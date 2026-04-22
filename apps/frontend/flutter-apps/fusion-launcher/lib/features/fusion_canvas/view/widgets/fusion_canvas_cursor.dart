@@ -12,11 +12,13 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_s
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../state/tools/connection_tool_state.dart';
+
 enum _CanvasCursorType {
   basic(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
   precise(image: "assets/icons/canvas_cursor/pencil.png", pointerTip: Alignment.bottomCenter),
   grab(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
-  grabbing(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
+  grabbing(image: "assets/icons/canvas_cursor/hand-grab.png", pointerTip: Alignment.center),
   resizeLeftRight(image: "assets/icons/canvas_cursor/move_horizontal.png", pointerTip: Alignment.center),
   resizeUpDown(image: "assets/icons/canvas_cursor/move_vertical.png", pointerTip: Alignment.center);
 
@@ -48,12 +50,14 @@ class FusionCanvasCursor extends StatelessWidget {
           _ when isHoveringLineCenter => _CanvasCursorType.precise,
           MeasureToolState _ => _CanvasCursorType.precise,
           PenToolState _ => _CanvasCursorType.precise,
-          LayerDraggingState _ => _CanvasCursorType.grabbing,
-          PointsDraggingState _ => _CanvasCursorType.grabbing,
+          LayerDraggingState _ => _CanvasCursorType.grab,
+          PointsDraggingState _ => _CanvasCursorType.grab,
+          ConnectingToolState _ => _CanvasCursorType.grabbing,
           _ =>
             hoverState.hoveredPainterId != null
                 ? switch (hoveredElement) {
                   FusionCanvasLine() => hoveredElement.isVerticalLine ? _CanvasCursorType.resizeLeftRight : _CanvasCursorType.resizeUpDown,
+                  FusionCanvasPathSegment() => hoveredElement.isVerticalLine ? _CanvasCursorType.resizeLeftRight : _CanvasCursorType.resizeUpDown,
                   FusionCanvasPoint _ => _CanvasCursorType.grab,
                   FusionCanvasPolygon _ => _CanvasCursorType.grab,
                   _ => _CanvasCursorType.basic,
@@ -85,8 +89,8 @@ class FusionCanvasCursor extends StatelessWidget {
   }
 
   Widget _buildCursor(_CanvasCursorType cursorType) {
-    return Image.asset(
-      cursorType.image,
+    return FusionImageAuto(
+      path: cursorType.image,
       width: 24,
       height: 24,
     );

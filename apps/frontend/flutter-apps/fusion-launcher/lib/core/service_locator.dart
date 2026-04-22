@@ -9,8 +9,11 @@ import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dar
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
+import 'package:fusion_launcher/features/projects/view_model/audio_message_sync/audio_message_sync_view model.dart';
 import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/fusion_events_sync/fusion_events_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/snapshots_sync/snapshot_sync_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -22,12 +25,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/home/domain/usecases/create_project_usecase.dart';
-import '../features/home/domain/usecases/delete_project_usecase.dart';
-import '../features/home/domain/usecases/fetch_file_usecase.dart';
-import '../features/home/domain/usecases/get_projects_data_usecase.dart';
-import '../features/home/domain/usecases/update_project_usecase.dart';
-import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -39,6 +36,13 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import '../features/firmware_update/viewmodel/firmware_update_vm.dart';
+import '../features/home/domain/usecases/create_project_usecase.dart';
+import '../features/home/domain/usecases/delete_project_usecase.dart';
+import '../features/home/domain/usecases/fetch_file_usecase.dart';
+import '../features/home/domain/usecases/get_projects_data_usecase.dart';
+import '../features/home/domain/usecases/update_project_usecase.dart';
+import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import '../features/projects/view_model/block_data/block_data_viewmodel.dart';
 import '../features/projects/view_model/meter_data/meter_data_view_model.dart';
@@ -56,6 +60,9 @@ Future<void> setupServiceLocator() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
 
+  final AppCacheService appRootCacheService = await AppCacheService.root();
+  serviceLocator.registerSingleton<AppCacheService>(appRootCacheService);
+
   serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
 
   serviceLocator.registerLazySingleton<FlutterSecureStorage>(
@@ -65,6 +72,20 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<WebSocketService>(WebSocketService());
+
+  /// Common Virtual Controller Service
+  serviceLocator.registerLazySingleton<FusionVirtualControllerService>(
+    () => FusionVirtualControllerService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  /// Common Virtual Controller ViewModel
+  serviceLocator.registerLazySingleton<VirtualControllerViewModel>(
+    () => VirtualControllerViewModel(
+      service: serviceLocator<FusionVirtualControllerService>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<FusionSecureStorage>(
     () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
@@ -101,7 +122,7 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<MdnsService>(
-    MdnsService(serviceType: '_http._tcp'),
+    MdnsService(serviceType: '_fusion._tcp.local'),
   );
 
   final UserProfile initialUserProfile = UserProfile(
@@ -189,11 +210,18 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
+  serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
+    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
+  );
+
   serviceLocator.registerSingleton<FusionConfigSyncService>(
     FusionConfigSyncService(
       networkClient: serviceLocator<FusionNetworkClient>(),
     ),
   );
+
+  // Download manager for handling file downloads across the app
+  serviceLocator.registerSingleton<TransferManagerCubit>(TransferManagerCubit());
 
   serviceLocator.registerSingleton<DroConfigService>(
     DroConfigService(
@@ -220,7 +248,13 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
+  final AppCacheService productsCache = await appRootCacheService.scope('products');
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(
+    () => ProductQueryViewModel(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+      cacheService: productsCache,
+    ),
+  );
 
   serviceLocator.registerLazySingleton<ProjectSyncService>(
     () => ProjectSyncService(
@@ -240,10 +274,37 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<BlockDataViewmodel>(() => BlockDataViewmodel());
 
+  serviceLocator.registerLazySingleton<MessageSyncService>(
+    () => MessageSyncService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
+  serviceLocator.registerLazySingleton<FusionEventService>(
+    () => FusionEventService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
+  serviceLocator.registerLazySingleton<SnapshotActivateService>(
+    () => SnapshotActivateService(networkClient: serviceLocator<FusionNetworkClient>()),
+  );
+
   serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
     () => ConfigSyncViewModel(
       droConfigService: serviceLocator<DroConfigService>(),
       fusionConfigSyncService: serviceLocator<FusionConfigSyncService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<AudioMessageSyncViewModel>(
+    () => AudioMessageSyncViewModel(
+      messageSyncService: serviceLocator<MessageSyncService>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<FusionEventsSyncViewModel>(
+    () => FusionEventsSyncViewModel(
+      fusionEventService: serviceLocator<FusionEventService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<SnapshotSyncViewModel>(
+    () => SnapshotSyncViewModel(
+      snapshotActivateService: serviceLocator<SnapshotActivateService>(),
     ),
   );
 

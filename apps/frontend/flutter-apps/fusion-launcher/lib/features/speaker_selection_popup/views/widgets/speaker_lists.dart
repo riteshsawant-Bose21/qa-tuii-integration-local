@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,9 +53,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                         if (midHighId == null && subwooferId == null) return const SizedBox.shrink();
 
                         final SpeakerProduct? midHighProduct =
-                            midHighId != null ? pq.speakers.where((SpeakerProduct s) => s.id == midHighId).firstOrNull : null;
+                            midHighId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == midHighId).firstOrNull : null;
                         final SpeakerProduct? subwooferProduct =
-                            subwooferId != null ? pq.speakers.where((SpeakerProduct s) => s.id == subwooferId).firstOrNull : null;
+                            subwooferId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == subwooferId).firstOrNull : null;
 
                         Widget buildSuggestedSection(String label, SpeakerProduct? product, int? productId) {
                           return Column(
@@ -88,23 +86,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
                                     children: <Widget>[
-                                      Container(
-                                        width: 36,
-                                        height: 36,
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Builder(
-                                          builder: (BuildContext ctx) {
-                                            final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                            if (firstAsset == null) return const SizedBox();
-                                            final String path = pq.getImagePath(firstAsset);
-                                            return Image.asset(path, fit: BoxFit.cover);
-                                          },
-                                        ),
-                                      ),
+                                      SpeakerImageContainer(productId: productId),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
@@ -156,7 +138,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                       final int? suggestedId = vmState.suggestedProductId;
                       if (suggestedId == null) return const SizedBox.shrink();
 
-                      final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.id == suggestedId).firstOrNull;
+                      final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.productId == suggestedId).firstOrNull;
                       if (suggestedProduct == null) return const SizedBox.shrink();
 
                       final double price = pq.getPrice(suggestedId);
@@ -177,23 +159,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                           ),
                           Row(
                             children: <Widget>[
-                              Container(
-                                width: 36,
-                                height: 36,
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Builder(
-                                  builder: (BuildContext ctx) {
-                                    final String? firstAsset = suggestedProduct.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                    if (firstAsset == null) return const SizedBox();
-                                    final String path = pq.getImagePath(firstAsset);
-                                    return Image.asset(path, fit: BoxFit.cover);
-                                  },
-                                ),
-                              ),
+                              SpeakerImageContainer(productId: suggestedId),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -235,7 +201,20 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
                     // In non-withSubwoofer mode, hide the card entirely when nothing is placed
                     final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
-                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) return const SizedBox.shrink();
+                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FusionAppText(
+                            text: 'No speakers selected yet. Select a speaker from the list.',
+                            textAlign: TextAlign.center,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,28 +256,14 @@ class ProductQuerySpeakerList extends StatelessWidget {
                               else
                                 ...unique.values.map((Speaker sp) {
                                   final SpeakerProduct? product =
-                                      sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.id == sp.productId).firstOrNull : null;
+                                      sp.productId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == sp.productId).firstOrNull : null;
                                   final double price = sp.productId != null ? pq.getPrice(sp.productId!) : 0.0;
 
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: Row(
                                       children: <Widget>[
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Builder(
-                                            builder: (BuildContext ctx) {
-                                              if (sp.assetImagePath.isEmpty) return const SizedBox();
-                                              return Image.asset(sp.assetImagePath, fit: BoxFit.cover);
-                                            },
-                                          ),
-                                        ),
+                                        SpeakerImageContainer(productId: sp.productId),
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
@@ -630,11 +595,12 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             SemanticTypes.container,
                             "speaker_products_empty_indicator",
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Padding(
-                              padding: EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.all(16.0),
                               child: FusionAppText(
                                 text: 'No products found',
+                                style: context.textTheme.l1Regular,
                               ),
                             ),
                           ),
@@ -693,8 +659,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                           ),
                                         ),
                                         ...products.map((SpeakerProduct product) {
-                                          final bool isSelected = activeSuggestedId == product.id;
-                                          final double productPrice = productQueryViewModel.getPrice(product.id);
+                                          final bool isSelected = activeSuggestedId == product.productId;
+                                          final double productPrice = productQueryViewModel.getPrice(product.productId);
                                           final PowerHandling? ph = product.powerHandling;
                                           final String spiText =
                                               'SPI = ${SpeakerSelectionViewModel.formatMaxSpl(product.maxSpl)}, '
@@ -709,23 +675,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: <Widget>[
                                                     // Speaker image
-                                                    Container(
-                                                      width: 40,
-                                                      height: 40,
-                                                      padding: const EdgeInsets.all(4),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Builder(
-                                                        builder: (BuildContext context) {
-                                                          final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                          if (firstAsset == null) return const SizedBox();
-                                                          final String path = productQueryViewModel.getImagePath(firstAsset);
-                                                          return Image.asset(path, fit: BoxFit.cover);
-                                                        },
-                                                      ),
-                                                    ),
+                                                    SpeakerImageContainer(productId: product.productId),
                                                     const SizedBox(width: 10),
                                                     Expanded(
                                                       child: Column(
@@ -786,17 +736,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                     ),
                                                     // Radio button
                                                     GestureDetector(
-                                                      onTap: () async {
-                                                        final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
-                                                        final String? cachedImagePath =
-                                                            firstAsset != null ? productQueryViewModel.getImagePath(firstAsset) : null;
-
-                                                        await speakerSelectionViewModel.selectSuggestedSpeaker(
-                                                          context: context,
-                                                          product: product,
-                                                          cachedImagePath: cachedImagePath,
-                                                        );
-                                                      },
+                                                      onTap: () => speakerSelectionViewModel.selectSuggestedSpeaker(context: context, product: product),
                                                       child: MouseRegion(
                                                         cursor: SystemMouseCursors.click,
                                                         child: Padding(
@@ -871,9 +811,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                   itemBuilder: (BuildContext context, int index) {
                                     final SpeakerProduct product = items[index];
 
-                                    log("==========>>>>>> ${product.id}");
-
-                                    final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.id);
+                                    final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.productId);
 
                                     return SpeakerCard(
                                       index: index,
@@ -895,6 +833,44 @@ class ProductQuerySpeakerList extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class SpeakerImageContainer extends StatelessWidget {
+  const SpeakerImageContainer({
+    super.key,
+    required this.productId,
+  });
+
+  final int? productId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: FusionImageAuto(
+        path: context.read<ProductQueryViewModel>().getProductImage(productId),
+        fit: BoxFit.contain,
+        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+          return Icon(
+            LucideIcons.speaker200,
+            size: 20,
+            color: context.colorScheme.iconDefault,
+          );
+        },
+        fallbackIcon: Icon(
+          LucideIcons.speaker200,
+          size: 20,
+          color: context.colorScheme.iconDefault,
+        ),
+      ),
     );
   }
 }
@@ -938,19 +914,15 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
-          // log("key: $key : ${values.first}");
-          // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
-          // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
-          // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
+          final String? cachedImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColor == speakerColor) {
             varients.add(
               _SpeakerColorVarient(
-                productId: widget.product.id,
+                productId: widget.product.productId,
                 color: speakerColor,
-                cachedImagePath: assetImagePath,
+                cachedImagePath: cachedImagePath,
               ),
             );
           }
@@ -990,7 +962,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
-        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.id);
+        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
 
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_${widget.index}"),
@@ -1009,23 +981,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         SemanticTypes.container,
                         "speaker_card_image_${widget.index}",
                       ),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Builder(
-                          builder: (BuildContext context) {
-                            if (selectedVarient?.cachedImagePath == null) return const SizedBox();
-                            return Image.asset(
-                              selectedVarient!.cachedImagePath!,
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        ),
+                      child: SpeakerImageContainer(
+                        productId: widget.product.productId,
                       ),
                     ),
                     Expanded(
@@ -1058,20 +1015,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                       children: <Widget>[
                                         Row(
                                           children: <Widget>[
-                                            if (selectedVarient?.cachedImagePath != null) ...<Widget>[
-                                              Center(
-                                                child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  child: Image.asset(
-                                                    selectedVarient!.cachedImagePath!,
-                                                    width: 36,
-                                                    height: 36,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                            ],
+                                            SpeakerImageContainer(productId: widget.product.productId),
+                                            const SizedBox(width: 10),
                                             Expanded(
                                               child: FusionAppText(
                                                 text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg",
@@ -1256,13 +1201,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                           color: widget.isSelected ? Colors.white : context.colorScheme.textPrimary,
                         ),
                         // text: "Add Speaker",
-                        onTap: () async {
-                          await context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
-                            context: context,
-                            cachedImagePath: selectedVarient?.cachedImagePath,
-                            product: widget.product,
-                          );
-                        },
+                        onTap: () => context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(context: context, product: widget.product),
                       ),
                     ),
                   ],

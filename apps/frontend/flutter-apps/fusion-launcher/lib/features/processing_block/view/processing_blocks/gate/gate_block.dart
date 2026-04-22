@@ -261,6 +261,7 @@ class _GateTextField extends StatelessWidget {
           ),
           Expanded(
             child: PBNumberTextField(
+              semanticId: "$semanticId",
               onChanged: onChanged,
               value: value,
               min: min,

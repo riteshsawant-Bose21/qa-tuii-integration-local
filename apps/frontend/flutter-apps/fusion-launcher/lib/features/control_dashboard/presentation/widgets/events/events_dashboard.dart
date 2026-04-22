@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/dashboard_section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../configuration_events/viewModel/events_viewmodel/config_events_viewmodel.dart';
 import '../../entitity/event_item_entity.dart';
 import 'events_card.dart';
 
@@ -86,6 +87,12 @@ class _EventsDashboardState extends State<EventsDashboard> {
                       type: _currentTab,
                       onToggle: (bool val) {
                         serviceLocator<ProjectViewModel>().toggleEvent(eventId: item.eventId, isEnabled: val);
+
+                        /// If event is enabled, recall it to update the schedule
+                        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+                        if (vip != null) {
+                          serviceLocator<ConfigEventsViewmodel>().toggleEventEnabledRemote(vip: vip, eventId: item.eventId, isEnabled: val);
+                        }
                       },
                       onClose: () {
                         _showEventCancelConfirmation(context, item);

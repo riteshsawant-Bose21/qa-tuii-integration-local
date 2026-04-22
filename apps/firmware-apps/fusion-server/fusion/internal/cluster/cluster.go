@@ -27,6 +27,7 @@ const (
 type VIPMonitorInterface interface {
 	GetCurrentVIP() string
 	IsLocalVIPHolder() bool
+	GetKeepalivedPriority() (int, error)
 }
 
 // ClusterInfo provides information about the cluster
@@ -316,8 +317,8 @@ func (c *Cluster) startStateMonitor() {
 	}()
 }
 
-// getStateString converts memberlist state to human-readable string
-func getStateString(state hashicorpMemberlist.NodeStateType) string {
+// GetStateString converts memberlist state to human-readable string
+func GetStateString(state hashicorpMemberlist.NodeStateType) string {
 	switch state {
 	case hashicorpMemberlist.StateAlive:
 		return "ALIVE"
@@ -340,7 +341,7 @@ func (c *Cluster) getMembers() []ClusterMember {
 			Name:    member.Name,
 			Address: member.Addr.String(),
 			Port:    member.Port,
-			State:   getStateString(member.State),
+			State:   GetStateString(member.State),
 		}
 	}
 
@@ -518,26 +519,7 @@ func (c *Cluster) PostGenericToAdmin(
 	endpoint string,
 	localFn func() error,
 ) error {
-
-	for _, addr := range c.getNodeAdminAddresses() {
-		if c.hostIsLocal(addr) {
-			// If this is the local address, invoke localFn() directly:
-			if err := localFn(); err != nil {
-				return fmt.Errorf("local function failed: %w", err)
-			}
-			continue
-		}
-
-		// POST to the remote node’s admin endpoint
-		urlStr := utils.GetLocalURL(addr, endpoint)
-		resp, err := http.Post(urlStr, "", nil)
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
-	}
-
-	return nil
+	return postGenericToAdminLast(c, endpoint, localFn)
 }
 
 func postGenericToAdminLast(
@@ -614,4 +596,17 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	}
 
 	return false
+}
+
+func (c *Cluster) getKeepalivedPriority() int {
+	if c.vipMonitor != nil {
+		 priority, err := c.vipMonitor.GetKeepalivedPriority()
+		 if err != nil {
+			 logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
+			 return 0
+		 }
+		 return priority
+	}
+	logging.GetLogger().Warn("VIP Monitor not set, cannot get keepalived priority")
+	return 0
 }

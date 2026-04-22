@@ -274,8 +274,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
         tilePadding: const EdgeInsets.symmetric(horizontal: 16),
         title: Row(
           children: <Widget>[
-            Image.asset(
-              image,
+            FusionImageAuto(
+              path: image,
               width: 24,
               height: 24,
             ),

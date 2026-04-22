@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/device_registration/views/device_registraion_page.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 import '../hardware_card.dart';
 
 class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
-  final VoidCallback onRecommission;
 
   const NetworkHardwarePanel({
     super.key,
     required this.networkDevices,
     required this.onDragStarted,
     required this.onDragEnded,
-    required this.onRecommission,
   });
 
   @override
@@ -83,12 +83,34 @@ class NetworkHardwarePanel extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 16),
-        FusionNeumorphicButton(
-          semanticId: "recommission_network_btn",
-          text: "Recommission Network",
-          height: 48,
-          onTap: onRecommission,
+        Builder(
+          builder: (BuildContext context) {
+            final bool hasUnRegisteredDevices = context.watch<FusionNetworkDeviceViewModel>().hasUnRegisteredDevices;
+
+            if (!hasUnRegisteredDevices) return const SizedBox();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const SizedBox(height: 16),
+                FusionNeumorphicButton(
+                  semanticId: "register_devices_btn",
+                  text: "Register devices",
+                  height: 48,
+                  onTap: () {
+                    showUnregisteredDevicesClaimDialog(context).then(
+                      (void value) {
+                        if (!context.mounted) return;
+                        // After the dialog is closed, refresh the device list to reflect any changes in registration status.
+                        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+                        if (vip != null) context.read<FusionNetworkDeviceViewModel>().getFusionNetworkDevice(vip: vip);
+                      },
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

@@ -60,18 +60,19 @@ func (s *Service) GetDB(_ context.Context) customModel.DBWithTransactions {
 // GetProjectByID retrieves a project by its ID.
 func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*model.Project, error) {
 	if projectID == "" {
-		return nil, errors.New("project ID cannot be empty")
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
 	}
 
 	row, err := model.Projects(model.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+			return nil, fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
 		logger.Error("Failed to fetch project",
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, fmt.Errorf("%s: %v", errorutils.ErrMsgFailedToGetProject, err)
+		return nil, err
 	}
 
 	return row, nil
@@ -79,6 +80,18 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *
 
 // Insert inserts a new project into the database.
 func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx customModel.DBTxExecutor, logger *zap.Logger) (string, error) {
+	if project == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectCannotBeNil))
+		return "", fmt.Errorf("%w", errorutils.ErrProjectCannotBeNil)
+	}
+	if accountID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrAccountIDEmpty))
+		return "", fmt.Errorf("%w", errorutils.ErrAccountIDEmpty)
+	}
+	if tx == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrTransactionNil))
+		return "", fmt.Errorf("%w", errorutils.ErrTransactionNil)
+	}
 
 	// Create project record
 	now := time.Now()
@@ -107,7 +120,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 			zap.Error(err),
 			zap.String("project_id", project.ID),
 			zap.String("account_id", accountID))
-		return "", errors.New(errorutils.ErrMsgFailedToInsertProject)
+		return "", err
 	}
 
 	return project.ID, nil
@@ -115,6 +128,18 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 // InsertProjectUser inserts a new project user association into the database.
 func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx customModel.DBTxExecutor, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+	if tx == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrTransactionNil))
+		return fmt.Errorf("%w", errorutils.ErrTransactionNil)
+	}
 
 	now := time.Now()
 	// Create project user association
@@ -131,7 +156,7 @@ func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID strin
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToInsertProjectUser)
+		return err
 	}
 
 	return nil
@@ -139,6 +164,18 @@ func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID strin
 
 // SelectAll retrieves all projects from the database.
 func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) ([]types.Project, error) {
+	if queryParams == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrQueryParamsNil))
+		return nil, fmt.Errorf("%w", errorutils.ErrQueryParamsNil)
+	}
+	if userAuth.User.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return nil, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+	if userAuth.Account.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrAccountIDEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrAccountIDEmpty)
+	}
 
 	order := strings.ToUpper(queryParams.SortOrder)
 
@@ -149,13 +186,13 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	if userAuth.Role.RoleName == constants.AdminRoleName {
 		query = fmt.Sprintf(`
 			SELECT p.id, p.name, p.description, p.venue, 
-			p.environment_type, p.project_phase, p.application, p.budget_amount, 
-			p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-			p.created_at, p.updated_at, COALESCE(pu.is_starred, false) is_starred, u.email as locked_by_user_email 
+			p.environment_type, p.project_phase, p.application, p.budget_amount,
+			p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id,
+			p.created_at, p.updated_at, COALESCE(pu.is_starred, false) is_starred, u.email as locked_by_user_email
 			FROM project p
-			LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $4 
-			LEFT JOIN app_user u ON p.locked_by_user_id = u.id 
-			WHERE p.primary_owner_account_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3 
+			LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $4
+			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+			WHERE p.primary_owner_account_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
 			ORDER BY p.%s %s`, queryParams.SortBy, order)
 		rows, err = s.db.QueryContext(ctx, query, userAuth.Account.ID, queryParams.IsArchived, false, userAuth.User.ID)
 	} else {
@@ -181,7 +218,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 			zap.Bool("is_archived", queryParams.IsArchived),
 			zap.String("sort_by", queryParams.SortBy),
 			zap.String("sort_order", order))
-		return nil, errors.New(errorutils.ErrMsgFailedToGetProjects)
+		return nil, err
 	}
 
 	defer func() {
@@ -219,7 +256,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 		if err != nil {
 			logger.Error(errorutils.ErrMsgFailedToParseRow,
 				zap.Error(err))
-			return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+			return nil, err
 		}
 
 		projects = append(projects, customModel.GetProjectModel{
@@ -236,7 +273,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 			logger.Error(errorutils.ErrMsgFailedToParseRow,
 				zap.Error(err),
 				zap.String("project_id", projectWithMetadata.Project.ID))
-			return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+			return nil, err
 		}
 		projectsArray = append(projectsArray, *project)
 	}
@@ -245,7 +282,16 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 }
 
 // SelectByID retrieves a single project by ID with user-specific metadata for Super Admins.
-func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) { //nolint:dupl
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userAuth.User.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return nil, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	var rows *sql.Rows
 	var err error
 
@@ -270,11 +316,11 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userAuth.User.ID))
-		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
+		return nil, err
 	}
 
 	if !rows.Next() {
-		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 	}
 
 	err = rows.Scan(
@@ -300,7 +346,7 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	projectWithMetadata := customModel.GetProjectModel{
@@ -314,7 +360,7 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	return project, nil
@@ -322,6 +368,19 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 
 // GetProjectByIDForAccount retrieves a single project by ID with user-specific metadata for Admins.
 func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userAuth.User.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return nil, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+	if userAuth.Account.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrAccountIDEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrAccountIDEmpty)
+	}
+
 	var rows *sql.Rows
 	var err error
 
@@ -346,11 +405,11 @@ func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userAuth.User.ID))
-		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
+		return nil, err
 	}
 
 	if !rows.Next() {
-		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 	}
 
 	err = rows.Scan(
@@ -376,7 +435,7 @@ func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	projectWithMetadata := customModel.GetProjectModel{
@@ -390,7 +449,7 @@ func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	return project, nil
@@ -398,6 +457,15 @@ func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string
 
 // GetProjectByIDForUser retrieves a single project by ID with user-specific metadata.
 func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userAuth.User.ID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return nil, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	var rows *sql.Rows
 	var err error
 
@@ -422,11 +490,11 @@ func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, u
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userAuth.User.ID))
-		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
+		return nil, err
 	}
 
 	if !rows.Next() {
-		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+		return nil, fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 	}
 
 	err = rows.Scan(
@@ -452,7 +520,7 @@ func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, u
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	projectWithMetadata := customModel.GetProjectModel{
@@ -466,7 +534,7 @@ func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, u
 		logger.Error(errorutils.ErrMsgFailedToParseRow,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+		return nil, err
 	}
 
 	return project, nil
@@ -474,9 +542,17 @@ func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, u
 
 // Update updates an existing project in the database.
 func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest, logger *zap.Logger) error {
+	if projectRow == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectRowNil))
+		return fmt.Errorf("%w", errorutils.ErrProjectRowNil)
+	}
+	if project == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectUpdateReqNil))
+		return fmt.Errorf("%w", errorutils.ErrProjectUpdateReqNil)
+	}
 
 	if projectRow.IsArchived {
-		return errors.New(errorutils.ErrMsgProjectArchived)
+		return fmt.Errorf("%w", errorutils.ErrProjectArchived)
 	}
 
 	if project.Name != "" {
@@ -518,7 +594,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 		logger.Error(errorutils.ErrMsgFailedToUpdateProject,
 			zap.Error(err),
 			zap.String("project_id", projectRow.ID))
-		return fmt.Errorf("%s: %v", errorutils.ErrMsgFailedToUpdateProject, err)
+		return err
 	}
 
 	return nil
@@ -526,6 +602,10 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 
 // Delete removes a project by its ID.
 func (s *Service) Delete(ctx context.Context, projectRow *model.Project, logger *zap.Logger) error {
+	if projectRow == nil {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectRowNil))
+		return fmt.Errorf("%w", errorutils.ErrProjectRowNil)
+	}
 
 	projectRow.IsDeleted = true
 	projectRow.UpdatedAt = time.Now()
@@ -534,7 +614,7 @@ func (s *Service) Delete(ctx context.Context, projectRow *model.Project, logger 
 		logger.Error(errorutils.ErrMsgFailedToDeleteProject,
 			zap.Error(err),
 			zap.String("project_id", projectRow.ID))
-		return errors.New(errorutils.ErrMsgFailedToDeleteProject)
+		return err
 	}
 
 	return nil
@@ -542,6 +622,14 @@ func (s *Service) Delete(ctx context.Context, projectRow *model.Project, logger 
 
 // AssignUser assigns a user to a project.
 func (s *Service) AssignUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
 
 	now := time.Now()
 	projectUser := &model.ProjectUser{
@@ -565,13 +653,22 @@ func (s *Service) AssignUser(ctx context.Context, projectID, userID string, logg
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToAssignUser)
+		return err
 	}
 	return nil
 }
 
 // RemoveUser removes a user from a project.
 func (s *Service) RemoveUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	_, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
 		model.ProjectUserWhere.UserID.EQ(userID),
@@ -582,13 +679,22 @@ func (s *Service) RemoveUser(ctx context.Context, projectID, userID string, logg
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToRemoveUser)
+		return err
 	}
 	return nil
 }
 
 // IsUserAssigned checks if a user is assigned to a project.
 func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error) {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return false, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return false, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	exists, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
 		model.ProjectUserWhere.UserID.EQ(userID),
@@ -599,13 +705,18 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string, 
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return false, errors.New(errorutils.ErrMsgFailedUserAssignmentCheck)
+		return false, err
 	}
 	return exists, nil
 }
 
 // ProjectExists checks if a project exists.
 func (s *Service) ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error) {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return false, fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+
 	exists, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
 		model.ProjectWhere.IsDeleted.EQ(false),
@@ -615,13 +726,18 @@ func (s *Service) ProjectExists(ctx context.Context, projectID string, logger *z
 		logger.Error(errorutils.ErrMsgFailedToCheckProjectExistence,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return false, errors.New(errorutils.ErrMsgFailedToCheckProjectExistence)
+		return false, err
 	}
 	return exists, nil
 }
 
 // UserExists checks if a user exists.
 func (s *Service) UserExists(ctx context.Context, userID string, logger *zap.Logger) (bool, error) {
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return false, fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	exists, err := model.AppUsers(
 		model.AppUserWhere.ID.EQ(userID),
 	).Exists(ctx, s.db)
@@ -630,25 +746,30 @@ func (s *Service) UserExists(ctx context.Context, userID string, logger *zap.Log
 		logger.Error(errorutils.ErrMsgFailedToCheckUserExistence,
 			zap.Error(err),
 			zap.String("user_id", userID))
-		return false, errors.New(errorutils.ErrMsgFailedToCheckUserExistence)
+		return false, err
 	}
 	return exists, nil
 }
 
 // GetUserIDByEmail gets user ID by email address.
 func (s *Service) GetUserIDByEmail(ctx context.Context, email string, logger *zap.Logger) (string, error) {
+	if email == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserEmailEmpty))
+		return "", fmt.Errorf("%w", errorutils.ErrUserEmailEmpty)
+	}
+
 	user, err := model.AppUsers(
 		model.AppUserWhere.Email.EQ(email),
 	).One(ctx, s.db)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New(errorutils.ErrMsgUserNotFound)
+			return "", fmt.Errorf("%w", errorutils.ErrUserNotFound)
 		}
 		logger.Error(errorutils.ErrMsgFailedToGetUserByEmail,
 			zap.Error(err),
 			zap.String("email", email))
-		return "", errors.New(errorutils.ErrMsgFailedToGetUserByEmail)
+		return "", err
 	}
 	return user.ID, nil
 }
@@ -656,6 +777,15 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string, logger *za
 // StarProject stars a project for a user.
 // Note: Assumes business layer has validated user assignment to project
 func (s *Service) StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	// Get the project user record
 	projectUser, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
@@ -667,7 +797,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string, log
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToGetProjectUser)
+		return err
 	}
 
 	// Check if already starred
@@ -685,7 +815,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string, log
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToStarProject)
+		return err
 	}
 
 	return nil
@@ -694,6 +824,15 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string, log
 // UnstarProject unstars a project for a user.
 // Note: Assumes business layer has validated user assignment to project
 func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	// Get the project user record
 	projectUser, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
@@ -705,7 +844,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, l
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToGetProjectUser)
+		return err
 	}
 
 	// Check if not starred
@@ -723,7 +862,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, l
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToUnstarProject)
+		return err
 	}
 
 	return nil
@@ -731,6 +870,11 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, l
 
 // ArchiveProject archives a project.
 func (s *Service) ArchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -738,9 +882,12 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, logger *
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(errorutils.ErrMsgProjectNotFound)
+			return fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
-		return errors.New(errorutils.ErrMsgFailedToGetProject)
+		logger.Error(errorutils.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return err
 	}
 
 	// Check if already archived
@@ -757,7 +904,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, logger *
 		logger.Error(errorutils.ErrMsgFailedToArchiveProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToArchiveProject)
+		return err
 	}
 
 	return nil
@@ -765,6 +912,11 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, logger *
 
 // UnarchiveProject unarchives a project.
 func (s *Service) UnarchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -772,12 +924,12 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, logger
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(errorutils.ErrMsgProjectNotFound)
+			return fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
 		logger.Error(errorutils.ErrMsgFailedToGetProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToGetProject)
+		return err
 	}
 
 	// Check if not archived
@@ -794,7 +946,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, logger
 		logger.Error(errorutils.ErrMsgFailedToUnarchiveProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToUnarchiveProject)
+		return err
 	}
 
 	return nil
@@ -802,6 +954,15 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, logger
 
 // LockProject locks a project for a specific user.
 func (s *Service) LockProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+	if userID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrUserIDRequired))
+		return fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -809,12 +970,12 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string, log
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(errorutils.ErrMsgProjectNotFound)
+			return fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
 		logger.Error(errorutils.ErrMsgFailedToGetProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToGetProject)
+		return err
 	}
 
 	// Check if project is already locked
@@ -822,7 +983,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string, log
 		if project.LockedByUserID.String == userID {
 			return nil // Already locked by the same user
 		}
-		return errors.New(errorutils.ErrMsgProjectLockedByUser + " " + project.LockedByUserID.String)
+		return fmt.Errorf("project is locked by user %s: %w", project.LockedByUserID.String, errorutils.ErrProjectLockedByOtherUser)
 	}
 
 	// Lock the project
@@ -835,7 +996,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string, log
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
-		return errors.New(errorutils.ErrMsgFailedToLockProject)
+		return err
 	}
 
 	return nil
@@ -843,6 +1004,11 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string, log
 
 // UnlockProject unlocks a project for a specific user.
 func (s *Service) UnlockProject(ctx context.Context, projectID string, logger *zap.Logger) error {
+	if projectID == "" {
+		logger.Error("invalid argument", zap.Error(errorutils.ErrProjectIDCannotBeEmpty))
+		return fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -850,12 +1016,12 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string, logger *z
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(errorutils.ErrMsgProjectNotFound)
+			return fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
 		logger.Error(errorutils.ErrMsgFailedToGetProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToGetProject)
+		return err
 	}
 
 	// Check if project is already unlocked
@@ -872,7 +1038,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string, logger *z
 		logger.Error(errorutils.ErrMsgFailedToUnlockProject,
 			zap.Error(err),
 			zap.String("project_id", projectID))
-		return errors.New(errorutils.ErrMsgFailedToUnlockProject)
+		return err
 	}
 
 	return nil
@@ -880,6 +1046,10 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string, logger *z
 
 // GetProjectLockUserID returns whether the project is locked and the user ID who locked it.
 func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error) {
+	if projectID == "" {
+		return false, "", fmt.Errorf("%w", errorutils.ErrProjectIDCannotBeEmpty)
+	}
+
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -887,9 +1057,9 @@ func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (i
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return false, "", errors.New(errorutils.ErrMsgProjectNotFound)
+			return false, "", fmt.Errorf("%w", errorutils.ErrProjectNotFound)
 		}
-		return false, "", errors.New(errorutils.ErrMsgFailedToGetProject)
+		return false, "", err
 	}
 
 	// Check if project is locked
@@ -902,6 +1072,10 @@ func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (i
 
 // GetUserEmailByID returns the email address for a given user ID.
 func (s *Service) GetUserEmailByID(ctx context.Context, userID string) (string, error) {
+	if userID == "" {
+		return "", fmt.Errorf("%w", errorutils.ErrUserIDRequired)
+	}
+
 	// Get the user who locked the project
 	user, err := model.AppUsers(
 		model.AppUserWhere.ID.EQ(userID),
@@ -909,9 +1083,9 @@ func (s *Service) GetUserEmailByID(ctx context.Context, userID string) (string, 
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New(errorutils.ErrMsgUserNotFound)
+			return "", fmt.Errorf("%w", errorutils.ErrUserNotFound)
 		}
-		return "", errors.New(errorutils.ErrMsgFailedToGetLockedUserInfo)
+		return "", err
 	}
 
 	return user.Email, nil

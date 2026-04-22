@@ -1,12 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_lib.dart';
-
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
 import 'device/device_mapping_table.dart';
@@ -52,6 +51,8 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   String? _draggedHardwareId;
   List<FusionNetworkDevice> _networkDevices = <FusionNetworkDevice>[];
 
+  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => context.read<FusionNetworkDeviceViewModel>();
+
   Future<void> _handleAssignHardware(HardwareComponent device, FusionNetworkDevice? hardware) async {
     if (hardware != null && hardware.id == device.id) return;
 
@@ -59,7 +60,7 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
       for (final FusionNetworkDevice hw in _networkDevices.where((FusionNetworkDevice h) => h.id == device.id)) {
         final String newId = const Uuid().v4();
         if (!mounted) return;
-        await context.read<FusionNetworkDeviceViewModel>().updateDeviceDetails(
+        await fusionNetworkDeviceViewModel.updateDeviceDetails(
           currentDeviceId: hw.id,
           newDeviceId: newId,
           name: "Fusion ${FusionUtils.shortStringUUID()}",
@@ -71,7 +72,7 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
         final String equipmentLocation = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id)?.name ?? "";
 
         if (!mounted) return;
-        await context.read<FusionNetworkDeviceViewModel>().updateDeviceDetails(
+        await fusionNetworkDeviceViewModel.updateDeviceDetails(
           currentDeviceId: hardware.id,
           newDeviceId: device.id,
           name: "${device.name} ${Random().nextInt(100)}",
@@ -81,18 +82,13 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
 
       final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
       if (vip != null && mounted) {
-        context.read<FusionNetworkDeviceViewModel>().getFusionNetworkDevice(vip: vip);
+        fusionNetworkDeviceViewModel.getFusionNetworkDevice(vip: vip);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
       }
     }
-  }
-
-  void _onRecommissionNetwork() {
-    Navigator.pop(context);
-    serviceLocator<ProjectViewModel>().setVirtualIP(ip: null);
   }
 
   @override
@@ -148,14 +144,13 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                     color: context.colorScheme.strokeLight,
                   ),
                   const SizedBox(width: 16),
-                  // PANEL SECTION
+
                   Expanded(
                     flex: 3,
                     child: NetworkHardwarePanel(
                       networkDevices: _networkDevices,
                       onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
                       onDragEnded: () => setState(() => _draggedHardwareId = null),
-                      onRecommission: _onRecommissionNetwork,
                     ),
                   ),
                 ],

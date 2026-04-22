@@ -103,8 +103,9 @@ type OrganizationSearchRequest struct {
 
 // InviteUserToOrganizationRequest represents a single user invitation
 type InviteUserToOrganizationRequest struct {
-	Email string `json:"email" validate:"required,email" example:"john.doe@example.com"`
-	Role  string `json:"role" validate:"required,min=3,max=50" example:"Partner Admin"`
+	Email             string `json:"email" validate:"required,email" example:"john.doe@example.com"`
+	FullName          string `json:"full_name,omitempty" example:"John Doe"`
+	AccountTypeRoleID int    `json:"account_type_role_id" validate:"required,min=1" example:"3"`
 }
 
 // InviteUsersToOrganizationRequest represents a request to invite multiple users to an organization

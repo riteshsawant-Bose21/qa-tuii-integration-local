@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_tab_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../../../../core/constants/assets_constants.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -56,6 +54,16 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
       assetsName: Assets.playIcon,
       label: 'Media Files',
       semantic: 'Media Files',
+    ),
+    ConfigurationMenuMode.aes67: TabConfig(
+      assetsName: Assets.playIcon,
+      label: 'AES67',
+      semantic: 'AES67',
+    ),
+    ConfigurationMenuMode.controllers: TabConfig(
+      assetsName: Assets.processingIcon,
+      label: 'Controllers',
+      semantic: 'Controllers',
     ),
   };
 
@@ -122,11 +130,11 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                                 SemanticTypes.icon,
                                 FusionTestKeys.instance.configureTabIcon,
                               ),
-                              child: FusionImage.asset(
-                                config.assetsName,
+                              child: FusionImageAuto(
+                                path: config.assetsName,
                                 width: 24,
                                 height: 24,
-                                assetColor: context.colorScheme.primaryWhite,
+                                color: context.colorScheme.primaryWhite,
                               ),
                             ),
                             const SizedBox(width: 16),

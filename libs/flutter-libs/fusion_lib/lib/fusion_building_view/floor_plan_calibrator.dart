@@ -160,7 +160,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   final TextEditingController _distanceController = TextEditingController(
     text: '5.00',
   );
-  MeasurementUnit _selectedUnit = MeasurementUnit.feet;
+  MeasurementUnit _selectedUnit = MeasurementUnit.meters;
   _ToolMode _mode = _ToolMode.measure;
 
   // current image rect on screen (used for conversions)
@@ -178,6 +178,11 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     if (r == null) return null;
     // Adjust for pan/zoom
     final local = (p - _panOffset) / _zoomScale;
+
+    // Ignore interactions outside the visible floor plan image area.
+    // This keeps the current measurement line intact when user clicks outside.
+    if (!r.contains(local)) return null;
+
     final x = ((local.dx - r.left) / r.width).clamp(0.0, 1.0);
     final y = ((local.dy - r.top) / r.height).clamp(0.0, 1.0);
     return Offset(x, y);

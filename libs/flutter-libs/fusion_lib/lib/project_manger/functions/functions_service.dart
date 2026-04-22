@@ -13,7 +13,6 @@ extension ZoneFunctionService on ProjectService {
       final linkedSceneActions = relationships.getParents(RelationshipType.actionItemMapping, zoneId);
       final copyOfLinkedSceneActions = List<String>.from(linkedSceneActions);
       for (final actionId in copyOfLinkedSceneActions) {
-        print("Checking action $actionId for removal due to function change");
         final action = sceneActions.get(actionId);
         if (action != null && action.param != null) {
           if (action.param!.type.isRelatedToZoneFunction) {
@@ -102,6 +101,15 @@ extension ZoneFunctionService on ProjectService {
       return;
     }
     final updatedFunction = function.copyWith(selectedSourceId: sourceId);
+    zoneFunctions.add(functionId, updatedFunction);
+  }
+
+  void updateSourceIndexForFunction({required String functionId, required Map<String, int> sourceIndex}) {
+    final ZoneFunctions? function = getZoneFunctionById(functionId: functionId);
+    if (function == null) {
+      return;
+    }
+    final updatedFunction = function.copyWith(sourceIndex: sourceIndex);
     zoneFunctions.add(functionId, updatedFunction);
   }
 }

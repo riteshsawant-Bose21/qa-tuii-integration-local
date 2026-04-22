@@ -81,6 +81,26 @@ const AlgorithmDefinition &Definition::get_algorithm(const std::string &name) co
 }
 
 
+CompositeDefinition::CompositeDefinition(const std::string &filename)
+    : Definition(filename)
+{
+}
+
+
+bool CompositeDefinition::has_composite_algorithm(const std::string &name) const
+{
+    return list_has_member("composite_algorithms", "name", name);
+}
+
+
+const CompositeAlgorithmDefinition &CompositeDefinition::get_composite_algorithm(const std::string &name) const
+{
+    return (const CompositeAlgorithmDefinition &)list_get_member("composite_algorithms",
+                                                                 "name",
+                                                                 name);
+}
+
+
 bool Definition::has_module(const std::string &name) const
 {
     return list_has_member("modules", "name", name);
@@ -258,6 +278,127 @@ bool ProcessorDefinition::has_telemetry() const
 const TelemetryDefinition &ProcessorDefinition::get_telemetry() const
 {
     return (const TelemetryDefinition &)get_member("telemetry");
+}
+
+
+bool CompositeImplementationDefinition::has_blocks() const
+{
+    return has_member("blocks");
+}
+
+
+const Definition &CompositeImplementationDefinition::get_blocks() const
+{
+    return (const Definition &)get_member("blocks");
+}
+
+
+bool CompositeImplementationDefinition::has_block_connections() const
+{
+    return has_member("block_connections");
+}
+
+
+const Definition &CompositeImplementationDefinition::get_block_connections() const
+{
+    return (const Definition &)get_member("block_connections");
+}
+
+
+bool CompositeImplementationDefinition::has_parameter_settings() const
+{
+    return has_member("parameter_settings");
+}
+
+
+const Definition &CompositeImplementationDefinition::get_parameter_settings() const
+{
+    return (const Definition &)get_member("parameter_settings");
+}
+
+
+bool CompositeImplementationDefinition::has_parameter_map() const
+{
+    return has_member("parameter_map");
+}
+
+
+const ParameterMapDefinition &CompositeImplementationDefinition::get_parameter_map() const
+{
+    return (const ParameterMapDefinition &)get_member("parameter_map");
+}
+
+
+bool CompositeImplementationDefinition::has_telemetry_map() const
+{
+    return has_member("telemetry_map");
+}
+
+
+const TelemetryMapDefinition &CompositeImplementationDefinition::get_telemetry_map() const
+{
+    return (const TelemetryMapDefinition &)get_member("telemetry_map");
+}
+
+
+const std::string &ParameterMapEntryDefinition::get_composite_parameter() const
+{
+    return get_string("composite_parameter");
+}
+
+
+const std::string &ParameterMapEntryDefinition::get_block_name() const
+{
+    return get_string("block_name");
+}
+
+
+const std::string &ParameterMapEntryDefinition::get_block_parameter() const
+{
+    return get_string("block_parameter");
+}
+
+
+const std::string &TelemetryMapEntryDefinition::get_composite_telemetry() const
+{
+    return get_string("composite_telemetry");
+}
+
+
+const std::string &TelemetryMapEntryDefinition::get_block_name() const
+{
+    return get_string("block_name");
+}
+
+
+const std::string &TelemetryMapEntryDefinition::get_block_telemetry() const
+{
+    return get_string("block_telemetry");
+}
+
+
+bool CompositeAlgorithmDefinition::is_opaque() const
+{
+    if (!has_member("is_opaque"))
+    {
+        return false;
+    }
+
+    bool opaque = false;
+    get_member_value("is_opaque", opaque);
+    return opaque;
+}
+
+
+bool CompositeAlgorithmDefinition::has_implementation() const
+{
+    return has_member("implementation");
+}
+
+
+const CompositeImplementationDefinition &CompositeAlgorithmDefinition::get_implementation() const
+{
+    return (const CompositeImplementationDefinition &)get_member("implementation");
 }
 
 

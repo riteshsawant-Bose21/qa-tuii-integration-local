@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -10,11 +12,20 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
   final FusionDeviceService fusionDeviceService;
   FusionNetworkDeviceViewModel(this.fusionDeviceService) : super(FusionNetworkDeviceViewModelInitial());
 
+  bool get hasUnRegisteredDevices {
+    if (state is FusionNetworkDeviceViewModelLoaded) {
+      final List<FusionNetworkDevice> devices = (state as FusionNetworkDeviceViewModelLoaded).devices;
+      return devices.any((FusionNetworkDevice device) => !device.isDeviceCertificateValid);
+    }
+    return false;
+  }
+
   Future<void> getFusionNetworkDevice({required String vip}) async {
     emit(FusionNetworkDeviceViewModelLoading());
     try {
       final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip);
       if (response.success) {
+        log("FUSION DEVICES: ${response.data?.map((FusionNetworkDevice e) => e.toJson()).toList()}");
         emit(FusionNetworkDeviceViewModelLoaded(devices: response.data ?? <FusionNetworkDevice>[]));
       } else {
         emit(FusionNetworkDeviceViewModelError(message: response.message));
@@ -24,12 +35,7 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     }
   }
 
-  Future<bool> updateDeviceDetails({
-    required String currentDeviceId,
-    required String newDeviceId,
-    required String name,
-    required String location,
-  }) async {
+  Future<bool> updateDeviceDetails({required String currentDeviceId, required String newDeviceId, required String name, required String location}) async {
     final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? "";
     final ResponseCallback<bool> response = await fusionDeviceService.updateDeviceDetails(
       currentDeviceId: currentDeviceId,

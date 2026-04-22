@@ -7,12 +7,15 @@ import (
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/utils"
 	"fusion/internal/version"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -32,6 +35,7 @@ type Handler struct {
 
 	controllerManager controllers.ControllerManagerInterface
 	httpClient        *http.Client
+	sceneCatalog      *scene_catalog.Activator
 
 	// Software update sync tracking
 	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
@@ -55,6 +59,7 @@ func NewHandler(
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
 	controllerManager controllers.ControllerManagerInterface,
+	sceneCatalog *scene_catalog.Activator,
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
@@ -65,6 +70,7 @@ func NewHandler(
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
 		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		sceneCatalog:      sceneCatalog,
 		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
@@ -114,39 +120,91 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 		Updates map[string]any `json:"updates"`
 	}
 
-	existing := h.StateManager.GetStateMap()
+	configUpdate, snapshots, sceneSets, err := h.SplitFeaturePayload(update)
+	if err != nil {
+		return nil, err
+	}
 
-	if reflect.DeepEqual(existing, update) {
+	if err := h.persistFeatureDefinitions(snapshots, sceneSets); err != nil {
+		return nil, err
+	}
+
+	isSnapshotSceneDefProvided := len(snapshots) > 0 || len(sceneSets) > 0
+	isConfigKeysAbsent := len(configUpdate) == 0
+
+	if isConfigKeysAbsent {
+		// Snapshot keys only in the json
+		if isSnapshotSceneDefProvided {
+			return setResponse{
+				Status:  "success",
+				Updates: nil,
+			}, nil
+		}
+		// No keys at all in the json??
 		return setResponse{
 			Status:  "noop",
 			Updates: nil,
 		}, nil
 	}
 
-	if err := h.handleConfigUpdate(update, true); err != nil {
+	existing := h.StateManager.GetStateMap()
+
+	if reflect.DeepEqual(existing, configUpdate) {
+		if isSnapshotSceneDefProvided {
+			return setResponse{
+				Status:  "success",
+				Updates: nil,
+			}, nil
+		}
+		return setResponse{
+			Status:  "noop",
+			Updates: nil,
+		}, nil
+	}
+
+	if err := h.handleConfigUpdate(configUpdate, nil, true); err != nil {
 		return nil, err
 	}
 
 	return setResponse{
 		Status:  "success",
-		Updates: update,
+		Updates: configUpdate,
 	}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) {
+	configPatch, snapshots, sceneSets, err := h.SplitFeaturePayload(patch)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.persistFeatureDefinitions(snapshots, sceneSets); err != nil {
+		return nil, err
+	}
+
+	featureUpdated := len(snapshots) > 0 || len(sceneSets) > 0
+	if len(configPatch) == 0 {
+		if featureUpdated {
+			return map[string]any{}, nil
+		}
+		return nil, nil
+	}
 
 	// Get full state before PATCH
 	before := h.StateManager.GetStateMap()
 
 	// Apply internal patch
-	afterPtr, err := h.StateManager.Patch(patch)
+	afterPtr, err := h.StateManager.Patch(configPatch)
 	if err != nil {
 		return nil, err
 	}
 
 	// No changes
 	if afterPtr == nil {
+		if featureUpdated {
+			return map[string]any{}, nil
+		}
 		return nil, nil
 	}
 
@@ -154,16 +212,84 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 
 	diff := utils.CalculateDiff(before, after)
 
-	if err := h.handleConfigUpdate(after, false); err != nil {
+	if err := h.handleConfigUpdate(after, diff, false); err != nil {
 		return nil, err
 	}
 
 	return diff, nil
 }
 
+func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, sceneSets []api.SceneSet) error {
+	if len(snapshots) > 0 {
+		if err := h.persistence.UpsertSnapshotDefinitions(snapshots); err != nil {
+			return err
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSnapshotDefsUpsert,
+			h.appConfig.NodeName,
+			api.WithSnapshotDefinitions(snapshots),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast snapshot definitions upsert: %w", err)
+		}
+	}
+
+	if len(sceneSets) > 0 {
+		if err := h.persistence.UpsertSceneSets(sceneSets); err != nil {
+			return err
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpSceneSetsUpsert,
+			h.appConfig.NodeName,
+			api.WithSceneSets(sceneSets),
+		)
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			return fmt.Errorf("failed to broadcast scene sets upsert: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) SplitFeaturePayload(update map[string]any) (
+	config map[string]any,
+	snapshots []api.SnapshotDefinition,
+	sceneSets []api.SceneSet,
+	err error,
+) {
+	config = make(map[string]any, len(update))
+
+	for key, value := range update {
+		switch key {
+		case "snapshots":
+			raw, marshalErr := json.Marshal(value)
+			if marshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid snapshots payload: %w", marshalErr)
+			}
+			if unmarshalErr := json.Unmarshal(raw, &snapshots); unmarshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid snapshots payload: %w", unmarshalErr)
+			}
+		case "scene_sets":
+			raw, marshalErr := json.Marshal(value)
+			if marshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid scene_sets payload: %w", marshalErr)
+			}
+			if unmarshalErr := json.Unmarshal(raw, &sceneSets); unmarshalErr != nil {
+				return nil, nil, nil, fmt.Errorf("invalid scene_sets payload: %w", unmarshalErr)
+			}
+		default:
+			config[key] = value
+		}
+	}
+
+	return config, snapshots, sceneSets, nil
+}
+
 func (h *Handler) HandleClearAllData() error {
 
-	if err := h.handleConfigUpdate(map[string]any{}, true); err != nil {
+	if err := h.handleConfigUpdate(map[string]any{}, nil, true); err != nil {
 		return err
 	}
 
@@ -201,12 +327,13 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
-func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
+func (h *Handler) handleConfigUpdate(data map[string]any, observerData map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
+	configUpdate.ObserverData = observerData
 	configUpdate.Clear = clear
 
 	if _, err := h.StateManager.ApplyUpdate(*configUpdate); err != nil {

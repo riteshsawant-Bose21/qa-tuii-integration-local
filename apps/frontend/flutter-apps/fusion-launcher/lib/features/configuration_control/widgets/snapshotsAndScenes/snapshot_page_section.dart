@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_state.dart';
+import 'package:fusion_launcher/features/configuration_control/viewModel/snapshotViewModel/snapshot_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/snapshotsAndScenes/create_snapshot_page_form.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+class SnapshotPageSection extends StatelessWidget {
+  final SnapshotLoaded state;
+  const SnapshotPageSection({super.key, required this.state});
+
+  Future<void> _openCreateForm(BuildContext context, SnapshotLoaded state) async {
+    final List<SnapshotsModel> availableSnapshots = state.availableSnapshots;
+
+    final CreateSnapshotPageResult? result = await showCreateSnapshotPageDialog(
+      context: context,
+      availableSnapshots: availableSnapshots,
+    );
+    if (result == null || !context.mounted) return;
+    context.read<SnapshotViewModel>().createSnapshotPage(
+      name: result.name,
+      selectedSnapshotIds: result.selectedIds,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<SnapshotPageModel> pages = state.snapshotPages;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          PanelSectionHeader(
+            semanticId: FusionTestKeys.instance.snapshotSectionHeader,
+            title: 'SNAPSHOT PAGE',
+            trailing: GestureDetector(
+              onTap: () => _openCreateForm(context, state),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: FusionIcon.icon(
+                  Icons.add,
+                  size: 18,
+                  color: context.colorScheme.iconDefault,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child:
+                pages.isEmpty
+                    ? Center(
+                      child: FusionAppText(
+                        text: 'Tap + to add pages',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.textSecondary,
+                        ),
+                      ),
+                    )
+                    : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemCount: pages.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final SnapshotPageModel page = pages[index];
+                        return _SnapshotPageItem(
+                          page: page,
+                          onDelete: () => context.read<SnapshotViewModel>().deleteSnapshotPage(page.id),
+                        );
+                      },
+                    ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SnapshotPageItem extends StatelessWidget {
+  final SnapshotPageModel page;
+  final VoidCallback onDelete;
+
+  const _SnapshotPageItem({
+    required this.page,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(text: page.name, style: Theme.of(context).textTheme.l1Regular),
+          ),
+          FusionKebabPopup(
+            semanticId: 'snapshot_page_item',
+            onDelete: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}

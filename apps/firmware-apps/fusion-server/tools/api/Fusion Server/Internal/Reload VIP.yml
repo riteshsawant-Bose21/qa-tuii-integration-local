@@ -1,0 +1,17 @@
+info:
+  name: Reload VIP
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{admin_url}}/device/reload/vip"
+  body:
+    type: json
+    data: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

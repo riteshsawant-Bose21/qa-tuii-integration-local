@@ -1,19 +1,14 @@
 package cluster
 
 import (
-	"fmt"
 	"net/http"
-	"os"
-	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/network"
 	"fusion/internal/persistence"
 
 	"github.com/hashicorp/memberlist"
@@ -23,25 +18,22 @@ import (
 )
 
 const (
-	collectInterval   = 15 * time.Second
-	haproxySocketPath = "/var/run/haproxy.sock"
+	collectInterval = 15 * time.Second
 )
 
 // MetricsCollector handles system-wide metric collection
 type MetricsCollector struct {
-	memberlist        *memberlist.Memberlist
-	stateManager      persistence.StateManagerInterface
-	mutex             sync.RWMutex
-	metrics           SystemMetrics
-	wsConnCount       int
-	clusterInfo       ClusterInfo
-	haproxyMetrics    *network.HAProxyMetrics
-	cpuGauge          prometheus.Gauge
-	memGauge          prometheus.Gauge
-	goroutinesGauge   prometheus.Gauge
-	wsClientsGauge    prometheus.Gauge
-	haproxyConnsGauge prometheus.Gauge
-	httpReqCounter    prometheus.Counter
+	memberlist      *memberlist.Memberlist
+	stateManager    persistence.StateManagerInterface
+	mutex           sync.RWMutex
+	metrics         SystemMetrics
+	wsConnCount     int
+	clusterInfo     ClusterInfo
+	cpuGauge        prometheus.Gauge
+	memGauge        prometheus.Gauge
+	goroutinesGauge prometheus.Gauge
+	wsClientsGauge  prometheus.Gauge
+	httpReqCounter  prometheus.Counter
 }
 
 // SystemMetrics represents the complete system state
@@ -68,20 +60,6 @@ type SystemMetrics struct {
 	CPUUsage    float64 `json:"cpu_usage"`
 	MemoryUsage int64   `json:"memory_usage"`
 	Goroutines  int     `json:"goroutines"`
-
-	// HAProxy metrics
-	HAProxyStatus string `json:"haproxy_status"`
-	BackendNodes  int    `json:"backend_nodes"`
-	HAProxy       struct {
-		Status        string                   `json:"status"`
-		TotalRequests int64                    `json:"total_requests"`
-		CurrentConns  int                      `json:"current_conns"`
-		BytesIn       int64                    `json:"bytes_in"`
-		BytesOut      int64                    `json:"bytes_out"`
-		FrontendStats map[string]network.Stats `json:"frontend_stats"`
-		BackendStats  map[string]network.Stats `json:"backend_stats"`
-		ServerStats   map[string]network.Stats `json:"server_stats"`
-	} `json:"haproxy"`
 }
 
 // NodeHealth represents health metrics for a single node
@@ -95,9 +73,8 @@ type NodeHealth struct {
 
 func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *persistence.StateManager) *MetricsCollector {
 	mc := &MetricsCollector{
-		memberlist:     memberlist,
-		stateManager:   stateManager,
-		haproxyMetrics: network.NewHAProxyMetrics(haproxySocketPath, network.HAProxyConfigPath),
+		memberlist:   memberlist,
+		stateManager: stateManager,
 
 		cpuGauge: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "fusion_process_cpu_percent",
@@ -115,11 +92,6 @@ func NewMetricsCollector(memberlist *memberlist.Memberlist, stateManager *persis
 		wsClientsGauge: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "fusion_websocket_clients",
 			Help: "Current number of WebSocket clients connected",
-		}),
-		// HAProxy metrics (as gauges)
-		haproxyConnsGauge: promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "fusion_haproxy_current_connections",
-			Help: "Current HAProxy connections",
 		}),
 		// HTTP request rate as a counter
 		httpReqCounter: promauto.NewCounter(prometheus.CounterOpts{
@@ -151,59 +123,23 @@ func (mc *MetricsCollector) collect() {
 		gs := runtime.NumGoroutine()
 		ws := mc.wsConnCount
 
-		// Populate JSON-backed metrics struct
-		state := mc.stateManager.GetFullState().State
-		stateSummary := make(map[string]string, len(state))
-		valueTypes := make(map[string]int)
-		for k, v := range state {
-			if v != nil {
-				t := fmt.Sprintf("%T", v.Data)
-				stateSummary[k] = t
-				valueTypes[t]++
-			} else {
-				stateSummary[k] = "nil"
-				valueTypes["nil"]++
-			}
-		}
-
-		haproxyStats := mc.haproxyMetrics.GetStats()
+		// Build a lightweight top-level summary without deep-copying the full config tree.
+		stateSummary := mc.stateManager.GetStateSummary()
 
 		mc.mutex.Lock()
 		mc.metrics = SystemMetrics{
 			Timestamp:        time.Now(),
 			Cluster:          mc.clusterInfo,
 			NodeHealth:       mc.metrics.NodeHealth,
-			ConfigKeys:       len(state),
+			ConfigKeys:       stateSummary.ConfigKeys,
 			ConfigVersion:    time.Now().UnixNano(),
 			LastUpdateTime:   time.Now(),
-			ConfigState:      stateSummary,
-			ValueTypes:       valueTypes,
+			ConfigState:      stateSummary.ConfigState,
+			ValueTypes:       stateSummary.ValueTypes,
 			WebSocketClients: ws,
 			CPUUsage:         cpu,
 			MemoryUsage:      int64(mem.Alloc),
 			Goroutines:       gs,
-			HAProxyStatus:    mc.checkHAProxy(),
-			BackendNodes:     len(mc.memberlist.Members()),
-
-			HAProxy: struct {
-				Status        string                   `json:"status"`
-				TotalRequests int64                    `json:"total_requests"`
-				CurrentConns  int                      `json:"current_conns"`
-				BytesIn       int64                    `json:"bytes_in"`
-				BytesOut      int64                    `json:"bytes_out"`
-				FrontendStats map[string]network.Stats `json:"frontend_stats"`
-				BackendStats  map[string]network.Stats `json:"backend_stats"`
-				ServerStats   map[string]network.Stats `json:"server_stats"`
-			}{
-				Status:        haproxyStats.Status,
-				TotalRequests: haproxyStats.TotalRequests,
-				CurrentConns:  haproxyStats.CurrentConns,
-				BytesIn:       haproxyStats.BytesIn,
-				BytesOut:      haproxyStats.BytesOut,
-				FrontendStats: haproxyStats.FrontendStats,
-				BackendStats:  haproxyStats.BackendStats,
-				ServerStats:   haproxyStats.ServerStats,
-			},
 		}
 		mc.mutex.Unlock()
 
@@ -212,7 +148,6 @@ func (mc *MetricsCollector) collect() {
 		mc.cpuGauge.Set(cpu)
 		mc.goroutinesGauge.Set(float64(gs))
 		mc.wsClientsGauge.Set(float64(ws))
-		mc.haproxyConnsGauge.Set(float64(haproxyStats.CurrentConns))
 
 	}
 }
@@ -286,7 +221,7 @@ func (mc *MetricsCollector) monitorCluster() {
 				Name:    member.Name,
 				Address: member.Addr.String(),
 				Port:    member.Port,
-				State:   getStateString(member.State),
+				State:   GetStateString(member.State),
 			}
 
 			switch member.State {
@@ -314,7 +249,7 @@ func (mc *MetricsCollector) monitorCluster() {
 		}
 
 		mc.metrics.NodeHealth = NodeHealth{
-			Status:           getStateString(memberlist.StateAlive),
+			Status:           GetStateString(memberlist.StateAlive),
 			LastHeartbeat:    time.Now(),
 			UptimeSeconds:    int64(time.Since(startTime).Seconds()),
 			StartTime:        startTime,
@@ -329,29 +264,9 @@ func (mc *MetricsCollector) calculateAvgPingLatency() float64 {
 	return 0.0 // Implementation needed
 }
 
-func (mc *MetricsCollector) checkHAProxy() string {
-	cmd := exec.Command("systemctl", "status", "haproxy")
-	if err := cmd.Run(); err != nil {
-		return "stopped"
-	}
-	return "running"
-}
-
 func (mc *MetricsCollector) getCPUUsage() float64 {
-	cmd := exec.Command("ps", "-p", fmt.Sprintf("%d", mc.getPID()), "-o", "%cpu")
-	output, err := cmd.Output()
-	if err != nil {
-		return 0
-	}
-	lines := strings.Split(string(output), "\n")
-	if len(lines) < 2 {
-		return 0
-	}
-	var cpu float64
-	fmt.Sscanf(strings.TrimSpace(lines[1]), "%f", &cpu)
-	return cpu
-}
-
-func (mc *MetricsCollector) getPID() int {
-	return os.Getpid()
+	// TODO: Remove process CPU reporting from fusion-server metrics or replace it with
+	// a native in-process implementation if it is still needed. Shelling out from the
+	// daemon to sample CPU is the wrong layer for system monitoring.
+	return 0
 }

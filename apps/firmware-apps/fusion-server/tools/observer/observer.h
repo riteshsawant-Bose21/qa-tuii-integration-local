@@ -381,6 +381,46 @@ shouldAcceptUpdate(long long incomingEpoch, long long incomingVersion,
   return false;
 }
 
+inline std::string summarizeTopLevelKeys(const Json::Value &value)
+{
+  if (!value.isObject())
+    return "";
+
+  std::ostringstream oss;
+  bool first = true;
+  for (const auto &key : value.getMemberNames())
+  {
+    if (!first)
+      oss << ", ";
+    oss << key;
+    first = false;
+  }
+  return oss.str();
+}
+
+inline std::string summarizeUpdateMetadata(const Json::Value &update)
+{
+  std::ostringstream oss;
+  oss << "keys=[" << summarizeTopLevelKeys(update) << "]";
+  if (update.isMember("_fusion_op"))
+  {
+    oss << " op=" << update["_fusion_op"].asString();
+  }
+  if (update.isMember("_fusion_epoch"))
+  {
+    oss << " epoch=" << update["_fusion_epoch"].asInt64();
+  }
+  if (update.isMember("_fusion_version"))
+  {
+    oss << " version=" << update["_fusion_version"].asInt64();
+  }
+  if (update.isMember("_fusion_msg_id"))
+  {
+    oss << " msg_id=" << update["_fusion_msg_id"].asString();
+  }
+  return oss.str();
+}
+
 // -----------------------------------------------------------------------------
 // Class: JsonMonitor
 // -----------------------------------------------------------------------------
@@ -795,14 +835,34 @@ public:
   /// Type definition for device ID change notification callbacks.
   using DeviceIDChangeCallback = std::function<void(const std::string &)>;
 
-  UDPValueMonitor(const std::string &serverIP, int port)
-      : jsonMonitor_(Json::objectValue)
+  static constexpr int kDefaultKeepaliveIntervalSeconds = 5;
+  static constexpr int kDefaultServerPruneThresholdSeconds = 15;
+
+  struct TimingConfig
   {
-    
+    TimingConfig(
+        int keepaliveIntervalSeconds = kDefaultKeepaliveIntervalSeconds,
+        int serverPruneThresholdSeconds = kDefaultServerPruneThresholdSeconds)
+        : keepaliveIntervalSeconds(keepaliveIntervalSeconds),
+          serverPruneThresholdSeconds(serverPruneThresholdSeconds) {}
+
+    int keepaliveIntervalSeconds;
+    int serverPruneThresholdSeconds;
+  };
+
+  UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true,
+                  TimingConfig timingConfig = {})
+      : jsonMonitor_(Json::objectValue), timingConfig_(timingConfig)
+  {
     // Enable trace logging for debugging (dont push this to git).
     // spdlog::set_level(spdlog::level::trace);
 
     SPDLOG_TRACE("Initializing UDPValueMonitor to {}:{}", serverIP, port);
+
+    if (timingConfig_.keepaliveIntervalSeconds <= 0)
+      throw std::runtime_error("keepaliveIntervalSeconds must be > 0");
+    if (timingConfig_.serverPruneThresholdSeconds <= 0)
+      throw std::runtime_error("serverPruneThresholdSeconds must be > 0");
 
     const int sockfd = udpSocket_.get();
 
@@ -819,7 +879,7 @@ public:
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_addr.s_addr = INADDR_ANY;
     clientAddr.sin_port = htons(0);
-    if (bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
+    if (::bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
              sizeof(clientAddr)) < 0)
       throw std::runtime_error("Failed to bind socket: " +
                                std::string(strerror(errno)));
@@ -836,8 +896,24 @@ public:
       throw std::runtime_error(std::string("fcntl(F_SETFL) failed: ") +
                                strerror(errno));
     }
-    requestInitialDeviceInfo(serverAddr_);
+
+    if (autostart)
+    {
+      start();
+    }
+  }
+
+  void start()
+  {
+    std::lock_guard<std::mutex> lk(start_mutex_);
+    if (started_)
+    {
+      return;
+    }
+
+    beginInitialHandshake();
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
+    started_ = true;
   }
 
   std::vector<PathComponent> splitPath(const std::string &path) const
@@ -854,7 +930,10 @@ public:
    */
   void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(path);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(path);
+    }
     jsonMonitor_.watch(path, callback);
   }
 
@@ -868,7 +947,10 @@ public:
    */
   void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(pattern);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(pattern);
+    }
     jsonMonitor_.watchPattern(pattern, callback);
   }
 
@@ -960,6 +1042,12 @@ private:
     // receivedInitialState_ = false; // ask nate, he put the condition here instead of above
   }
 
+  void beginInitialHandshake()
+  {
+    receivedInitialState_ = false;
+    requestInitialDeviceInfo(serverAddr_);
+  }
+
   Json::Value getValueAtPath(const Json::Value &root,
                              const std::vector<PathComponent> &pathParts)
   {
@@ -1016,51 +1104,40 @@ private:
 
   void handleUpdateMessage(const Json::Value &update, bool useVersion = true)
   {
-    SPDLOG_TRACE("Received update: {}", update.toStyledString());
-
-    static long long lastEpoch = -1;
-    static long long lastCounter = -1;
+    SPDLOG_TRACE("Received update {}", summarizeUpdateMetadata(update));
 
     if (useVersion)
     {
       if (!update.isMember("_fusion_epoch"))
       {
-        SPDLOG_WARN("Ignoring update without epoch. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without epoch {}", summarizeUpdateMetadata(update));
         return;
       }
 
       if (!update.isMember("_fusion_version"))
       {
-        SPDLOG_WARN("Ignoring update without version. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without version {}", summarizeUpdateMetadata(update));
         return;
       }
 
       long long incomingEpoch = update["_fusion_epoch"].asInt64();
       long long incomingVersion = update["_fusion_version"].asInt64();
 
-      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch,
-                              lastCounter))
+      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch_,
+                              lastCounter_))
       {
-        SPDLOG_WARN("Rejecting out of order update {}", update.toStyledString());
+        SPDLOG_WARN("Rejecting out of order update {}", summarizeUpdateMetadata(update));
         return;
       }
     }
 
-    for (const auto &path : targetPaths_)
+    std::vector<std::string> targetPaths;
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths = targetPaths_;
+    }
+
+    for (const auto &path : targetPaths)
     {
       if (path.find('*') != std::string::npos)
       {
@@ -1085,6 +1162,26 @@ private:
     }
   }
 
+  void sendKeepalive(const sockaddr_in &serverAddr)
+  {
+    Json::Value message;
+    message["action"] = "no_op";
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    std::string jsonStr = Json::writeString(writerBuilder, message);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(), 0,
+                          reinterpret_cast<const sockaddr *>(&serverAddr),
+                          sizeof(serverAddr));
+    if (sent < 0)
+    {
+      SPDLOG_WARN("Failed to send keepalive: {}", std::string(strerror(errno)));
+    }
+    else
+    {
+      SPDLOG_TRACE("Sent keepalive to server");
+    }
+  }
+
   void receiveLoop()
   {
     pollfd pfd;
@@ -1094,6 +1191,10 @@ private:
     char buffer[BUFFER_SIZE];
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
+
+    // Send a keepalive every KEEPALIVE_INTERVAL_S seconds to prevent the
+    // server from pruning this client (clientStaleTTL = 10s).
+    int keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
 
     while (running_)
     {
@@ -1110,6 +1211,17 @@ private:
         if (!receivedInitialState_)
         {
           requestInitialDeviceInfo(serverAddr_);
+        }
+        else
+        {
+          // Keep our UDP client registration alive so the server continues
+          // broadcasting to us. Without this, the server prunes idle clients
+          // after 10 seconds and silently stops sending config_update packets.
+          if (--keepaliveCountdown <= 0)
+          {
+            sendKeepalive(serverAddr_);
+            keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
+          }
         }
         continue;
       }
@@ -1191,6 +1303,29 @@ private:
               handleDeviceUpdate(response);
               continue;
             }
+            else if (op == "no_op") // keepalive ACK from server
+            {
+              auto now = std::chrono::steady_clock::now();
+              // If we haven't heard a noop ACK in more than the configured
+              // prune threshold,
+              // seconds, the server was unavailable and has just come back. Re-do the
+              // full handshake so we reset stale Lamport counters.
+              if (receivedInitialState_ && lastNoopAckTime_.time_since_epoch().count() > 0)
+              {
+                auto gapS = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - lastNoopAckTime_).count();
+                if (gapS > timingConfig_.serverPruneThresholdSeconds)
+                {
+                  SPDLOG_WARN("Server was unreachable for {}s — re-requesting state", gapS);
+                  lastEpoch_ = -1;
+                  lastCounter_ = -1;
+                  beginInitialHandshake();
+                  continue;
+                }
+              }
+              lastNoopAckTime_ = now;
+              continue;
+            }
             else
             {
               SPDLOG_WARN("Unknown operation in message: {}", op);
@@ -1198,8 +1333,8 @@ private:
           }
           else
           {
-            SPDLOG_DEBUG("Processing update message (no _fusion_op). Raw JSON: {}",
-                        response.toStyledString());
+            SPDLOG_DEBUG("Processing update message without _fusion_op {}",
+                         summarizeUpdateMetadata(response));
             handleUpdateMessage(response);
           }
         }
@@ -1266,11 +1401,26 @@ private:
   UDPSocket udpSocket_{AF_INET, SOCK_DGRAM, 0};
   std::atomic<bool> running_{true};
   std::thread receiveThread_;
+  bool started_{false};
+  std::mutex start_mutex_;
   std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
+  mutable std::mutex targetPaths_mutex_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
   bool receivedInitialState_{false};
+
+  long long lastEpoch_{-1};
+  long long lastCounter_{-1};
+  TimingConfig timingConfig_{};
+
+  // Timestamp of the last noop ACK received from the server. Used to detect
+  // server prunes: a gap > SERVER_PRUNE_THRESHOLD_S means the server was
+  // unavailable. The handshake is maintained by sending noop keepalives 
+  // every KEEPALIVE_INTERVAL_S seconds, so a gap > SERVER_PRUNE_THRESHOLD_S 
+  // indicates the server was down and has just come back up.
+  
+  std::chrono::steady_clock::time_point lastNoopAckTime_{};
 
   // Device ID change callbacks
   std::vector<DeviceIDChangeCallback> deviceIDCallbacks_;
