@@ -170,7 +170,10 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
             Navigator(
               onGenerateRoute: (RouteSettings settings) {
                 return CupertinoPageRoute(
-                  builder: (BuildContext _) => VirtualControllerVolumeControl(isDesignMode: widget.isDesignMode,),
+                  builder: (BuildContext _) => VirtualControllerVolumeControl(
+                    isArc: true,
+                    isDesignMode: widget.isDesignMode
+                  ),
                   settings: const RouteSettings(name: 'volume_controller'),
                 );
               },

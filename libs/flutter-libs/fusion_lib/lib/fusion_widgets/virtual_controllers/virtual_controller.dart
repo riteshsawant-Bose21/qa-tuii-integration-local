@@ -160,6 +160,12 @@ class _VirtualControllerState extends State<VirtualController> {
 
 
   Future<WallSubZone> getItem(int zoneIndex,int subzoneIndex,WallSubZone src) async{
+
+    if(widget.isDesignMode){
+    src = src.copyWith(ono: src.ono.copyWith(gain: 0,mute: 0));
+    return src;
+    }
+
     String gainId = src.gain.gainID;
     if (!_cache.containsKey(gainId)) {
 

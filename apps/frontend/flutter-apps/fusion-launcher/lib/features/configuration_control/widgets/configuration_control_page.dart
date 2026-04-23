@@ -46,7 +46,7 @@ class ConfigurationControlPage extends StatelessWidget {
           create: (_) => SettingsViewModel(),
         ),
         BlocProvider<VirtualControllerViewModel>(
-          create: (_) => serviceLocator<VirtualControllerViewModel>(),
+          create: (_) => VirtualControllerViewModel(service: serviceLocator<FusionVirtualControllerService>()),
         ),
       ],
       child: const _ConfigurationControlBody(),
