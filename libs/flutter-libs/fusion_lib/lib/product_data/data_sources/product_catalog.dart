@@ -12,6 +12,7 @@ class ProductCatalog {
   final List<DspProduct> dsps;
   final List<AccessoryProduct> accessories;
   final List<IoEndpointProduct> ioEndpoints;
+  final List<SourceProduct> sources;
 
   const ProductCatalog({
     required this.version,
@@ -21,6 +22,7 @@ class ProductCatalog {
     this.dsps = const [],
     this.accessories = const [],
     this.ioEndpoints = const [],
+    this.sources = const [],
   });
 
   /// Creates an empty catalog with default version
@@ -36,6 +38,7 @@ class ProductCatalog {
       dsps: (json['dsp'] as List<dynamic>?)?.map((e) => DspProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       ioEndpoints: (json['io_endpoint'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       accessories: (json['additional_accessories'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      sources: (json['sources'] as List<dynamic>?)?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
 
@@ -47,13 +50,14 @@ class ProductCatalog {
     'dsp': dsps.map((e) => e.toJson()).toList(),
     'io_endpoint': ioEndpoints.map((e) => e.toJson()).toList(),
     'additional_accessories': accessories.map((e) => e.toJson()).toList(),
+    'sources': sources.map((e) => e.toJson()).toList(),
   };
 
   /// Check if catalog has any products
-  bool get isEmpty => speakers.isEmpty && amplifiers.isEmpty && controllers.isEmpty && dsps.isEmpty && accessories.isEmpty && ioEndpoints.isEmpty;
+  bool get isEmpty => speakers.isEmpty && amplifiers.isEmpty && controllers.isEmpty && dsps.isEmpty && accessories.isEmpty && ioEndpoints.isEmpty && sources.isEmpty;
 
   /// Get total product count
-  int get totalCount => speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length;
+  int get totalCount => speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length + sources.length;
 
   @override
   String toString() => 'ProductCatalog(version: $version, totalCount: $totalCount)';

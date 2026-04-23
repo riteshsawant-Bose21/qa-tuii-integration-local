@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../fusion_theme/app_theme.dart';
@@ -134,8 +133,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
       height - widget.thumbSize / 2,
     );
 
-    final double normalized =
-        1 - ((clampedDy - widget.thumbSize / 2) / trackRange);
+    final double normalized = 1 - ((clampedDy - widget.thumbSize / 2) / trackRange);
 
     final num newValue = _fromNormalized(normalized);
 
@@ -154,7 +152,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
         'fusion_vertical_slider${widget.semanticId ?? ''}',
       ),
       label: 'max:${widget.max}/min:${widget.min}',
-      value: widget.value,
+      value: widget.value.toDouble(),
       minValue: widget.min,
       maxValue: widget.max,
       child: LayoutBuilder(
@@ -166,17 +164,14 @@ class _VerticalSliderState extends State<VerticalSlider> {
           // So it touches line ends perfectly
           final double halfThumb = widget.thumbSize / 2;
           final double trackHeight = height - widget.thumbSize;
-          final double thumbCenter =
-              halfThumb + (normalizedValue * trackHeight);
+          final double thumbCenter = halfThumb + (normalizedValue * trackHeight);
           final double thumbBottom = thumbCenter - halfThumb;
 
           // Track sections based on thumb center
           final double activeHeight = thumbCenter - (widget.thumbSize / 2);
           final double inactiveHeight = height - thumbCenter;
 
-          final List<num> intervals = widget.showIntervals
-              ? _generateIntervals(height)
-              : <num>[];
+          final List<num> intervals = widget.showIntervals ? _generateIntervals(height) : <num>[];
 
           return Center(
             child: IntrinsicWidth(
@@ -203,13 +198,11 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                 children: <Widget>[
                                   FusionAppText(
                                     text: v.round().toString(),
-                                    style: context.textTheme.labelSmall
-                                        ?.copyWith(
-                                          color:
-                                              context.colorScheme.textPrimary,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 8,
-                                        ),
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 8,
+                                    ),
                                   ),
                                   Container(
                                     height: 2,
@@ -233,12 +226,9 @@ class _VerticalSliderState extends State<VerticalSlider> {
                     height: height,
                     child: GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onTapDown: (TapDownDetails d) =>
-                          _jumpToPosition(d.localPosition.dy, height),
-                      onVerticalDragStart: (DragStartDetails d) =>
-                          _jumpToPosition(d.localPosition.dy, height),
-                      onVerticalDragUpdate: (DragUpdateDetails d) =>
-                          _jumpToPosition(d.localPosition.dy, height),
+                      onTapDown: (TapDownDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                      onVerticalDragStart: (DragStartDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                      onVerticalDragUpdate: (DragUpdateDetails d) => _jumpToPosition(d.localPosition.dy, height),
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: <Widget>[
@@ -251,17 +241,13 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
                                     // Inactive (top)
-                                    SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'slider_inactive'),
-                                      child: Container(
-                                        width: widget.trackWidth,
-                                        height: inactiveHeight,
-                                        decoration: BoxDecoration(
-                                          color: context.colorScheme.elevation5,
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                top: Radius.circular(100),
-                                              ),
+                                    Container(
+                                      width: widget.trackWidth,
+                                      height: inactiveHeight,
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.elevation5,
+                                        borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(100),
                                         ),
                                       ),
                                     ),
@@ -272,13 +258,10 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                         width: widget.trackWidth,
                                         height: activeHeight,
                                         decoration: BoxDecoration(
-                                          color:
-                                              widget.activeColor ??
-                                              context.colorScheme.primaryColor,
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                bottom: Radius.circular(100),
-                                              ),
+                                          color: widget.activeColor ?? context.colorScheme.primaryColor,
+                                          borderRadius: const BorderRadius.vertical(
+                                            bottom: Radius.circular(100),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -297,8 +280,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                               child: Thumb(
                                 size: widget.thumbSize,
                                 onStart: _onPanStart,
-                                onUpdate: (DragUpdateDetails details) =>
-                                    _onPanUpdate(details, height),
+                                onUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
                                 onEnd: _onPanEnd,
                               ),
                             ),
@@ -319,6 +301,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
 
 class Thumb extends StatelessWidget {
   const Thumb({
+    super.key,
     required this.size,
     required this.onStart,
     required this.onUpdate,

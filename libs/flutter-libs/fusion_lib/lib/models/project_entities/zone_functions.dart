@@ -90,6 +90,7 @@ class ZoneFunctions {
   final List<MixScene> mixScenes;
   final String? selectedMixSceneId;
   final String? selectedSourceId;
+  final Map<String, int>? sourceIndex;
 
   ZoneFunctions({
     String? id,
@@ -101,6 +102,7 @@ class ZoneFunctions {
     this.selectedMixSceneId,
     this.mixScenes = const [],
     this.selectedSourceId,
+    this.sourceIndex,
   }) : id = id ?? "FUNC${FusionUtils.shortStringUUID()}";
 
   ZoneFunctions copyWith({
@@ -113,6 +115,7 @@ class ZoneFunctions {
     List<MixScene>? mixScenes,
     String? selectedMixSceneId,
     String? selectedSourceId,
+    Map<String, int>? sourceIndex,
   }) {
     return ZoneFunctions(
       id: id ?? this.id,
@@ -124,6 +127,7 @@ class ZoneFunctions {
       mixScenes: mixScenes ?? this.mixScenes,
       selectedMixSceneId: selectedMixSceneId ?? this.selectedMixSceneId,
       selectedSourceId: selectedSourceId ?? this.selectedSourceId,
+      sourceIndex: sourceIndex ?? this.sourceIndex,
     );
   }
 
@@ -139,6 +143,7 @@ class ZoneFunctions {
       'mixScenes': mixScenes.map((e) => e.toJson()).toList(),
       'selectedMixSceneId': selectedMixSceneId,
       'selectedSourceId': selectedSourceId,
+      'sourceIndex': sourceIndex,
     };
   }
 
@@ -166,6 +171,7 @@ class ZoneFunctions {
       }).toList(),
       selectedMixSceneId: json['selectedMixSceneId'],
       selectedSourceId: json['selectedSourceId'],
+      sourceIndex: json['sourceIndex'] != null ? Map<String, int>.from(json['sourceIndex']) : null,
     );
   }
 

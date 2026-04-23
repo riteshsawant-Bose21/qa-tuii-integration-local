@@ -31,7 +31,7 @@ class AddressInformationScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
           backgroundColor: context.colorScheme.primaryBlack,
-          appBar: CommonAppBar(title: 'Personal Information'),
+          appBar: CommonMobileAppBar(title: 'Personal Information'),
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

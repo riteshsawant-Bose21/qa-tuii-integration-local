@@ -38,14 +38,14 @@ class _StatusIndicatorState extends State<StatusIndicator> {
   void initState() {
     super.initState();
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
-    _meterDataViewModel.registerObserver();
+    _meterDataViewModel.registerObserver(this);
     _staleCheckTimer = Timer.periodic(_checkInterval, (_) => _evaluateActive());
   }
 
   @override
   void dispose() {
     _staleCheckTimer?.cancel();
-    _meterDataViewModel.unregisterObserver();
+    _meterDataViewModel.unregisterObserver(this);
     super.dispose();
   }
 

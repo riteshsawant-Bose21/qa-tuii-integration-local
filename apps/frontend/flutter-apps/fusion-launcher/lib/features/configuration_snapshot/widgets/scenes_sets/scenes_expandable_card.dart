@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
@@ -60,6 +63,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   late ValueNotifier<bool> _isScenesExpanded;
   ConfigSnapshotsViewmodel get _configSnapshotsViewmodel => context.read<ConfigSnapshotsViewmodel>();
   ConfigSceneSetsViewmodel get _configSceneSetsViewmodel => context.read<ConfigSceneSetsViewmodel>();
+  bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
   final TextEditingController _snapshotsNameController = TextEditingController();
 
   bool _isHovered = false;
@@ -312,9 +316,33 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                       onDragStarted: widget.onDragStarted,
                                       onDragEnd: widget.onDragEnd,
                                       draggingSnapshotId: widget.draggingSnapshotId,
+                                      isInControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       onRenameSave: (String value, SnapshotsModel newSnapshot) {
                                         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
                                         _configSceneSetsViewmodel.syncWithProjectViewModel();
+                                      },
+                                      onSnapshotRecall: (String sceneId) async {
+                                        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+                                        if (vip != null) {
+                                          try {
+                                            final ResponseCallback<bool> result = await _configSceneSetsViewmodel.recallSceneSetSnapshot(
+                                              vip: vip,
+                                              sceneSetId: widget.sceneSetData.id,
+                                              snapshotId: sceneId,
+                                            );
+                                            if (context.mounted) {
+                                              if (result.success) {
+                                                FusionToast.success(context, message: "Snapshot recalled successfully");
+                                              } else {
+                                                FusionToast.error(context, message: result.message.isNotEmpty ? result.message : "Failed to recall snapshot");
+                                              }
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              FusionToast.error(context, message: "Failed to recall snapshot");
+                                            }
+                                          }
+                                        }
                                       },
                                     );
                                   },

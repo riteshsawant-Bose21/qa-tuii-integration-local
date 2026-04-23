@@ -63,7 +63,7 @@ class _DeviceSearchingScreenState extends State<DeviceSearchingScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Configure Network'),
+        appBar: CommonMobileAppBar(title: 'Configure Network'),
         body: isSearching ? SearchingScreen() :
         CommonEmptyState(
             icon: Icons.search_off,
