@@ -41,22 +41,28 @@ class WallControllerConfig {
 class WallController {
   final String id;
   final String name;
+
+  /// Controller type: 'pro' or 'lt'.
+  final String type;
   final List<String> zoneIds;
 
   const WallController({
     required this.id,
     required this.name,
+    required this.type,
     this.zoneIds = const [],
   });
 
   WallController copyWith({
     String? id,
     String? name,
+    String? type,
     List<String>? zoneIds,
   }) {
     return WallController(
       id: id ?? this.id,
       name: name ?? this.name,
+      type: type ?? this.type,
       zoneIds: zoneIds ?? this.zoneIds,
     );
   }
@@ -64,12 +70,14 @@ class WallController {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
+    'type': type,
     'zoneIds': zoneIds,
   };
 
   factory WallController.fromJson(Map<String, dynamic> json) => WallController(
     id: json['id'] as String,
     name: json['name'] as String,
+    type: json['type'] as String,
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
   );
 }

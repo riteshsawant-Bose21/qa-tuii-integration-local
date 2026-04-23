@@ -318,7 +318,7 @@ class FusionNetworkClient {
   }
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
-    if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    // if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
 
     try {
       // Close any existing socket to prevent leaks on reconnect.

@@ -271,6 +271,7 @@ extension ControllerService on ProjectService {
           (FusionController c) => WallController(
             id: c.id,
             name: c.name,
+            type: (c.sku.toLowerCase().contains('pro') || c.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
             zoneIds: getAssignedZoneIds(c.id).toList(),
           ),
         )
