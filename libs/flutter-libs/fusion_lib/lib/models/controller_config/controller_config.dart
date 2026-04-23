@@ -316,10 +316,10 @@ class WallGainConfig {
 
   const WallGainConfig({
     required this.gainID,
-    this.defaultGainValue = '50',
-    this.defaultMuteValue = '50',
-    this.minValue = '0',
-    this.maxValue = '100',
+    this.defaultGainValue = '0',
+    this.defaultMuteValue = '0',
+    this.minValue = '-60',
+    this.maxValue = '12',
   });
 
   WallGainConfig copyWith({
