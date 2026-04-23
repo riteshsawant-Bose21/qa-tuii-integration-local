@@ -26,7 +26,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver(this);
+    serviceLocator<MeterDataViewModel>().registerObserver(this, blockIds : <String>{'system_info'});
   }
 
   @override

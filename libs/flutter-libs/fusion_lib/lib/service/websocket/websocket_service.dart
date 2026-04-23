@@ -17,9 +17,12 @@ class WebSocketService {
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+  bool _intentionalDisconnect = false;
 
   void connect(String url) {
     if (_isConnected) return;
+
+    _intentionalDisconnect = false;
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
@@ -31,10 +34,14 @@ class WebSocketService {
         },
         onDone: () {
           _isConnected = false;
+          if (!_intentionalDisconnect) {
+            _controller.addError(Exception('WebSocket connection closed'));
+          }
           debugPrint("Disconnected from server.");
         },
         onError: (error) {
           _isConnected = false;
+          _controller.addError(error);
           debugPrint("WS Error: $error");
         },
       );
@@ -53,6 +60,7 @@ class WebSocketService {
   }
 
   void disconnect() {
+    _intentionalDisconnect = true;
     _channel?.sink.close(status.normalClosure);
     _isConnected = false;
   }

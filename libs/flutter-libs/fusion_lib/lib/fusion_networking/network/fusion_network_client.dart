@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -32,6 +33,24 @@ class FusionNetworkClient {
 
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
+
+  // ── WebSocket ping/pong heartbeat ─────────────────────────────────────────
+  //
+  // Managed here so every consumer gets liveness events from a single source.
+  // Consumers listen to [wsAliveStream]; they do not implement ping/pong themselves.
+
+  /// Broadcasts `false` when a pong timeout occurs (connection is dead).
+  /// Consumers should trigger a reconnect on `false`.
+  final StreamController<bool> _wsAliveController = StreamController<bool>.broadcast();
+  Stream<bool> get wsAliveStream => _wsAliveController.stream;
+
+  Timer? _wsPingTimer;
+  Timer? _wsPongTimeoutTimer;
+  StreamSubscription<dynamic>? _wsPongListenerSubscription;
+  bool _wsWaitingForPong = false;
+
+  static const Duration _kWsPingInterval = Duration(seconds: 8);
+  static const Duration _kWsPongTimeout = Duration(seconds: 5);
 
   String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
     if (baseUrlToOverride != null) {
@@ -381,6 +400,80 @@ class FusionNetworkClient {
     }
   }
 
+  // ── WebSocket heartbeat management ────────────────────────────────────────
+
+  /// Starts periodic ping/pong. Call once after [connectWebSocket] succeeds.
+  /// Safe to call multiple times — any running heartbeat is replaced.
+  void startWsHeartbeat() {
+    stopWsHeartbeat();
+    _wsPongListenerSubscription = webSocketService.stream.listen(
+      (dynamic message) {
+        try {
+          final dynamic decoded = jsonDecode(message.toString());
+          if (decoded is Map<String, dynamic> && decoded['type'] == 'pong') {
+            _handleWsPong();
+          }
+        } catch (_) {}
+      },
+      onError: (_) {},
+    );
+    _wsPingTimer = Timer.periodic(_kWsPingInterval, (_) => _sendWsPing());
+  }
+
+  /// Stops the heartbeat and clears all pending timers.
+  void stopWsHeartbeat() {
+    _wsPingTimer?.cancel();
+    _wsPingTimer = null;
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = null;
+    _wsWaitingForPong = false;
+    _wsPongListenerSubscription?.cancel();
+    _wsPongListenerSubscription = null;
+  }
+
+  /// Sends a ping and starts the pong-timeout timer.
+  void _sendWsPing() {
+    if (!webSocketService.isConnected) {
+      FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Ping skipped — not connected.');
+      _wsAliveController.add(false);
+      return;
+    }
+
+    if (_wsWaitingForPong) {
+      // Previous ping never got a pong — connection is dead.
+      FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong timeout — connection dead.');
+      stopWsHeartbeat();
+      _wsAliveController.add(false);
+      return;
+    }
+
+    final String pingId = 'ping-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    webSocketService.sendMessage(jsonEncode(<String, dynamic>{
+      'id': pingId,
+      'version': 1,
+      'type': 'ping',
+    }));
+    _wsWaitingForPong = true;
+    // FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Ping sent ($pingId).');
+
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = Timer(_kWsPongTimeout, () {
+      if (_wsWaitingForPong) {
+        FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong timeout expired.');
+        _wsWaitingForPong = false;
+        _wsAliveController.add(false);
+      }
+    });
+  }
+
+  /// Called internally when a pong frame arrives on the WebSocket stream.
+  void _handleWsPong() {
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = null;
+    _wsWaitingForPong = false;
+    // FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong received — connection alive.');
+  }
+
   /// Connects to a WebSocket URL using the injected WebSocketService
   Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
     try {
@@ -417,6 +510,7 @@ class FusionNetworkClient {
   /// Disconnects the active WebSocket connection
   Future<ResponseCallback<T>> disconnectWebSocket<T>() async {
     try {
+      stopWsHeartbeat();
       webSocketService.disconnect();
       FusionLogger.log(tag: LogTag.network, message: "WebSocket Disconnected!!!");
 
@@ -427,26 +521,32 @@ class FusionNetworkClient {
     }
   }
 
-  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback
+  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback.
   Stream<ResponseCallback<dynamic>> get webSocketMessages async* {
     if (!webSocketService.isConnected) {
       yield ResponseCallback<dynamic>(success: false, message: 'No active WebSocket connection', statusCode: null);
     }
 
-    await for (final dynamic message in webSocketService.stream) {
-      try {
-        // Attempt to decode JSON if applicable, otherwise return raw string
-        dynamic decodedData;
+    try {
+      await for (final dynamic message in webSocketService.stream) {
         try {
-          decodedData = jsonDecode(message.toString());
-        } catch (_) {
-          decodedData = message; // Fallback to raw message
-        }
+            // Attempt to decode JSON if applicable, otherwise return raw string
+          dynamic decodedData;
+          try {
+            decodedData = jsonDecode(message.toString());
+          } catch (_) {
+            decodedData = message; // Fallback to raw message
+          }
 
         yield ResponseCallback<dynamic>(success: true, message: "New WebSocket data received", data: decodedData, statusCode: 200);
-      } catch (ex) {
-        yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ', statusCode: null);
+        } catch (ex) {
+          yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ', statusCode: null);
+        }
       }
+    } catch (ex) {
+      // WebSocket disconnected — stream error propagated from WebSocketService.
+      FusionLogger.log(tag: LogTag.network, message: '[WS] Stream error (connection dropped): $ex');
+      yield ResponseCallback<dynamic>(success: false, message: 'WebSocket disconnected: $ex', statusCode: null);
     }
   }
 }
