@@ -39,7 +39,6 @@ struct fusion_cn_metrics_pcpu {
     u64 rx_queue_drop_count;
     u64 kernel_silence_sub_count;
     u64 kernel_silence_sub_frames;
-
     /* TX */
     u64 tx_packets_total, tx_bytes_total;
 } ____cacheline_aligned;

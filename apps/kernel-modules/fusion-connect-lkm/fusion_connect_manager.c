@@ -1200,12 +1200,11 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         struct fusion_cn_substream *alsa_stream = NULL;
 
         spin_lock(&stream->lock);
+        alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;
-        if (stream->info.is_source) {
-            alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
-        } else {
+        if (!stream->info.is_source) {
             stream->playback_slot = 0;
             atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)

@@ -1629,7 +1629,7 @@ void FusionConnectClient::process() {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} rxq_drop={} ksil={} ksil_frames={} burst_max={} batch_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late={} rxq_drop={} ksil={} ksil_frames={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
                         "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
