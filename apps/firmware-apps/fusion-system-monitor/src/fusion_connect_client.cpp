@@ -1059,7 +1059,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             config.frames_per_packet  = 16;
 
             if (!has_explicit_playout_delay && config.sample_rate != 0)
-                config.playout_delay = static_cast<uint32_t>((6ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
+                config.playout_delay = static_cast<uint32_t>((5ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             if (create_source) {
                 config.is_source = true;

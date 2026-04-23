@@ -224,6 +224,10 @@ static bool is_fusion_connect_stream_name(const std::string &device_name)
     return device_name.rfind("FC_", 0) == 0;
 }
 
+static bool is_bluealsa_device_name(const std::string &device_name)
+{
+    return device_name.compare(0, 9, "bluealsa:") == 0;
+}
 
 static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
 {
@@ -234,7 +238,7 @@ static bool use_low_latency_fc_depths(const std::string &device_name, bool use_a
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
              snd_pcm_stream_t stream, int mode)
 {
-    if (full_device_name.compare(0, 9, "bluealsa:") != 0)
+    if (!is_bluealsa_device_name(full_device_name))
     {
         return snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
     }
@@ -343,14 +347,12 @@ void AlsaDevice::open_device()
     // can open immediately.  If it doesn't, it's the name of a fusion connect
     // stream, and we need to look up its device number first.
     if ((device_name.compare(0, 3, "hw:") != 0)
-        && (device_name.compare(0, 9, "bluealsa:") != 0))
+        && !is_bluealsa_device_name(device_name))
     {
-        SPDLOG_DEBUG("Getting device number for: {}", device_name);
         int device_number = get_device_number(device_name);
 
         if (device_number < 0)
         {
-            SPDLOG_DEBUG("ALSA device {} not found", device_name);
             pthread_mutex_unlock(&open_mutex);
             return;
         }
@@ -358,7 +360,6 @@ void AlsaDevice::open_device()
         full_device_name = "hw:FusionConnect," + std::to_string(device_number);
     }
 
-    SPDLOG_DEBUG("Opening: {}", full_device_name);
     int error = open_pcm(&alsa, full_device_name,
                          is_input ? SND_PCM_STREAM_CAPTURE
                                   : SND_PCM_STREAM_PLAYBACK,
@@ -366,7 +367,6 @@ void AlsaDevice::open_device()
 
     if (error < 0)
     {
-        SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
         pthread_mutex_unlock(&open_mutex);
         return;
     }
@@ -431,6 +431,11 @@ bool AlsaDevice::is_open()
 void AlsaDevice::log_io_diagnostics(const char *event, int requested,
                                     int result)
 {
+    if (is_bluealsa_device_name(device_name))
+    {
+        return;
+    }
+
     std::time_t now = std::time(nullptr);
 
     if (now == last_io_diagnostic_log_sec)
@@ -986,16 +991,13 @@ int AlsaDevice::get_device_number(const std::string &name)
 
     if (snd_ctl_open(&ctl, "hw:FusionConnect", 0) < 0)
     {
-        SPDLOG_DEBUG("Failed to open ALSA control device");
         return -1;
     }
 
     int device = -1;
 
-    SPDLOG_DEBUG("checking device numbers for: {}", name);
     while (snd_ctl_pcm_next_device(ctl, &device) >= 0 && device >= 0)
     {
-        SPDLOG_DEBUG("checking device number {} for: {}", device, name);
         snd_pcm_info_t *info;
         snd_pcm_info_alloca(&info);
         snd_pcm_info_set_device(info, device);
@@ -1003,26 +1005,19 @@ int AlsaDevice::get_device_number(const std::string &name)
         snd_pcm_info_set_stream(info, is_input ? SND_PCM_STREAM_CAPTURE
                 : SND_PCM_STREAM_PLAYBACK);
 
-        SPDLOG_DEBUG("getting pcm info for: {}", device);
         if (snd_ctl_pcm_info(ctl, info) < 0)
         {
-            SPDLOG_DEBUG("Failed to get ALSA PCM info for device {}", device);
             continue;
         }
 
-        SPDLOG_DEBUG("getting pcm info name for: {}", device);
         if (snd_pcm_info_get_name(info) == name)
         {
-            SPDLOG_DEBUG("Found ALSA device: {} {}",
-                    snd_pcm_info_get_name(info), device);
             snd_ctl_close(ctl);
             return device;
         }
     }
 
-    SPDLOG_DEBUG("closing control");
     snd_ctl_close(ctl);
-    SPDLOG_DEBUG("didn't find device {}", name);
     return -1;
 }
 
@@ -1397,7 +1392,7 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), 3 * period_size);
+        min_depth = std::max(get_frame_size(), 4 * period_size);
         target_depth = min_depth + period_size;
         max_depth = target_depth + period_size;
     }
@@ -1540,13 +1535,15 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
             target_depth += period_size - (target_depth % period_size);
         }
     }
+    // FusionConnect is 4/5/6
     else if (use_low_latency_fc_depths(device_name, use_asrc))
     {
         max_write_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), 3 * period_size);
+        min_depth = std::max(get_frame_size(), 4 * period_size);
         target_depth = min_depth + period_size;
         max_depth = target_depth + period_size;
     }
+    // AES67 is 5/6/10
     else
     {
         max_write_samples = get_frame_size();
