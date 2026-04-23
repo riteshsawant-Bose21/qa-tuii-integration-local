@@ -868,7 +868,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       text:
                           _selectedListeningAreaIds.isEmpty
                               ? "Select Location"
-                              : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
+                              : "${_selectedListeningAreaIds.length} listening areas${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.elevation5 : Theme.of(context).textTheme.bodySmall?.color,
                       ),
