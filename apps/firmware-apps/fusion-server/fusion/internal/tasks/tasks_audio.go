@@ -132,7 +132,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 		getStringSliceLocal := func(key string) []string {
 			v, hasKey := t.Params[key]
 			if !hasKey {
-				return nil
+				return []string{}
 			}
 			return utils.CoerceStringSlice(v)
 		}
@@ -389,7 +389,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 	getStringSlice := func(key string) []string {
 		v, hasKey := task.Params[key]
 		if !hasKey {
-			return nil
+			return []string{}
 		}
 		return utils.CoerceStringSlice(v)
 	}
