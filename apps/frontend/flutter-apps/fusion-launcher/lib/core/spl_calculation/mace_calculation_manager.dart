@@ -48,7 +48,7 @@ class SPLCalculationManager {
     for (final HardwareComponent sp in speakers) {
       if (sp is! Speaker) continue;
       final int cid = engine.addSpeaker(
-        sp.speakerSKU,
+        sp.speakerSKU.replaceAll("-SUB", "-Sub"),
         sp.pos!.dx / 100,
         sp.pos!.dy / 100,
         sp.zAxis! / 100,
