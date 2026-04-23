@@ -13,7 +13,7 @@ import '../../../core/spl_calculation/mace_calculation_manager.dart';
 class SplViewModel extends Cubit<SplState> {
   SplViewModel()
     : super(
-        SplState(panelData: const SplPanelData(), listeningAreas: <ListeningArea>[]),
+        SplLoadingState(panelData: const SplPanelData(), listeningAreas: <ListeningArea>[]),
       ) {
     _initialize();
   }
@@ -23,7 +23,7 @@ class SplViewModel extends Cubit<SplState> {
   Future<void> _initialize() async {
     await IsolatedMaceCalculationManager.instance.start();
     final SplPanelData currentPanelData = splRangeController.getPanelData();
-    emit(state.copyWith(panelData: currentPanelData));
+    emit(SplLoadedState(panelData: currentPanelData, listeningAreas: state.listeningAreas));
     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
     serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb, autoSave: false);
   }
@@ -55,9 +55,9 @@ class SplViewModel extends Cubit<SplState> {
   }
 
   Future<void> calculateSPL() async {
-    print(
-      "Calculating SPL with panel data: ${state.panelData}, current listening areas: ${state.listeningAreas.length}",
-    );
+    // print(
+    //   "Calculating SPL with panel data: ${state.panelData}, current listening areas: ${state.listeningAreas.length}",
+    // );
     // if (_engine == null) {
     //   debugPrint('calculateSPL: _engine is null');
     //   return;
@@ -94,13 +94,14 @@ class SplViewModel extends Cubit<SplState> {
       if (size.width > 0 && size.height > 0) {
         nonZeroAreas.add(area);
       } else {
-        print("Skipping area with zero size: ${area.id}, size: $size");
+        // print("Skipping area with zero size: ${area.id}, size: $size");
       }
     }
 
     await IsolatedMaceCalculationManager.instance.calculateSpl(
       speakers: speakers,
       surfaces: nonZeroAreas,
+      walls: serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: currentFloor.id),
       resolutionSpacing: state.panelData.getResolutionSpacing(),
     );
 
@@ -190,9 +191,17 @@ class SplViewModel extends Cubit<SplState> {
     await IsolatedMaceCalculationManager.instance.stop();
     return super.close();
   }
+
+  void startLoading() {
+    emit(LiveSplState(panelData: state.panelData, listeningAreas: state.listeningAreas));
+  }
+
+  void stopLoading() {
+    emit(SplLoadedState(panelData: state.panelData, listeningAreas: state.listeningAreas));
+  }
 }
 
-class SplState {
+abstract class SplState {
   final SplPanelData panelData;
   final List<ListeningArea> listeningAreas;
 
@@ -202,9 +211,21 @@ class SplState {
     SplPanelData? panelData,
     List<ListeningArea>? listeningAreas,
   }) {
-    return SplState(
+    return SplLoadedState(
       panelData: panelData ?? this.panelData,
       listeningAreas: listeningAreas ?? this.listeningAreas,
     );
   }
+}
+
+class SplLoadingState extends SplState {
+  SplLoadingState({required super.panelData, required super.listeningAreas});
+}
+
+class SplLoadedState extends SplState {
+  SplLoadedState({required super.panelData, required super.listeningAreas});
+}
+
+class LiveSplState extends SplState {
+  LiveSplState({required super.panelData, required super.listeningAreas});
 }
