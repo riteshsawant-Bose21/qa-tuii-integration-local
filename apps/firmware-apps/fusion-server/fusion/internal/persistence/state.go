@@ -515,10 +515,10 @@ func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, ne
 // SetState replaces the entire state map and advances the version.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Lock()
-	sm.state.State = state
-	sm.version.Counter++
-	sm.Unlock()
+	defer sm.Unlock()
 
+	sm.state.State = deepCopyState(state)
+	sm.version.Counter++
 	sm.updateChecksumUnsafe()
 }
 
@@ -543,6 +543,8 @@ func (sm *StateManager) SetVersion(newVersion api.Version) {
 }
 
 func (sm *StateManager) GetMemberList() *memberlist.Memberlist {
+	sm.RLock()
+	defer sm.RUnlock()
 	return sm.memberlist
 }
 
@@ -577,7 +579,9 @@ func (sm *StateManager) validateState() {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -644,7 +648,9 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -707,7 +713,7 @@ func (sm *StateManager) validateData() {
 	exportURL := utils.BuildInternalURL(
 		mostCurrent.Member.Addr.String(),
 		api.AdminPort,
-		routes.StateEndpoint,
+		routes.DataEndpoint,
 	)
 
 	resp, err := sm.httpClient.Get(exportURL)
@@ -719,7 +725,11 @@ func (sm *StateManager) validateData() {
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
-		logger.Error("Export returned %v with body %s", err, string(body))
+		if err != nil {
+			logger.Error("Failed to read export error body from %s: %v", mostCurrent.Member.Name, err)
+			return
+		}
+		logger.Error("Export from %s returned status %d with body %s", mostCurrent.Member.Name, resp.StatusCode, string(body))
 		return
 	}
 
