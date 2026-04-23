@@ -100,7 +100,32 @@ class FusionNetworkClient {
           return ResponseCallback<T>.success(data, statusCode: response.statusCode);
         }
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        final dynamic rawError = response.data;
+
+        String bodyMessage = '';
+        if (rawError is String) {
+          bodyMessage = rawError.trim();
+        } else if (rawError is Map<String, dynamic>) {
+          final dynamic m = rawError['message'];
+          final dynamic e = rawError['error'];
+          final dynamic d = rawError['details'];
+
+          if (m is String && m.trim().isNotEmpty) {
+            bodyMessage = m.trim();
+          } else if (e is String && e.trim().isNotEmpty) {
+            bodyMessage = e.trim();
+          } else if (d is String) {
+            bodyMessage = d.trim();
+          }
+        }
+
+        final String fallback = httpClient.handleStatusCodeError(response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: bodyMessage.isNotEmpty ? bodyMessage : fallback,
+          statusCode: response.statusCode,
+          data: rawError is T ? rawError : null,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
@@ -390,7 +415,7 @@ class FusionNetworkClient {
   /// Connects to a WebSocket URL using the injected WebSocketService
   Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
     try {
-      webSocketService.connect(url);
+      await webSocketService.connect(url);
       FusionLogger.log(tag: LogTag.network, message: "WebSocket connecting to $url");
 
       return ResponseCallback<T>(success: true, message: "WebSocket connection initiated", statusCode: 200);

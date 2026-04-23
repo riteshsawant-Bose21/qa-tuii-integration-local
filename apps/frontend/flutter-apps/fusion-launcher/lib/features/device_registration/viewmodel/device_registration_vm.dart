@@ -17,6 +17,15 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
   final String virtualIP = serviceLocator<ProjectViewModel>().virtualIP ?? '';
   final String projectId = serviceLocator<ProjectViewModel>().projectId;
 
+  String _toUserErrorMessage(Object error, {required String fallback}) {
+    String message = error.toString().trim();
+    if (message.startsWith('Exception:')) {
+      message = message.substring('Exception:'.length).trim();
+    }
+    if (message.isEmpty) return fallback;
+    return message;
+  }
+
   Future<void> _syncLocalFusionNetworkUnRegisteredDevices() async {
     try {
       final List<FusionNetworkDevice> devices = await repository.getFusionNetworkUnRegisteredDevices();
@@ -65,11 +74,12 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
     } on DeviceAlreadyRegisteredException {
       await resetDeviceCertificateAndRetry(deviceState);
     } catch (e) {
+      final String message = _toUserErrorMessage(e, fallback: 'Registration Failed');
       final DeviceRegistrationState updated = state.copyWith(
         devices: state.updateDevice(
           deviceState.copyWith(
             step: DeviceRegistrationStep.initial,
-            error: 'Registration Failed',
+            error: message,
           ),
         ),
       );

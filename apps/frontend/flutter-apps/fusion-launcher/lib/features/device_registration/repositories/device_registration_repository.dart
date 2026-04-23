@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 // CUSTOM EXCEPTIONS based on error responses from the API,
@@ -14,6 +15,32 @@ class DeviceRegistrationRepository {
   final FusionDeviceService fusionDeviceService;
   DeviceRegistrationRepository({required this.vip, required this.fusionDeviceService});
 
+  String _extractErrorMessage({required dynamic responseData, required String? responseMessage}) {
+    // Some APIs return plain text bodies instead of JSON objects.
+    if (responseData is String) {
+      final String message = responseData.trim();
+      if (message.isNotEmpty) return message;
+    }
+
+    final Map<String, dynamic> errorObject = responseData is Map<String, dynamic> ? responseData : <String, dynamic>{};
+
+    String clean(dynamic value) => value is String ? value.trim() : '';
+
+    final List<String?> candidates = <String?>[
+      clean(errorObject['message']),
+      clean(errorObject['error']),
+      clean(errorObject['details']),
+      responseMessage,
+    ];
+
+    for (final String? candidate in candidates) {
+      final String cleaned = (candidate ?? '').trim();
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+
+    return 'Unknown error';
+  }
+
   Future<List<FusionNetworkDevice>> getFusionNetworkUnRegisteredDevices() async {
     try {
       final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip);
@@ -21,10 +48,11 @@ class DeviceRegistrationRepository {
         final List<FusionNetworkDevice> devices = response.data ?? <FusionNetworkDevice>[];
         return devices.where((FusionNetworkDevice element) => !element.isDeviceCertificateValid).toList();
       } else {
-        final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
-        final String? errorMessage = errorObject['error'] ?? response.message ?? 'Unknown error';
+        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
+    } on DioException {
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -46,9 +74,7 @@ class DeviceRegistrationRepository {
       if (response.success && response.data != null) {
         return response.data!;
       } else {
-        final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
-        // final String? errorType = errorObject['error'] ?? response.message ?? 'Unknown error';
-        final String errorMessage = errorObject['message'] ?? response.message ?? 'Unknown error';
+        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
 
         if (response.statusCode == 400) {
           throw DeviceAlreadyRegisteredException(csrCertificate, device.id);
@@ -67,8 +93,7 @@ class DeviceRegistrationRepository {
       if (response.success && response.data != null) {
         return response.data!;
       } else {
-        final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
-        final String? errorMessage = errorObject['error'] ?? response.message ?? 'Unknown error';
+        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -87,8 +112,7 @@ class DeviceRegistrationRepository {
       if (response.success) {
         return true;
       } else {
-        final Map<String, dynamic> errorObject = response.data is Map<String, dynamic> ? (response.data as Map<String, dynamic>) : <String, dynamic>{};
-        final String? errorMessage = errorObject['error'] ?? response.message ?? 'Unknown error';
+        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
     } catch (e) {

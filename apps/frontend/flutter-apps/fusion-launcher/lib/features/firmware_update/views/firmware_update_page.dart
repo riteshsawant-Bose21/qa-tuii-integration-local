@@ -1,58 +1,75 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/firmware_update/viewmodel/firmware_update_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../viewmodel/firmware_update_vm.dart';
+import '../software_update/software_update_service.dart';
 
 class FirmwareUpdatesTab extends StatefulWidget {
   const FirmwareUpdatesTab({super.key});
 
   @override
-  State<FirmwareUpdatesTab> createState() => _FirmwareUpdatesTabState();
+  State<FirmwareUpdatesTab> createState() => _FusionSoftwareUpdate2State();
 }
 
-class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
-  final FirmwareUpdateViewModel _firmwareUpdateViewModel = serviceLocator<FirmwareUpdateViewModel>();
+class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
+  final SoftwareUpdateCubit _cubit = SoftwareUpdateCubit(
+    networkClient: serviceLocator<FusionNetworkClient>(),
+  );
+
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
+  bool _showedSuccessDialog = false;
 
   @override
   void initState() {
     super.initState();
-    _firmwareUpdateViewModel.initialize();
+    final UpdateState s = _cubit.state;
+
+    if (s.phase == UpdatePhase.idle && !s.updateAvailable && !s.appUpdateRequired) {
+      unawaited(_cubit.checkForUpdates());
+    }
   }
 
   @override
   void dispose() {
-    _screenBlocker.dispose(); // ✅ proper cleanup
+    _screenBlocker.dispose();
+    _cubit.close();
     super.dispose();
   }
 
-  void _onDownloadNow() => unawaited(_firmwareUpdateViewModel.onDownloadTap());
-
-  void _installNow() => unawaited(_firmwareUpdateViewModel.installNow());
-
-  void _retryDownload() => unawaited(_firmwareUpdateViewModel.retryDownload());
-
-  void _retryInstall() => unawaited(_firmwareUpdateViewModel.retryInstall());
-
-  void _rollbackToDownloaded() => unawaited(_firmwareUpdateViewModel.rollbackToDownloaded());
-
-  void _deleteDownloadedBundle() => unawaited(_firmwareUpdateViewModel.deleteDownloadedBundle());
-
-  String get _description {
-    final String releaseNotes = _firmwareUpdateViewModel.state.updateCheckResult?.releaseNotes ?? '';
-    if (releaseNotes.trim().isNotEmpty) return releaseNotes;
-    return 'A new update is ready. Download it now to get all the latest features and improvements.';
+  bool _isHeadlineProcessingPhase(UpdatePhase phase) {
+    return phase == UpdatePhase.checking ||
+        phase == UpdatePhase.downloading ||
+        phase == UpdatePhase.discovering ||
+        phase == UpdatePhase.uploading ||
+        phase == UpdatePhase.installing ||
+        phase == UpdatePhase.rebooting;
   }
 
-  Future<void> _showInstallSuccessDialog() async {
-    if (!mounted) return;
+  void _syncGlobalInstallBlocker(UpdateState state) {
+    final bool shouldBlock =
+        state.phase == UpdatePhase.checking ||
+        state.phase == UpdatePhase.downloading ||
+        state.phase == UpdatePhase.discovering ||
+        state.phase == UpdatePhase.uploading ||
+        state.phase == UpdatePhase.installing ||
+        state.phase == UpdatePhase.rebooting;
 
-    await showDialog<void>(
+    if (shouldBlock) {
+      _screenBlocker.show(context, content: const SizedBox());
+    } else {
+      _screenBlocker.hide();
+    }
+  }
+
+  Future<void> _showInstallSuccessDialogForTwoSeconds() async {
+    if (!mounted || _showedSuccessDialog) return;
+    _showedSuccessDialog = true;
+
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
@@ -66,44 +83,18 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
               color: dialogContext.colorScheme.elevation1,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: dialogContext.colorScheme.strokeLight),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x26000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 10),
-                ),
-              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Color(0x1F1BC47D),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: Color(0xFF1BC47D),
-                    size: 28,
-                  ),
-                ),
+                const Icon(Icons.check_circle, color: Color(0xFF1BC47D), size: 38),
                 const SizedBox(height: 12),
-                FusionAppText(
-                  text: 'Firmware Updated',
-                  style: dialogContext.textTheme.b2Medium,
-                  textAlign: TextAlign.center,
-                ),
+                FusionAppText(text: 'Firmware Updated', style: dialogContext.textTheme.b2Medium),
                 const SizedBox(height: 6),
                 FusionAppText(
                   text: 'Firmware update was successful.',
-                  style: dialogContext.textTheme.b3Regular.copyWith(
-                    color: dialogContext.colorScheme.textSecondary,
-                  ),
+                  style: dialogContext.textTheme.b3Regular.copyWith(color: dialogContext.colorScheme.textSecondary),
                   textAlign: TextAlign.center,
-                  maxLine: 2,
                 ),
               ],
             ),
@@ -111,68 +102,54 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
         );
       },
     );
-  }
 
-  Future<void> _showInstallSuccessDialogForTwoSeconds() async {
-    if (!mounted) return;
-
-    _showInstallSuccessDialog();
     await Future<void>.delayed(const Duration(seconds: 2));
-
     if (!mounted) return;
-
-    final NavigatorState navigator = Navigator.of(context, rootNavigator: false);
-    if (navigator.canPop()) {
-      navigator.pop();
-    }
-  }
-
-  void _syncGlobalInstallBlocker(FirmwareUpdateViewModelState state) {
-    if (state.uiState == FirmwareUpdateUiState.downloading || state.uiState == FirmwareUpdateUiState.installing || state.isRebootTrackingInProgress) {
-      _screenBlocker.show(context, content: const SizedBox());
-    } else {
-      _screenBlocker.hide();
-    }
+    final NavigatorState nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<FirmwareUpdateViewModel, FirmwareUpdateViewModelState>(
-      bloc: _firmwareUpdateViewModel,
-      listenWhen: (FirmwareUpdateViewModelState previous, FirmwareUpdateViewModelState current) {
-        return previous.uiState != current.uiState ||
-            previous.isRebootTrackingInProgress != current.isRebootTrackingInProgress ||
-            previous.isUploadInProgress != current.isUploadInProgress;
-      },
-      listener: (BuildContext context, FirmwareUpdateViewModelState state) {
+    return BlocConsumer<SoftwareUpdateCubit, UpdateState>(
+      bloc: _cubit,
+      listener: (BuildContext context, UpdateState state) {
         _syncGlobalInstallBlocker(state);
-        if (state.uiState == FirmwareUpdateUiState.installed) {
+        if (state.phase == UpdatePhase.completed) {
           _showInstallSuccessDialogForTwoSeconds();
         }
       },
-      builder: (BuildContext context, FirmwareUpdateViewModelState state) {
-        if (state.uiState == FirmwareUpdateUiState.noUpdate) {
-          return _buildNoUpdateView(context, state);
-        }
+      builder: (BuildContext context, UpdateState state) {
+        final String description = state.releaseNotes?.trim() ?? 'No release notes provided for this update.';
+
+        final String inUseVersion = state.fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice element) => element.isPrimary)?.primaryDeviceVersion ?? '';
+        final String versionText = state.availableVersion?.trim() ?? inUseVersion;
 
         return Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        _buildHeading(context, state),
-                        const SizedBox(height: 10),
-                        FusionAppText(
-                          text: _description,
-                          style: context.textTheme.h6Regular,
+                        RichText(
+                          text: TextSpan(
+                            style: DefaultTextStyle.of(context).style,
+                            children: <InlineSpan>[
+                              TextSpan(text: '$versionText ', style: context.textTheme.h1Bold),
+                              TextSpan(
+                                text: _headline(state),
+                                style: context.textTheme.h2Regular.copyWith(fontWeight: FontWeight.w400),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(height: 10),
+                        FusionAppText(text: description, style: context.textTheme.h6Regular),
                       ],
                     ),
                   ),
@@ -181,13 +158,11 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
                 ],
               ),
               const SizedBox(height: 18),
-              if ((state.uiState == FirmwareUpdateUiState.installing || state.uiState == FirmwareUpdateUiState.installed) && state.isProgressExpanded)
-                _buildDeviceProgressTable(context, state),
-              if ((state.uiState == FirmwareUpdateUiState.installing || state.uiState == FirmwareUpdateUiState.installed) && state.isProgressExpanded)
-                const SizedBox(height: 18),
-              _buildInUseVersionRow(context, state),
-              if (state.errorText.trim().isNotEmpty) const SizedBox(height: 12),
-              if (state.errorText.trim().isNotEmpty) _buildDetailedErrorFooter(context, state.errorText),
+              if (_showProgressTable(state)) _buildDeviceProgressTable(context, state),
+              if (_showProgressTable(state)) const SizedBox(height: 18),
+              _buildInUseVersionRow(context, state, versionText),
+              if (state.error?.message.trim().isNotEmpty == true) const SizedBox(height: 12),
+              if (state.error?.message.trim().isNotEmpty == true) _buildDetailedErrorFooter(context, state.error!.message),
             ],
           ),
         );
@@ -195,282 +170,182 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
     );
   }
 
-  Widget _buildNoUpdateView(BuildContext context, FirmwareUpdateViewModelState state) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          FusionIcon.svg(
-            AssetSvg.sadFace,
-            color: context.colorScheme.textPrimary,
-          ),
-          const SizedBox(height: 24),
-          FusionAppText(
-            text: 'Oh no! No new updates available',
-            style: context.textTheme.h4SemiBold,
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: 560,
-            child: _buildInUseVersionRow(context, state),
-          ),
-          const SizedBox(height: 20),
-          _buildButton(
-            context,
-            'Check Again',
-            () => unawaited(_firmwareUpdateViewModel.checkNewFirmwareUpdates()),
-            width: 180,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeading(BuildContext context, FirmwareUpdateViewModelState state) {
-    final String version = state.availableVersion.isEmpty ? serviceLocator<FirmwareUpdateViewModel>().primaryFusionDeviceVersion : state.availableVersion;
-
-    final String stateText;
-    switch (state.uiState) {
-      case FirmwareUpdateUiState.updateAvailable:
-        stateText = 'available for download';
-      case FirmwareUpdateUiState.downloading:
-        stateText = 'is downloading';
-      case FirmwareUpdateUiState.downloaded:
-        stateText = 'available to install';
-      case FirmwareUpdateUiState.downloadFailed:
-        stateText = 'failed to download';
-      case FirmwareUpdateUiState.installing:
-        stateText = 'is installing';
-      case FirmwareUpdateUiState.installFailed:
-        stateText = 'failed to install';
-      case FirmwareUpdateUiState.installed:
-        stateText = 'is installed successfully';
-      case FirmwareUpdateUiState.checking:
-        stateText = 'is checking';
-      case FirmwareUpdateUiState.noUpdate:
-        stateText = 'is up to date';
-      case FirmwareUpdateUiState.appUpdateRequired:
-        stateText = 'requires launcher update';
+  bool _showProgressTable(UpdateState s) {
+    // During upload, keep device list hidden until file transfer is fully done.
+    if (s.phase == UpdatePhase.uploading) {
+      return s.uploadProgress >= 1.0;
     }
 
-    return RichText(
-      text: TextSpan(
-        children: <InlineSpan>[
-          TextSpan(
-            text: 'v $version ',
-            style: context.textTheme.h1Bold,
-          ),
-          TextSpan(
-            text: stateText,
-            style: context.textTheme.h2Regular.copyWith(fontWeight: FontWeight.w400),
-          ),
-        ],
-      ),
-    );
+    return s.phase == UpdatePhase.installing ||
+        s.phase == UpdatePhase.rebooting ||
+        s.phase == UpdatePhase.completed ||
+        s.isWaitingForSocketResponse ||
+        s.deviceProgress.isNotEmpty;
   }
 
-  Widget _buildActionPanel(BuildContext context, FirmwareUpdateViewModelState state) {
-    Widget content;
+  String _headline(UpdateState state) {
+    if (state.appUpdateRequired) return 'requires launcher update';
 
-    switch (state.uiState) {
-      case FirmwareUpdateUiState.updateAvailable:
-        content = _buildButton(
-          context,
-          'Download Now',
-          _onDownloadNow,
-        );
-      case FirmwareUpdateUiState.downloading:
-        content = Row(
+    switch (state.phase) {
+      case UpdatePhase.idle:
+        return state.updateAvailable ? 'available for download' : 'is up to date';
+      case UpdatePhase.checking:
+        return 'is checking';
+      case UpdatePhase.awaitDownload:
+        return 'available for download';
+      case UpdatePhase.downloading:
+        return 'is downloading';
+      case UpdatePhase.awaitInstall:
+        return 'available to install';
+      case UpdatePhase.discovering:
+        return 'is discovering devices';
+      case UpdatePhase.uploading:
+        return 'is uploading to device';
+      case UpdatePhase.installing:
+        return 'is installing';
+      case UpdatePhase.rebooting:
+        return 'is rebooting devices';
+      case UpdatePhase.completed:
+        return 'is installed successfully';
+      case UpdatePhase.failed:
+        return switch (state.error?.code) {
+          UpdateErrorCode.checkingFailed => 'failed to connect to Fusion server',
+          UpdateErrorCode.versionMismatch => 'device versions are mismatching',
+          UpdateErrorCode.downloadFailed => 'failed to download update',
+          UpdateErrorCode.uploadFailed => 'failed to upload update to device',
+          UpdateErrorCode.rollbackFailed => 'failed to rollback update',
+          UpdateErrorCode.wsConnectionFailed => 'connection to device lost',
+          UpdateErrorCode.wsDeviceFailed => 'device failed during update',
+          UpdateErrorCode.wsClosedEarly => 'connection to device lost',
+          UpdateErrorCode.syncTimeout => 'devices did not come back online in time',
+          UpdateErrorCode.networkError => 'network error occurred',
+          UpdateErrorCode.unknown => 'an unknown error occurred',
+          _ => 'an unknown error occurred',
+        };
+      case UpdatePhase.cancelled:
+        return 'was cancelled';
+      case UpdatePhase.rollingBack:
+        return 'is rolling back';
+      case UpdatePhase.rolledBack:
+        return 'was rolled back';
+    }
+  }
+
+  Widget _buildActionPanel(BuildContext context, UpdateState state) {
+    switch (state.phase) {
+      case UpdatePhase.awaitDownload:
+        return _BuildAction(text: 'Download Now', onTap: _cubit.confirmDownload);
+      case UpdatePhase.downloading:
+        return Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _buildProgressCircle(state),
-            const SizedBox(width: 14),
-            FusionAppText(
-              text: 'Downloading',
-              style: context.textTheme.b2Medium,
+            _buildProgressCircle(state.downloadProgress),
+            const SizedBox(width: 12),
+            _AnimatedHeadlineStatusText(
+              animate: _isHeadlineProcessingPhase(state.phase),
+              child: FusionAppText(text: 'Downloading', style: context.textTheme.b2Medium),
             ),
           ],
         );
-      case FirmwareUpdateUiState.downloaded:
-        content = Column(
+      case UpdatePhase.awaitInstall:
+        return Column(
           children: <Widget>[
-            _buildButton(context, 'Install Now', _installNow),
-            const SizedBox(height: 14),
-            _buildSuccessLabel('Downloaded Successfully'),
-            if (kDebugMode) ...<Widget>[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  InkWell(
-                    onTap: _retryDownload,
-                    child: FusionAppText(
-                      text: 'Re-download',
-                      style: context.textTheme.b3Regular.copyWith(
-                        color: context.colorScheme.textSecondary,
-                        decoration: TextDecoration.underline,
-                        decorationColor: context.colorScheme.textSecondary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  FusionAppText(
-                    text: '•',
-                    style: context.textTheme.b3Regular.copyWith(
-                      color: context.colorScheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  InkWell(
-                    onTap: _deleteDownloadedBundle,
-                    child: FusionAppText(
-                      text: 'Delete file',
-                      style: context.textTheme.b3Regular.copyWith(
-                        color: const Color(0xFFE43333),
-                        decoration: TextDecoration.underline,
-                        decorationColor: const Color(0xFFE43333),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _BuildAction(text: 'Install Now', onTap: _cubit.confirmInstall),
+            // const SizedBox(height: 10),
+            // _BuildAction(text: 'Cancel', onTap: () => unawaited(_cubit.cancel())),
+          ],
+        );
+      case UpdatePhase.uploading:
+      case UpdatePhase.discovering:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _buildProgressCircle(_overallProgress(state)),
+            const SizedBox(width: 12),
+            _AnimatedHeadlineStatusText(
+              animate: _isHeadlineProcessingPhase(state.phase),
+              child: FusionAppText(text: _phaseLabel(state.phase), style: context.textTheme.b2Medium),
+            ),
+          ],
+        );
+      case UpdatePhase.installing:
+      case UpdatePhase.rebooting:
+        return _AnimatedHeadlineStatusText(
+          animate: _isHeadlineProcessingPhase(state.phase),
+          child: FusionAppText(text: _phaseLabel(state.phase), style: context.textTheme.b2Medium),
+        );
+      case UpdatePhase.failed:
+        return Column(
+          children: <Widget>[
+            if (state.canRetry) _BuildAction(text: state.error?.retryLabel ?? 'Retry', onTap: () => unawaited(_cubit.retryPhase())),
+            if (state.showRollbackButton) ...<Widget>[
+              const SizedBox(height: 10),
+              _BuildAction(text: 'Rollback', onTap: () => unawaited(_cubit.rollback())),
             ],
           ],
         );
-      case FirmwareUpdateUiState.downloadFailed:
-        content = Column(
-          children: <Widget>[
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _buildButton(context, 'Retry Download', _retryDownload, width: 180),
-                const SizedBox(width: 10),
-                _buildButton(context, 'Rollback', _rollbackToDownloaded, width: 150),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: _buildErrorLabel(state.errorShortText.isEmpty ? 'Download failed.' : state.errorShortText),
-            ),
-          ],
-        );
-      case FirmwareUpdateUiState.installing:
-        content = Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            InkWell(
-              onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _buildProgressCircle(state),
-                  const SizedBox(width: 14),
-                  FusionAppText(
-                    text: 'View Device Progress',
-                    style: context.textTheme.b2Medium,
-                  ),
-                  const SizedBox(width: 10),
-                  Icon(
-                    state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
-                    color: const Color(0xFFB9B9B9),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      case FirmwareUpdateUiState.installFailed:
-        content = Column(
-          children: <Widget>[
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _buildButton(context, 'Retry Install', _retryInstall, width: 170),
-                const SizedBox(width: 10),
-                _buildButton(context, 'Rollback', _rollbackToDownloaded, width: 150),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: _buildErrorLabel(state.errorShortText.isEmpty ? 'Device Timeout' : state.errorShortText),
-            ),
-          ],
-        );
-      case FirmwareUpdateUiState.installed:
-        content = Column(
+      case UpdatePhase.completed:
+        return Column(
           children: <Widget>[
             _buildSuccessLabel('Installed Successfully'),
             const SizedBox(height: 12),
-            InkWell(
-              onTap: _firmwareUpdateViewModel.toggleProgressExpanded,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  FusionAppText(
-                    text: 'View Device Progress',
-                    style: context.textTheme.b2Medium,
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    state.isProgressExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
-                    color: const Color(0xFFB9B9B9),
-                  ),
-                ],
-              ),
-            ),
+            _BuildAction(text: 'Check Again', onTap: () => unawaited(_cubit.checkForUpdates())),
           ],
         );
-      case FirmwareUpdateUiState.checking:
-        content = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 1,
-                color: Color(0xFF27B177),
+      case UpdatePhase.idle:
+      case UpdatePhase.cancelled:
+      case UpdatePhase.rolledBack:
+      case UpdatePhase.rollingBack:
+      case UpdatePhase.checking:
+        if (state.appUpdateRequired) {
+          return ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _buildErrorLabel(
+              'Launcher update required${state.minDesktopAppVersion == null ? '' : ' (min ${state.minDesktopAppVersion})'}',
+            ),
+          );
+        }
+        if (state.phase == UpdatePhase.checking) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 1, color: Color(0xFF27B177))),
+              const SizedBox(width: 10),
+              _AnimatedHeadlineStatusText(
+                animate: _isHeadlineProcessingPhase(state.phase),
+                child: FusionAppText(text: 'Checking', style: context.textTheme.b2Medium),
               ),
-            ),
-            const SizedBox(width: 10),
-            FusionAppText(
-              text: 'Checking',
-              style: context.textTheme.b2Medium,
-            ),
-          ],
-        );
-      case FirmwareUpdateUiState.noUpdate:
-        content = const SizedBox.shrink();
-      case FirmwareUpdateUiState.appUpdateRequired:
-        content = Column(
-          children: <Widget>[
-            _buildErrorLabel(state.errorShortText.isEmpty ? 'Launcher update required.' : state.errorShortText),
-          ],
+            ],
+          );
+        }
+        return _BuildAction(
+          text: 'Check for Updates',
+          onTap: () => unawaited(_cubit.checkForUpdates()),
         );
     }
-
-    return content;
   }
 
-  Widget _buildButton(BuildContext context, String text, VoidCallback onTap, {double width = 230}) {
-    return SizedBox(
-      width: width,
-      child: FusionNeumorphicButton(
-        semanticId: 'updates_${text.toLowerCase().replaceAll(' ', '_')}',
-        text: text,
-        onTap: onTap,
-        borderRadius: 8,
-        height: 45,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        textStyle: context.textTheme.l1Medium,
-      ),
-    );
+  String _phaseLabel(UpdatePhase phase) {
+    return switch (phase) {
+      UpdatePhase.discovering => 'Discovering devices',
+      UpdatePhase.uploading => 'Uploading',
+      UpdatePhase.installing => 'Installing',
+      UpdatePhase.rebooting => 'Rebooting devices',
+      _ => 'Working',
+    };
   }
 
-  Widget _buildProgressCircle(FirmwareUpdateViewModelState state) {
-    final int percent = (state.progress * 100).round().clamp(0, 100);
+  double _overallProgress(UpdateState state) {
+    if (state.phase == UpdatePhase.uploading) return state.uploadProgress.clamp(0, 1);
+    if (state.deviceProgress.isEmpty) return 0;
+    final List<DeviceUpdateProgressEvent> values = state.deviceProgress.values.toList();
+    final double sum = values.fold<double>(0, (double p, DeviceUpdateProgressEvent e) => p + e.progress.clamp(0, 1));
+    return (sum / values.length).clamp(0, 1);
+  }
+
+  Widget _buildProgressCircle(double progress) {
+    final double safe = progress.clamp(0, 1).toDouble();
+    final int percent = (safe * 100).round();
     return Stack(
       alignment: Alignment.center,
       children: <Widget>[
@@ -478,19 +353,13 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
           width: 34,
           height: 34,
           child: CircularProgressIndicator(
-            value: state.progress,
+            value: safe,
             strokeWidth: 3,
             backgroundColor: const Color(0xFF3A3A3A),
             color: const Color(0xFF27B177),
           ),
         ),
-        FusionAppText(
-          text: '$percent%',
-          style: context.textTheme.l1Regular.copyWith(
-            color: const Color(0xFF27B177),
-            fontSize: 12,
-          ),
-        ),
+        FusionAppText(text: '$percent%', style: const TextStyle(fontSize: 12, color: Color(0xFF27B177))),
       ],
     );
   }
@@ -501,12 +370,7 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
       children: <Widget>[
         const Icon(Icons.check_circle, color: Color(0xFF1BC47D), size: 18),
         const SizedBox(width: 8),
-        FusionAppText(
-          text: text,
-          style: context.textTheme.l1Medium.copyWith(
-            color: const Color(0xFF1BC47D),
-          ),
-        ),
+        FusionAppText(text: text, style: const TextStyle(color: Color(0xFF1BC47D))),
       ],
     );
   }
@@ -517,13 +381,7 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
       children: <Widget>[
         const Icon(Icons.cancel, color: Color(0xFFE43333), size: 18),
         const SizedBox(width: 8),
-        FusionAppText(
-          text: text,
-          maxLine: 3,
-          style: context.textTheme.l1Medium.copyWith(
-            color: const Color(0xFFE43333),
-          ),
-        ),
+        Flexible(child: FusionAppText(text: text, maxLine: 3, style: const TextStyle(color: Color(0xFFE43333)))),
       ],
     );
   }
@@ -545,21 +403,13 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
             child: Icon(Icons.error_outline, color: Color(0xFFE43333), size: 16),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: FusionAppText(
-              text: text,
-              maxLine: 6,
-              style: context.textTheme.b3Regular.copyWith(
-                color: const Color(0xFFE43333),
-              ),
-            ),
-          ),
+          Expanded(child: FusionAppText(text: text, maxLine: 6, style: context.textTheme.b3Regular.copyWith(color: const Color(0xFFE43333)))),
         ],
       ),
     );
   }
 
-  Widget _buildInUseVersionRow(BuildContext context, FirmwareUpdateViewModelState state) {
+  Widget _buildInUseVersionRow(BuildContext context, UpdateState state, String versionText) {
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -569,157 +419,167 @@ class _FirmwareUpdatesTabState extends State<FirmwareUpdatesTab> {
       ),
       child: Row(
         children: <Widget>[
-          FusionAppText(
-            text: 'In-use Version',
-            style: context.textTheme.b3Regular.copyWith(
-              color: context.colorScheme.textSecondary,
-            ),
-          ),
+          FusionAppText(text: 'In-use Version', style: context.textTheme.b3Regular.copyWith(color: context.colorScheme.textSecondary)),
           const Spacer(),
-          FusionAppText(
-            text: 'v ${serviceLocator<FirmwareUpdateViewModel>().primaryFusionDeviceVersion}',
-            style: context.textTheme.b3Bold,
-          ),
+          FusionAppText(text: versionText, style: context.textTheme.b3Bold),
         ],
       ),
     );
   }
 
-  Widget _buildDeviceProgressTable(BuildContext context, FirmwareUpdateViewModelState state) {
-    final List<FirmwareInstallDeviceProgress> devices = state.deviceInstallProgress;
-
-    return Column(
-      children: <Widget>[
-        if (serviceLocator<FirmwareUpdateViewModel>().state.isWaitingForSocketResponse) ...<Widget>[
-          Row(
-            spacing: 12,
-            children: <Widget>[
-              const Flexible(child: FusionAppText(text: "Waiting for udpate progress from devices")),
-              SizedBox(
-                width: 200,
-                child: LinearProgressIndicator(
-                  color: context.colorScheme.primaryColor,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF2F2F2F), width: 1),
-          ),
-          child: Column(
-            children: <Widget>[
-              if (devices.isEmpty) ...<Widget>[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    // Downloaded file is uploaded message
-                    child: _TableValueText('Firmware software file is uploading...'),
-                  ),
-                ),
-              ] else ...<Widget>[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(flex: 2, child: _TableHeaderText('STATUS')),
-                      Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
-                      Expanded(flex: 3, child: _TableHeaderText('NODE')),
-                      Expanded(flex: 2, child: _TableHeaderText('STEP')),
-                      Expanded(flex: 3, child: _TableHeaderText('TASK')),
-                      Expanded(flex: 4, child: _TableHeaderText('INSTALLATION PROGRESS')),
-                    ],
-                  ),
-                ),
-                Builder(
-                  builder: (BuildContext context) {
-                    final List<FusionNetworkDevice> networkDevices = serviceLocator<FirmwareUpdateViewModel>().state.networkDevices;
-
-                    return Column(
-                      children: <Widget>[
-                        ...networkDevices.map((FusionNetworkDevice networkDevice) {
-                          final FirmwareInstallDeviceProgress? device = devices.firstWhereOrNull(
-                            (FirmwareInstallDeviceProgress d) => d.serialNumber == networkDevice.serialNumber,
-                          );
-
-                          return _buildDeviceRow(networkDevice, device, state);
-                        }),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDeviceRow(FusionNetworkDevice networkDevice, FirmwareInstallDeviceProgress? device, FirmwareUpdateViewModelState state) {
-    // Check if we're in reboot tracking mode
-    final bool isRebooting = state.isRebootTrackingInProgress;
-
-    final String normalizedState = isRebooting ? 'REBOOTING' : device?.updateState.toUpperCase() ?? '';
-
-    final bool completed = normalizedState == 'COMPLETED';
-    final bool success = normalizedState == 'SUCCESS';
-    final Color stateColor = completed || success ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
-    final double rowProgress = completed || success ? 1 : ((device?.stepProgress ?? 0) / 100).clamp(0, 1);
-    final String progressLabel = completed || success ? '100%' : '${(device?.stepProgress ?? 0).clamp(0, 100)}%';
+  Widget _buildDeviceProgressTable(BuildContext context, UpdateState state) {
+    final List<FusionNetworkDevice> devices = state.fusionNetworkDevices;
+    final bool hideInstallProgressColumn = state.phase == UpdatePhase.rebooting;
 
     return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 1)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2F2F2F), width: 1),
       ),
-      child: Row(
+      child: Column(
         children: <Widget>[
-          Expanded(
-            flex: 2,
+          if (state.isWaitingForSocketResponse)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _TableValueText('Waiting for update progress from devices...'),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: <Widget>[
-                Icon(Icons.square_rounded, color: stateColor, size: 10),
-                const SizedBox(width: 8),
-                Expanded(child: _TableValueText(normalizedState, color: stateColor)),
+                const Expanded(flex: 2, child: _TableHeaderText('STATUS')),
+                const Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
+                const Expanded(flex: 3, child: _TableHeaderText('NODE')),
+                const Expanded(flex: 2, child: _TableHeaderText('STEP')),
+                Expanded(
+                  flex: 4,
+                  child: hideInstallProgressColumn ? const SizedBox.shrink() : const _TableHeaderText('INSTALLATION PROGRESS'),
+                ),
               ],
             ),
           ),
-          Expanded(flex: 3, child: _TableValueText(networkDevice.serialNumber, color: const Color(0xFF2FA16B), underline: true)),
-          Expanded(flex: 3, child: _TableValueText(device?.node.isEmpty ?? true ? '--' : device?.node ?? '')),
-          Expanded(flex: 2, child: _TableValueText(device?.stepLabel ?? '--')),
-          Expanded(flex: 3, child: _TableValueText(device?.currentTask.isEmpty ?? true ? '--' : device?.currentTask ?? '')),
-          Expanded(
-            flex: 4,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: rowProgress,
-                      minHeight: 4,
-                      backgroundColor: const Color(0xFF363636),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1B9A66)),
+          ...devices.map((FusionNetworkDevice networkDevice) {
+            final DeviceUpdateProgressEvent? event = state.deviceProgress[networkDevice.serialNumber];
+
+            final String status = event?.updateState ?? 'PENDING';
+            final bool completed = event?.isCompleted == true || event?.isSuccess == true;
+            final double rowProgress = completed ? 1.0 : (event?.stepProgress ?? 0.0);
+            final Color stateColor = completed ? const Color(0xFF5CC59A) : const Color(0xFFE0A645);
+
+            return Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFF2A2A2A), width: 1))),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 2,
+                    child: Row(
+                      children: <Widget>[
+                        Icon(Icons.square_rounded, color: stateColor, size: 10),
+                        const SizedBox(width: 8),
+                        Expanded(child: _TableValueText(status, color: stateColor)),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 40,
-                  child: _TableValueText(progressLabel),
-                ),
-              ],
-            ),
-          ),
+                  Expanded(flex: 3, child: _TableValueText(networkDevice.serialNumber, color: const Color(0xFF2FA16B), underline: true)),
+                  Expanded(flex: 3, child: _TableValueText(networkDevice.modelName)),
+                  Expanded(flex: 2, child: _TableValueText(event?.step ?? "-/-")),
+                  Expanded(
+                    flex: 4,
+                    child:
+                        hideInstallProgressColumn
+                            ? const SizedBox.shrink()
+                            : Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: LinearProgressIndicator(
+                                      value: rowProgress.clamp(0, 1),
+                                      minHeight: 4,
+                                      backgroundColor: const Color(0xFF363636),
+                                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1B9A66)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(width: 40, child: _TableValueText('${(rowProgress * 100).round()}%')),
+                              ],
+                            ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedHeadlineStatusText extends StatefulWidget {
+  const _AnimatedHeadlineStatusText({
+    required this.child,
+    required this.animate,
+  });
+
+  final Widget child;
+  final bool animate;
+
+  @override
+  State<_AnimatedHeadlineStatusText> createState() => _AnimatedHeadlineStatusTextState();
+}
+
+class _AnimatedHeadlineStatusTextState extends State<_AnimatedHeadlineStatusText> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+      reverseDuration: const Duration(milliseconds: 650),
+      value: 1.0,
+    );
+
+    if (widget.animate) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedHeadlineStatusText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate == widget.animate) return;
+
+    if (widget.animate) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (BuildContext context, Widget? child) {
+        final double opacity = widget.animate ? (0.35 + (0.65 * _controller.value)) : 1.0;
+        return Opacity(opacity: opacity, child: child);
+      },
+      child: widget.child,
     );
   }
 }
@@ -733,20 +593,14 @@ class _TableHeaderText extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: text,
-      style: context.textTheme.l1Regular.copyWith(
-        color: context.colorScheme.textSecondary,
-      ),
+      style: context.textTheme.l1Regular.copyWith(color: context.colorScheme.textSecondary),
       maxLine: 1,
     );
   }
 }
 
 class _TableValueText extends StatelessWidget {
-  const _TableValueText(
-    this.text, {
-    this.color = const Color(0xFFD3D3D3),
-    this.underline = false,
-  });
+  const _TableValueText(this.text, {this.color = const Color(0xFFD3D3D3), this.underline = false});
 
   final String text;
   final Color color;
@@ -756,12 +610,43 @@ class _TableValueText extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: text,
-      style: context.textTheme.b2Medium.copyWith(
-        color: color,
-        fontSize: 14,
-        decoration: underline ? TextDecoration.underline : TextDecoration.none,
-      ),
+      style: context.textTheme.b2Medium.copyWith(color: color, fontSize: 14, decoration: underline ? TextDecoration.underline : TextDecoration.none),
       maxLine: 1,
+    );
+  }
+}
+
+class _BuildAction extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const _BuildAction({
+    required this.text,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId("btn", 'updates_$text'),
+      child: SizedBox(
+        height: 42,
+        child: ElevatedButton(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            backgroundColor: context.colorScheme.elevation2,
+            foregroundColor: context.colorScheme.textPrimary,
+            textStyle: context.textTheme.l1Medium,
+            side: BorderSide(color: context.colorScheme.elevation3),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: FusionAppText(
+            text: text,
+            style: context.textTheme.l1Medium,
+          ),
+        ),
+      ),
     );
   }
 }
