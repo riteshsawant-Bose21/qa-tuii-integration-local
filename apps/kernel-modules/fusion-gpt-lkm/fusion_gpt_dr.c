@@ -683,7 +683,6 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	unsigned long flags;
 	u32 prev_pps_seq;
 	long prev_freq_error;
-	int baseline_dac;
 	bool prev_epoch_valid, prev_aligned, prev_continuity, prev_gm_locked;
 	bool prev_pending;
 	bool prev_pps_valid;
@@ -691,7 +690,6 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	unsigned long prev_last_pps_jiffies;
 	bool changed;
 	const char *reset_log_name;
-	const char *reset_reason_name;
 	unsigned long suppress_until = 0;
 	g = fusion_gpt_get_locked();
 	if (!g)
@@ -699,8 +697,6 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 
 	reset_log_name = preserve_ready_for_recheck ?
 		"timing reset" : "timing session reset";
-	reset_reason_name = preserve_ready_for_recheck ?
-		"timing_reset" : "timing_session_reset";
 
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	raw_spin_lock(&g->ctrl_lock);
@@ -729,7 +725,6 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	if (READ_ONCE(g->discipline_continuity_ready) ||
 	    g->discipline_reacquire_pending)
 		g->last_pps_jiffies = prev_last_pps_jiffies;
-	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -738,8 +733,6 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 			reset_log_name, prev_pps_seq, prev_epoch_valid, prev_aligned,
 			prev_continuity, prev_gm_locked, prev_pending,
 			prev_freq_error);
-	pr_info("fusion_gpt: dac restore queued reason=%s dac=%d\n",
-		reset_reason_name, baseline_dac);
 	if (simulate_pps_gap)
 		pr_info("fusion_gpt: simulating PPS gap for %u ms after %s\n",
 			READ_ONCE(timing_reset_sim_duration_ms_param), reset_log_name);
@@ -1438,6 +1431,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 	int ret;
 	int target;
 	int current_dac;
+	bool dac_updated = false;
 	bool baseline_restore_pending;
 	bool baseline_restore_session_reset;
 
@@ -1460,6 +1454,7 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			g->current_dac_value = target;
 			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 			current_dac = target;
+			dac_updated = true;
 		}
 	}
 
@@ -1469,10 +1464,10 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		g->baseline_restore_session_reset = false;
 		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
-		pr_info("fusion_gpt: dac restore applied reason=%s dac=%d applied_dac=%u\n",
+		pr_info("fusion_gpt: dac restore complete: reason=%s target=%d action=%s\n",
 			baseline_restore_session_reset ?
 				"timing_session_reset" : "timing_reset",
-			target, current_dac == target ? 1U : 0U);
+			target, dac_updated ? "applied" : "already_set");
 	}
 }
 static int gpt_start(struct fusion_gpt *g)
