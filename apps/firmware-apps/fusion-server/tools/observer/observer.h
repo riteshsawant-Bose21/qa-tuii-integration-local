@@ -879,7 +879,7 @@ public:
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_addr.s_addr = INADDR_ANY;
     clientAddr.sin_port = htons(0);
-    if (bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
+    if (::bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
              sizeof(clientAddr)) < 0)
       throw std::runtime_error("Failed to bind socket: " +
                                std::string(strerror(errno)));

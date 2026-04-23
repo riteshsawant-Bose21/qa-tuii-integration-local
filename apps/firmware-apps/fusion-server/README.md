@@ -18,9 +18,7 @@ Fusion Server can be run:
 
 ## High Availability
 - **Memberlist** gossip-based cluster membership
-- **HAProxy** load balancing  
 - **Keepalived / VRRP** for Virtual IP failover (`192.168.2.100` by default)
-- Automatic backend registration and health checks
 - Seamless failover and state recovery
 
 ## Audio & PAVA Messaging
@@ -105,7 +103,6 @@ Fusion Server can be run:
 +-------------------------------------------+
 |       HA Layer (Multipass Deployments)    |
 | - Keepalived (VRRP) for VIP               |
-| - HAProxy load balancing                  |
 +-------------------------------------------+
 ```
 
@@ -126,7 +123,7 @@ Run:
 ```
 
 Local mode:
-- Disables HAProxy / Keepalived
+- Disables Keepalived / VIP management
 - Memberlist runs as a 1‑node cluster
 - Enables BLE (Fusion Mini)
 - Provides the full REST API
@@ -201,7 +198,7 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 
 ## Scene Catalog
 - `POST /value` (with `snapshots` and/or `scene_sets` root keys to upsert definitions)
-- `POST /snapshots/activate`
+- `POST /snapshots/activate/{name}`
 - `GET  /snapshots/list`
 - `GET  /scenes/list`
 - `POST /scene-sets/activate`

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
@@ -13,7 +16,7 @@ class EventItemCard extends StatefulWidget {
   final bool isInControlMode;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
-  final VoidCallback? onEventRecall;
+  final Future<void> Function()? onEventRecall;
   final Function(String eventId, bool isEnabled)? onSwitchChanged;
   final int index;
 
@@ -36,17 +39,11 @@ class EventItemCard extends StatefulWidget {
 
 class _EventItemCardState extends State<EventItemCard> {
   bool _isHovered = false;
-  bool _isRecalling = false;
   bool _isPressed = false;
 
-  Future<void> _handleRecallTap() async {
+  void _handleRecallTap() {
     if (!widget.isInControlMode || widget.onEventRecall == null) return;
-    setState(() => _isRecalling = true);
-    try {
-      await Future<void>.microtask(() => widget.onEventRecall!());
-    } finally {
-      if (mounted) setState(() => _isRecalling = false);
-    }
+    widget.onEventRecall!();
   }
 
   @override
@@ -96,39 +93,44 @@ class _EventItemCardState extends State<EventItemCard> {
                 const SizedBox(width: 8),
                 Tooltip(
                   message: widget.isInControlMode ? 'Recall Event' : 'Enable control mode to recall',
-                  child: GestureDetector(
-                    onTap: widget.isInControlMode && !_isRecalling ? _handleRecallTap : null,
-                    onTapDown: widget.isInControlMode && !_isRecalling ? (_) => setState(() => _isPressed = true) : null,
-                    onTapUp: (_) => setState(() => _isPressed = false),
-                    onTapCancel: () => setState(() => _isPressed = false),
-                    child: AnimatedScale(
-                      scale: _isPressed ? 0.6 : 1.0,
-                      duration: const Duration(milliseconds: 100),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child:
-                            _isRecalling
-                                ? Center(
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: context.colorScheme.iconWhite,
+                  child: BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+                    builder: (BuildContext context, ConfigEventsState eventsState) {
+                      final bool isRecalling = eventsState.recallingEventId == widget.eventData.id;
+                      return GestureDetector(
+                        onTap: widget.isInControlMode && !isRecalling ? _handleRecallTap : null,
+                        onTapDown: widget.isInControlMode && !isRecalling ? (_) => setState(() => _isPressed = true) : null,
+                        onTapUp: (_) => setState(() => _isPressed = false),
+                        onTapCancel: () => setState(() => _isPressed = false),
+                        child: AnimatedScale(
+                          scale: _isPressed ? 0.6 : 1.0,
+                          duration: const Duration(milliseconds: 100),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child:
+                                isRecalling
+                                    ? Center(
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: context.colorScheme.iconWhite,
+                                        ),
+                                      ),
+                                    )
+                                    : FusionImageAuto(
+                                      path: Assets.playIcon,
+                                      semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+                                      width: 24,
+                                      height: 24,
+                                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                                      fit: BoxFit.contain,
                                     ),
-                                  ),
-                                )
-                                : FusionImageAuto(
-                                  path: Assets.playIcon,
-                                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
-                                  width: 24,
-                                  height: 24,
-                                  color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
-                                  fit: BoxFit.contain,
-                                ),
-                      ),
-                    ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),

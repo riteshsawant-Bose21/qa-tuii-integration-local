@@ -26,6 +26,13 @@ const (
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
 	GetFullState() VersionedState
+	GetStateSummary() StateSummary
+}
+
+type StateSummary struct {
+	ConfigKeys  int
+	ConfigState map[string]string
+	ValueTypes  map[string]int
 }
 
 // VersionedState represents a version of instance state
@@ -391,9 +398,14 @@ func (sm *StateManager) applyWhileLocked(
 		// Important: we compare against incomingVersion (the timestamp of the
 		// originating event), not effectiveVersion (the local receive event).
 		if exists && !localEntry.Version.Less(incomingVersion) {
-			logger.Info("------>>> Skipping key %q: local version is newer or equal", key)
-			logger.Info("incoming.Version: %d local.Version %d", incomingVersion.Counter, localEntry.Version.Counter)
-			logger.Info("incoming.Epoch: %d local.Epoch %d", incomingVersion.Epoch, localEntry.Version.Epoch)
+			logger.Debug(
+				"skipping stale/duplicate key=%q incoming=(epoch=%d version=%d) local=(epoch=%d version=%d)",
+				key,
+				incomingVersion.Epoch,
+				incomingVersion.Counter,
+				localEntry.Version.Epoch,
+				localEntry.Version.Counter,
+			)
 			continue
 		}
 
@@ -429,6 +441,30 @@ func (sm *StateManager) GetFullState() VersionedState {
 	return VersionedState{
 		Checksum: sm.state.Checksum,
 		State:    deepCopyState(sm.state.State),
+	}
+}
+
+func (sm *StateManager) GetStateSummary() StateSummary {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	configState := make(map[string]string, len(sm.state.State))
+	valueTypes := make(map[string]int)
+	for k, v := range sm.state.State {
+		if v == nil {
+			configState[k] = "nil"
+			valueTypes["nil"]++
+			continue
+		}
+		t := fmt.Sprintf("%T", v.Data)
+		configState[k] = t
+		valueTypes[t]++
+	}
+
+	return StateSummary{
+		ConfigKeys:  len(sm.state.State),
+		ConfigState: configState,
+		ValueTypes:  valueTypes,
 	}
 }
 
