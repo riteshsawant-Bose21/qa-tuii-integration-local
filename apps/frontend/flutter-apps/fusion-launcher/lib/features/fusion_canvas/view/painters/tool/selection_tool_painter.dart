@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/derived/wall_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -78,6 +79,7 @@ class SelectionToolPainter extends FusionBasePainter {
   }
 
   void _paintHighlight(Canvas canvas, FusionCanvasPainter painter, FusionCanvasElement element, FusionBasePainter layer) {
+    // print("Painting highlight for element ${element.id} of type ${element.runtimeType}");
     if (element is FusionCanvasLine) {
       drawDashedLine(
         canvas,
@@ -127,7 +129,7 @@ class SelectionToolPainter extends FusionBasePainter {
       _paintSurfaceSpeakerSelection(canvas, element.getTransformedRect(painter), painter, (element.hardware as Speaker).yaw);
     } else if (element is FusionCanvasElementPainter) {
       _paintSimpleRectSelection(canvas, element.getTransformedRect(painter), painter);
-    } else {
+    } else if (element is WallPainter) {
       // _paintSimpleRectSelection(canvas, element.getBounds(painter), painter);
     }
   }

@@ -30,6 +30,7 @@ export 'schedule/schedule_view_model.dart';
 export 'source_set/source_set_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
+export 'wall/wall_viewmodel.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
 

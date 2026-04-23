@@ -38,6 +38,8 @@ class CanvasToolBar extends StatelessWidget {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
             } else if (state.toolState is DrawingListeningAreaState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
+            } else if (state.toolState is DrawingWallState) {
+              context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
             } else if (state.toolState is MeasuringToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState());
             } else if (state.toolState is SelectToolState) {
@@ -47,6 +49,8 @@ class CanvasToolBar extends StatelessWidget {
             } else if (state.toolState is SplToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
               context.read<SplViewModel>().calculateSPL();
+            } else if (state.toolState is WallSelectToolState) {
+              context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
             }
           },
         ),

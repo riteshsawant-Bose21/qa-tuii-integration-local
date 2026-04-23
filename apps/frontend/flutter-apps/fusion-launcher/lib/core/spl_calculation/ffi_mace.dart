@@ -219,6 +219,12 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
     'assets/Loudspeakers/msa_ohs.bsf',
     'assets/Loudspeakers/msa_tb.bsf',
     'assets/Loudspeakers/MSA12X.bsf',
+    'assets/Loudspeakers/DM10S-SUB 70V.bsf',
+    'assets/Loudspeakers/DM10S-SUB 100V.bsf',
+    'assets/Loudspeakers/DM10S-Sub.bsf',
+    'assets/Loudspeakers/DM8C-SUB 70V.bsf',
+    'assets/Loudspeakers/DM8C-SUB 100V.bsf',
+    'assets/Loudspeakers/DM8C-Sub.bsf',
   ];
 
   // Determine on-disk Flutter assets location to avoid rootBundle in isolates
@@ -250,7 +256,7 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
       // Already copied
       continue;
     }
-await outFile.create(recursive: true);
+    await outFile.create(recursive: true);
     // Prefer copying from disk when assetsRoot is known
     print("[isolate] Base Asset path identified : $assetsRoot");
     if (assetsRoot != null) {
@@ -260,21 +266,19 @@ await outFile.create(recursive: true);
       if (await srcFile.exists()) {
         await srcFile.copy(outFile.path);
         continue;
-      }else{
+      } else {
         print("[isolate] Not Found file in First Method, Trying in second method");
 
         final String filenameWithoutSpace = srcPath.replaceAll(assetPath, assetPath.replaceAll(" ", "%20"));
-        print("[isolate] Second MEthod File : $filenameWithoutSpace");
+        print("[isolate] Second Method File : $filenameWithoutSpace");
         final File newFile = File(filenameWithoutSpace);
-        if(await newFile.exists()){
+        if (await newFile.exists()) {
           await newFile.copy(outFile.path);
           continue;
-        }else{
+        } else {
           print("[isolate] No File found in 2 methods");
-
         }
       }
-
     }
 
     // Fallback: use rootBundle if available in this isolate
