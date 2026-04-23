@@ -328,7 +328,6 @@ struct fusion_gpt
 	bool discipline_continuity_ready;
 	bool discipline_gm_locked;
 	bool discipline_reacquire_pending;
-	bool discipline_reacquire_armed;
 	u64 discipline_reacquire_cap64;
 	bool discipline_reacquire_jump_pending;
 	u32 discipline_lock_streak;
@@ -412,8 +411,6 @@ static void gpt_reset_discipline_control_locked(struct fusion_gpt *g,
 	g->sq_err_sum = 0;
 	g->err_count = 0;
 	g->discipline_reacquire_pending = keep_continuity;
-	g->discipline_reacquire_armed = keep_continuity && reacquire_pending &&
-		g->discipline_reacquire_armed;
 	g->discipline_reacquire_cap64 = keep_continuity ?
 		(reacquire_pending ? g->discipline_reacquire_cap64 : last_pps_cap64) : 0;
 	g->discipline_reacquire_jump_pending = keep_continuity;
@@ -686,6 +683,7 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	bool prev_pending;
 	bool prev_pps_valid;
 	u64 prev_pps_cap64;
+	unsigned long prev_last_pps_jiffies;
 	bool changed;
 	unsigned long suppress_until = 0;
 	g = fusion_gpt_get_locked();
@@ -703,6 +701,7 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 	prev_pending = g->pending_future_anchor;
 	prev_pps_valid = g->pps_valid;
 	prev_pps_cap64 = g->pps_icr1_last64;
+	prev_last_pps_jiffies = g->last_pps_jiffies;
 	changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
 		g->pending_future_anchor || g->pps_seq ||
 		prev_continuity || prev_gm_locked || g->discipline_lock_streak ||
@@ -717,7 +716,7 @@ static int fusion_gpt_reset_timing_state_internal(bool preserve_ready_for_rechec
 					    prev_pps_valid, prev_pps_cap64);
 	if (READ_ONCE(g->discipline_continuity_ready) ||
 	    g->discipline_reacquire_pending)
-		g->last_pps_jiffies = jiffies;
+		g->last_pps_jiffies = prev_last_pps_jiffies;
 	baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
@@ -897,24 +896,31 @@ static void gpt_update_discipline_state_locked(struct fusion_gpt *g, u64 cap64,
 	long abs_err;
 
 	if (g->discipline_reacquire_pending) {
-		if (!g->discipline_reacquire_armed) {
-			g->discipline_reacquire_cap64 = cap64;
-			g->discipline_reacquire_armed = true;
+		long reacquire_error =
+			gpt_compute_freq_error(cap64, g->discipline_reacquire_cap64);
+		bool reacquire_valid_pps_interval =
+			gpt_is_valid_pps_interval(reacquire_error);
+
+		g->discipline_reacquire_pending = false;
+		g->discipline_reacquire_cap64 = 0;
+		abs_err = abs(reacquire_error);
+
+		if (!reacquire_valid_pps_interval || abs_err >= thresh) {
+			WRITE_ONCE(g->discipline_continuity_ready, false);
+			WRITE_ONCE(g->discipline_gm_locked, false);
+			g->discipline_reacquire_jump_pending = false;
+			g->discipline_lock_streak = 0;
+			pr_warn("fusion_gpt: discipline continuity lost on reacquire err=%ld thresh=%u valid=%u max_valid_err=%u\n",
+				reacquire_error, thresh,
+				reacquire_valid_pps_interval ? 1U : 0U,
+				READ_ONCE(max_valid_pps_error_param));
 			return;
 		}
 
-		if (!valid_pps_interval)
-			return;
-
-		g->discipline_reacquire_pending = false;
-		g->discipline_reacquire_armed = false;
-		g->discipline_reacquire_cap64 = 0;
-		g->discipline_reacquire_jump_pending = false;
-		abs_err = abs(freq_error);
-		g->discipline_lock_streak = (abs_err < thresh) ? 1 : 0;
 		WRITE_ONCE(g->discipline_gm_locked, false);
-		pr_info("fusion_gpt: discipline reacquire sample err=%ld thresh=%u lock_streak=%u\n",
-			freq_error, thresh, g->discipline_lock_streak);
+		g->discipline_lock_streak = 1;
+		pr_info("fusion_gpt: discipline continuity preserved on reacquire err=%ld thresh=%u lock_streak=%u\n",
+			reacquire_error, thresh, g->discipline_lock_streak);
 		return;
 	}
 
@@ -1212,7 +1218,6 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 		WRITE_ONCE(g->discipline_continuity_ready, false);
 		WRITE_ONCE(g->discipline_gm_locked, false);
 		g->discipline_reacquire_pending = false;
-		g->discipline_reacquire_armed = false;
 		g->discipline_reacquire_cap64 = 0;
 		g->discipline_reacquire_jump_pending = false;
 		g->discipline_lock_streak = 0;
