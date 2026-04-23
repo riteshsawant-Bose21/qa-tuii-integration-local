@@ -51,6 +51,17 @@ PKG_CFLAGS += $(JSONCPP_CFLAGS)
 PKG_LIBS += $(JSONCPP_LIBS)
 
 # ================================
+# fmt support (required by spdlog)
+# ================================
+ifeq ($(UNAME_S),Darwin)
+    FMT_LIBS := $(shell $(PKGCONF) --libs fmt 2>/dev/null || echo "-L/opt/homebrew/lib -lfmt")
+else
+    FMT_LIBS := -lfmt
+endif
+
+PKG_LIBS += $(FMT_LIBS)
+
+# ================================
 # Boost ASIO support
 # ================================
 ifeq ($(UNAME_S),Darwin)
