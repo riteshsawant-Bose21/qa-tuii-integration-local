@@ -1,0 +1,16 @@
+info:
+  name: Delete All Scene Sets
+  type: http
+  seq: 15
+
+http:
+  method: DELETE
+  url: "{{api_url}}/scenes-sets"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Deletes all scene-set definitions (and therefore all scenes contained in those sets).

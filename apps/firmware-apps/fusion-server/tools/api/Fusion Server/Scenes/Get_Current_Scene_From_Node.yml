@@ -1,11 +1,11 @@
 info:
-  name: Get Current Scene
+  name: Get Current Scene From Node
   type: http
-  seq: 8
+  seq: 18
 
 http:
   method: POST
-  url: "{{api_url}}/scenes-sets/current-scene"
+  url: "{{node_url}}/scenes-sets/current-scene"
   headers:
     - name: Content-Type
       value: application/json
@@ -22,4 +22,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Returns the currently active scene ID for the given scene set.
+docs: Replication check. Reads current scene metadata for a set from a specific node URL.

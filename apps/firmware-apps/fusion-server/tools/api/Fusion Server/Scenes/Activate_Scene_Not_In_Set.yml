@@ -1,11 +1,11 @@
 info:
-  name: Get Current Scene
+  name: Activate Scene Not In Set
   type: http
-  seq: 8
+  seq: 12
 
 http:
   method: POST
-  url: "{{api_url}}/scenes-sets/current-scene"
+  url: "{{api_url}}/scenes-sets/activate"
   headers:
     - name: Content-Type
       value: application/json
@@ -13,7 +13,8 @@ http:
     type: json
     data: |-
       {
-        "set_id": "scene-set-test-01"
+        "set_id": "scene-set-test-01",
+        "scene_id": "not-in-set"
       }
 
 settings:
@@ -22,4 +23,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Returns the currently active scene ID for the given scene set.
+docs: Negative-path test. Scene id is not a member of the specified set.
