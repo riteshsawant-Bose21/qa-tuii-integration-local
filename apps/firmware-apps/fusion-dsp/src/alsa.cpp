@@ -157,22 +157,12 @@ private:
     snd_pcm_uframes_t negotiated_buffer_size = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
-    uint64_t read_silence_not_open_count = 0;
-    uint64_t read_silence_eagain_count = 0;
-    uint64_t read_silence_error_count = 0;
-    uint64_t read_silence_short_count = 0;
-    uint64_t write_drop_not_open_count = 0;
-    uint64_t write_drop_eagain_count = 0;
-    uint64_t write_drop_error_count = 0;
-    uint64_t write_drop_short_count = 0;
-    std::time_t last_io_diagnostic_log_sec = 0;
 
     void (*convert_read)(const uint8_t *src, float *dst,
                          int channels, int samples) = nullptr;
     void (*convert_write)(const float *src, uint8_t *dst,
                           int channels, int samples) = nullptr;
 
-    void log_io_diagnostics(const char *event, int requested, int result);
     void open_device();
     void close_device();
     bool is_open();
@@ -428,33 +418,6 @@ bool AlsaDevice::is_open()
 }
 
 
-void AlsaDevice::log_io_diagnostics(const char *event, int requested,
-                                    int result)
-{
-    if (is_bluealsa_device_name(device_name))
-    {
-        return;
-    }
-
-    std::time_t now = std::time(nullptr);
-
-    if (now == last_io_diagnostic_log_sec)
-    {
-        return;
-    }
-
-    last_io_diagnostic_log_sec = now;
-
-    SPDLOG_WARN(
-        "ALSA {} {} requested={} result={} read_silence{{not_open={},eagain={},error={},short={}}} write_drop{{not_open={},eagain={},error={},short={}}}",
-        device_name.c_str(), event, requested, result,
-        read_silence_not_open_count, read_silence_eagain_count,
-        read_silence_error_count, read_silence_short_count,
-        write_drop_not_open_count, write_drop_eagain_count,
-        write_drop_error_count, write_drop_short_count);
-}
-
-
 int AlsaDevice::get_buffer_depth()
 {
     if (!is_open())
@@ -572,8 +535,6 @@ int AlsaDevice::read(float *buffer, int samples)
     if (!is_open())
     {
         deferred_open_task.tick();
-        read_silence_not_open_count++;
-        log_io_diagnostics("read silence: device not open", samples, 0);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -590,8 +551,6 @@ int AlsaDevice::read(float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
-        read_silence_eagain_count++;
-        log_io_diagnostics("read silence: EAGAIN", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -609,8 +568,6 @@ int AlsaDevice::read(float *buffer, int samples)
                 close_device();
             }
 
-            read_silence_error_count++;
-            log_io_diagnostics("read silence: xrun", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -618,8 +575,6 @@ int AlsaDevice::read(float *buffer, int samples)
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
-            read_silence_error_count++;
-            log_io_diagnostics("read silence: unavailable", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -629,8 +584,6 @@ int AlsaDevice::read(float *buffer, int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Capture stream suspended on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
-            read_silence_error_count++;
-            log_io_diagnostics("read silence: suspended", samples, res);
             std::memset(buffer, 0, samples * channels * sizeof(float));
             return samples;
         }
@@ -639,8 +592,6 @@ int AlsaDevice::read(float *buffer, int samples)
                               "Unable to read from {}: {}",
                               device_name.c_str(), snd_strerror(res));
         close_device();
-        read_silence_error_count++;
-        log_io_diagnostics("read silence: error", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -651,8 +602,6 @@ int AlsaDevice::read(float *buffer, int samples)
                               "Unexpected samples read from {}: {} vs {}",
                               device_name.c_str(), res, samples);
 
-        read_silence_short_count++;
-        log_io_diagnostics("read silence: short read", samples, res);
         std::memset(buffer, 0, samples * channels * sizeof(float));
         if (res > 0)
         {
@@ -675,8 +624,6 @@ void AlsaDevice::write(const float *buffer, int samples)
     if (!is_open())
     {
         deferred_open_task.tick();
-        write_drop_not_open_count++;
-        log_io_diagnostics("write dropped: device not open", samples, 0);
         return;
     }
 
@@ -699,8 +646,6 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     if (res == -EAGAIN)
     {
-        write_drop_eagain_count++;
-        log_io_diagnostics("write dropped: EAGAIN", samples, res);
         return;
     }
 
@@ -717,16 +662,12 @@ void AlsaDevice::write(const float *buffer, int samples)
                 close_device();
             }
 
-            write_drop_error_count++;
-            log_io_diagnostics("write dropped: xrun", samples, res);
             return;
         }
 
         if (res == -EBADFD || res == -ENODEV)
         {
             close_device();
-            write_drop_error_count++;
-            log_io_diagnostics("write dropped: unavailable", samples, res);
             return;
         }
 
@@ -735,8 +676,6 @@ void AlsaDevice::write(const float *buffer, int samples)
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Playback stream suspended on {}: {}",
                                   device_name.c_str(), snd_strerror(res));
-            write_drop_error_count++;
-            log_io_diagnostics("write dropped: suspended", samples, res);
             return;
         }
 
@@ -744,8 +683,6 @@ void AlsaDevice::write(const float *buffer, int samples)
                               "Unable to write {}: {}",
                               device_name.c_str(), snd_strerror(res));
         close_device();
-        write_drop_error_count++;
-        log_io_diagnostics("write dropped: error", samples, res);
         return;
     }
 
@@ -754,8 +691,6 @@ void AlsaDevice::write(const float *buffer, int samples)
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unexpected samples written to {}: {} vs {}",
                               device_name.c_str(), res, samples);
-        write_drop_short_count++;
-        log_io_diagnostics("write dropped: short write", samples, res);
         return;
     }
 
