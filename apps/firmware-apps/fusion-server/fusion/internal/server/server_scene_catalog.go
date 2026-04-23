@@ -13,7 +13,7 @@ import (
 	"fusion/internal/utils"
 )
 
-// ActivateSnapshot handles POST /snapshots/activate.
+// ActivateSnapshot handles POST /snapshots/activate/{name}.
 // Patches the snapshot data onto DB State (fire-and-forget).
 // Returns 404 if the snapshot ID does not exist.
 func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -21,27 +21,15 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	name, err := utils.ExtractName(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
 
-	var req api.ActivateSnapshotRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if req.ID == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.handler.HandleActivateSnapshotByID(req.ID); err != nil {
+	if err := s.handler.HandleActivateSnapshotByID(name); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", req.ID), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -51,7 +39,7 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListSnapshotDefinitions handles GET /snapshots/list.
+// ListSnapshotDefinitions handles GET /snapshots.
 // Returns the list of all stored snapshot definitions.
 func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -68,7 +56,7 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(api.SnapshotListResponse{Snapshots: snapshots})
 }
 
-// ListScenes handles GET /scenes/list.
+// ListScenes handles GET /scenes.
 // Returns a flat list of all scenes across all scene sets.
 func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -190,7 +178,7 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// ListSceneSets handles GET /scene-sets/list.
+// ListSceneSets handles GET /scene-sets.
 // Returns all stored scene sets.
 func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {

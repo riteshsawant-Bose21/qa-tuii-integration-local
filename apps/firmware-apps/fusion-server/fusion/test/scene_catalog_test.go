@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,8 +46,8 @@ func upsertSceneSets(t *testing.T, sets []api.SceneSet) {
 
 func activateSnapshotDef(t *testing.T, id string) *http.Response {
 	t.Helper()
-	payload, _ := json.Marshal(api.ActivateSnapshotRequest{ID: id})
-	resp, err := http.Post(snapshotDefsActivateURL, api.JsonMIMEType, bytes.NewBuffer(payload))
+	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, id, 1)
+	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("activateSnapshotDef: POST request failed: %v", err)
 	}
@@ -149,14 +150,15 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 	}
 }
 
-func TestSceneCatalogActivateSnapshotDefMissingID(t *testing.T) {
-	resp, err := http.Post(snapshotDefsActivateURL, api.JsonMIMEType, bytes.NewBufferString(`{}`))
+func TestSceneCatalogActivateSnapshotDefMissingName(t *testing.T) {
+	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, "", 1)
+	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
-		t.Fatalf("POST /snapshots/activate failed: %v", err)
+		t.Fatalf("POST /snapshots/activate/ failed: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected 400 for missing id, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound && resp.StatusCode != http.StatusMovedPermanently {
+		t.Errorf("Expected 404 or 301 for missing name, got %d", resp.StatusCode)
 	}
 }
 

@@ -11,7 +11,7 @@ class EventList extends StatelessWidget {
   final Function(String eventId) onDelete;
   final Function(String eventId)? onSelect;
   final Function(String eventId, bool isEnabled)? onSwitchChanged;
-  final Function(String eventId)? onEventRecall;
+  final Future<void> Function(String eventId)? onEventRecall;
 
   final String? selectedEventId;
   final Function(int oldIndex, int newIndex)? onReorder;
