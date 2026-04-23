@@ -131,7 +131,6 @@ enum gpt_dac_restore_reason {
 
 struct gpt_reset_spec {
 	const char *profile_name;
-	const char *log_reason;
 	bool reset_timing_session_domain;
 	bool reset_control_domain;
 	bool reset_model_domain;
@@ -141,7 +140,6 @@ struct gpt_reset_spec {
 	bool simulate_pps_gap;
 	bool preserve_last_pps_jiffies_on_reacquire;
 	bool queue_dac_restore_work;
-	bool log_previous_state;
 	enum gpt_dac_restore_reason dac_restore_reason;
 };
 
@@ -167,7 +165,6 @@ static int fusion_gpt_simulate_pps_gap_only(void);
 
 static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_STATE = {
 	.profile_name = "timing_state",
-	.log_reason = "timing_reset",
 	.reset_timing_session_domain = true,
 	.reset_control_domain = true,
 	.reset_model_domain = false,
@@ -177,13 +174,11 @@ static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_STATE = {
 	.simulate_pps_gap = false,
 	.preserve_last_pps_jiffies_on_reacquire = true,
 	.queue_dac_restore_work = true,
-	.log_previous_state = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_RESET,
 };
 
 static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_SESSION = {
 	.profile_name = "timing_session",
-	.log_reason = "timing_session_reset",
 	.reset_timing_session_domain = true,
 	.reset_control_domain = true,
 	.reset_model_domain = false,
@@ -193,13 +188,11 @@ static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_SESSION = {
 	.simulate_pps_gap = false,
 	.preserve_last_pps_jiffies_on_reacquire = false,
 	.queue_dac_restore_work = true,
-	.log_previous_state = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_SESSION_RESET,
 };
 
 static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_RESET_SIM = {
 	.profile_name = "timing_reset_sim",
-	.log_reason = "timing_reset",
 	.reset_timing_session_domain = true,
 	.reset_control_domain = true,
 	.reset_model_domain = false,
@@ -209,13 +202,11 @@ static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_RESET_SIM = {
 	.simulate_pps_gap = true,
 	.preserve_last_pps_jiffies_on_reacquire = true,
 	.queue_dac_restore_work = true,
-	.log_previous_state = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_RESET,
 };
 
 static const struct gpt_reset_spec GPT_RESET_PROFILE_PPS_GAP_ONLY = {
 	.profile_name = "pps_gap_only",
-	.log_reason = "pps_gap_only",
 	.reset_timing_session_domain = false,
 	.reset_control_domain = false,
 	.reset_model_domain = false,
@@ -225,13 +216,11 @@ static const struct gpt_reset_spec GPT_RESET_PROFILE_PPS_GAP_ONLY = {
 	.simulate_pps_gap = true,
 	.preserve_last_pps_jiffies_on_reacquire = true,
 	.queue_dac_restore_work = false,
-	.log_previous_state = false,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_NONE,
 };
 
 static const struct gpt_reset_spec GPT_RESET_PROFILE_COLD_START = {
 	.profile_name = "cold_start",
-	.log_reason = "cold_start",
 	.reset_timing_session_domain = true,
 	.reset_control_domain = true,
 	.reset_model_domain = true,
@@ -241,7 +230,6 @@ static const struct gpt_reset_spec GPT_RESET_PROFILE_COLD_START = {
 	.simulate_pps_gap = false,
 	.preserve_last_pps_jiffies_on_reacquire = false,
 	.queue_dac_restore_work = false,
-	.log_previous_state = false,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_NONE,
 };
 
@@ -890,7 +878,6 @@ static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
 	struct fusion_gpt *g;
 	unsigned long flags;
 	struct gpt_reset_runtime_ctx ctx;
-	int baseline_dac = DAC_INVALID_VALUE;
 
 	g = fusion_gpt_get_locked();
 	if (!g)
@@ -900,13 +887,11 @@ static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
 	raw_spin_lock(&g->ctrl_lock);
 	gpt_capture_reset_runtime_ctx_locked(g, &ctx);
 	gpt_apply_reset_profile_locked(g, &ctx, spec);
-	if (spec->queue_dac_restore_work)
-		baseline_dac = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset apply profile=%s reason=%s domains{timing_session=%u control=%u model=%u simulation=%u} preserve{continuity=%u last_pps_jiffies=%u model_history=%u dac_baseline=%u} dac_restore=%s\n",
-		spec->profile_name, spec->log_reason,
+	pr_info("fusion_gpt: reset profile=%s domains{timing_session=%u control=%u model=%u simulation=%u} preserve{continuity=%u last_pps_jiffies=%u model_history=%u dac_baseline=%u} dac_restore=%s\n",
+		spec->profile_name,
 		spec->reset_timing_session_domain ? 1U : 0U,
 		spec->reset_control_domain ? 1U : 0U,
 		spec->reset_model_domain ? 1U : 0U,
@@ -916,17 +901,6 @@ static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
 		spec->preserve_model_history ? 1U : 0U,
 		spec->preserve_dac_baseline ? 1U : 0U,
 		gpt_dac_restore_reason_name(spec->dac_restore_reason));
-	if (spec->log_previous_state && ctx.changed)
-		pr_info("fusion_gpt: reset prev profile=%s prev{pps_seq=%u epoch=%u aligned=%u continuity=%u gm_locked=%u pending=%u freq_err=%ld reacquire=%u}\n",
-			spec->profile_name, ctx.prev_pps_seq, ctx.prev_epoch_valid,
-			ctx.prev_aligned, ctx.prev_continuity, ctx.prev_gm_locked,
-			ctx.prev_pending_anchor, ctx.prev_freq_error,
-			ctx.prev_reacquire_pending ? 1U : 0U);
-	if (spec->queue_dac_restore_work)
-		pr_info("fusion_gpt: dac restore queued profile=%s reason=%s dac=%d\n",
-			spec->profile_name,
-			gpt_dac_restore_reason_name(spec->dac_restore_reason),
-			baseline_dac);
 	if (spec->simulate_pps_gap) {
 		if (spec->reset_timing_session_domain || spec->reset_control_domain ||
 		    spec->reset_model_domain)
