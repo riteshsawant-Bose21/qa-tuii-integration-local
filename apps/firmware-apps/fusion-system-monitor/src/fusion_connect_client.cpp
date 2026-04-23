@@ -59,7 +59,6 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_GET_METRICS,
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
     FUSION_CN_CTRL_CMD_GET_TIMING_STATUS,
-    FUSION_CN_CTRL_CMD_RESET_TIMING_STATE,
     FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION,
     FUSION_CN_CTRL_CMD_SET_DEBUG,
     FUSION_CN_CTRL_CMD_SET_ETH_IFACE
@@ -498,19 +497,6 @@ static bool nl_get_timing_status(NetlinkClient& c, fc_get_timing_status_reply *o
     memcpy(out, reply.data, sizeof(*out));
     if (reply.data) free(reply.data);
     return true;
-}
-
-static bool nl_reset_timing_state(NetlinkClient& c)
-{
-    fusion_cn_ctrl_msg reply{};
-    if (!c.send_message(FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, nullptr, 0, &reply)) {
-        return false;
-    }
-    if (reply.err != 0) {
-        SPDLOG_ERROR("RESET_TIMING_STATE err={}", reply.err);
-    }
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
 }
 
 static bool nl_reset_timing_session(NetlinkClient& c)
