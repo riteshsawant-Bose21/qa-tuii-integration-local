@@ -136,7 +136,7 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
     // if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
 
     if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isEmpty) {
-      return FusionToast.error(context, message: 'Select atleast one listening area');
+      return FusionToast.error(context, message: 'Select at least one listening area');
     } else {
       for (final AddListeningAreaToSubzoneModel subzone in state.subzones) {
         if (subzone.listeningAreas.isEmpty) {
