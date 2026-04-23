@@ -129,8 +129,16 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 			return 0, false
 		}
 
+		getStringSliceLocal := func(key string) []string {
+			v, hasKey := t.Params[key]
+			if !hasKey {
+				return nil
+			}
+			return utils.CoerceStringSlice(v)
+		}
+
 		msgID, hasMessageID := getString(api.MessageIDKey)
-		zones, _ := getString(api.MessageZonesKey)
+		zones := getStringSliceLocal(api.MessageZonesKey)
 		priority, hasPriority := getInt64(api.MessagePriorityKey)
 
 		// Skip or log incomplete tasks
@@ -377,6 +385,15 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 		return ""
 	}
 
+	// Helper to coerce any value to []string
+	getStringSlice := func(key string) []string {
+		v, hasKey := task.Params[key]
+		if !hasKey {
+			return nil
+		}
+		return utils.CoerceStringSlice(v)
+	}
+
 	// Helper to coerce any value to int
 	getInt := func(key string) int {
 		if v, hasKey := task.Params[key]; hasKey && v != nil {
@@ -402,7 +419,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	messageID := getString(api.MessageIDKey)
 	priority := getInt(api.MessagePriorityKey)
-	zones := getString(api.MessageZonesKey)
+	zones := getStringSlice(api.MessageZonesKey)
 
 	switch messageID {
 	case "":
@@ -450,7 +467,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 	return nil
 }
 
-func (tm *TaskManager) buildMessageTaskParams(messageID string, priority int, zones string) (map[string]any, error) {
+func (tm *TaskManager) buildMessageTaskParams(messageID string, priority int, zones []string) (map[string]any, error) {
 	meta, err := tm.persistence.GetAudioMetadata(messageID)
 	if err != nil {
 		return nil, err

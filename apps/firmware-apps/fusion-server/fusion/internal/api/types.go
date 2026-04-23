@@ -344,7 +344,7 @@ type TaskMessage struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   string           `json:"message_id"`
 	Priority    int64            `json:"priority"`
-	Zones       string           `json:"zones"`
+	Zones       []string         `json:"zones"`
 }
 
 // TaskMessagePatch represents a patchable message task
@@ -356,7 +356,7 @@ type TaskMessagePatch struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   *string          `json:"message_id,omitempty"`
 	Priority    *int64           `json:"priority"`
-	Zones       *string          `json:"zones"`
+	Zones       *[]string        `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
@@ -490,14 +490,14 @@ type SoftwareUpdateInfo struct {
 // PAVA Messages
 
 type TriggerMessageRequest struct {
-	Priority int    `json:"priority,omitempty"`
-	Zones    string `json:"zones,omitempty"`
+	Priority int      `json:"priority,omitempty"`
+	Zones    []string `json:"zones,omitempty"`
 }
 
 type MessageTrigger struct {
-	ID        string `json:"id"`
-	Path      string `json:"path"`
-	Priority  int    `json:"priority,omitempty"`
-	Zones     string `json:"zones,omitempty"`
-	Timestamp int64  `json:"timestamp"`
+	ID        string   `json:"id"`
+	Path      string   `json:"path"`
+	Priority  int      `json:"priority,omitempty"`
+	Zones     []string `json:"zones,omitempty"`
+	Timestamp int64    `json:"timestamp"`
 }

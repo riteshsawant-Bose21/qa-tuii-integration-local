@@ -26,11 +26,11 @@ const (
 )
 
 type messageTriggerPayload struct {
-	ID        string `json:"id"`
-	Path      string `json:"path"`
-	Priority  int    `json:"priority,omitempty"`
-	Zones     string `json:"zones,omitempty"`
-	Timestamp int64  `json:"timestamp"`
+	ID        string   `json:"id"`
+	Path      string   `json:"path"`
+	Priority  int      `json:"priority,omitempty"`
+	Zones     []string `json:"zones,omitempty"`
+	Timestamp int64    `json:"timestamp"`
 }
 
 func localAudioBaseURL(t *testing.T) string {
@@ -341,7 +341,7 @@ func TestTriggerMessageEmitsZonesPayloadLocal(t *testing.T) {
 	defer deleteAudio(t, ctx, baseURL, meta.Id)
 
 	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
-	reqBody := []byte(`{"priority":77,"zones":"lobby,gym"}`)
+	reqBody := []byte(`{"priority":77,"zones":["lobby","gym"]}`)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", baseURL, triggerEndpoint), bytes.NewReader(reqBody))
 	if err != nil {
 		t.Fatalf("creating trigger request failed: %v", err)
@@ -366,8 +366,8 @@ func TestTriggerMessageEmitsZonesPayloadLocal(t *testing.T) {
 	if payload.Priority != 77 {
 		t.Fatalf("unexpected payload priority: got %d want %d", payload.Priority, 77)
 	}
-	if payload.Zones != "lobby,gym" {
-		t.Fatalf("unexpected payload zones: got %q want %q", payload.Zones, "lobby,gym")
+	if strings.Join(payload.Zones, ",") != "lobby,gym" {
+		t.Fatalf("unexpected payload zones: got %v want %v", payload.Zones, []string{"lobby", "gym"})
 	}
 	if !strings.HasSuffix(payload.Path, filepath.Base(meta.Filename)) && !strings.HasSuffix(payload.Path, meta.Id+".wav") {
 		t.Fatalf("unexpected payload path: got %q", payload.Path)
