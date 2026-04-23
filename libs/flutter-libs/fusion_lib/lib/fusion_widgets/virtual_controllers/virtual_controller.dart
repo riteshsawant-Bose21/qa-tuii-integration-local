@@ -29,9 +29,6 @@ class _VirtualControllerState extends State<VirtualController> {
 
   @override
   void initState() {
-    // Listen for server-side updates
-
-    //_wsService.connect(context.read<VirtualControllerViewModel>().vipAddress);
 
     if(!widget.isDesignMode) {
       _wsSubscription = _wsService.stream.listen((encoded) {
@@ -206,37 +203,36 @@ class _VirtualControllerState extends State<VirtualController> {
             WallZone zone = zones[zoneIndex];
      
 
-            return FutureBuilder(
-                key: Key(zone.id),
-                future: getSelectSource("${zone.functionId ?? ""}/selector"),
-                builder: (context, AsyncSnapshot<WallZone> snapshot) {
-
-                  zone.sourceSelected = snapshot.data?.sourceSelected ?? 1;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(zone.name.toUpperCase()),
-                      SizedBox(height: 8,),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: zone.subZones.length,
-                        itemBuilder: (context, subzoneIndex) {
-                          WallSubZone src = zone.subZones[subzoneIndex];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(zone.name.toUpperCase()),
+                SizedBox(height: 8,),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: zone.subZones.length,
+                  itemBuilder: (context, subzoneIndex) {
+                    WallSubZone src = zone.subZones[subzoneIndex];
 
 
-                          return FutureBuilder(
-                            key: Key("$zoneIndex-$subzoneIndex"),
-                            future: getItem(zoneIndex,subzoneIndex,src),
-                            builder: (context, AsyncSnapshot<WallSubZone> snapshot) {
-                              if (!snapshot.hasData) {
+                    return FutureBuilder(
+                    //  key: Key("$zoneIndex-$subzoneIndex"),
+                      future: getItem(zoneIndex,subzoneIndex,src),
+                      builder: (context, AsyncSnapshot<WallSubZone> snapshot) {
+                        if (!snapshot.hasData) {
 
-                                return Container(height: 50,width: 100);
-                              }
-                              WallSubZone subzone = snapshot.data!;
+                          return Container(height: 50,width: 100);
+                        }
+                        WallSubZone subzone = snapshot.data!;
 
 
+                        return  FutureBuilder(
+                            key: Key(zone.id),
+                            future: getSelectSource("${zone.functionId ?? ""}/selector"),
+                            builder: (context, AsyncSnapshot<WallZone> snapshot) {
+
+                              zone.sourceSelected = snapshot.data?.sourceSelected ?? 1;
                               return ZoneSourceCard(
                                 onTap: () {
                                   context.read<VirtualControllerViewModel>().selectZone(
@@ -253,15 +249,15 @@ class _VirtualControllerState extends State<VirtualController> {
                                 icon: Icons.eighteen_up_rating_outlined,
                                 volume: subzone.ono.gain.toDouble(),
                               );
-                            },
-                          );
+                            }
+                        );
+                      },
+                    );
 
 
-                        },
-                      ),
-                    ],
-                  );
-                }
+                  },
+                ),
+              ],
             );
           },
         );
