@@ -199,16 +199,22 @@ extension ControllerService on ProjectService {
 
     // Build WallZone list.
     final List<WallZone> wallZones = <WallZone>[];
-    for (final String assignedIds in orderedZoneIds) {
-      Zone? zone = zones.get(assignedIds);
+    final Set<String> addedZoneIds = <String>{};
+
+    for (final String assignedId in orderedZoneIds) {
+      Zone? zone = zones.get(assignedId);
+
       if (zone == null) {
-        /// assignedIds is a subzone id; fetch parent zone id and then fetch zone details
-        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedIds);
+        // assignedId is a sub-zone; resolve to its parent zone.
+        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedId);
         if (parentZoneId != null) {
           zone = zones.get(parentZoneId);
         }
         if (zone == null) continue;
       }
+
+      // Skip if this zone was already added (e.g. another sub-zone of the same zone).
+      if (!addedZoneIds.add(zone.id)) continue;
 
       // Sources (direct + source-set sources).
       final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
@@ -245,7 +251,7 @@ extension ControllerService on ProjectService {
         );
       }
 
-      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedIds, includeUserBlocks: true);
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedId, includeUserBlocks: true);
       ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );

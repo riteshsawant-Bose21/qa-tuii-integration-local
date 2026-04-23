@@ -49,7 +49,7 @@ class WallController {
   const WallController({
     required this.id,
     required this.name,
-    required this.type,
+    this.type = 'lt',
     this.zoneIds = const [],
   });
 
@@ -77,7 +77,7 @@ class WallController {
   factory WallController.fromJson(Map<String, dynamic> json) => WallController(
     id: json['id'] as String,
     name: json['name'] as String,
-    type: json['type'] as String,
+    type: json['type'] as String? ?? 'lt',
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
   );
 }
@@ -125,7 +125,7 @@ class WallZone {
     );
   }
 
-  int sourceSelected = 1;
+  int sourceSelected = 0;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,

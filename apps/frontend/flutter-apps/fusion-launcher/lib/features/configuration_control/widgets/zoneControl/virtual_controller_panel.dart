@@ -1,4 +1,3 @@
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,26 +18,25 @@ class VirtualControllerPanel extends StatefulWidget {
 }
 
 class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
-
   bool selectedController = false;
 
   @override
   void initState() {
     context.read<VirtualControllerViewModel>().loadZones(getZones(), widget.vipAddress);
-    WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
+    if (!widget.isDesignMode) WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
     super.initState();
   }
+
   @override
   void didUpdateWidget(covariant VirtualControllerPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    selectedController=false;
+    selectedController = false;
     context.read<VirtualControllerViewModel>().loadZones(getZones(), widget.vipAddress);
-    WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
+    if (!widget.isDesignMode) WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
   }
+
   @override
   Widget build(BuildContext context) {
-
-
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
@@ -64,7 +62,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
   }
 
   getZones() {
-  //  print("WallControllerConfig");
+    //  print("WallControllerConfig");
     final WallControllerConfig config = widget.config!;
     // print(config.toJson());
     // print("controllerID : " + widget.controllerID);
@@ -79,7 +77,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     // print("zoneIds : " + zoneIds.length.toString());
     //
 
-    if(zoneIds.isEmpty){
+    if (zoneIds.isEmpty) {
       return _zones;
     }
 
@@ -87,46 +85,41 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
       WallZone? zone;
 
       for (String id in zoneIds) {
+        //if (id == item.id) {
+        //  print("Matching ZONEID with zone $id Sucess: " + item.id);
+        zone = WallZone(
+          functionId: item.functionId,
+          id: id,
+          name: item.name,
+          subZones: <WallSubZone>[],
+          sources: item.sources ?? <WallZoneSource>[],
+          gain: item.gain,
+          ono: item.ono,
+        );
+        // }
 
-          //if (id == item.id) {
-          //  print("Matching ZONEID with zone $id Sucess: " + item.id);
-            zone = WallZone(
-              functionId: item.functionId,
-              id: id,
-              name: item.name,
-              subZones: <WallSubZone>[],
-              sources: item.sources ?? <WallZoneSource>[],
-              gain: item.gain,
-              ono: item.ono,
-            );
-         // }
+        if (item.subZones.isNotEmpty) {
+          print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
 
+          for (WallSubZone subZone in item.subZones) {
+            if (id == subZone.id) {
+              print("Matching ZONEID with subzone $id Sucess: " + item.id);
+              zone = zone!.copyWith(name: subZone.name);
 
-          if (item.subZones.isNotEmpty) {
-            print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
-
-            for (WallSubZone subZone in item.subZones) {
-              if (id == subZone.id) {
-                print("Matching ZONEID with subzone $id Sucess: " + item.id);
-                zone = zone!.copyWith(name:subZone.name );
-
-                zone.subZones.add(
-                  WallSubZone(
-                    id: subZone.id,
-                    name: subZone.name,
-                    gain: subZone.gain,
-                    ono: subZone.ono,
-                  ),
-                );
-                _zones.add(zone!);
-              }
+              zone.subZones.add(
+                WallSubZone(
+                  id: subZone.id,
+                  name: subZone.name,
+                  gain: subZone.gain,
+                  ono: subZone.ono,
+                ),
+              );
+              _zones.add(zone!);
             }
-
-          } else {
-            print(
-                "Subzones empty, adding sources directly to parent zone : ${item
-                    .subZones.length}");
-           if (id == item.id) {
+          }
+        } else {
+          print("Subzones empty, adding sources directly to parent zone : ${item.subZones.length}");
+          if (id == item.id) {
             zone!.subZones.add(
               WallSubZone(
                 id: item.id,
@@ -141,23 +134,21 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
             );
             _zones.add(zone!);
           }
-          }
+        }
       }
     }
     return _zones;
   }
 
   Widget _buildContent(BuildContext context) {
-
-
     return AspectRatio(
-      aspectRatio: 16/9,
+      aspectRatio: 16 / 9,
       child: Container(
         padding: const EdgeInsets.all(24),
         child: Center(
           child: Container(
             width: 320,
-            padding: const EdgeInsets.symmetric(horizontal: 8,vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
             decoration: BoxDecoration(
               color: context.colorScheme.black,
               borderRadius: BorderRadius.circular(16),
@@ -166,25 +157,24 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
                 width: 1,
               ),
             ),
-            child:selectedController ?
-            Navigator(
-              onGenerateRoute: (RouteSettings settings) {
-                return CupertinoPageRoute(
-                  builder: (BuildContext _) => VirtualControllerVolumeControl(
-                    isArc: true,
-                    isDesignMode: widget.isDesignMode
-                  ),
-                  settings: const RouteSettings(name: 'volume_controller'),
-                );
-              },
-            )
-
-             :  VirtualController(isDesignMode: widget.isDesignMode, onSelected: () {
-              setState(() {
-                selectedController = true;
-              });
-
-            }),
+            child:
+                selectedController
+                    ? Navigator(
+                      onGenerateRoute: (RouteSettings settings) {
+                        return CupertinoPageRoute(
+                          builder: (BuildContext _) => VirtualControllerVolumeControl(isArc: true, isDesignMode: widget.isDesignMode),
+                          settings: const RouteSettings(name: 'volume_controller'),
+                        );
+                      },
+                    )
+                    : VirtualController(
+                      isDesignMode: widget.isDesignMode,
+                      onSelected: () {
+                        setState(() {
+                          selectedController = true;
+                        });
+                      },
+                    ),
           ),
         ),
       ),
