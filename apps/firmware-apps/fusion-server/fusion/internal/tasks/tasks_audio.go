@@ -502,7 +502,7 @@ func (tm *TaskManager) buildMessageTaskParams(messageID string, priority int, zo
 		ID:        meta.Id,
 		Path:      filePath,
 		Priority:  priority,
-		Zones:     zones,
+		Zones:     utils.CoerceStringSlice(zones),
 		Timestamp: time.Now().Unix(),
 	}
 
@@ -513,7 +513,7 @@ func (tm *TaskManager) buildMessageTaskParams(messageID string, priority int, zo
 
 	// Empty zones means "all zones", but keep it explicit in task params so the
 	// scheduler API can round-trip the user's intent.
-	params[api.MessageZonesKey] = zones
+	params[api.MessageZonesKey] = utils.CoerceStringSlice(zones)
 
 	return params, nil
 }

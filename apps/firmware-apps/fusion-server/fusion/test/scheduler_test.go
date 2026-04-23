@@ -213,7 +213,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 		CronExpr:    "@every 1m",
 		MessageID:   meta.Id,
 		Priority:    100,
-		Zones:       nil,
+		Zones:       []string{},
 	}
 
 	payload, err := json.Marshal(taskMessage)

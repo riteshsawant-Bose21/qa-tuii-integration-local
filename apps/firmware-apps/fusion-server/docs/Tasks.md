@@ -187,7 +187,7 @@ This performs a full-state restore with an epoch bump — the same behaviour as 
 "params": {
     "message_id": "<id>",
     "priority": 50,
-    "zones": "lobby"
+    "zones": ["lobby"]
 }
 ```
 Triggers audio playback.

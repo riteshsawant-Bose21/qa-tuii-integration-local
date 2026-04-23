@@ -498,6 +498,6 @@ type MessageTrigger struct {
 	ID        string   `json:"id"`
 	Path      string   `json:"path"`
 	Priority  int      `json:"priority,omitempty"`
-	Zones     []string `json:"zones,omitempty"`
+	Zones     []string `json:"zones"`
 	Timestamp int64    `json:"timestamp"`
 }

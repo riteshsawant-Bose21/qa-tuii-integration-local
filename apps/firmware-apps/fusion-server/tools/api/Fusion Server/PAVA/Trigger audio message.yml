@@ -14,7 +14,7 @@ http:
     type: json
     data: |-
       {
-        "zones": "lobby",
+        "zones": ["lobby"],
         "priority": 100
       }
 
