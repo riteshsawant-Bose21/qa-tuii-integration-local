@@ -2,20 +2,21 @@ import 'dart:async';
 
 class AudioUtils {
   /// Convert UI volume (0.0-1.0) to dB gain (-60 to +12) for server communication.
-  static double volumeToDbGain(double volume) {
-    volume = volume.clamp(0.0, 1.0);
-    return -60.0 + (volume * 72.0);
+  double percentageToDbfs(double percentage) {
+    const double minDb = -60.0;
+    const double maxDb = 12.0;
+
+    final double clamped = percentage.clamp(0.0, 100.0);
+    return minDb + (clamped / 100.0) * (maxDb - minDb);
   }
 
-  /// Convert dB gain (-60 to +12) from server back to UI volume (0.0-1.0).
-  static double dbGainToVolume(double dbGain) {
-    dbGain = dbGain.clamp(-60.0, 12.0);
-    return (dbGain + 60.0) / 72.0;
-  }
+  /// Converts a dBFS value (-60 to 12) to a percentage value (0–100)
+  double dbfsToPercentage(double dbfs) {
+    const double minDb = -60.0;
+    const double maxDb = 12.0;
 
-  /// Scales a 0.0-1.0 volume to 0-100 for UI display.
-  static double toUiVolume(double dbGain) {
-    return dbGainToVolume(dbGain) * 100.0;
+    final double clamped = dbfs.clamp(minDb, maxDb);
+    return ((clamped - minDb) / (maxDb - minDb)) * 100.0;
   }
 }
 
