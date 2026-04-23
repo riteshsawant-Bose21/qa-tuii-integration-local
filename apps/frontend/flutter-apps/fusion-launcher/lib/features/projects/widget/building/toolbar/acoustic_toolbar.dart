@@ -13,9 +13,7 @@ class AcousticToolBar extends StatelessWidget {
           icon: "listening_area.png",
           label: "Listening Area",
           isSelected: toolState is ListeningAreaToolState,
-          onTap: () => context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(
-            listeningAreaId: null
-          )),
+          onTap: () => context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: null)),
         ),
 
         _ToolBarIcon(
@@ -29,6 +27,17 @@ class AcousticToolBar extends StatelessWidget {
           label: "Measure",
           isSelected: toolState is MeasuringToolState,
           onTap: () => context.read<BuildingPageViewModel>().setTool(MeasuringToolState()),
+        ),
+        _ToolBarIcon(
+          icon: "wall.png",
+          label: "Wall",
+          isSelected: toolState is WallToolState,
+          onTap:
+              () => context.read<BuildingPageViewModel>().setTool(
+                DrawingWallState(
+                  wallId: null,
+                ),
+              ),
         ),
         // _ToolBarIcon(
         //   icon: "pointer.png",
