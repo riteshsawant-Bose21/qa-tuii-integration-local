@@ -213,7 +213,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 		CronExpr:    "@every 1m",
 		MessageID:   meta.Id,
 		Priority:    100,
-		Zones:       "",
+		Zones:       nil,
 	}
 
 	payload, err := json.Marshal(taskMessage)
@@ -236,13 +236,13 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	for _, message := range scheduled {
 		if message.ID == taskMessage.ID {
 			found = true
-			assert.Equal(t, "", message.Zones)
+			assert.Empty(t, message.Zones)
 			assert.Equal(t, meta.Id, message.MessageID)
 		}
 	}
 	require.True(t, found, "expected scheduled message to be listed")
 
-	zone := "Lobby"
+	zone := []string{"Lobby"}
 	patch := api.TaskMessagePatch{
 		Zones: &zone,
 	}
@@ -258,7 +258,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	patchResp.Body.Close()
 	require.Equal(t, http.StatusOK, patchResp.StatusCode)
 
-	clearZone := ""
+	clearZone := []string{}
 	patch = api.TaskMessagePatch{
 		Zones: &clearZone,
 	}
@@ -286,7 +286,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	for _, message := range scheduled {
 		if message.ID == taskMessage.ID {
 			found = true
-			assert.Equal(t, "", message.Zones)
+			assert.Empty(t, message.Zones)
 		}
 	}
 	require.True(t, found, "expected scheduled message to remain listed after clearing zones")
@@ -313,7 +313,7 @@ func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
 		CronExpr:    "@every 1s",
 		MessageID:   meta.Id,
 		Priority:    55,
-		Zones:       "lobby,gym",
+		Zones:       []string{"lobby", "gym"},
 	}
 
 	payload, err := json.Marshal(taskMessage)
@@ -327,7 +327,7 @@ func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
 	trigger := awaitMessageTriggerPayload(t, listener, 4*time.Second)
 	assert.Equal(t, meta.Id, trigger.ID)
 	assert.Equal(t, 55, trigger.Priority)
-	assert.Equal(t, "lobby,gym", trigger.Zones)
+	assert.Equal(t, []string{"lobby", "gym"}, trigger.Zones)
 	assert.NotZero(t, trigger.Timestamp)
 }
 
