@@ -8,9 +8,9 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/equip_location.dart';
-import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import 'package:fusion_lib/models/project_entities/mix_scenes.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
+import 'package:fusion_lib/models/project_entities/zone_model.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../configuration_aes67/viewModel/config_aes67_viewmodel.dart';
@@ -31,10 +31,11 @@ class AddSourcesPopupContent extends StatefulWidget {
 }
 
 class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
-  SourceLocationType? _selectedLocationType;
+  SourceLocationType? _selectedLocationType = SourceLocationType.zone;
 
   /// Tracks the selected equipment location locally.
   EquipLocation? _selectedEquipLocation;
+  Zone? _selectedZone;
   bool _selected = false;
 
   @override
@@ -47,10 +48,9 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
               builder: (BuildContext context, AddSourceViewModelState state) {
                 final AddSourceViewModel addSourceViewModel = context.read<AddSourceViewModel>();
                 final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-                final List<ListeningArea> listeningAreas = projectViewModel.getAllListeningAreas();
 
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -93,21 +93,30 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                           setState(() {
                             _selectedLocationType = type;
                             _selectedEquipLocation = null;
+                            _selectedZone = null;
                           });
                         },
-
-                        selectedListeningArea: state.selectedListeningArea,
-                        listeningAreas: listeningAreas,
-
-                        onListeningAreaChanged: (ListeningArea value) {
-                          addSourceViewModel.setSelectedListeningArea(value);
-                        },
-
                         isFromBuildingPage: widget.isFromBuildingPage,
-
-                        zoneInfo: addSourceViewModel.getZonesForListeningArea,
                       ),
+                      if (_selectedLocationType == SourceLocationType.zone) ...<Widget>[
+                        Builder(
+                          builder: (BuildContext context) {
+                            final List<Zone> zone = projectViewModel.getAllZones();
 
+                            return FusionOutlinedDropdown<Zone>(
+                              hint: 'Select Zone',
+                              label: 'Select Zone',
+                              value: _selectedZone,
+                              items: zone,
+                              itemLabelBuilder: (Zone item) => item.name,
+                              onChanged: (Zone value) {
+                                setState(() => _selectedZone = value);
+                                addSourceViewModel.setzone(value.id);
+                              },
+                            );
+                          },
+                        ),
+                      ],
                       // ── Equipment Location flow ──────────────
                       if (_selectedLocationType == SourceLocationType.equipmentLocation) ...<Widget>[
                         Builder(
@@ -133,8 +142,10 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                         children: <Widget>[
                           FusionSwitch(
                             width: 44,
+                            radiusFactor: 0.4,
                             height: 24,
                             value: _selected,
+
                             onChanged: (bool value) {
                               setState(() => _selected = value);
                             },

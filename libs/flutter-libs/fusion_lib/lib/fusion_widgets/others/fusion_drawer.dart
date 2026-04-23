@@ -115,8 +115,8 @@ class FusionDrawer extends StatelessWidget {
         padding: const EdgeInsets.only(
           top: 24,
           bottom: 16,
-          right: 16,
-          left: 16,
+          right: 24,
+          left: 24,
         ),
         child: Row(
           children: <Widget>[

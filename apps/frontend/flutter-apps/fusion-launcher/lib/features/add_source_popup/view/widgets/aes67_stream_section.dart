@@ -127,7 +127,7 @@ class _Aes67StreamSectionState extends State<Aes67StreamSection> {
                 onExit: (_) => setState(() => hovered = false),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: hovered ? context.colorScheme.elevation2 : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),

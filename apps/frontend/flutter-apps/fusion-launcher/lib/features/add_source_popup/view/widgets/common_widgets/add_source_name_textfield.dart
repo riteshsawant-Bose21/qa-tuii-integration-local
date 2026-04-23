@@ -48,7 +48,6 @@ class _SourceNameTextfieldState extends State<SourceNameTextfield> {
           onExit: (_) => setState(() => _isHoveringField = false),
           child: FusionTextField(
             focusNode: _focusNode,
-            maxLength: 30,
             semanticFieldId: 'scheduler_form_name_field',
             hintText: "Enter schedule name",
             decoration: InputDecoration(
@@ -66,7 +65,7 @@ class _SourceNameTextfieldState extends State<SourceNameTextfield> {
                 borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1.5),
               ),
               isDense: true,
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 21),
             ),
             onChanged: (String value) {
               widget.addSourceViewModel.setSelectedSourceName(value);

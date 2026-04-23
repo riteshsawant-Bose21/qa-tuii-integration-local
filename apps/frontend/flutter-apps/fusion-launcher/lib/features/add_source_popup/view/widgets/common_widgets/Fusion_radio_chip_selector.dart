@@ -66,7 +66,7 @@ class _RadioChipState extends State<_RadioChip> {
         onExit: (_) => setState(() => hovered = false),
         cursor: SystemMouseCursors.click,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: (widget.isSelected || hovered) ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
@@ -76,15 +76,21 @@ class _RadioChipState extends State<_RadioChip> {
             ),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               FusionCheckbox(
+                innerChild: Icon(
+                  Icons.check,
+                  size: 10,
+                  color: widget.isSelected ? context.colorScheme.black : null,
+                ),
                 value: widget.isSelected,
                 shape: BoxShape.circle,
                 onChanged: widget.onTap,
                 semanticId: '',
               ),
               const SizedBox(width: 8),
-              Expanded(
+              Flexible(
                 child: FusionAppText(
                   text: widget.label,
                   maxLine: 1,

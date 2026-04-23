@@ -799,8 +799,8 @@
 //     );
 //   }
 // }
-import 'dart:async';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
@@ -861,7 +861,7 @@ class AddSourceDrawer extends StatelessWidget {
 
     void updateButtonEnabled(AddSourceViewModelState state) {
       final bool hasSource = state.selectedSources.any((SourceData? e) => e != null);
-      final bool hasLocation = state.selectedListeningArea != null;
+      final bool hasLocation = state.selectedZone != null || state.selectedEquipmentLocationId != null;
       final bool isPaging = state.selectedSources.firstOrNull?.type == SourceType.paging;
       final bool hasConnectionType = state.selectedConnectionType != null;
       final bool isAes67 = state.selectedConnectionType == SourceConnectionType.aes67input;
@@ -870,6 +870,7 @@ class AddSourceDrawer extends StatelessWidget {
     }
 
     updateButtonEnabled(addSourceVM.state);
+    final StreamSubscription<AddSourceViewModelState> subscription = addSourceVM.stream.listen(updateButtonEnabled);
     await FusionDrawer.show<void>(
       context: context,
       semanticId: FusionTestKeys.instance.addSourcesDialog,
@@ -888,6 +889,7 @@ class AddSourceDrawer extends StatelessWidget {
     );
 
     // Cleanup after drawer closes
+    subscription.cancel();
     configAes67VM.close();
     inputStreamVM.close();
     addSourceVM.close();
