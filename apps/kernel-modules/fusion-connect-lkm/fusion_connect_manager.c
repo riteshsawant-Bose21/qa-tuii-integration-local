@@ -1130,8 +1130,9 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
         if (phc_ns_at_pps) {
             status_rc = fusion_gpt_get_timing_status(&timing_status);
             if (!status_rc) {
-                pr_info("fusion_cn: timing status at set_phc_anchor discipline_ready=%d epoch_valid=%d aligned=%d pps_seq=%u\n",
-                        timing_status.discipline_ready,
+                pr_info("fusion_cn: timing status at set_phc_anchor continuity=%d gm_locked=%d epoch_valid=%d aligned=%d pps_seq=%u\n",
+                        timing_status.discipline_continuity_ready,
+                        timing_status.discipline_gm_locked,
                         timing_status.epoch_valid, timing_status.aligned,
                         timing_status.pps_seq);
             }
@@ -1143,7 +1144,8 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
 
 struct fc_get_timing_status_reply
 {
-    bool discipline_ready;
+    bool discipline_continuity_ready;
+    bool discipline_gm_locked;
     bool epoch_valid;
     bool aligned;
     u32  pps_seq;
@@ -1160,7 +1162,8 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     if (rc)
         return reply->err = rc;
 
-    r.discipline_ready = status.discipline_ready;
+    r.discipline_continuity_ready = status.discipline_continuity_ready;
+    r.discipline_gm_locked = status.discipline_gm_locked;
     r.epoch_valid = status.epoch_valid;
     r.aligned = status.aligned;
     r.pps_seq = status.pps_seq;
