@@ -125,7 +125,7 @@ Key knobs:
 ## Run Snapshot + Scene Catalog Tests
 
 The integration tests are now split across:
-- `snapshot_test.go` for **Time Machine** tests
+- `time_machine_test.go` for **Time Machine** tests
 - `scene_catalog_test.go` for **Scene Catalog** tests
 
 They validate both:

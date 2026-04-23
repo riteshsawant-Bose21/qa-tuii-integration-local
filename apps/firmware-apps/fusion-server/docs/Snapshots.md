@@ -310,14 +310,13 @@ PATCH /value
 #### Activate a Snapshot Definition
 
 ```
-POST /snapshots/activate
-{ "id": "<snapshot-id>" }
+POST /snapshots/activate/<snapshot-id>
 ```
 
 - Loads the stored snapshot definition
 - Merges `data` onto DB State via `Patch` semantics (no epoch bump)
 - Broadcasts `snapshot_v2_activate` to the cluster
-- Returns **204** on success, **400** if `id` is missing, **404** if not found
+- Returns **204** on success, **404** if not found
 
 #### Activate a Scene (within a Scene Set)
 
