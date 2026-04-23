@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <mutex>
 #include <sstream>
+#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 
@@ -337,6 +338,69 @@ bool parseHostPort(const std::string &addr, std::string *host, int *port) {
   }
   return *port > 0;
 }
+
+bool sendExternalUDPPatchProcess(const std::string &host, int port, bool mute) {
+  const pid_t pid = fork();
+  if (pid < 0) {
+    return false;
+  }
+
+  if (pid == 0) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      _exit(2);
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 2;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in serverAddr;
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
+      close(sock);
+      _exit(3);
+    }
+
+    Json::Value update;
+    update["action"] = "patch";
+    update["payload"]["audio"]["settings"]["gain_block"]["mute"] = mute;
+
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    const std::string payload = Json::writeString(writerBuilder, update);
+    const ssize_t sent =
+        sendto(sock, payload.c_str(), payload.size(), 0,
+               reinterpret_cast<const sockaddr *>(&serverAddr),
+               sizeof(serverAddr));
+    if (sent != static_cast<ssize_t>(payload.size())) {
+      close(sock);
+      _exit(4);
+    }
+
+    char buffer[1024];
+    const ssize_t received = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
+    close(sock);
+    if (received <= 0) {
+      _exit(5);
+    }
+
+    const std::string response(buffer, static_cast<size_t>(received));
+    if (response.find("\"status\":\"success\"") == std::string::npos) {
+      _exit(6);
+    }
+
+    _exit(0);
+  }
+
+  int status = 0;
+  if (waitpid(pid, &status, 0) != pid) {
+    return false;
+  }
+  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
 } // namespace
 
 TEST(UDPValueMonitorTest, SendsKeepaliveWhileIdle) {
@@ -641,5 +705,70 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
   }
 
   EXPECT_EQ(val.asInt(), expected);
+  monitorUDP.stop();
+}
+
+TEST(UDPValueMonitorTest, IntegrationExternalUDPPatchPropagationWithFusionServer) {
+  if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
+    GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
+  }
+
+  const char *addrEnv = std::getenv("FUSION_UDP_ADDR");
+  std::string addr = addrEnv ? addrEnv : "127.0.0.1:7947";
+
+  std::string host;
+  int port = 0;
+  ASSERT_TRUE(parseHostPort(addr, &host, &port))
+      << "Invalid FUSION_UDP_ADDR (expected host:port): " << addr;
+
+  if (host == "localhost") {
+    host = "127.0.0.1";
+  }
+
+  ASSERT_TRUE(sendExternalUDPPatchProcess(host, port, false))
+      << "Failed to set baseline mute=false through external UDP process";
+
+  std::mutex updateMutex;
+  std::condition_variable updateCv;
+  bool truePatchReceived = false;
+
+  UDPValueMonitor monitorUDP(host, port, false);
+  monitorUDP.watch("audio.settings.gain_block.mute",
+                   [&](const std::string &, const Json::Value &, const Json::Value &newValue) {
+                     if (newValue.isBool() && newValue.asBool()) {
+                       std::lock_guard<std::mutex> lock(updateMutex);
+                       truePatchReceived = true;
+                       updateCv.notify_one();
+                     }
+                   });
+  monitorUDP.start();
+
+  Json::Value baseline;
+  const auto baselineDeadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  while (std::chrono::steady_clock::now() < baselineDeadline) {
+    baseline = monitorUDP.get("audio.settings.gain_block.mute");
+    if (baseline.isBool() && !baseline.asBool()) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  ASSERT_TRUE(baseline.isBool()) << "Timed out waiting for initial mute baseline";
+  ASSERT_FALSE(baseline.asBool()) << "Expected mute=false baseline before true patch";
+
+  ASSERT_TRUE(sendExternalUDPPatchProcess(host, port, true))
+      << "Failed to send mute=true patch through external UDP process";
+
+  {
+    std::unique_lock<std::mutex> lock(updateMutex);
+    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(3), [&] {
+      return truePatchReceived;
+    })) << "Timed out waiting for observer to receive external UDP patch";
+  }
+
+  Json::Value val = monitorUDP.get("audio.settings.gain_block.mute");
+  ASSERT_TRUE(val.isBool());
+  EXPECT_TRUE(val.asBool());
   monitorUDP.stop();
 }

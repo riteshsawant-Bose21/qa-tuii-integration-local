@@ -271,29 +271,6 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return fmt.Errorf("udp broadcast: config_update missing payload")
 	}
 
-	// Normal config updates: apply Lamport version gating
-	if msg.Operation == api.NotifyOpConfigUpdate &&
-		msg.ConfigUpdate != nil {
-
-		v := msg.ConfigUpdate.Version
-
-		last := api.Version{
-			Epoch:   s.lastBroadcastEpoch.Load(),
-			Counter: s.lastBroadcastVersion.Load(),
-		}
-
-		if v.Less(last) {
-			logger.Debug(
-				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
-				v, last,
-			)
-			return nil
-		}
-
-		s.lastBroadcastEpoch.Store(v.Epoch)
-		s.lastBroadcastVersion.Store(v.Counter)
-	}
-
 	if msg.ID == "" {
 		msg.ID = ulid.Make().String()
 	}
@@ -303,6 +280,8 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return err
 	}
 
+	s.lastBroadcastEpoch.Store(msg.ConfigUpdate.Version.Epoch)
+	s.lastBroadcastVersion.Store(msg.ConfigUpdate.Version.Counter)
 	s.broadcast(payload, msg.ID)
 
 	return nil
