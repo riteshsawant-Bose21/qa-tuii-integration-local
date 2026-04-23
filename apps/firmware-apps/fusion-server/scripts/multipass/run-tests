@@ -219,6 +219,14 @@ if [[ "$list_tests" = true ]]; then
         exit 1
     fi
 
+    if [[ "$test_type" == "logger" ]]; then
+        list_tests_from_file "./$file"
+        echo "Tests in ../../fusion-services-core/logging:"
+        (cd ../../../fusion-services-core && go test -list . ./logging)
+        echo ""
+        exit 0
+    fi
+
     if [[ "$test_type" == "udp-chaos" ]]; then
         echo "Tests in package ./ matching UDP chaos:"
         go test -list . ./ | grep 'Chaos\|UDP' | sort
@@ -254,6 +262,23 @@ function run_package_tests() {
     fi
 }
 
+function run_logger_tests() {
+    local status=0
+
+    echo "=============================================="
+    echo "Running package: ./fusion/test"
+    echo "Logger tests: fusion/test/logger_test.go"
+    echo "=============================================="
+    run_package_tests "$(regex_for_test_file ./logger_test.go)" || status=$?
+
+    echo "=============================================="
+    echo "Running package: ../../fusion-services-core/logging"
+    echo "=============================================="
+    (cd ../../../fusion-services-core && go test -v --race ./logging) || status=$?
+
+    return "$status"
+}
+
 # # Helper for tests without extra args
 # function run_simple_test() {
 #     local file="$1"
@@ -281,7 +306,7 @@ case "$test_type" in
     cluster)            run_package_tests "$(regex_for_test_file ./cluster_test.go)" ;;
     controllers)        run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
     fusion)             run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
-    logger)             run_package_tests "$(regex_for_test_file ./logger_test.go)" ;;
+    logger)             run_logger_tests ;;
     persistence)        run_package_tests "$(regex_for_test_file ./persistence_test.go)" ;;
     sap)                run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
     scheduler)          run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;
