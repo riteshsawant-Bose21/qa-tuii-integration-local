@@ -5,16 +5,12 @@ info:
 
 http:
   method: POST
-  url: "{{api_url}}/snapshots/activate"
+  url: "{{api_url}}/snapshots/activate/:name"
   headers:
     - name: Content-Type
       value: application/json
   body:
-    type: json
-    data: |-
-      {
-        "id": "snapshot-test-01"
-      }
+    type: none
 
 settings:
   encodeUrl: true

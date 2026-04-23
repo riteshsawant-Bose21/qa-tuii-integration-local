@@ -5,6 +5,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
 
 import 'ffi_constants.dart';
 import 'mace_engine_provider.dart';
@@ -30,6 +31,7 @@ class SPLCalculationManager {
     MaceEngine engine,
     List<HardwareComponent> speakers,
     List<ListeningArea> surfaces,
+    List<Wall> walls,
     double resolutionSpacing,
   ) async {
     if (speakers.isEmpty || surfaces.isEmpty) {
@@ -46,7 +48,7 @@ class SPLCalculationManager {
     for (final HardwareComponent sp in speakers) {
       if (sp is! Speaker) continue;
       final int cid = engine.addSpeaker(
-        sp.speakerSKU,
+        sp.speakerSKU.replaceAll("-SUB", "-Sub"),
         sp.pos!.dx / 100,
         sp.pos!.dy / 100,
         sp.zAxis! / 100,
@@ -58,6 +60,39 @@ class SPLCalculationManager {
       clusterIds.add(cid);
     }
 
+    ///
+    /// Add Walls
+    ///
+
+    for (final Wall wall in walls) {
+      // for (final FusionCanvasPoint vertex in wall.vertices) {
+      //   poly3d.add(<double>[vertex.position.dx / 100, vertex.position.dy / 100, 0.0]);
+      // }
+      for (int i = 0; i < wall.vertices.length - 1; i++) {
+        final List<List<double>> poly3d = <List<double>>[];
+        final FusionCanvasPoint start = wall.vertices[i];
+        final FusionCanvasPoint end = wall.vertices[i + 1];
+
+        final double distance = sqrt(pow(end.position.dx - start.position.dx, 2) + pow(end.position.dy - start.position.dy, 2));
+        if (distance == 0) continue; // skip zero-length walls
+        poly3d.add(<double>[start.position.dx / 100, start.position.dy / 100, 0.0]);
+        poly3d.add(<double>[end.position.dx / 100, end.position.dy / 100, 0.0]);
+
+        ///
+        /// Extrude wall on Z Axis to create a Surface.
+        ///
+        poly3d.add(<double>[end.position.dx / 100, end.position.dy / 100, 100.0]);
+        poly3d.add(<double>[start.position.dx / 100, start.position.dy / 100, 100.0]);
+
+        print(" Wall[$i] Points for ${wall.id}: $poly3d points");
+        engine.addSurface(poly3d);
+      }
+      // ///
+      // /// Extrude Wall to height
+      // for (final FusionCanvasPoint vertex in wall.vertices.reversed) {
+      //   poly3d.add(<double>[(vertex.position.dx + 100) / 100, (vertex.position.dy + 100) / 100, 100.0]);
+      // }
+    }
     // add each surface and its field points
     for (final ListeningArea cs in surfaces) {
       final List<List<double>> poly3d = cs.vertices.map((FusionCanvasPoint o) => <double>[o.position.dx / 100, o.position.dy / 100, 0.0]).toList();
