@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <mutex>
 #include <sstream>
+#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 
