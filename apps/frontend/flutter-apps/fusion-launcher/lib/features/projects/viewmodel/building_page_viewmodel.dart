@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_canvas_input_state.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -217,6 +218,12 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       );
     } catch (e) {}
     return null;
+  }
+
+  void selectWall(String id) {
+    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+    
   }
 }
 
