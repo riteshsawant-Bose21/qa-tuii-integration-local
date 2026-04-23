@@ -38,7 +38,7 @@ tasks:
 
   build-macos-automation:
     command: "flutter"
-    args: ["build", "macos", "--profile", './integration_test/appium.dart']
+    args: ["build", "macos", "--debug", './integration_test/appium.dart']
     deps:
 #      - "analyze"
 #      - "unit-tests"
@@ -56,7 +56,7 @@ tasks:
 
   build-windows-automation:
     command: "flutter"
-    args: ["build", "windows", "--profile", '.\integration_test\appium.dart']
+    args: ["build", "windows", "--debug", '.\integration_test\appium.dart']
     deps:
 #      - "analyze"
 #      - "unit-tests"
