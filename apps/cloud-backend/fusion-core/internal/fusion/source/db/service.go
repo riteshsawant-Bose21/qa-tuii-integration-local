@@ -32,7 +32,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all sources from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error) {
-	query := `SELECT id, name, asset_path, type, connection_type, price, paging_source_type, supported_connection_types FROM source ORDER BY name`
+	query := `SELECT id, model_name, asset_path, model_family, primary_connection_type, description, paging_source_type, supported_connection_types, is_fusion_compatible FROM source ORDER BY model_name`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -44,27 +44,61 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 
 	sources := make([]types.SourceItemResponse, 0)
 	for rows.Next() {
-		var item types.SourceItemResponse
-		var pagingSourceType sql.NullString
+		var (
+			sourceID           string
+			modelName          string
+			assetPath          string
+			modelFamily        string
+			primaryConnection  string
+			description        sql.NullString
+			pagingSourceType   sql.NullString
+			supportedConns     []string
+			isFusionCompatible bool
+		)
+
 		if err := rows.Scan(
-			&item.SourceID,
-			&item.Name,
-			&item.AssetPath,
-			&item.SourceType,
-			&item.ConnectionType,
-			&item.Price,
+			&sourceID,
+			&modelName,
+			&assetPath,
+			&modelFamily,
+			&primaryConnection,
+			&description,
 			&pagingSourceType,
-			pq.Array(&item.SupportedConnectionTypes),
+			pq.Array(&supportedConns),
+			&isFusionCompatible,
 		); err != nil {
 			logger.Error("failed to scan source row", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan source row: %w", err)
 		}
+
+		if supportedConns == nil {
+			supportedConns = []string{}
+		}
+
+		var descPtr *string
+		if description.Valid {
+			descPtr = &description.String
+		}
+
+		var pagingTypePtr *string
 		if pagingSourceType.Valid {
-			item.PagingSourceType = &pagingSourceType.String
+			pagingTypePtr = &pagingSourceType.String
 		}
-		if item.SupportedConnectionTypes == nil {
-			item.SupportedConnectionTypes = []string{}
+
+		item := types.SourceItemResponse{
+			SourceID:    sourceID,
+			Assets:      []map[string][]string{{"black": {assetPath}}},
+			ModelName:   modelName,
+			ModelFamily: modelFamily,
+			Description: descPtr,
+			Specifications: types.SourceSpecifications{
+				PrimaryConnection:    primaryConnection,
+				SupportedConnections: supportedConns,
+				PagingType:           pagingTypePtr,
+			},
+			IsFusionCompatible: isFusionCompatible,
 		}
+
 		sources = append(sources, item)
 	}
 

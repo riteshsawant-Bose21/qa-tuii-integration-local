@@ -340,6 +340,7 @@ CREATE TYPE bundle_update_status_enum AS ENUM (
     'INSTALL_SUCCESS',
     'INSTALL_FAIL'
 );
+
 CREATE TABLE bundle_update_status (
     id UUID PRIMARY KEY,         
     update_id UUID NOT null UNIQUE,
@@ -376,11 +377,16 @@ CREATE TYPE paging_source_type AS ENUM (
 
 CREATE TABLE source (
     id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+
+    model_name VARCHAR(100) NOT NULL,
     asset_path TEXT NOT NULL,
-    type source_type NOT NULL,
-    connection_type connection_type NOT NULL,
-    price NUMERIC(10,2) NOT NULL,
+    model_family source_type NOT NULL,
+    primary_connection_type connection_type NOT NULL,
+    description TEXT,
     paging_source_type paging_source_type,
-    supported_connection_types connection_type[] NOT NULL DEFAULT '{}'
+    supported_connection_types connection_type[] NOT NULL DEFAULT '{}',
+
+    is_fusion_compatible BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

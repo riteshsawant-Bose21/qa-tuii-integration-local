@@ -1,12 +1,17 @@
 package types
 
+type SourceSpecifications struct {
+	PrimaryConnection    string   `json:"primary_connection"`
+	SupportedConnections []string `json:"supported_connections"`
+	PagingType           *string  `json:"paging_type"`
+}
+
 type SourceItemResponse struct {
-	SourceID                string   `json:"product_id"`
-	Name                    string   `json:"name"`
-	AssetPath               string   `json:"asset_path"`
-	SourceType              string   `json:"type"`
-	ConnectionType          string   `json:"connection_type"`
-	Price                   float64  `json:"price"`
-	PagingSourceType        *string  `json:"paging_source_type"`
-	SupportedConnectionTypes []string `json:"supported_connection_types"`
+	SourceID           string                `json:"source_id"`
+	Assets             []map[string][]string `json:"assets"`
+	ModelName          string                `json:"model_name"`
+	ModelFamily        string                `json:"model_family"`
+	Description        *string               `json:"description"`
+	Specifications     SourceSpecifications  `json:"specifications"`
+	IsFusionCompatible bool                  `json:"is_fusion_compatible"`
 }
