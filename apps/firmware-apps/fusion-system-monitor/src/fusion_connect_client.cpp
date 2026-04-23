@@ -60,6 +60,7 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
     FUSION_CN_CTRL_CMD_GET_TIMING_STATUS,
     FUSION_CN_CTRL_CMD_RESET_TIMING_STATE,
+    FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION,
     FUSION_CN_CTRL_CMD_SET_DEBUG,
     FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
@@ -507,6 +508,19 @@ static bool nl_reset_timing_state(NetlinkClient& c)
     }
     if (reply.err != 0) {
         SPDLOG_ERROR("RESET_TIMING_STATE err={}", reply.err);
+    }
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_reset_timing_session(NetlinkClient& c)
+{
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION, nullptr, 0, &reply)) {
+        return false;
+    }
+    if (reply.err != 0) {
+        SPDLOG_ERROR("RESET_TIMING_SESSION err={}", reply.err);
     }
     if (reply.data) free(reply.data);
     return reply.err == 0;
@@ -1266,8 +1280,8 @@ void FusionConnectClient::maybe_start_manager()
 
 void FusionConnectClient::reset_timing_session(const char *reason)
 {
-    if (!nl_reset_timing_state(client)) {
-        SPDLOG_WARN("Failed to reset GPT timing state during {}", reason);
+    if (!nl_reset_timing_session(client)) {
+        SPDLOG_WARN("Failed to reset GPT timing session during {}", reason);
     }
     if (!set_pps_enable(false)) {
         SPDLOG_WARN("Failed to disable PPS during {}", reason);
@@ -1279,13 +1293,13 @@ void FusionConnectClient::reset_timing_session(const char *reason)
     ptp_last_timing_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
 
-    SPDLOG_INFO("Timing state reset due to {}", reason);
+    SPDLOG_INFO("Timing session reset due to {}", reason);
 }
 
 void FusionConnectClient::start_timing_session()
 {
-    if (!nl_reset_timing_state(client)) {
-        SPDLOG_WARN("Failed to reset GPT timing state before enabling PPS");
+    if (!nl_reset_timing_session(client)) {
+        SPDLOG_WARN("Failed to reset GPT timing session before enabling PPS");
     }
     if (!set_pps_enable(true)) {
         SPDLOG_WARN("Failed to enable PPS");

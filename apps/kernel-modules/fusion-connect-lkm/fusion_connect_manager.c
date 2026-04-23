@@ -1177,15 +1177,38 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     return 0;
 }
 
+static int handle_reset_timing(struct fusion_cn_manager *mgr,
+                               struct fusion_cn_ctrl_msg *msg,
+                               struct fusion_cn_ctrl_msg *reply,
+                               bool session_reset);
+
 static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
                                      struct fusion_cn_ctrl_msg *msg,
                                      struct fusion_cn_ctrl_msg *reply)
 {
+    return handle_reset_timing(mgr, msg, reply, false);
+}
+
+static int handle_reset_timing_session(struct fusion_cn_manager *mgr,
+                                       struct fusion_cn_ctrl_msg *msg,
+                                       struct fusion_cn_ctrl_msg *reply)
+{
+    return handle_reset_timing(mgr, msg, reply, true);
+}
+
+static int handle_reset_timing(struct fusion_cn_manager *mgr,
+                               struct fusion_cn_ctrl_msg *msg,
+                               struct fusion_cn_ctrl_msg *reply,
+                               bool session_reset)
+{
+    (void)msg;
     struct fusion_cn_rtp_stream *stream;
     int bkt;
     unsigned long flags;
 
-    reply->err = fusion_gpt_reset_timing_state();
+    reply->err = session_reset ?
+        fusion_gpt_reset_timing_session() :
+        fusion_gpt_reset_timing_state();
     if (reply->err)
         return 0;
 
@@ -1276,6 +1299,7 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
     { FUSION_CN_CTRL_CMD_GET_TIMING_STATUS, handle_get_timing_status },
     { FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, handle_reset_timing_state },
+    { FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION, handle_reset_timing_session },
     { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
     { FUSION_CN_CTRL_CMD_SET_ETH_IFACE, handle_set_eth_iface },
     { 0, NULL }
