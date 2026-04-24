@@ -263,9 +263,6 @@ private:
     double max_ratio;
     double base_ratio;
     static const int_fast32_t MIN_DEPTH = 1024;
-    uint64_t depth_adjust_count = 0;
-    int64_t depth_adjust_frames = 0;
-    std::time_t last_depth_adjust_log_sec = 0;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -295,9 +292,6 @@ private:
     double min_ratio;
     double max_ratio;
     static const int_fast32_t MIN_DEPTH = 1024;
-    uint64_t silence_fill_count = 0;
-    uint64_t silence_fill_frames = 0;
-    std::time_t last_silence_fill_log_sec = 0;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -1379,21 +1373,8 @@ void AlsaIn::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth || depth < min_depth)
     {
-        int old_depth = depth;
         int adjust_frames = target_depth - depth;
         depth = device->adjust_buffer_depth(adjust_frames);
-        depth_adjust_count++;
-        depth_adjust_frames += adjust_frames;
-
-        std::time_t now = std::time(nullptr);
-        if (now != last_depth_adjust_log_sec)
-        {
-            last_depth_adjust_log_sec = now;
-            SPDLOG_WARN(
-                "ALSA input {} adjusted depth old={} new={} target={} min={} max={} adjust={} adjustments={} adjustment_frames={}",
-                device_name.c_str(), old_depth, depth, target_depth, min_depth,
-                max_depth, adjust_frames, depth_adjust_count, depth_adjust_frames);
-        }
 
         if (use_asrc)
         {
@@ -1549,18 +1530,6 @@ void AlsaOut::process()
                           std::min(fill_amount, get_frame_size()));
 
             fill_amount -= get_frame_size();
-        }
-
-        silence_fill_count++;
-        silence_fill_frames += fill_total;
-        std::time_t now = std::time(nullptr);
-        if (now != last_silence_fill_log_sec)
-        {
-            last_silence_fill_log_sec = now;
-            SPDLOG_WARN(
-                "ALSA output {} inserted silence depth={} target={} min={} max={} fill={} silence_fills={} silence_frames={}",
-                device_name.c_str(), depth, target_depth, min_depth, max_depth,
-                fill_total, silence_fill_count, silence_fill_frames);
         }
 
         if (use_asrc)
