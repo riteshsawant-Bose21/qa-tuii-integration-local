@@ -397,6 +397,38 @@ DELETE /scene-sets
 - Broadcasts `scene_sets_delete_all` to the cluster so all nodes are cleared
 - Returns **204** on success
 
+#### Delete a Snapshot Definition by ID
+
+```
+DELETE /snapshots/<snapshot-id>
+```
+
+- Removes the single snapshot definition with the given ID from persistent storage
+- Broadcasts `snapshot_def_delete` to the cluster so all nodes remove the entry
+- Returns **204** on success, **404** if the ID does not exist
+
+#### Delete a Scene Set by ID
+
+```
+DELETE /scene-sets/<set-id>
+```
+
+- Removes the single scene set with the given ID from persistent storage
+- Because scenes are embedded in their parent set, this also removes all scenes belonging to that set
+- Broadcasts `scene_set_delete` to the cluster so all nodes remove the entry
+- Returns **204** on success, **404** if the ID does not exist
+
+#### Delete a Scene by ID
+
+```
+DELETE /scenes/<scene-id>
+```
+
+- Scans all scene sets and removes the scene with the given ID from whichever set contains it
+- If the deleted scene was the `current_scene_id` or `default_scene_id` for its parent set, those fields are cleared on all nodes
+- Broadcasts `scene_delete` to the cluster so all nodes apply the removal
+- Returns **204** on success, **404** if the ID does not exist in any scene set
+
 #### List Full Scene Catalog
 
 ```
