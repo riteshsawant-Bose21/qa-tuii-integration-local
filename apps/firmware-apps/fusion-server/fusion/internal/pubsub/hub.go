@@ -203,6 +203,19 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			}
 		}
 
+	case api.NotifyOpSnapshotDefDelete:
+		if message.SnapshotOperation == nil || message.SnapshotOperation.Name == "" {
+			return fmt.Errorf("SnapshotOperation with valid name required for snapshot delete")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.DeleteSnapshotDefinition(message.SnapshotOperation.Name); err != nil {
+				return fmt.Errorf("error deleting snapshot definition: %v", err)
+			}
+		}
+
 	case api.NotifyOpSceneSetsDeleteAll:
 		if h.transport == nil || h.transport.LocalNode() == nil {
 			return fmt.Errorf("cluster transport not configured")
@@ -210,6 +223,32 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		if message.Node != h.transport.LocalNode().Name {
 			if err := h.persistence.DeleteAllSceneSets(); err != nil {
 				return fmt.Errorf("error deleting scene sets: %v", err)
+			}
+		}
+
+	case api.NotifyOpSceneSetDelete:
+		if message.SceneSetOperation == nil || message.SceneSetOperation.SetID == "" {
+			return fmt.Errorf("SceneSetOperation with valid set_id required for scene set delete")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.DeleteSceneSet(message.SceneSetOperation.SetID); err != nil {
+				return fmt.Errorf("error deleting scene set: %v", err)
+			}
+		}
+
+	case api.NotifyOpSceneDelete:
+		if message.SceneOperation == nil || message.SceneOperation.SceneID == "" {
+			return fmt.Errorf("SceneOperation with valid scene_id required for scene delete")
+		}
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		if message.Node != h.transport.LocalNode().Name {
+			if err := h.persistence.DeleteScene(message.SceneOperation.SceneID); err != nil {
+				return fmt.Errorf("error deleting scene: %v", err)
 			}
 		}
 

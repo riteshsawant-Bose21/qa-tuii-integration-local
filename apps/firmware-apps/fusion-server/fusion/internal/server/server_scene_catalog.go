@@ -71,6 +71,31 @@ func (s *FusionServer) DeleteSnapshotDefinitions(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteSnapshotDefinition handles DELETE /snapshots/{name}.
+// Removes one stored snapshot definition by ID.
+func (s *FusionServer) DeleteSnapshotDefinition(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	name, err := utils.ExtractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteSnapshotDefinition(name); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting snapshot %s: %v", name, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ListScenes handles GET /scenes.
 // Returns a flat list of all scenes across all scene sets.
 func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
@@ -219,6 +244,56 @@ func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.handler.HandleDeleteAllSceneSets(); err != nil {
 		http.Error(w, fmt.Sprintf("Error deleting scene sets: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteSceneSet handles DELETE /scenes-sets/{name}.
+// Removes one stored scene set by set ID.
+func (s *FusionServer) DeleteSceneSet(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	name, err := utils.ExtractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteSceneSet(name); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting scene set %s: %v", name, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteScene handles DELETE /scenes/{name}.
+// Removes one stored scene by ID from any scene set containing it.
+func (s *FusionServer) DeleteScene(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	name, err := utils.ExtractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteScene(name); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting scene %s: %v", name, err), http.StatusInternalServerError)
 		return
 	}
 

@@ -1,0 +1,20 @@
+info:
+  name: Delete Snapshot By Name
+  type: http
+  seq: 16
+
+http:
+  method: DELETE
+  url: "{{api_url}}/snapshots/:name"
+  params:
+    - name: name
+      value: snapshot-test-01
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Deletes one snapshot definition by id.
