@@ -40,7 +40,7 @@ func (p *Persistence) UpsertSnapshotDefinitions(items []api.SnapshotDefinition) 
 		return nil
 	}
 
-	return p.updateHash()
+	return p.updateHash(true)
 }
 
 // GetSnapshotDefinition returns a snapshot definition by ID.
@@ -138,7 +138,7 @@ func (p *Persistence) UpsertSceneSets(items []api.SceneSet) error {
 		return nil
 	}
 
-	return p.updateHash()
+	return p.updateHash(true)
 }
 
 // GetSceneSet returns a scene set by set_id.
@@ -240,7 +240,7 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHash(true)
 }
 
 // GetSceneInSet returns the scene by ID if it belongs to the specified scene set.

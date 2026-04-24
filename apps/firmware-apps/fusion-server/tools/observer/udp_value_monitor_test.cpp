@@ -64,7 +64,7 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   std::string serverError;
   std::mutex serverErrorMutex;
 
-  // Start a fake UDP server in a separate thread.
+  // Start a local UDP server in a separate thread.
   std::thread serverThread([&]() {
     // Create the UDP socket for the server.
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -204,7 +204,7 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   Json::Value val = monitorUDP.get("test.value");
   EXPECT_EQ(val.asInt(), 42);
 
-  // Cleanup: stop the UDPValueMonitor and shut down the fake server.
+  // Cleanup: stop the UDPValueMonitor and shut down the local server.
   monitorUDP.stop();
 }
 

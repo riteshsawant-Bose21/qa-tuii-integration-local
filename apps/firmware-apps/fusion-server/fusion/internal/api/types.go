@@ -129,6 +129,7 @@ type SoftwareUpdateProgress struct {
 // VersionUpdate represents version information to sync across nodes
 type VersionUpdate struct {
 	Version Version `json:"version"`
+	Hash    string  `json:"hash"`
 	NodeID  string  `json:"node_id"`
 }
 

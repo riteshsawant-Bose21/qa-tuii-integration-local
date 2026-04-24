@@ -91,7 +91,7 @@ When monitoring a path, changes will be displayed with timestamps:
 
 ## Running Tests
 
-The UDP monitor has a gtest that spins up a fake UDP server and validates
+The UDP monitor has a gtest that spins up a local UDP server and validates
 `UDPValueMonitor` end-to-end. It does not require `fusion-server` to be
 running.
 

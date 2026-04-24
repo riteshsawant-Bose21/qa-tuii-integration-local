@@ -44,6 +44,7 @@ var (
 	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
 	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
 	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+	corsWarningOnce    sync.Once
 )
 
 func getEnvOrDefault(key string, fallback string) string {
@@ -78,6 +79,7 @@ type App struct {
 	Hub                 *pubsub.Hub
 	discoveryReconciler *DiscoveryReconciler
 	vipEventCoordinator *VIPEventCoordinator
+	profiler            *cpuProfiler
 }
 
 // NewApp is a factory function to set up the application
@@ -90,6 +92,9 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
+	persistence.SetMetadataNotifier(func(metadata *api.DatabaseMetadata) {
+		hub.BroadcastVersionUpdate(config.NodeName, metadata)
+	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
 	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
@@ -144,6 +149,7 @@ func NewApp(config *api.AppConfig) *App {
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
 		Hub:               hub,
+		profiler:          newCPUProfiler(),
 	}
 	app.discoveryReconciler = NewDiscoveryReconciler(app)
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
@@ -153,6 +159,9 @@ func NewApp(config *api.AppConfig) *App {
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
+	if _, err := app.profiler.Stop(); err != nil {
+		app.Logger.Error("Failed to stop CPU profiler: %v", err)
+	}
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
@@ -368,6 +377,10 @@ func (app *App) setupPrivateRoutes() {
 
 	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
 	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
+	app.registerPrivateGET(routes.DebugProfileStatusEndpoint, app.HandleProfileStatus)
+	app.registerPrivatePOST(routes.DebugProfileHeapEndpoint, app.HandleHeapProfileCapture)
+	app.registerPrivatePOST(routes.DebugProfileStartEndpoint, app.HandleProfileStart)
+	app.registerPrivatePOST(routes.DebugProfileStopEndpoint, app.HandleProfileStop)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -768,18 +781,19 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // corsMiddleware adds CORS headers to all responses
 func corsMiddleware() mux.MiddlewareFunc {
-	logging.GetLogger().Warn(
-		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
-	)
+	corsWarningOnce.Do(func() {
+		logging.GetLogger().Warn(
+			"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+		)
+	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Set CORS headers
+
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 
-			// Handle preflight OPTIONS request
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return

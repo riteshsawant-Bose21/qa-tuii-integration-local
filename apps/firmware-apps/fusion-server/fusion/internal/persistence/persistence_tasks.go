@@ -71,7 +71,7 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 		return fmt.Errorf("failed to save tasks: %w", err)
 	}
 
-	return p.updateHash()
+	return p.updateHash(true)
 }
 
 // DeleteTask removes the task
@@ -93,7 +93,7 @@ func (p *Persistence) DeleteTask(taskID string) error {
 	}
 
 	// Update the database hash
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(true); err != nil {
 		return fmt.Errorf("to update hash after deleting task '%s': %v", taskID, err)
 	}
 	return nil
@@ -157,7 +157,7 @@ func (p *Persistence) ImportTasks(importData map[string]any) error {
 	}
 
 	// Update the overall database hash.
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(false); err != nil {
 		return fmt.Errorf("failed to update DB hash after import: %w", err)
 	}
 	return nil

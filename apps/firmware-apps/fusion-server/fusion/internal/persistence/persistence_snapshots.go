@@ -2,8 +2,8 @@ package persistence
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/utils"
 	"time"
 
@@ -83,7 +83,7 @@ func (p *Persistence) ActivateSnapshot(snapshotName string) error {
 
 	// Mark last save time
 	p.mutex.Lock()
-	p.lastSave = time.Now().UTC()
+	p.save.lastRun = time.Now().UTC()
 	p.mutex.Unlock()
 
 	return nil
@@ -140,7 +140,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 	}
 
 	// Update the database hash
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(true); err != nil {
 		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotName, err)
 	}
 
