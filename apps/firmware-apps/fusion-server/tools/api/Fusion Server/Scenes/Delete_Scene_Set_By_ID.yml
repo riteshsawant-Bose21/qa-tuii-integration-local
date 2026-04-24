@@ -1,14 +1,14 @@
 info:
-  name: Delete Scene By Name
+  name: Delete Scene Set By ID
   type: http
-  seq: 18
+  seq: 17
 
 http:
   method: DELETE
-  url: "{{api_url}}/scenes/:id"
+  url: "{{api_url}}/scene-sets/:id"
   params:
     - name: id
-      value: scene-morning-01
+      value: scene-set-test-01
       type: path
 
 settings:
@@ -17,4 +17,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Deletes one scene by id from scene sets.
+docs: Deletes one scene set by set_id.

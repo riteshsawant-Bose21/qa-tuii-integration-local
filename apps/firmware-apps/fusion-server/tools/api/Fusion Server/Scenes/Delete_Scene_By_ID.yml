@@ -1,14 +1,14 @@
 info:
-  name: Delete Snapshot By Name
+  name: Delete Scene By ID
   type: http
-  seq: 16
+  seq: 18
 
 http:
   method: DELETE
-  url: "{{api_url}}/snapshots/:id"
+  url: "{{api_url}}/scenes/:id"
   params:
     - name: id
-      value: snapshot-test-01
+      value: scene-morning-01
       type: path
 
 settings:
@@ -17,4 +17,4 @@ settings:
   followRedirects: true
   maxRedirects: 5
 
-docs: Deletes one snapshot definition by id.
+docs: Deletes one scene by id from scene sets.
