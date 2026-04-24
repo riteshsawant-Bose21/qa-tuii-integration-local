@@ -286,12 +286,20 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
 		}
 
+		// Collect updates to apply after iteration — mutating the bucket
+		// inside ForEach is not safe in bbolt.
+		type pendingUpdate struct {
+			key  []byte
+			data []byte
+		}
+		var updates []pendingUpdate
 		found := false
 
-		if err := bucket.ForEach(func(key, value []byte) error {
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			var set api.SceneSet
-			if err := json.Unmarshal(value, &set); err != nil {
-				return fmt.Errorf("failed to unmarshal scene set '%s': %w", string(key), err)
+			if err := json.Unmarshal(v, &set); err != nil {
+				return fmt.Errorf("failed to unmarshal scene set '%s': %w", string(k), err)
 			}
 
 			filtered := make([]api.Scene, 0, len(set.Scenes))
@@ -305,7 +313,7 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 			}
 
 			if !removedFromSet {
-				return nil
+				continue
 			}
 
 			found = true
@@ -322,17 +330,20 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 				return fmt.Errorf("failed to marshal updated scene set '%s': %w", set.SetID, err)
 			}
 
-			if err := bucket.Put(key, updated); err != nil {
-				return fmt.Errorf("failed to update scene set '%s': %w", set.SetID, err)
-			}
-
-			return nil
-		}); err != nil {
-			return err
+			// Copy the key — cursor keys are only valid for the lifetime of the transaction step.
+			keyCopy := make([]byte, len(k))
+			copy(keyCopy, k)
+			updates = append(updates, pendingUpdate{key: keyCopy, data: updated})
 		}
 
 		if !found {
 			return ErrNotFound
+		}
+
+		for _, u := range updates {
+			if err := bucket.Put(u.key, u.data); err != nil {
+				return fmt.Errorf("failed to update scene set '%s': %w", string(u.key), err)
+			}
 		}
 
 		return nil
