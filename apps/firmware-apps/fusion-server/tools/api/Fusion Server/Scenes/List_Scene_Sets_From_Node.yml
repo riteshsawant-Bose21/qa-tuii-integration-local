@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{node_url}}/scenes-sets"
+  url: "{{node_url}}/scene-sets"
 
 settings:
   encodeUrl: true

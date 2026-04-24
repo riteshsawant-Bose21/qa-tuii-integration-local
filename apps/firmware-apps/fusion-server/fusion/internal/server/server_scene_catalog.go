@@ -235,7 +235,7 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(api.SceneSetListResponse{SceneSets: sceneSets})
 }
 
-// DeleteSceneSets handles DELETE /scenes-sets.
+// DeleteSceneSets handles DELETE /scene-sets.
 // Removes all stored scene sets (and therefore all scenes contained in those sets).
 func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
@@ -250,7 +250,7 @@ func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DeleteSceneSet handles DELETE /scenes-sets/{id}.
+// DeleteSceneSet handles DELETE /scene-sets/{id}.
 // Removes one stored scene set by set ID.
 func (s *FusionServer) DeleteSceneSet(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {

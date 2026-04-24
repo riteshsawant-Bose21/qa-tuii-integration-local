@@ -371,7 +371,7 @@ Returns all scenes across all scene sets as a flat list.
 #### List Scene Sets
 
 ```
-GET /scenes-sets
+GET /scene-sets
 ```
 
 Returns all stored scene sets (full objects including nested scenes and `current_scene_id`).
@@ -389,7 +389,7 @@ DELETE /snapshots
 #### Delete All Scene Sets
 
 ```
-DELETE /scenes-sets
+DELETE /scene-sets
 ```
 
 - Removes every stored scene set from persistent storage

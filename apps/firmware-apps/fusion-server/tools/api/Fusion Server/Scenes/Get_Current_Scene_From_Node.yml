@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{node_url}}/scenes-sets/current-scene"
+  url: "{{node_url}}/scene-sets/current-scene"
   headers:
     - name: Content-Type
       value: application/json

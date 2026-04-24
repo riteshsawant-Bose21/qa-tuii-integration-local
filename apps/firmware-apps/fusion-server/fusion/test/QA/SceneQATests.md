@@ -90,7 +90,7 @@ curl -i -sS "$VIP/scenes"
 ```
 
 ```bash
-curl -i -sS "$VIP/scenes-sets"
+curl -i -sS "$VIP/scene-sets"
 ```
 
 ```bash
@@ -108,7 +108,7 @@ curl -i -sS "$VIP/value?key=feature_probe"
 
 **3) Activate scene and verify current scene tracking**
 ```bash
-curl -i -sS -X POST "$VIP/scenes-sets/activate" \
+curl -i -sS -X POST "$VIP/scene-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01",
@@ -121,7 +121,7 @@ curl -i -sS "$VIP/value?key=feature_probe"
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scenes-sets/current-scene" \
+curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01"
@@ -162,7 +162,7 @@ curl -i -sS -X POST "$VIP/snapshots/activate/does-not-exist"
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scenes-sets/activate" \
+curl -i -sS -X POST "$VIP/scene-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01",
@@ -171,7 +171,7 @@ curl -i -sS -X POST "$VIP/scenes-sets/activate" \
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scenes-sets/activate" \
+curl -i -sS -X POST "$VIP/scene-sets/activate" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "missing-set",
@@ -199,7 +199,7 @@ curl -i -sS "$VIP/scenes"
 ```
 
 ```bash
-curl -i -sS -X POST "$VIP/scenes-sets/current-scene" \
+curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{
     "set_id": "scene-set-test-01"
@@ -209,11 +209,11 @@ curl -i -sS -X POST "$VIP/scenes-sets/current-scene" \
 Expect `scene-evening-01` to be removed from the `scenes` array. If it was current, `current_scene.scene_id` should be empty.
 
 ```bash
-curl -i -sS -X DELETE "$VIP/scenes-sets/scene-set-test-01"
+curl -i -sS -X DELETE "$VIP/scene-sets/scene-set-test-01"
 ```
 
 ```bash
-curl -i -sS "$VIP/scenes-sets"
+curl -i -sS "$VIP/scene-sets"
 ```
 
 Expect `scene-set-test-01` to be removed from the `scene_sets` array.
@@ -221,7 +221,7 @@ Expect `scene-set-test-01` to be removed from the `scene_sets` array.
 ```bash
 curl -i -sS -X DELETE "$VIP/snapshots/does-not-exist"
 curl -i -sS -X DELETE "$VIP/scenes/does-not-exist"
-curl -i -sS -X DELETE "$VIP/scenes-sets/does-not-exist"
+curl -i -sS -X DELETE "$VIP/scene-sets/does-not-exist"
 ```
 
 Expect `404` for each missing ID.
@@ -288,11 +288,11 @@ Expect an empty `snapshots` array.
 
 **9) Delete all scene-sets (also removes all scenes in those sets)**
 ```bash
-curl -i -sS -X DELETE "$VIP/scenes-sets"
+curl -i -sS -X DELETE "$VIP/scene-sets"
 ```
 
 ```bash
-curl -i -sS "$VIP/scenes-sets"
+curl -i -sS "$VIP/scene-sets"
 ```
 
 ```bash
@@ -309,21 +309,21 @@ curl -i -sS "$NODE3/snapshots"
 ```
 
 ```bash
-curl -i -sS "$NODE1/scenes-sets"
-curl -i -sS "$NODE2/scenes-sets"
-curl -i -sS "$NODE3/scenes-sets"
+curl -i -sS "$NODE1/scene-sets"
+curl -i -sS "$NODE2/scene-sets"
+curl -i -sS "$NODE3/scene-sets"
 ```
 
 ```bash
-curl -i -sS -X POST "$NODE1/scenes-sets/current-scene" \
+curl -i -sS -X POST "$NODE1/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 
-curl -i -sS -X POST "$NODE2/scenes-sets/current-scene" \
+curl -i -sS -X POST "$NODE2/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 
-curl -i -sS -X POST "$NODE3/scenes-sets/current-scene" \
+curl -i -sS -X POST "$NODE3/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 ```

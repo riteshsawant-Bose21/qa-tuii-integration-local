@@ -720,12 +720,12 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("DELETE /scenes-sets returned %d: %s", resp.StatusCode, string(body))
+		t.Fatalf("DELETE /scene-sets returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	resp, err := http.Get(sceneSetsListURL)
 	if err != nil {
-		t.Fatalf("GET /scenes-sets failed after delete-all: %v", err)
+		t.Fatalf("GET /scene-sets failed after delete-all: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -774,12 +774,12 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("DELETE /scenes-sets/%s returned %d: %s", deleteSetID, resp.StatusCode, string(body))
+		t.Fatalf("DELETE /scene-sets/%s returned %d: %s", deleteSetID, resp.StatusCode, string(body))
 	}
 
 	resp, err := http.Get(sceneSetsListURL)
 	if err != nil {
-		t.Fatalf("GET /scenes-sets failed after targeted delete: %v", err)
+		t.Fatalf("GET /scene-sets failed after targeted delete: %v", err)
 	}
 	defer resp.Body.Close()
 

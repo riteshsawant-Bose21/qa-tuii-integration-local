@@ -103,7 +103,7 @@ const (
 	ScenesEndpoint     = "/scenes"
 	ScenesNameEndpoint = ScenesEndpoint + "/{id}"
 
-	ScenesSetsEndpoint        = "/scenes-sets"
+	ScenesSetsEndpoint        = "/scene-sets"
 	ScenesSetsNameEndpoint    = ScenesSetsEndpoint + "/{id}"
 	SceneSetsActivateEndpoint = ScenesSetsEndpoint + "/activate"
 	SceneSetsCurrentEndpoint  = ScenesSetsEndpoint + "/current-scene"

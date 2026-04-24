@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{api_url}}/scenes-sets/activate"
+  url: "{{api_url}}/scene-sets/activate"
   headers:
     - name: Content-Type
       value: application/json
