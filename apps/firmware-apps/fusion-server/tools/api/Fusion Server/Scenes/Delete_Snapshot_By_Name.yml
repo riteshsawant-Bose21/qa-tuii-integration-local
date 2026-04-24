@@ -5,9 +5,9 @@ info:
 
 http:
   method: DELETE
-  url: "{{api_url}}/snapshots/:name"
+  url: "{{api_url}}/snapshots/:id"
   params:
-    - name: name
+    - name: id
       value: snapshot-test-01
       type: path
 

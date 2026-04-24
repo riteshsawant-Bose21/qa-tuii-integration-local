@@ -5,9 +5,9 @@ info:
 
 http:
   method: DELETE
-  url: "{{api_url}}/scenes-sets/:name"
+  url: "{{api_url}}/scenes-sets/:id"
   params:
-    - name: name
+    - name: id
       value: scene-set-test-01
       type: path
 

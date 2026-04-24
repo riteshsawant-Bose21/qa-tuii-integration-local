@@ -13,7 +13,7 @@ import (
 	"fusion/internal/utils"
 )
 
-// ActivateSnapshot handles POST /snapshots/activate/{name}.
+// ActivateSnapshot handles POST /snapshots/activate/{id}.
 // Patches the snapshot data onto DB State (fire-and-forget).
 // Returns 404 if the snapshot ID does not exist.
 func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -21,15 +21,15 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	name, err := utils.ExtractName(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := s.handler.HandleActivateSnapshotByID(name); err != nil {
+	if err := s.handler.HandleActivateSnapshotByID(id); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -71,25 +71,25 @@ func (s *FusionServer) DeleteSnapshotDefinitions(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DeleteSnapshotDefinition handles DELETE /snapshots/{name}.
+// DeleteSnapshotDefinition handles DELETE /snapshots/{id}.
 // Removes one stored snapshot definition by ID.
 func (s *FusionServer) DeleteSnapshotDefinition(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
 		return
 	}
 
-	name, err := utils.ExtractName(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := s.handler.HandleDeleteSnapshotDefinition(name); err != nil {
+	if err := s.handler.HandleDeleteSnapshotDefinition(id); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
 			return
 		}
-		http.Error(w, fmt.Sprintf("Error deleting snapshot %s: %v", name, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error deleting snapshot %s: %v", id, err), http.StatusInternalServerError)
 		return
 	}
 
@@ -250,50 +250,50 @@ func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DeleteSceneSet handles DELETE /scenes-sets/{name}.
+// DeleteSceneSet handles DELETE /scenes-sets/{id}.
 // Removes one stored scene set by set ID.
 func (s *FusionServer) DeleteSceneSet(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
 		return
 	}
 
-	name, err := utils.ExtractName(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := s.handler.HandleDeleteSceneSet(name); err != nil {
+	if err := s.handler.HandleDeleteSceneSet(id); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
 			return
 		}
-		http.Error(w, fmt.Sprintf("Error deleting scene set %s: %v", name, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error deleting scene set %s: %v", id, err), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DeleteScene handles DELETE /scenes/{name}.
+// DeleteScene handles DELETE /scenes/{id}.
 // Removes one stored scene by ID from any scene set containing it.
 func (s *FusionServer) DeleteScene(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
 		return
 	}
 
-	name, err := utils.ExtractName(r)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := s.handler.HandleDeleteScene(name); err != nil {
+	if err := s.handler.HandleDeleteScene(id); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", name), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
 			return
 		}
-		http.Error(w, fmt.Sprintf("Error deleting scene %s: %v", name, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error deleting scene %s: %v", id, err), http.StatusInternalServerError)
 		return
 	}
 

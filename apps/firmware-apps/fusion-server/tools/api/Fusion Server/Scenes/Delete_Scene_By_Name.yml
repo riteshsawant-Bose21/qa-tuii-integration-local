@@ -5,9 +5,9 @@ info:
 
 http:
   method: DELETE
-  url: "{{api_url}}/scenes/:name"
+  url: "{{api_url}}/scenes/:id"
   params:
-    - name: name
+    - name: id
       value: scene-morning-01
       type: path
 

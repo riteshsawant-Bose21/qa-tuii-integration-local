@@ -47,6 +47,7 @@ func upsertSceneSets(t *testing.T, sets []api.SceneSet) {
 func activateSnapshotDef(t *testing.T, id string) *http.Response {
 	t.Helper()
 	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, id, 1)
+	activateURL = strings.Replace(activateURL, idParam, id, 1)
 	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("activateSnapshotDef: POST request failed: %v", err)
@@ -173,6 +174,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 
 func TestSceneCatalogActivateSnapshotDefMissingName(t *testing.T) {
 	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, "", 1)
+	activateURL = strings.Replace(activateURL, idParam, "", 1)
 	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("POST /snapshots/activate/ failed: %v", err)
