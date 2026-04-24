@@ -14,6 +14,7 @@ const (
 	NotifyOpAck                       NotifyOp = "ack"
 	NotifyOpAudioRemove               NotifyOp = "audio_remove"
 	NotifyOpAudioSync                 NotifyOp = "audio_sync"
+	NotifyOpConfigPullRequired        NotifyOp = "config_pull_required"
 	NotifyOpConfigUpdate              NotifyOp = "config_update"
 	NotifyOpDeviceUpdate              NotifyOp = "device_update"
 	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
