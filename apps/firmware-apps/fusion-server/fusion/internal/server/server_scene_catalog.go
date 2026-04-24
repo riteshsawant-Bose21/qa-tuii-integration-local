@@ -300,7 +300,7 @@ func (s *FusionServer) DeleteScene(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListSceneCatalog handles GET /scene-catalog-list.
+// ListSceneCatalog handles GET /scene-catalog.
 // Returns all stored snapshots and scene sets in a single response.
 func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
