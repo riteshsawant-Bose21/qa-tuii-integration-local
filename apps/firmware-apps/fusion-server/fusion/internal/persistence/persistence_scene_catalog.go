@@ -99,9 +99,14 @@ func (p *Persistence) DeleteAllSnapshotDefinitions() error {
 			return fmt.Errorf("bucket '%s' not found", bucketSnapshotDefs)
 		}
 
-		return bucket.ForEach(func(key, _ []byte) error {
-			return bucket.Delete(key)
-		})
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if err := cursor.Delete(); err != nil {
+				return fmt.Errorf("failed to delete snapshot definition: %w", err)
+			}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return err
@@ -242,9 +247,16 @@ func (p *Persistence) DeleteAllSceneSets() error {
 			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
 		}
 
-		return bucket.ForEach(func(key, _ []byte) error {
-			return bucket.Delete(key)
-		})
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; {
+			nextKey, _ := cursor.Next()
+			if err := bucket.Delete(key); err != nil {
+				return err
+			}
+			key = nextKey
+		}
+
+		return nil
 	})
 	if err != nil {
 		return err
