@@ -41,6 +41,34 @@ int reserveUDPPort() {
   return port;
 }
 
+int reserveTCPPort() {
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == -1) {
+    return -1;
+  }
+
+  sockaddr_in addr;
+  std::memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(0);
+
+  if (bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0) {
+    close(sock);
+    return -1;
+  }
+
+  socklen_t addrLen = sizeof(addr);
+  if (getsockname(sock, reinterpret_cast<sockaddr *>(&addr), &addrLen) != 0) {
+    close(sock);
+    return -1;
+  }
+
+  const int port = ntohs(addr.sin_port);
+  close(sock);
+  return port;
+}
+
 struct ThreadJoiner {
   explicit ThreadJoiner(std::thread &thread) : thread_(thread) {}
   ~ThreadJoiner() {
@@ -305,6 +333,173 @@ bool isEnvEnabled(const char *name) {
   return value != nullptr && value[0] != '\0' && std::string(value) != "0";
 }
 
+TEST(UDPValueMonitorTest, ConfigPullRequiredPullsFullConfigOverHTTP) {
+  const int udpPort = reserveUDPPort();
+  const int httpPort = reserveTCPPort();
+  if (udpPort <= 0 || httpPort <= 0) {
+    GTEST_SKIP() << "Failed to reserve local ports";
+  }
+
+  std::atomic<bool> udpReady{false};
+  std::atomic<bool> httpReady{false};
+
+  std::thread httpThread([&]() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1) {
+      return;
+    }
+    const int reuseAddr = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+
+    sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(httpPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0 ||
+        listen(sock, 1) != 0) {
+      close(sock);
+      return;
+    }
+    httpReady.store(true);
+
+    int client = accept(sock, nullptr, nullptr);
+    if (client >= 0) {
+      char request[512];
+      recv(client, request, sizeof(request), 0);
+      const std::string body = "{\"large\":{\"value\":99}}\n";
+      std::ostringstream response;
+      response << "HTTP/1.0 200 OK\r\n"
+               << "Content-Type: application/json\r\n"
+               << "Content-Length: " << body.size() << "\r\n\r\n"
+               << body;
+      const std::string responseStr = response.str();
+      send(client, responseStr.c_str(), responseStr.size(), 0);
+      close(client);
+    }
+    close(sock);
+  });
+  ThreadJoiner joinHTTPThread(httpThread);
+
+  std::thread udpThread([&]() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      return;
+    }
+    const int reuseAddr = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+    timeval timeout{.tv_sec = 0, .tv_usec = 100000};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in serverAddr;
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(udpPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&serverAddr),
+             sizeof(serverAddr)) != 0) {
+      close(sock);
+      return;
+    }
+    udpReady.store(true);
+
+    char buffer[1024];
+    sockaddr_in clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+    Json::CharReaderBuilder readerBuilder;
+
+    auto receiveJson = [&](Json::Value *request) -> bool {
+      for (int attempts = 0; attempts < 30; ++attempts) {
+        ssize_t n = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
+                             reinterpret_cast<sockaddr *>(&clientAddr),
+                             &clientLen);
+        if (n < 0) {
+          if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            continue;
+          }
+          return false;
+        }
+        buffer[n] = '\0';
+        std::string errs;
+        std::istringstream stream{std::string(buffer)};
+        return Json::parseFromStream(readerBuilder, stream, request, &errs);
+      }
+      return false;
+    };
+
+    Json::Value request;
+    if (!receiveJson(&request)) {
+      close(sock);
+      return;
+    }
+    Json::Value deviceInfo;
+    deviceInfo["_fusion_op"] = "get_local_device_information";
+    deviceInfo["status"] = "success";
+    deviceInfo["payload"]["id"] = "pull-required-device";
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    const std::string deviceInfoStr = Json::writeString(writer, deviceInfo);
+    sendto(sock, deviceInfoStr.c_str(), deviceInfoStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    request.clear();
+    if (!receiveJson(&request)) {
+      close(sock);
+      return;
+    }
+    Json::Value initialState;
+    initialState["_fusion_op"] = "get";
+    initialState["status"] = "success";
+    initialState["payload"]["small"]["value"] = 1;
+    const std::string initialStateStr = Json::writeString(writer, initialState);
+    sendto(sock, initialStateStr.c_str(), initialStateStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    Json::Value pullRequired;
+    pullRequired["_fusion_op"] = "config_pull_required";
+    pullRequired["_fusion_epoch"] = 1;
+    pullRequired["_fusion_version"] = 2;
+    pullRequired["_fusion_msg_id"] = "pull-required-test";
+    const std::string pullRequiredStr = Json::writeString(writer, pullRequired);
+    sendto(sock, pullRequiredStr.c_str(), pullRequiredStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+    close(sock);
+  });
+  ThreadJoiner joinUDPThread(udpThread);
+
+  for (int i = 0; i < 50 &&
+                  (!udpReady.load() || !httpReady.load()); ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  ASSERT_TRUE(udpReady.load());
+  ASSERT_TRUE(httpReady.load());
+
+  std::mutex updateMutex;
+  std::condition_variable updateCv;
+  bool updateReceived = false;
+
+  UDPValueMonitor monitorUDP("127.0.0.1", udpPort, false, {}, httpPort);
+  monitorUDP.watch("large.value", [&](const std::string &, const Json::Value &,
+                                      const Json::Value &newValue) {
+    if (newValue.isInt() && newValue.asInt() == 99) {
+      std::lock_guard<std::mutex> lock(updateMutex);
+      updateReceived = true;
+      updateCv.notify_one();
+    }
+  });
+  monitorUDP.start();
+
+  {
+    std::unique_lock<std::mutex> lock(updateMutex);
+    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(2), [&] {
+      return updateReceived;
+    })) << "Timed out waiting for HTTP config pull";
+  }
+
+  EXPECT_EQ(monitorUDP.get("large.value").asInt(), 99);
+  monitorUDP.stop();
+}
+
 bool parseJsonMessage(const char *buffer, ssize_t size, Json::Value *message) {
   Json::CharReaderBuilder readerBuilder;
   readerBuilder["collectComments"] = false;
@@ -339,67 +534,97 @@ bool parseHostPort(const std::string &addr, std::string *host, int *port) {
   return *port > 0;
 }
 
-bool sendExternalUDPPatchProcess(const std::string &host, int port, bool mute) {
-  const pid_t pid = fork();
-  if (pid < 0) {
+std::string httpBaseForIntegrationHost(const std::string &host) {
+  const char *httpAddrEnv = std::getenv("FUSION_HTTP_ADDR");
+  if (httpAddrEnv != nullptr && httpAddrEnv[0] != '\0') {
+    std::string httpAddr = httpAddrEnv;
+    if (httpAddr.rfind("http://", 0) == 0 ||
+        httpAddr.rfind("https://", 0) == 0) {
+      return httpAddr;
+    }
+    return "http://" + httpAddr;
+  }
+  return "http://" + host + ":8080";
+}
+
+bool httpPatchJSON(const std::string &host, int httpPort,
+                   const std::string &path, const std::string &body) {
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
     return false;
   }
 
-  if (pid == 0) {
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock == -1) {
-      _exit(2);
-    }
+  timeval timeout{};
+  timeout.tv_sec = 5;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
-    timeval timeout{};
-    timeout.tv_sec = 2;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-
-    sockaddr_in serverAddr;
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-    if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
-      close(sock);
-      _exit(3);
-    }
-
-    Json::Value update;
-    update["action"] = "patch";
-    update["payload"]["audio"]["settings"]["gain_block"]["mute"] = mute;
-
-    Json::StreamWriterBuilder writerBuilder;
-    writerBuilder["indentation"] = "";
-    const std::string payload = Json::writeString(writerBuilder, update);
-    const ssize_t sent =
-        sendto(sock, payload.c_str(), payload.size(), 0,
-               reinterpret_cast<const sockaddr *>(&serverAddr),
-               sizeof(serverAddr));
-    if (sent != static_cast<ssize_t>(payload.size())) {
-      close(sock);
-      _exit(4);
-    }
-
-    char buffer[1024];
-    const ssize_t received = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
-    close(sock);
-    if (received <= 0) {
-      _exit(5);
-    }
-
-    const std::string response(buffer, static_cast<size_t>(received));
-    if (response.find("\"status\":\"success\"") == std::string::npos) {
-      _exit(6);
-    }
-
-    _exit(0);
-  }
-
-  int status = 0;
-  if (waitpid(pid, &status, 0) != pid) {
+  sockaddr_in serverAddr{};
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(static_cast<uint16_t>(httpPort));
+  if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
+    close(sockfd);
     return false;
   }
-  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+  if (connect(sockfd, reinterpret_cast<sockaddr *>(&serverAddr),
+              sizeof(serverAddr)) != 0) {
+    close(sockfd);
+    return false;
+  }
+
+  std::ostringstream request;
+  request << "PATCH " << path << " HTTP/1.0\r\n"
+          << "Host: " << host << ":" << httpPort << "\r\n"
+          << "Content-Type: application/json\r\n"
+          << "Content-Length: " << body.size() << "\r\n"
+          << "Connection: close\r\n\r\n"
+          << body;
+  const std::string requestStr = request.str();
+
+  size_t sentTotal = 0;
+  while (sentTotal < requestStr.size()) {
+    ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
+                        requestStr.size() - sentTotal, 0);
+    if (sent < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      close(sockfd);
+      return false;
+    }
+    sentTotal += static_cast<size_t>(sent);
+  }
+
+  std::string response;
+  char buffer[1024];
+  while (true) {
+    ssize_t n = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (n == 0) {
+      break;
+    }
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      close(sockfd);
+      return false;
+    }
+    response.append(buffer, static_cast<size_t>(n));
+    if (response.size() >= 32 && response.find("\r\n") != std::string::npos) {
+      break;
+    }
+  }
+  close(sockfd);
+
+  const std::string statusLine = response.substr(0, response.find("\r\n"));
+  return statusLine.find(" 200 ") != std::string::npos;
+}
+
+std::string jsonStringLiteral(const std::string &value) {
+  Json::Value json(value);
+  Json::StreamWriterBuilder writer;
+  writer["indentation"] = "";
+  return Json::writeString(writer, json);
 }
 } // namespace
 
@@ -708,7 +933,7 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
   monitorUDP.stop();
 }
 
-TEST(UDPValueMonitorTest, IntegrationExternalUDPPatchPropagationWithFusionServer) {
+TEST(UDPValueMonitorTest, IntegrationOversizedUpdatePullsConfigFromFusionServer) {
   if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
     GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
   }
@@ -717,58 +942,61 @@ TEST(UDPValueMonitorTest, IntegrationExternalUDPPatchPropagationWithFusionServer
   std::string addr = addrEnv ? addrEnv : "127.0.0.1:7947";
 
   std::string host;
-  int port = 0;
-  ASSERT_TRUE(parseHostPort(addr, &host, &port))
+  int udpPort = 0;
+  ASSERT_TRUE(parseHostPort(addr, &host, &udpPort))
       << "Invalid FUSION_UDP_ADDR (expected host:port): " << addr;
 
   if (host == "localhost") {
     host = "127.0.0.1";
   }
 
-  ASSERT_TRUE(sendExternalUDPPatchProcess(host, port, false))
-      << "Failed to set baseline mute=false through external UDP process";
+  std::string httpHost;
+  int httpPort = 0;
+  std::string httpBase = httpBaseForIntegrationHost(host);
+  if (httpBase.rfind("http://", 0) == 0) {
+    httpBase = httpBase.substr(std::strlen("http://"));
+  }
+  ASSERT_TRUE(parseHostPort(httpBase, &httpHost, &httpPort))
+      << "Invalid FUSION_HTTP_ADDR (expected host:port): " << httpBase;
+  if (httpHost == "localhost") {
+    httpHost = "127.0.0.1";
+  }
+  ASSERT_EQ(httpHost, host)
+      << "UDPValueMonitor HTTP pull uses the UDP host; set FUSION_UDP_ADDR and "
+         "FUSION_HTTP_ADDR to the same host for this test";
 
-  std::mutex updateMutex;
-  std::condition_variable updateCv;
-  bool truePatchReceived = false;
+  const auto unique =
+      std::chrono::steady_clock::now().time_since_epoch().count();
+  const std::string path = "observer_pull_required.value_" + std::to_string(unique);
+  const std::string expectedPrefix = "pull-required-";
+  const std::string expected =
+      expectedPrefix + std::to_string(unique) + "-" + std::string(70 * 1024, 'x');
 
-  UDPValueMonitor monitorUDP(host, port, false);
-  monitorUDP.watch("audio.settings.gain_block.mute",
-                   [&](const std::string &, const Json::Value &, const Json::Value &newValue) {
-                     if (newValue.isBool() && newValue.asBool()) {
-                       std::lock_guard<std::mutex> lock(updateMutex);
-                       truePatchReceived = true;
-                       updateCv.notify_one();
-                     }
-                   });
+  UDPValueMonitor monitorUDP(host, udpPort, false, {}, httpPort);
+  monitorUDP.watch(path, [](const std::string &, const Json::Value &,
+                            const Json::Value &) {});
   monitorUDP.start();
 
-  Json::Value baseline;
-  const auto baselineDeadline =
-      std::chrono::steady_clock::now() + std::chrono::seconds(3);
-  while (std::chrono::steady_clock::now() < baselineDeadline) {
-    baseline = monitorUDP.get("audio.settings.gain_block.mute");
-    if (baseline.isBool() && !baseline.asBool()) {
+  const std::string patchPath = "/value?key=" + path;
+  const std::string body = "{\"value\":" + jsonStringLiteral(expected) + "}";
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, patchPath, body))
+      << "Failed to PATCH oversized config value";
+
+  Json::Value val;
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(10);
+  while (std::chrono::steady_clock::now() < deadline) {
+    val = monitorUDP.get(path);
+    if (val.isString() && val.asString() == expected) {
       break;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  ASSERT_TRUE(baseline.isBool()) << "Timed out waiting for initial mute baseline";
-  ASSERT_FALSE(baseline.asBool()) << "Expected mute=false baseline before true patch";
-
-  ASSERT_TRUE(sendExternalUDPPatchProcess(host, port, true))
-      << "Failed to send mute=true patch through external UDP process";
-
-  {
-    std::unique_lock<std::mutex> lock(updateMutex);
-    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(3), [&] {
-      return truePatchReceived;
-    })) << "Timed out waiting for observer to receive external UDP patch";
-  }
-
-  Json::Value val = monitorUDP.get("audio.settings.gain_block.mute");
-  ASSERT_TRUE(val.isBool());
-  EXPECT_TRUE(val.asBool());
+  const std::string cleanupBody = "{\"value\":\"\"}";
+  (void)httpPatchJSON(httpHost, httpPort, patchPath, cleanupBody);
   monitorUDP.stop();
+
+  ASSERT_TRUE(val.isString()) << "Observer did not receive pulled config value";
+  EXPECT_EQ(val.asString(), expected);
 }

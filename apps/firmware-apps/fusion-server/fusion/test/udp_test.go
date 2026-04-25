@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"fusion/internal/api"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
@@ -119,6 +124,107 @@ func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	if _, ok := msg["udp_broadcast_test"]; !ok {
 		t.Fatalf("unexpected broadcast payload: %s", string(buf[:n]))
 	}
+}
+
+func TestFusionUDP_OversizedBroadcastRequiresConfigPull(t *testing.T) {
+	if runtime.GOOS == "darwin" && shouldSkipMultipassOnDarwin() {
+		t.Skip("macOS and Multipass networking prevents VM to host UDP responses. Set FUSION_UDP_ADDR=127.0.0.1:7947 to run locally.")
+	}
+
+	serverAddr, err := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
+	if err != nil {
+		t.Fatalf("resolve server: %v", err)
+	}
+	listenerConn, err := net.ListenUDP("udp4", nil)
+	if err != nil {
+		t.Fatalf("listen udp: %v", err)
+	}
+	defer listenerConn.Close()
+
+	if err := sendUDPJSON(listenerConn, serverAddr, map[string]any{"action": "no_op"}); err != nil {
+		t.Fatalf("register udp observer: %v", err)
+	}
+	buf := make([]byte, 65535)
+	_ = listenerConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if _, _, err := listenerConn.ReadFromUDP(buf); err != nil {
+		t.Fatalf("read registration response: %v", err)
+	}
+
+	patchKey := fmt.Sprintf("settings.udp_buffer_limit.%d", time.Now().UnixNano())
+	oversizedValue := strings.Repeat("x", 70*1024)
+	patchBody, err := json.Marshal(map[string]any{"value": oversizedValue})
+	if err != nil {
+		t.Fatalf("marshal patch: %v", err)
+	}
+
+	httpBase := httpBaseForUDPAddr(getFusionUDPAddr())
+	patchURL := fmt.Sprintf("%s/value?key=%s", httpBase, patchKey)
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		patchURL,
+		bytes.NewReader(patchBody),
+	)
+	if err != nil {
+		t.Fatalf("build patch request: %v", err)
+	}
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+	if err != nil {
+		t.Fatalf("patch oversized value: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("patch oversized value status=%d body=%s", resp.StatusCode, string(body))
+	}
+	defer func() {
+		cleanupBody, err := json.Marshal(map[string]any{"value": ""})
+		if err != nil {
+			return
+		}
+		req, err := http.NewRequest(http.MethodPatch, patchURL, bytes.NewReader(cleanupBody))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = listenerConn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		n, _, err := listenerConn.ReadFromUDP(buf)
+		if err != nil {
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				continue
+			}
+			t.Fatalf("read broadcast: %v", err)
+		}
+		msg, err := parseJSON(buf[:n])
+		if err != nil {
+			continue
+		}
+		op, _ := msg[api.FusionOperation].(string)
+		if op == string(api.NotifyOpConfigPullRequired) {
+			if _, ok := msg[api.FusionEpoch]; !ok {
+				t.Fatalf("config_pull_required missing epoch: %s", string(buf[:n]))
+			}
+			if _, ok := msg[api.FusionVersion]; !ok {
+				t.Fatalf("config_pull_required missing version: %s", string(buf[:n]))
+			}
+			if n > 2048 {
+				t.Fatalf("config_pull_required notification too large: %d bytes", n)
+			}
+			return
+		}
+		if op == string(api.NotifyOpConfigUpdate) {
+			t.Fatalf("expected config_pull_required for oversized payload, got config_update len=%d", n)
+		}
+	}
+	t.Fatalf("timed out waiting for config_pull_required broadcast")
 }
 
 func TestFusionUDP_BroadcastAckStopsRetries(t *testing.T) {
@@ -346,6 +452,14 @@ func TestFusionUDP_Stress(t *testing.T) {
 	elapsed := testDuration.Seconds()
 	wps := float64(totalWrites) / elapsed
 	t.Logf("completed %d total writes (%.0f writes/sec)", totalWrites, wps)
+}
+
+func httpBaseForUDPAddr(udpAddr string) string {
+	host, _, err := net.SplitHostPort(udpAddr)
+	if err != nil || host == "" {
+		return serverAddr
+	}
+	return "http://" + net.JoinHostPort(host, "8080")
 }
 
 func sendUDPJSON(conn *net.UDPConn, addr *net.UDPAddr, payload any) error {
