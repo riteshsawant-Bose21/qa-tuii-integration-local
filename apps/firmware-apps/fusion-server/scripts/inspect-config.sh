@@ -8,7 +8,7 @@ if [ $# -lt 2 ]; then
 Usage: $0 <instance-name> <bbolt command> [<args>...]
 
 This script makes a temporary copy of the Fusion database located at
-/var/lib/fusion/fusion.db on the specified multipass instance and then
+/persist/fusion/fusion.db on the specified multipass instance and then
 runs the bbolt command against that copy.
 
 The expected usage of the command is:
@@ -52,7 +52,7 @@ set -e
 TMP_DB=$(mktemp /tmp/fusion-copy.XXXXXX.db)
 
 # Copy the live database to the temporary file.
-cp /var/lib/fusion/fusion.db "$TMP_DB"
+cp /persist/fusion/fusion.db "$TMP_DB"
 
 # Determine the bbolt subcommand and reorder arguments as needed.
 cmd="$1"

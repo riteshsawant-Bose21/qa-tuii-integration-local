@@ -91,6 +91,55 @@ func (p *Persistence) ListSnapshotDefinitions() ([]api.SnapshotDefinition, error
 	return items, err
 }
 
+// DeleteAllSnapshotDefinitions removes all stored snapshot definitions.
+func (p *Persistence) DeleteAllSnapshotDefinitions() error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSnapshotDefs)
+		}
+
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if err := cursor.Delete(); err != nil {
+				return fmt.Errorf("failed to delete snapshot definition: %w", err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
+}
+
+// DeleteSnapshotDefinition removes one stored snapshot definition by ID.
+func (p *Persistence) DeleteSnapshotDefinition(id string) error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSnapshotDefs)
+		}
+
+		if bucket.Get([]byte(id)) == nil {
+			return ErrNotFound
+		}
+
+		if err := bucket.Delete([]byte(id)); err != nil {
+			return fmt.Errorf("failed to delete snapshot definition '%s': %w", id, err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
+}
+
 // SnapshotDefinitionExists checks if a snapshot definition exists.
 func (p *Persistence) SnapshotDefinitionExists(id string) (bool, error) {
 	var exists bool
@@ -187,6 +236,135 @@ func (p *Persistence) ListSceneSets() ([]api.SceneSet, error) {
 	})
 
 	return items, err
+}
+
+// DeleteAllSceneSets removes all stored scene sets.
+// Deleting scene sets also removes their associated scenes because scenes are embedded in each set.
+func (p *Persistence) DeleteAllSceneSets() error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSceneSets))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
+		}
+
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; {
+			nextKey, _ := cursor.Next()
+			if err := bucket.Delete(key); err != nil {
+				return err
+			}
+			key = nextKey
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
+}
+
+// DeleteSceneSet removes one stored scene set by set_id.
+func (p *Persistence) DeleteSceneSet(setID string) error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSceneSets))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
+		}
+
+		if bucket.Get([]byte(setID)) == nil {
+			return ErrNotFound
+		}
+
+		if err := bucket.Delete([]byte(setID)); err != nil {
+			return fmt.Errorf("failed to delete scene set '%s': %w", setID, err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
+}
+
+// DeleteScene removes one scene by ID from any scene set that contains it.
+func (p *Persistence) DeleteScene(sceneID string) error {
+	err := p.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketSceneSets))
+		if bucket == nil {
+			return fmt.Errorf("bucket '%s' not found", bucketSceneSets)
+		}
+
+		// Collect updates to apply after iteration — mutating the bucket
+		// inside ForEach is not safe in bbolt.
+		type pendingUpdate struct {
+			key  []byte
+			data []byte
+		}
+		var updates []pendingUpdate
+		found := false
+
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var set api.SceneSet
+			if err := json.Unmarshal(v, &set); err != nil {
+				return fmt.Errorf("failed to unmarshal scene set '%s': %w", string(k), err)
+			}
+
+			filtered := make([]api.Scene, 0, len(set.Scenes))
+			removedFromSet := false
+			for _, scene := range set.Scenes {
+				if scene.ID == sceneID {
+					removedFromSet = true
+					continue
+				}
+				filtered = append(filtered, scene)
+			}
+
+			if !removedFromSet {
+				continue
+			}
+
+			found = true
+			set.Scenes = filtered
+			if set.DefaultSceneID == sceneID {
+				set.DefaultSceneID = ""
+			}
+			if set.CurrentSceneID == sceneID {
+				set.CurrentSceneID = ""
+			}
+
+			updated, err := json.Marshal(set)
+			if err != nil {
+				return fmt.Errorf("failed to marshal updated scene set '%s': %w", set.SetID, err)
+			}
+
+			// Copy the key — cursor keys are only valid for the lifetime of the transaction step.
+			keyCopy := make([]byte, len(k))
+			copy(keyCopy, k)
+			updates = append(updates, pendingUpdate{key: keyCopy, data: updated})
+		}
+
+		if !found {
+			return ErrNotFound
+		}
+
+		for _, u := range updates {
+			if err := bucket.Put(u.key, u.data); err != nil {
+				return fmt.Errorf("failed to update scene set '%s': %w", string(u.key), err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return p.updateHash()
 }
 
 // SceneSetExists checks if a scene set exists.
