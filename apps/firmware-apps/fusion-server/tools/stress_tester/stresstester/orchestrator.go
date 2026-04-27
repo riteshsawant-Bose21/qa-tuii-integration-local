@@ -2,6 +2,7 @@ package stresstester
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -126,7 +127,8 @@ func Run(cfg Config) (*RunResult, error) {
 
 	// ─── 6. Grace period ────────────────────────────────────────────────
 	logNormal(cfg.Verbosity, "Entering grace period (max %s, adaptive=%v)...", cfg.GracePeriod, cfg.AdaptiveGrace)
-	waitGracePeriod(cfg, wsListeners, udpListeners, lastSentGain)
+	graceSummary := waitGracePeriod(cfg, wsListeners, udpListeners, lastSentGain)
+	logGraceSummary(cfg.Verbosity, graceSummary)
 
 	// Stop progress goroutine
 	close(progressStop)
@@ -281,27 +283,175 @@ func sendBurst(cfg Config, w Writer, sendTimes *sync.Map, startGain int, sharedS
 	return gain, sent
 }
 
+type laggingListener struct {
+	Name    string
+	Kind    string
+	LastSeen int
+	HasSeen bool
+}
+
+type graceSummary struct {
+	Duration       time.Duration
+	LastSentGain   int
+	TotalListeners int
+	DeliveredCount int
+	EndedEarly     bool
+	Lagging        []laggingListener
+}
+
 // waitGracePeriod waits up to GracePeriod for late arrivals.
 // In adaptive mode, it exits early if all listeners have received lastSentGain.
-func waitGracePeriod(cfg Config, wsListeners []*WSListener, udpListeners []*UDPListener, lastSentGain int) {
+func waitGracePeriod(cfg Config, wsListeners []*WSListener, udpListeners []*UDPListener, lastSentGain int) graceSummary {
+	started := time.Now()
 	deadline := time.After(cfg.GracePeriod)
 	poll := time.NewTicker(2 * time.Second)
 	defer poll.Stop()
 
+	lastLogged := time.Time{}
+	lastStatus := captureGraceStatus(wsListeners, udpListeners, lastSentGain)
+
 	for {
 		select {
 		case <-deadline:
-			return
+			lastStatus.Duration = time.Since(started)
+			return lastStatus
 		case <-poll.C:
-			if !cfg.AdaptiveGrace {
-				continue
+			status := captureGraceStatus(wsListeners, udpListeners, lastSentGain)
+
+			if shouldLogGraceUpdate(cfg.Verbosity, lastLogged, lastStatus, status) {
+				logGraceProgress(cfg.Verbosity, status)
+				lastLogged = time.Now()
 			}
-			if allReceivedLatest(wsListeners, udpListeners, lastSentGain) {
+
+			lastStatus = status
+
+			if cfg.AdaptiveGrace && status.DeliveredCount == status.TotalListeners {
+				status.EndedEarly = true
+				status.Duration = time.Since(started)
 				logNormal(cfg.Verbosity, "All listeners received final gain %d — ending grace early.", lastSentGain)
-				return
+				return status
 			}
 		}
 	}
+}
+
+func shouldLogGraceUpdate(v Verbosity, lastLogged time.Time, prev, cur graceSummary) bool {
+	if v == VerbosityQuiet {
+		return false
+	}
+	if len(cur.Lagging) == 0 && len(prev.Lagging) == 0 {
+		return false
+	}
+	if !sameLaggingState(prev.Lagging, cur.Lagging) {
+		return true
+	}
+	if lastLogged.IsZero() || time.Since(lastLogged) >= 5*time.Second {
+		return true
+	}
+	return false
+}
+
+func sameLaggingState(a, b []laggingListener) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func logGraceProgress(v Verbosity, s graceSummary) {
+	if len(s.Lagging) == 0 {
+		logNormal(v, "Grace progress: latest gain %d delivered to %d/%d listeners.",
+			s.LastSentGain, s.DeliveredCount, s.TotalListeners)
+		return
+	}
+	logNormal(v, "Grace progress: latest gain %d delivered to %d/%d listeners. Lagging listeners:",
+		s.LastSentGain, s.DeliveredCount, s.TotalListeners)
+	for _, l := range s.Lagging {
+		lastSeen := "none"
+		gap := s.LastSentGain
+		if l.HasSeen {
+			lastSeen = fmt.Sprintf("%d", l.LastSeen)
+			gap = s.LastSentGain - l.LastSeen
+		}
+		logNormal(v, "  - %s (%s): last seen=%s, gap=%d", l.Name, l.Kind, lastSeen, gap)
+	}
+}
+
+func logGraceSummary(v Verbosity, s graceSummary) {
+	if v == VerbosityQuiet {
+		return
+	}
+	logNormal(v, "Grace summary: latest gain %d delivered to %d/%d listeners after %s (adaptive ended early=%v).",
+		s.LastSentGain, s.DeliveredCount, s.TotalListeners, s.Duration.Truncate(time.Millisecond), s.EndedEarly)
+	if len(s.Lagging) == 0 {
+		return
+	}
+	logNormal(v, "Grace summary lagging listeners:")
+	for _, l := range s.Lagging {
+		lastSeen := "none"
+		gap := s.LastSentGain
+		if l.HasSeen {
+			lastSeen = fmt.Sprintf("%d", l.LastSeen)
+			gap = s.LastSentGain - l.LastSeen
+		}
+		logNormal(v, "  - %s (%s): last seen=%s, gap=%d", l.Name, l.Kind, lastSeen, gap)
+	}
+}
+
+func captureGraceStatus(wsListeners []*WSListener, udpListeners []*UDPListener, lastGain int) graceSummary {
+	status := graceSummary{
+		LastSentGain:   lastGain,
+		TotalListeners: len(wsListeners) + len(udpListeners),
+	}
+
+	for _, l := range wsListeners {
+		_, seen, _, _, _ := l.Snapshot()
+		if _, ok := seen[lastGain]; ok {
+			status.DeliveredCount++
+			continue
+		}
+		lastSeen, hasSeen := maxSeenGain(seen)
+		status.Lagging = append(status.Lagging, laggingListener{Name: l.Name(), Kind: "ws", LastSeen: lastSeen, HasSeen: hasSeen})
+	}
+
+	for _, l := range udpListeners {
+		_, seen, _, _ := l.Snapshot()
+		if _, ok := seen[lastGain]; ok {
+			status.DeliveredCount++
+			continue
+		}
+		lastSeen, hasSeen := maxSeenGain(seen)
+		status.Lagging = append(status.Lagging, laggingListener{Name: l.Name(), Kind: "udp", LastSeen: lastSeen, HasSeen: hasSeen})
+	}
+
+	sort.Slice(status.Lagging, func(i, j int) bool {
+		if status.Lagging[i].Kind == status.Lagging[j].Kind {
+			return status.Lagging[i].Name < status.Lagging[j].Name
+		}
+		return status.Lagging[i].Kind < status.Lagging[j].Kind
+	})
+
+	return status
+}
+
+func maxSeenGain(seen map[int]int) (int, bool) {
+	if len(seen) == 0 {
+		return 0, false
+	}
+	max := 0
+	has := false
+	for gain := range seen {
+		if !has || gain > max {
+			max = gain
+			has = true
+		}
+	}
+	return max, true
 }
 
 func allReceivedLatest(wsListeners []*WSListener, udpListeners []*UDPListener, lastGain int) bool {
