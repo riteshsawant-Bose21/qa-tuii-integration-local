@@ -9,7 +9,7 @@ class FusionDrawer extends StatelessWidget {
   FusionDrawer({
     required this.semanticId,
     super.key,
-    required this.title,
+    this.title,
     required this.content,
     this.width = 406,
     this.buttonLabel,
@@ -17,7 +17,11 @@ class FusionDrawer extends StatelessWidget {
     this.onClose,
     this.backgroundColor,
     this.buttonEnabledNotifier,
-  });
+    this.header,
+  }) : assert(
+         header != null || title != null,
+         'Either a custom header or a title must be provided.',
+       );
 
   final ValueNotifier<bool>? buttonEnabledNotifier;
 
@@ -25,13 +29,18 @@ class FusionDrawer extends StatelessWidget {
   final String semanticId;
 
   /// Header title shown at the top of the drawer.
-  final String title;
+  /// Not required when a custom [header] widget is provided.
+  final String? title;
 
   /// Drawer Backgroung Color
   final Color? backgroundColor;
 
   /// The body content of the drawer (scrollable).
   final Widget content;
+
+  /// The header of the drawer.
+  /// When provided, [title] is not required.
+  final Widget? header;
 
   /// Width of the drawer.
   final double width;
@@ -55,7 +64,7 @@ class FusionDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _buildHeader(context),
+            (header ?? _buildHeader(context)),
             Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight),
             Expanded(
               child: SemanticHelper.container(
@@ -122,7 +131,7 @@ class FusionDrawer extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text: title.toUpperCase(),
+                text: title!.toUpperCase(),
                 semanticId: '${semanticId}_drawer_header_title',
                 style: Theme.of(context).textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
               ),
@@ -141,18 +150,23 @@ class FusionDrawer extends StatelessWidget {
   static Future<T?> show<T>({
     required BuildContext context,
     required String semanticId,
-    required String title,
+    String? title,
     required Widget content,
+    Widget? header,
     double width = 406,
     String? buttonLabel,
     VoidCallback? onButtonPressed,
     Color? backgroundColor,
     ValueNotifier<bool>? buttonEnabledNotifier,
   }) {
+    assert(
+      header != null || title != null,
+      'Either a custom header or a title must be provided.',
+    );
     return showGeneralDialog<T>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: title,
+      barrierLabel: title ?? semanticId,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (BuildContext ctx, _, __) {
@@ -167,6 +181,7 @@ class FusionDrawer extends StatelessWidget {
                 title: title,
                 backgroundColor: backgroundColor,
                 content: content,
+                header: header,
                 width: width,
                 buttonLabel: buttonLabel,
                 onButtonPressed: onButtonPressed,
