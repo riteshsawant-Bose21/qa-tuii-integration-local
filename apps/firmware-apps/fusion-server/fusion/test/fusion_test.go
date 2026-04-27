@@ -664,6 +664,11 @@ func TestPatchDiffOutput(t *testing.T) {
 	defer resp.Body.Close()
 }
 
+// TestPatchNewArrayPreservedAsArrayInUpdates is a regression test for the bug where
+// PATCHing a key that previously did not exist with an array value causes the
+// "updates" field in the response to contain a string-keyed map
+// (e.g. {"band_enable":{"0":true,"1":false,"2":false}}) instead of a JSON array
+// ({"band_enable":[true,false,false]}). This is the exact scenario reported with PEQ band_enable.
 func TestPatchNewArrayPreservedAsArrayInUpdates(t *testing.T) {
 	// First clear the key we're about to write so it is genuinely new.
 	clearBody, _ := json.Marshal(map[string]any{
