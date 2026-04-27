@@ -317,9 +317,10 @@ func CalculateDiff(before, after any) map[string]any {
 	aarr, aIsArr := after.([]any)
 	if bIsArr || aIsArr {
 
-		// before not array → treat as empty
+		// before not array and after is array -> whole-array replacement
+		// Return primitive-style replacement so parent map assigns the full []any.
 		if !bIsArr && aIsArr {
-			barr = []any{}
+			return map[string]any{"": after}
 		}
 
 		// after not array → primitive replace
@@ -434,9 +435,9 @@ func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 	if !ok {
 		return nil, false
 	}
-	// Only unwrap true primitives
+	// Unwrap non-map values so callers get direct replacements (including []any).
 	switch v.(type) {
-	case map[string]any, []any:
+	case map[string]any:
 		return nil, false
 	default:
 		return v, true
