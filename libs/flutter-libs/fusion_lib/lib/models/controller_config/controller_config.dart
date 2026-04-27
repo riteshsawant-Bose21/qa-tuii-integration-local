@@ -46,7 +46,7 @@ class WallController {
   final String type;
   final List<String> zoneIds;
   final List<WallPages> pages;
-  final WallControllerSchedule schedule;
+  final WallSchedule? schedule;
 
   const WallController({
     required this.id,
@@ -54,7 +54,7 @@ class WallController {
     this.type = 'lt',
     this.zoneIds = const [],
     this.pages = const [],
-    this.schedule = const WallControllerSchedule(),
+    this.schedule,
   });
 
   WallController copyWith({
@@ -63,7 +63,7 @@ class WallController {
     String? type,
     List<String>? zoneIds,
     List<WallPages>? pages,
-    WallControllerSchedule? schedule,
+    WallSchedule? schedule,
   }) {
     return WallController(
       id: id ?? this.id,
@@ -81,7 +81,7 @@ class WallController {
     'type': type,
     'zoneIds': zoneIds,
     'pages': pages.map((p) => p.toJson()).toList(),
-    'schedule': schedule.toJson(),
+    'schedule': schedule?.toJson(),
   };
 
   factory WallController.fromJson(Map<String, dynamic> json) => WallController(
@@ -90,7 +90,7 @@ class WallController {
     type: json['type'] as String? ?? 'lt',
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     pages: (json['pages'] as List<dynamic>?)?.map((e) => WallPages.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
-    schedule: json['schedule'] != null ? WallControllerSchedule.fromJson(Map<String, dynamic>.from(json['schedule'] as Map)) : const WallControllerSchedule(),
+    schedule: json['schedule'] != null ? WallSchedule.fromJson(Map<String, dynamic>.from(json['schedule'] as Map)) : const WallSchedule(),
   );
 }
 
@@ -454,47 +454,99 @@ class WallSubZone {
 }
 
 // ---------------------------------------------------------------------------
-// WallControllerSchedule – schedule config embedded in WallController
+// WallScheduleItem – a single selected schedule entry inside WallSchedule
 // ---------------------------------------------------------------------------
 
-class WallControllerSchedule {
-  /// 'none' | 'all' | 'selected'
-  final String displayMode;
+class WallScheduleItem {
+  final String id;
+  final String name;
+  final bool isDisabled;
+  final String color;
+  final DateTime date;
+  final DateTime time;
 
-  /// Whether "Show upcoming items" is enabled.
-  final bool showUpcoming;
-
-  /// Schedule IDs selected when displayMode is 'selected'.
-  final List<String> selectedScheduleIds;
-
-  const WallControllerSchedule({
-    this.displayMode = 'all',
-    this.showUpcoming = false,
-    this.selectedScheduleIds = const [],
+  const WallScheduleItem({
+    required this.id,
+    required this.name,
+    this.isDisabled = false,
+    required this.color,
+    required this.date,
+    required this.time,
   });
 
-  WallControllerSchedule copyWith({
-    String? displayMode,
-    bool? showUpcoming,
-    List<String>? selectedScheduleIds,
+  WallScheduleItem copyWith({
+    String? id,
+    String? name,
+    String? eventName,
+    bool? isDisabled,
+    String? color,
+    DateTime? date,
+    DateTime? time,
   }) {
-    return WallControllerSchedule(
-      displayMode: displayMode ?? this.displayMode,
-      showUpcoming: showUpcoming ?? this.showUpcoming,
-      selectedScheduleIds: selectedScheduleIds ?? this.selectedScheduleIds,
+    return WallScheduleItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isDisabled: isDisabled ?? this.isDisabled,
+      color: color ?? this.color,
+      date: date ?? this.date,
+      time: time ?? this.time,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'displayMode': displayMode,
-    'showUpcoming': showUpcoming,
-    'selectedScheduleIds': selectedScheduleIds,
+    'id': id,
+    'name': name,
+    'isDisabled': isDisabled,
+    'color': color,
+    'date': date.toIso8601String(),
+    'time': time.toIso8601String(),
   };
 
-  factory WallControllerSchedule.fromJson(Map<String, dynamic> json) => WallControllerSchedule(
-    displayMode: json['displayMode'] as String? ?? 'all',
+  factory WallScheduleItem.fromJson(Map<String, dynamic> json) => WallScheduleItem(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    isDisabled: json['isDisabled'] as bool? ?? false,
+    color: json['color'] as String,
+    date: DateTime.parse(json['date'] as String),
+    time: json['time'] != null ? DateTime.parse(json['time'] as String) : DateTime.now(),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallSchedule – schedule config embedded in WallController
+// ---------------------------------------------------------------------------
+
+class WallSchedule {
+  /// Whether "Show upcoming items" is enabled.
+  final bool showUpcoming;
+
+  /// Selected schedule items for this controller.
+  final List<WallScheduleItem> selectedScheduleData;
+
+  const WallSchedule({
+    this.showUpcoming = false,
+    this.selectedScheduleData = const [],
+  });
+
+  WallSchedule copyWith({
+    bool? showUpcoming,
+    List<WallScheduleItem>? selectedScheduleData,
+  }) {
+    return WallSchedule(
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      selectedScheduleData: selectedScheduleData ?? this.selectedScheduleData,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'showUpcoming': showUpcoming,
+    'selectedScheduleData': selectedScheduleData.map((s) => s.toJson()).toList(),
+  };
+
+  factory WallSchedule.fromJson(Map<String, dynamic> json) => WallSchedule(
     showUpcoming: json['showUpcoming'] as bool? ?? false,
-    selectedScheduleIds: (json['selectedScheduleIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+    selectedScheduleData:
+        (json['selectedScheduleData'] as List<dynamic>?)?.map((e) => WallScheduleItem.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
   );
 }
 
