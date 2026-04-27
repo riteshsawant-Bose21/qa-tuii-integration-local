@@ -258,6 +258,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
                                 },
                                 title: subzone.name,
+                                muted: subzone.ono.mute==1,
                                 icon: Icons.eighteen_up_rating_outlined,
                                 volume: subzone.ono.gain.toDouble(),
                               );
