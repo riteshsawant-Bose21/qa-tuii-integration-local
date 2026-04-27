@@ -806,7 +806,15 @@ class SoftwareUpdateService {
     final String? version = response.data?.version;
 
     if (updateAvailable == false) {
-      _emit(_state.copyWith(phase: UpdatePhase.idle, updateAvailable: false));
+      _rollbackBundleVersion = null;
+      _downloadPaused = false;
+      _downloadResumeGate = null;
+      _emit(
+        UpdateState(
+          phase: UpdatePhase.idle,
+          fusionNetworkDevices: _state.fusionNetworkDevices,
+        ),
+      );
       return;
     }
 

@@ -10,7 +10,9 @@ import '../software_update/software_update_service.dart';
 import '../viewmodel/firmware_update_vm.dart';
 
 class FirmwareUpdatesTab extends StatefulWidget {
-  const FirmwareUpdatesTab({super.key});
+  const FirmwareUpdatesTab({super.key, this.refreshToken = 0});
+
+  final int refreshToken;
 
   @override
   State<FirmwareUpdatesTab> createState() => _FusionSoftwareUpdate2State();
@@ -23,15 +25,30 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
 
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
   bool _showedSuccessDialog = false;
+  bool _isInitialSilentCheckInProgress = true;
+  bool _hasSeenCheckingPhaseForSilentCheck = false;
 
   @override
   void initState() {
     super.initState();
-    final UpdateState s = _cubit.state;
+    _runSilentCheck();
+  }
 
-    if (s.phase == UpdatePhase.idle && !s.updateAvailable && !s.appUpdateRequired) {
-      unawaited(_cubit.checkForUpdates());
+  @override
+  void didUpdateWidget(covariant FirmwareUpdatesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _runSilentCheck();
     }
+  }
+
+  void _runSilentCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _isInitialSilentCheckInProgress = true;
+      _hasSeenCheckingPhaseForSilentCheck = false;
+      unawaited(_cubit.checkForUpdates());
+    });
   }
 
   @override
@@ -42,8 +59,7 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
   }
 
   bool _isHeadlineProcessingPhase(UpdatePhase phase) {
-    return phase == UpdatePhase.checking ||
-        phase == UpdatePhase.downloading ||
+    return phase == UpdatePhase.downloading ||
         phase == UpdatePhase.discovering ||
         phase == UpdatePhase.uploading ||
         phase == UpdatePhase.installing ||
@@ -52,7 +68,6 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
 
   void _syncGlobalInstallBlocker(UpdateState state) {
     final bool shouldBlock =
-        state.phase == UpdatePhase.checking ||
         state.phase == UpdatePhase.downloading ||
         state.phase == UpdatePhase.discovering ||
         state.phase == UpdatePhase.uploading ||
@@ -115,58 +130,66 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
     return BlocConsumer<SoftwareUpdateCubit, UpdateState>(
       bloc: _cubit,
       listener: (BuildContext context, UpdateState state) {
+        if (_isInitialSilentCheckInProgress) {
+          if (state.phase == UpdatePhase.checking) {
+            _hasSeenCheckingPhaseForSilentCheck = true;
+          } else if (_hasSeenCheckingPhaseForSilentCheck) {
+            _isInitialSilentCheckInProgress = false;
+            _hasSeenCheckingPhaseForSilentCheck = false;
+          }
+        }
         _syncGlobalInstallBlocker(state);
         if (state.phase == UpdatePhase.completed) {
           _showInstallSuccessDialogForTwoSeconds();
         }
       },
       builder: (BuildContext context, UpdateState state) {
+        final bool showUpToDateHero = _showUpToDateHero(state);
         final String description = state.releaseNotes?.trim() ?? 'No release notes provided for this update.';
 
         final String inUseVersion = state.fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice element) => element.isPrimary)?.primaryDeviceVersion ?? '';
-        final String versionText = state.availableVersion?.trim() ?? inUseVersion;
+        final String availableVersion = state.availableVersion?.trim() ?? '';
+        final bool shouldShowAvailableVersion = state.updateAvailable && availableVersion.isNotEmpty;
+        final String headlineVersion = shouldShowAvailableVersion ? availableVersion : inUseVersion;
 
         return Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        RichText(
-                          text: TextSpan(
-                            style: DefaultTextStyle.of(context).style,
-                            children: <InlineSpan>[
-                              TextSpan(text: '$versionText ', style: context.textTheme.h1Bold),
-                              TextSpan(
-                                text: _headline(state),
-                                style: context.textTheme.h2Regular.copyWith(fontWeight: FontWeight.w400),
-                              ),
-                            ],
+              if (!showUpToDateHero)
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          RichText(
+                            text: TextSpan(
+                              style: DefaultTextStyle.of(context).style,
+                              children: <InlineSpan>[
+                                TextSpan(text: '$headlineVersion ', style: context.textTheme.h1Bold),
+                                TextSpan(
+                                  text: _headline(state),
+                                  style: context.textTheme.h2Regular.copyWith(fontWeight: FontWeight.w400),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        FusionAppText(text: description, style: context.textTheme.h6Regular),
-                      ],
+                          const SizedBox(height: 10),
+                          FusionAppText(text: description, style: context.textTheme.h6Regular),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 28),
-                  _buildActionPanel(context, state),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-              if (_showProgressTable(state)) _buildDeviceProgressTable(context, state),
-              if (_showProgressTable(state)) const SizedBox(height: 18),
-              _buildInUseVersionRow(context, state, versionText),
-              if (_showUpToDateHero(state))
-                Expanded(
-                  child: _buildUpToDateHero(context),
+                    const SizedBox(width: 28),
+                    _buildActionPanel(context, state),
+                  ],
                 ),
+              if (!showUpToDateHero) const SizedBox(height: 18),
+              if (!showUpToDateHero && _showProgressTable(state)) _buildDeviceProgressTable(context, state),
+              if (!showUpToDateHero && _showProgressTable(state)) const SizedBox(height: 18),
+              if (!showUpToDateHero) _buildInUseVersionRow(context, state, inUseVersion),
+              if (showUpToDateHero) Expanded(child: _buildUpToDateBody(context, state, inUseVersion)),
               if (state.error?.message.trim().isNotEmpty == true) const SizedBox(height: 12),
               if (state.error?.message.trim().isNotEmpty == true) _buildDetailedErrorFooter(context, state.error!.message),
             ],
@@ -190,6 +213,9 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
   }
 
   bool _showUpToDateHero(UpdateState state) {
+    if (_isInitialSilentCheckInProgress && state.phase == UpdatePhase.checking) {
+      return true;
+    }
     return state.phase == UpdatePhase.idle && !state.updateAvailable && !state.appUpdateRequired;
   }
 
@@ -205,18 +231,35 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
           ),
           const SizedBox(height: 12),
           FusionAppText(
-            text: 'UP TO DATE',
+            text: 'Your device is up to date!',
             style: context.textTheme.h4SemiBold,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           FusionAppText(
-            text: 'Your device is already running the latest firmware version.',
+            text: 'No new updates available, as your device is already running on the latest firmware version.',
             style: context.textTheme.b3Regular.copyWith(color: context.colorScheme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildUpToDateBody(BuildContext context, UpdateState state, String versionText) {
+    return Column(
+      children: <Widget>[
+        const Spacer(),
+        _buildUpToDateHero(context),
+        const SizedBox(height: 34),
+        Center(
+          child: SizedBox(
+            width: 360,
+            child: _buildInUseVersionRow(context, state, versionText),
+          ),
+        ),
+        const Spacer(),
+      ],
     );
   }
 
@@ -343,17 +386,8 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
           );
         }
         if (state.phase == UpdatePhase.checking) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 1, color: Color(0xFF27B177))),
-              const SizedBox(width: 10),
-              _AnimatedHeadlineStatusText(
-                animate: _isHeadlineProcessingPhase(state.phase),
-                child: FusionAppText(text: 'Checking', style: context.textTheme.b2Medium),
-              ),
-            ],
-          );
+          if (_isInitialSilentCheckInProgress) return const SizedBox.shrink();
+          return const SizedBox.shrink();
         }
         return _BuildAction(
           text: 'Check for Updates',

@@ -36,6 +36,7 @@ class DeviceMappingDialog extends StatefulWidget {
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
   DeviceMappingDialogTab _selectedTab = DeviceMappingDialogTab.mapping;
+  int _updatesRefreshToken = 0;
 
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
@@ -73,7 +74,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                     case DeviceMappingDialogTab.droConfig:
                       return const DroConfigScreen();
                     case DeviceMappingDialogTab.updates:
-                      return const FirmwareUpdatesTab();
+                      return FirmwareUpdatesTab(refreshToken: _updatesRefreshToken);
                   }
                 },
               ),
@@ -149,7 +150,14 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     final bool isSelected = _selectedTab == tab;
 
     return InkWell(
-      onTap: () => setState(() => _selectedTab = tab),
+      onTap: () {
+        setState(() {
+          _selectedTab = tab;
+          if (tab == DeviceMappingDialogTab.updates) {
+            _updatesRefreshToken++;
+          }
+        });
+      },
       child: Container(
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(
