@@ -1,3 +1,4 @@
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,25 +19,55 @@ class VirtualControllerPanel extends StatefulWidget {
 }
 
 class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
-  bool selectedController = false;
 
+  bool selectedController = false;
+  WallController? controller;
   @override
   void initState() {
-    context.read<VirtualControllerViewModel>().loadZones(getZones(), widget.vipAddress);
-    if (!widget.isDesignMode) WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
+   final List<WallZone> zones = getZones();
+    context.read<VirtualControllerViewModel>().loadZones(zones, widget.vipAddress);
+
+    if(controller!.type=='lt'){
+      context.read<VirtualControllerViewModel>().selectZone(
+          zones.first,
+          0,
+          "",
+          subZone: zones.first.subZones.first.copyWith(ono:  zones.first.subZones.first.ono.copyWith(gain: 60, mute: 0)),
+          currentSubzoneIndex : 0,
+          sourceIndex: 1);
+      print("Zone Loaded By Default for LT Controller : " + zones.first.name);
+    }
+
+    if(!widget.isDesignMode) {
+      WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
+    }
     super.initState();
   }
-
   @override
   void didUpdateWidget(covariant VirtualControllerPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    selectedController = false;
-    context.read<VirtualControllerViewModel>().loadZones(getZones(), widget.vipAddress);
-    if (!widget.isDesignMode) WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
-  }
+    selectedController=false;
+    final List<WallZone> zones = getZones();
+    context.read<VirtualControllerViewModel>().loadZones(zones, widget.vipAddress);
+    if(controller!.type=='lt'){
+      context.read<VirtualControllerViewModel>().selectZone(
+          zones.first,
+          0,
+          "",
+          subZone: zones.first.subZones.first.copyWith(ono:  zones.first.subZones.first.ono.copyWith(gain: 60, mute: 0)),
+          currentSubzoneIndex : 0,
+          sourceIndex: 1);
+      print("Zone Loaded By Default for LT Controller : " + zones.first.name);
+    }
 
+    if(!widget.isDesignMode) {
+      WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
+    }
+  }
   @override
   Widget build(BuildContext context) {
+
+
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
@@ -61,65 +92,68 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     );
   }
 
-  getZones() {
-    //  print("WallControllerConfig");
+  List<WallZone> getZones() {
+  //  print("WallControllerConfig");
     final WallControllerConfig config = widget.config!;
     // print(config.toJson());
     // print("controllerID : " + widget.controllerID);
     final List<WallZone> _zones = <WallZone>[];
     final List<String> zoneIds = <String>[];
-    final WallController? controller = config.controllers.firstWhere((WallController ctrl) => ctrl.id == widget.controllerID);
+    controller = config.controllers.firstWhere((WallController ctrl) => ctrl.id == widget.controllerID);
 
     if (controller != null) {
-      zoneIds.addAll(controller.zoneIds ?? <String>[]);
+      zoneIds.addAll(controller!.zoneIds ?? <String>[]);
     }
-    // print("zones : " +  config.zones.length.toString());
-    // print("zoneIds : " + zoneIds.length.toString());
-    //
+    print("zones : " +  config.zones.length.toString());
+    print("zoneIds : " + zoneIds.length.toString());
 
-    if (zoneIds.isEmpty) {
+
+    if(zoneIds.isEmpty){
       return _zones;
     }
-
+    for (String id in zoneIds) {
     for (WallZone item in config.zones) {
-      WallZone? zone;
 
-      for (String id in zoneIds) {
-        //if (id == item.id) {
-        //  print("Matching ZONEID with zone $id Sucess: " + item.id);
-        zone = WallZone(
-          functionId: item.functionId,
-          id: id,
-          name: item.name,
-          subZones: <WallSubZone>[],
-          sources: item.sources ?? <WallZoneSource>[],
-          gain: item.gain,
-          ono: item.ono,
-        );
-        // }
+      final WallZone? zone = WallZone(
+        functionId: item.functionId,
+        id: item.id,
+        name: item.name,
+        subZones: <WallSubZone>[],
+        sources: item.sources ?? <WallZoneSource>[],
+        gain: item.gain,
+        ono: item.ono,
+      );
 
-        if (item.subZones.isNotEmpty) {
-          print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
 
-          for (WallSubZone subZone in item.subZones) {
-            if (id == subZone.id) {
-              print("Matching ZONEID with subzone $id Sucess: " + item.id);
-              zone = zone!.copyWith(name: subZone.name);
+          //if (id == item.id) {
+          //  print("Matching ZONEID with zone $id Sucess: " + item.id);
 
-              zone.subZones.add(
-                WallSubZone(
-                  id: subZone.id,
-                  name: subZone.name,
-                  gain: subZone.gain,
-                  ono: subZone.ono,
-                ),
-              );
-              _zones.add(zone!);
+         // }
+
+
+          if (item.subZones.isNotEmpty) {
+            print("Subzones found, adding sources directly to parent zone : ${item.subZones.length}");
+
+            for (WallSubZone subZone in item.subZones) {
+              if (id == subZone.id) {
+                print("Matching ZONEID with subzone $id Sucess: " + item.id);
+                zone!.subZones.add(
+                  WallSubZone(
+                    id: subZone.id,
+                    name: subZone.name,
+                    gain: subZone.gain,
+                    ono: subZone.ono,
+                  ),
+                );
+                _zones.add(zone);
+              }
             }
-          }
-        } else {
-          print("Subzones empty, adding sources directly to parent zone : ${item.subZones.length}");
-          if (id == item.id) {
+            print(_zones.length.toString() + " zones added with subzones $id");
+          } else {
+            print(
+                "Subzones empty, adding sources directly to parent zone : ${item
+                    .subZones.length}");
+           if (id == item.id) {
             zone!.subZones.add(
               WallSubZone(
                 id: item.id,
@@ -134,21 +168,66 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
             );
             _zones.add(zone!);
           }
+          }
+      }
+    }
+
+
+    print("_zones.length");
+    print(_zones.length);
+    final List<WallZone>  uniqueZones = mergeDuplicateWallZones(_zones);
+
+    return uniqueZones;
+  }
+
+  List<WallZone> mergeDuplicateWallZones(
+      List<WallZone> zones,
+      ) {
+    final Map<String, WallZone> map = <String, WallZone>{};
+
+    for (final WallZone zone in zones) {
+      final String key = zone.id;
+
+      /// First time add zone
+      if (!map.containsKey(key)) {
+        map[key] = zone.copyWith(
+          subZones: List<WallSubZone>.from(
+            zone.subZones,
+          ),
+        );
+        continue;
+      }
+
+      /// Duplicate found
+      final WallZone existing = map[key]!;
+
+      for (final WallSubZone subZone in zone.subZones) {
+        final bool alreadyExists =
+        existing.subZones.any(
+              (WallSubZone e) => e.id == subZone.id,
+        );
+
+        if (!alreadyExists) {
+          existing.subZones.add(
+            subZone,
+          );
         }
       }
     }
-    return _zones;
+
+    return map.values.toList();
   }
 
   Widget _buildContent(BuildContext context) {
+
     return AspectRatio(
-      aspectRatio: 16 / 9,
+      aspectRatio: 16/9,
       child: Container(
         padding: const EdgeInsets.all(24),
         child: Center(
           child: Container(
             width: 320,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 8,vertical: 24),
             decoration: BoxDecoration(
               color: context.colorScheme.black,
               borderRadius: BorderRadius.circular(16),
@@ -157,24 +236,26 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
                 width: 1,
               ),
             ),
-            child:
-                selectedController
-                    ? Navigator(
-                      onGenerateRoute: (RouteSettings settings) {
-                        return CupertinoPageRoute(
-                          builder: (BuildContext _) => VirtualControllerVolumeControl(isArc: true, isDesignMode: widget.isDesignMode),
-                          settings: const RouteSettings(name: 'volume_controller'),
-                        );
-                      },
-                    )
-                    : VirtualController(
-                      isDesignMode: widget.isDesignMode,
-                      onSelected: () {
-                        setState(() {
-                          selectedController = true;
-                        });
-                      },
-                    ),
+            child:(controller!.type == 'lt') ?
+            Navigator(
+              onGenerateRoute: (RouteSettings settings) {
+
+                return CupertinoPageRoute<dynamic>(
+                  builder: (BuildContext _) => VirtualControllerVolumeControl(
+                    isArc: true,
+                    isDesignMode: widget.isDesignMode
+                  ),
+                  settings: const RouteSettings(name: 'volume_controller'),
+                );
+              },
+            )
+
+             :  VirtualController(isDesignMode: widget.isDesignMode, onSelected: () {
+              setState(() {
+                selectedController = true;
+              });
+
+            }),
           ),
         ),
       ),

@@ -144,7 +144,14 @@ class _VirtualControllerState extends State<VirtualController> {
     }
   }
 
-  Future<WallZone> getSelectSource(String funcID) async{
+  Future<WallZone> getSelectSource(String funcID,WallZone zone) async{
+    if(widget.isDesignMode){
+      zone.sourceSelected=1;
+      return zone;
+    }
+
+
+
     if (!_cacheZone.containsKey(funcID)) {
 
       WallZone sourceModel = await context.read<VirtualControllerViewModel>().getSelectSource(funcID); // only once per item
@@ -180,8 +187,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
       return sourceModel;
     }
-    print("sourceModel.ono.gain");
-    print(_cache[gainId]!.ono.gain.toString());
+
     return Future.value(_cache[gainId]);
 
   }
@@ -235,7 +241,7 @@ class _VirtualControllerState extends State<VirtualController> {
 
                         return  FutureBuilder(
                             key: Key(zone.id),
-                            future: getSelectSource("${zone.functionId ?? ""}/selector"),
+                            future: getSelectSource("${zone.functionId ?? ""}/selector",zone),
                             builder: (context, AsyncSnapshot<WallZone> snapshot) {
 
                               zone.sourceSelected = snapshot.data?.sourceSelected ?? 1;
