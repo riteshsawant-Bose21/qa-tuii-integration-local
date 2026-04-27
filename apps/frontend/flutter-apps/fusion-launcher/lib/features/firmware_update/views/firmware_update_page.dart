@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../viewmodel/firmware_update_vm.dart';
 import '../software_update/software_update_service.dart';
+import '../viewmodel/firmware_update_vm.dart';
 
 class FirmwareUpdatesTab extends StatefulWidget {
   const FirmwareUpdatesTab({super.key});
@@ -157,10 +158,15 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
                   _buildActionPanel(context, state),
                 ],
               ),
+
               const SizedBox(height: 18),
               if (_showProgressTable(state)) _buildDeviceProgressTable(context, state),
               if (_showProgressTable(state)) const SizedBox(height: 18),
               _buildInUseVersionRow(context, state, versionText),
+              if (_showUpToDateHero(state))
+                Expanded(
+                  child: _buildUpToDateHero(context),
+                ),
               if (state.error?.message.trim().isNotEmpty == true) const SizedBox(height: 12),
               if (state.error?.message.trim().isNotEmpty == true) _buildDetailedErrorFooter(context, state.error!.message),
             ],
@@ -181,6 +187,37 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
         s.phase == UpdatePhase.completed ||
         s.isWaitingForSocketResponse ||
         s.deviceProgress.isNotEmpty;
+  }
+
+  bool _showUpToDateHero(UpdateState state) {
+    return state.phase == UpdatePhase.idle && !state.updateAvailable && !state.appUpdateRequired;
+  }
+
+  Widget _buildUpToDateHero(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SvgPicture.asset(
+            'assets/svg/smily_face.svg',
+            width: 120,
+            height: 120,
+          ),
+          const SizedBox(height: 12),
+          FusionAppText(
+            text: 'UP TO DATE',
+            style: context.textTheme.h4SemiBold,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          FusionAppText(
+            text: 'Your device is already running the latest firmware version.',
+            style: context.textTheme.b3Regular.copyWith(color: context.colorScheme.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 
   String _headline(UpdateState state) {

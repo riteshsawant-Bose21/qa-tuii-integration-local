@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -10,10 +12,26 @@ class DeviceAlreadyRegisteredException implements Exception {
   const DeviceAlreadyRegisteredException(this.certificate, this.fusionDeviceId);
 }
 
+class NoInternetException implements Exception {
+  final String message;
+  const NoInternetException([this.message = 'No internet connection']);
+
+  @override
+  String toString() => message;
+}
+
 class DeviceRegistrationRepository {
   final String vip;
   final FusionDeviceService fusionDeviceService;
   DeviceRegistrationRepository({required this.vip, required this.fusionDeviceService});
+
+  Never _throwNoInternetException() => throw const NoInternetException();
+
+  void _throwNoInternetIfSocketError(DioException exception) {
+    if (exception.error is SocketException || exception.type == DioExceptionType.connectionError) {
+      _throwNoInternetException();
+    }
+  }
 
   String _extractErrorMessage({required dynamic responseData, required String? responseMessage}) {
     // Some APIs return plain text bodies instead of JSON objects.
@@ -51,7 +69,10 @@ class DeviceRegistrationRepository {
         final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
-    } on DioException {
+    } on SocketException {
+      _throwNoInternetException();
+    } on DioException catch (exception) {
+      _throwNoInternetIfSocketError(exception);
       rethrow;
     } catch (e) {
       rethrow;
@@ -81,6 +102,11 @@ class DeviceRegistrationRepository {
         }
         throw Exception(errorMessage);
       }
+    } on SocketException {
+      _throwNoInternetException();
+    } on DioException catch (exception) {
+      _throwNoInternetIfSocketError(exception);
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -96,6 +122,11 @@ class DeviceRegistrationRepository {
         final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
+    } on SocketException {
+      _throwNoInternetException();
+    } on DioException catch (exception) {
+      _throwNoInternetIfSocketError(exception);
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -115,6 +146,11 @@ class DeviceRegistrationRepository {
         final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
         throw Exception(errorMessage);
       }
+    } on SocketException {
+      _throwNoInternetException();
+    } on DioException catch (exception) {
+      _throwNoInternetIfSocketError(exception);
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -129,6 +165,11 @@ class DeviceRegistrationRepository {
       );
 
       if (response.success) return true;
+      return false;
+    } on SocketException {
+      _throwNoInternetException();
+    } on DioException catch (exception) {
+      _throwNoInternetIfSocketError(exception);
       return false;
     } catch (e) {
       return false;
