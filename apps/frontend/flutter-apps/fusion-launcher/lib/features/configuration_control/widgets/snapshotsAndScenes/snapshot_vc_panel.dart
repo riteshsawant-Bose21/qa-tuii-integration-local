@@ -57,7 +57,7 @@ class SnapshotVcPanel extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 380),
           decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
+            color:  context.colorScheme.primaryBlack,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: context.colorScheme.strokeLight, width: 1),
           ),
@@ -79,7 +79,7 @@ class SnapshotVcPanel extends StatelessWidget {
 
               // ── Snapshot list ─────────────────────────────────────────
               if (snapshots.isEmpty)
-                Padding(
+                Container(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: FusionAppText(
                     text:
@@ -94,21 +94,8 @@ class SnapshotVcPanel extends StatelessWidget {
                   ),
                 )
               else
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.only(bottom: 8),
-                    itemCount: snapshots.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final SnapshotsModel snapshot = snapshots[index];
-                      final bool isActive = state.activeSnapshotId == snapshot.id;
-                      return _SnapshotRadioItem(
-                        snapshot: snapshot,
-                        isActive: isActive,
-                        onTap: () => context.read<SnapshotViewModel>().setActiveSnapshot(snapshot.id),
-                      );
-                    },
-                  ),
+                 Flexible(
+                  child: SnapshotsScreen(snapshots: snapshots),
                 ),
             ],
           ),
