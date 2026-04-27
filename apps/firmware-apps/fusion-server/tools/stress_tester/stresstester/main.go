@@ -13,7 +13,6 @@ func Main() {
 	configFile := flag.String("config", "", "Path to JSON config file (optional)")
 	writerMode := flag.String("writer-mode", "", "Writer transport: ws or http")
 	writerHost := flag.String("writer-host", "", "Writer target host:port")
-	enableProfiling := flag.Bool("profile", false, "Start CPU profiling on target fusion-server nodes before the run and stop it on exit")
 	profileHosts := flag.String("profile-hosts", "", "Comma-separated host:port targets for /debug/profile endpoints (default: infer unique hosts on port 9090)")
 	wsHosts := flag.String("ws-hosts", "", "Comma-separated WS listener hosts")
 	wsCount := flag.Int("ws-count", -1, "Number of WebSocket listeners")
@@ -56,9 +55,7 @@ func Main() {
 	if *writerHost != "" {
 		cfg.WriterHost = *writerHost
 	}
-	if *enableProfiling {
-		cfg.EnableProfiling = true
-	}
+	cfg.EnableProfiling = true
 	if *profileHosts != "" {
 		cfg.ProfileHosts = splitCSV(*profileHosts)
 	}
