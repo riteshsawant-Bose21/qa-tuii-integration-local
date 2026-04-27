@@ -49,14 +49,18 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
             if(state is VirtualZoneSelected) {
               WallZone selectedZone = state.zone;
 
-              WallZoneSource? selectedSource = selectedZone.sources[state.currentSourceIndex-1] ?? null;
+              WallZoneSource? selectedSource;
+              if(selectedZone.sources.isNotEmpty) {
+               selectedSource = selectedZone.sources?[state
+                    .currentSourceIndex - 1] ?? null;
+              }
               WallSubZone selectSubZone = state.subZone;
 
               double volume = selectSubZone.ono.gain.toDouble() ?? 0;
 
               return Scaffold(
                 backgroundColor: context.colorScheme.primaryBlack,
-                appBar: CommonMobileAppBar(title: selectedZone.name),
+                appBar: CommonMobileAppBar(title: selectSubZone.name,leadingIcon: widget.isArc ? SizedBox() :null),
                 body: Container(
                   margin: const EdgeInsets.all(16),
 
@@ -65,43 +69,46 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                     children: [
 
                       /// Source Selector
-                      BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
-                          buildWhen: (previous, current) {
-                            return current is SourceSelected;
-                          },
-                          builder: (context, selectSourceState) {
-                            if(selectSourceState is SourceSelected){
-                              selectedSource = selectSourceState.source;
-                            }
-                            return GestureDetector(
-                                onTap: () {
-                                  showModalBottomSheet(
-                                      context: context,
-                                      backgroundColor: Colors.transparent,
-                                      isScrollControlled: true,
-                                      builder: (_) =>
-                                          BottomSheetSelectSource(
-                                            source: ValueNotifier(selectedSource!),
-                                            sources: selectedZone.sources,
-                                            onSelected: (WallZoneSource source) {
-                                              context
-                                                  .read<
-                                                  VirtualControllerViewModel>()
-                                                  .selectSource(
-                                                  source,
-                                                  selectSubZone.id ?? "",
-                                                  "${selectedZone.functionId!}/selector",
-                                                  sendToService: !widget.isDesignMode);
+                      if(selectedZone.sources.isNotEmpty)...[
+                        BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
+                            buildWhen: (previous, current) {
+                              return current is SourceSelected;
+                            },
+                            builder: (context, selectSourceState) {
+                              if(selectSourceState is SourceSelected){
+                                selectedSource = selectSourceState.source;
+                              }
+                              return GestureDetector(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                        context: context,
+                                        backgroundColor: Colors.transparent,
+                                        isScrollControlled: true,
+                                        builder: (_) =>
+                                            BottomSheetSelectSource(
+                                              source: ValueNotifier(selectedSource!),
+                                              sources: selectedZone.sources,
+                                              onSelected: (WallZoneSource source) {
+                                                context
+                                                    .read<
+                                                    VirtualControllerViewModel>()
+                                                    .selectSource(
+                                                    source,
+                                                    selectSubZone.id ?? "",
+                                                    "${selectedZone.functionId!}/selector",
+                                                    sendToService: !widget.isDesignMode);
 
-                                            },
-                                          )
-                                  );
-                                },
-                                child: SourceCard(source: selectedSource!)
-                            );
-                          }
-                      ),
-                      const SizedBox(height: 24),
+                                              },
+                                            )
+                                    );
+                                  },
+                                  child: SourceCard(source: selectedSource!)
+                              );
+                            }
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
                       Expanded(
                         child:BlocBuilder<VirtualControllerViewModel, VirtualControllerState>(
                             buildWhen: (previous, current) {
@@ -114,8 +121,9 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
                                 volume = gainState.zoneSourceModel.ono.gain.toDouble();
                                 muted = gainState.zoneSourceModel.ono.mute  == 1 ? true:false;
                                 fromServer = gainState.fromServer;
-                               // key.currentState!.animateTo(volume);
+
                               }
+
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 24, horizontal: 24),
@@ -147,7 +155,20 @@ class _VirtualControllerVolumeControlState extends State<VirtualControllerVolume
 
                                     /// Slider Row
                                     widget.isArc ?
-                                    ArcVolumeMeter(volume: 70)
+                                    Expanded(child: ArcVolumeMeter(
+                                      onChanged: (value){
+                                        print(value);
+                                        context
+                                            .read<
+                                            VirtualControllerViewModel>()
+                                            .updateVolume(
+                                            selectSubZone!,
+                                            value,
+                                            sendToService: !widget
+                                                .isDesignMode);
+                                      },
+                                      volume: volume,muted: muted
+                                    ))
                                         : Expanded(
                                       child: Container(
                                         child: Row(
@@ -427,277 +448,307 @@ class VerticalAudioSliderState extends State<VerticalAudioSlider> with SingleTic
   }
 }
 
-class ArcVolumeSliderScreen extends StatefulWidget {
-  const ArcVolumeSliderScreen({super.key});
-
-  @override
-  State<ArcVolumeSliderScreen> createState() => _ArcVolumeSliderScreenState();
-}
-
-class _ArcVolumeSliderScreenState extends State<ArcVolumeSliderScreen> {
-  double _volume = 0.64;
-  bool _isMuted = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      body: Center(
-        child: Container(
-         // width: 320,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Arc Meter
-              SizedBox(
-                height: 200,
-                child: ArcVolumeMeter(volume: _isMuted ? 0.0 : _volume),
-              ),
-              const SizedBox(height: 32),
-              // Linear Slider
-              _buildLinearSlider(),
-              const SizedBox(height: 20),
-              // Mute Button
-              _buildMuteButton(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLinearSlider() {
-    return SliderTheme(
-      data: SliderThemeData(
-        trackHeight: 10,
-        thumbShape: const _CustomThumbShape(),
-        overlayShape: SliderComponentShape.noOverlay,
-        activeTrackColor: Colors.transparent,
-        inactiveTrackColor: const Color(0xFF2E2E2E),
-        thumbColor: Colors.white,
-      ),
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          // Custom gradient active track
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final trackWidth = constraints.maxWidth - 28;
-              final fillWidth = trackWidth * (_isMuted ? 0.0 : _volume);
-              return Container(
-                height: 10,
-                margin: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  color: const Color(0xFF2E2E2E),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: fillWidth,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1DB954), Color(0xFF4ADE80)],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          Slider(
-            value: _isMuted ? 0.0 : _volume,
-            onChanged: (v) {
-              setState(() {
-                _volume = v;
-                _isMuted = false;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMuteButton() {
-    return GestureDetector(
-      onTap: () => setState(() => _isMuted = !_isMuted),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2A2A2A),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_off_outlined,
-              color: Colors.white70,
-              size: 22,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Mute',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Arc Meter ────────────────────────────────────────────────────────────────
 
 class ArcVolumeMeter extends StatelessWidget {
   final double volume; // 0.0 – 1.0
-
-  const ArcVolumeMeter({super.key, required this.volume});
+  final bool muted; // 0.0 – 1.0
+  final ValueChanged<double>? onChanged;
+  const ArcVolumeMeter({super.key, this.onChanged, required this.volume,required this.muted});
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _ArcPainter(volume: volume),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 60),
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        ArcSlider(
+          onChanged: onChanged!,
+            value: volume, color: muted ? context.colorScheme.textDisabled : context.colorScheme.primary),
+        Container(
+          // padding: const EdgeInsets.only(top: 60),
           child: Text(
-            '${(volume).round()}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 52,
+            volume.toInt().toString(),
+            style: Theme
+                .of(context)
+                .textTheme
+                .h4Bold
+                .copyWith(
               fontWeight: FontWeight.w700,
-              letterSpacing: -2,
+              color: muted ?  context.colorScheme.textDisabled :  volume != 0 ?
+              context.colorScheme.textPrimary
+                  : context.colorScheme.volumeRed,
             ),
           ),
-        ),
-      ),
+        )
+      ],
+    );
+  }
+}
+
+
+class ArcSlider extends StatefulWidget {
+  /// value = 0 to 100
+  final double value;
+  final Color color;
+  final ValueChanged<double>? onChanged;
+
+  const ArcSlider({
+    super.key,
+    required this.value,
+    required this.color,
+    this.onChanged,
+  });
+
+  @override
+  State<ArcSlider> createState() =>
+      _ArcSliderState();
+}
+
+class _ArcSliderState extends State<ArcSlider> {
+  late double volume; // 0 -> 100
+
+  @override
+  void initState() {
+    super.initState();
+    volume = widget.value.clamp(
+      0.0,
+      100.0,
+    );
+  }
+
+  @override
+  void didUpdateWidget(
+      covariant ArcSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.value != widget.value) {
+      volume = widget.value.clamp(
+        0.0,
+        100.0,
+      );
+    }
+  }
+
+  void _updateValue(
+      Offset localPos,
+      Size size,
+      ) {
+    final center = Offset(
+      size.width / 2,
+      size.height - 10,
+    );
+
+    final dx = localPos.dx - center.dx;
+    final dy = localPos.dy - center.dy;
+
+    double angle = atan2(dy, dx);
+
+    if (angle < 0) {
+      angle += 2 * pi;
+    }
+
+    if (angle < pi ||
+        angle > 2 * pi) {
+      return;
+    }
+
+    double progress =
+        (angle - pi) / pi;
+
+    progress =
+        progress.clamp(0.0, 1.0);
+
+    if (progress < 0.02) {
+      progress = 0.0;
+    }
+
+    if (progress > 0.98) {
+      progress = 1.0;
+    }
+
+    final value =
+    (progress * 100).roundToDouble();
+
+    setState(() {
+      volume = value;
+    });
+
+    widget.onChanged?.call(
+      volume,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final size = Size(
+          c.maxWidth,
+          c.maxWidth / 2 + 30,
+        );
+
+        return GestureDetector(
+          behavior:
+          HitTestBehavior.opaque,
+          onPanDown: (d) =>
+              _updateValue(
+                d.localPosition,
+                size,
+              ),
+          onPanUpdate: (d) =>
+              _updateValue(
+                d.localPosition,
+                size,
+              ),
+          child: CustomPaint(
+            size: size,
+            painter: _ArcPainter(
+              volume: volume,
+              color: widget.color,
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _ArcPainter extends CustomPainter {
-  final double volume;
+  final double volume; // 0-100
+  final Color color;
 
-  _ArcPainter({required this.volume});
+  _ArcPainter({
+    required this.volume,
+    required this.color,
+  });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    const int totalTicks = 48;
-    const double startAngle = pi; // left (180°)
-    const double sweepAngle = pi; // half circle (180°)
-    const double tickLength = 18.0;
-    const double shortTickLength = 12.0;
+  void paint(
+      Canvas canvas,
+      Size size) {
+    const int totalTicks = 50;
+    const double startAngle = pi;
+    const double sweepAngle = pi;
+    const double tickLength = 18;
+    const double shortTickLength =
+    12;
     const double tickWidth = 2.8;
-    const double gapFromArc = 4.0;
+    const double gapFromArc = 4;
 
-    final center = Offset(size.width / 2, size.height - 10);
-    final radius = size.width / 2 - 20;
+    final center = Offset(
+      size.width / 2,
+      size.height - 10,
+    );
 
-    final activeColor = const Color(0xFF2ECC71);
-    final inactiveColor = const Color(0xFF3A3A3A);
+    final radius =
+        size.width / 2 - 20;
 
-    for (int i = 0; i < totalTicks; i++) {
-      final fraction = i / (totalTicks - 1);
-      final angle = startAngle + sweepAngle * fraction;
+    final activeColor = color;
+    final inactiveColor =
+    const Color(0xFF3A3A3A);
 
-      final isActive = fraction <= volume;
-      final isLong = i % 3 == 0;
-      final tickLen = isLong ? tickLength : shortTickLength;
+    final progress =
+        volume / 100;
 
-      final outerR = radius - gapFromArc;
-      final innerR = outerR - tickLen;
+    for (int i = 0;
+    i < totalTicks;
+    i++) {
+      final fraction =
+          i / (totalTicks - 1);
 
-      final outerX = center.dx + outerR * cos(angle);
-      final outerY = center.dy + outerR * sin(angle);
-      final innerX = center.dx + innerR * cos(angle);
-      final innerY = center.dy + innerR * sin(angle);
+      final angle =
+          startAngle +
+              sweepAngle *
+                  fraction;
 
-      // Color with gradient effect on active ticks
+      final isActive =
+          fraction <= progress;
+
+      final isLong =
+          i % 3 == 0;
+
+      final tickLen = isLong
+          ? tickLength
+          : shortTickLength;
+
+      final outerR =
+          radius - gapFromArc;
+
+      final innerR =
+          outerR - tickLen;
+
+      final outerX =
+          center.dx +
+              outerR *
+                  cos(angle);
+
+      final outerY =
+          center.dy +
+              outerR *
+                  sin(angle);
+
+      final innerX =
+          center.dx +
+              innerR *
+                  cos(angle);
+
+      final innerY =
+          center.dy +
+              innerR *
+                  sin(angle);
+
       Color tickColor;
+
       if (isActive) {
-        // slight fade at the leading edge
-        final brightness = 0.65 + 0.35 * (fraction / volume.clamp(0.01, 1.0));
+        final brightness =
+            0.65 +
+                0.35 *
+                    (fraction /
+                        progress.clamp(
+                          0.01,
+                          1.0,
+                        ));
+
         tickColor = Color.lerp(
-          activeColor.withOpacity(0.5),
+          activeColor.withOpacity(
+            0.5,
+          ),
           activeColor,
-          brightness.clamp(0.0, 1.0),
+          brightness.clamp(
+            0.0,
+            1.0,
+          ),
         )!;
       } else {
-        tickColor = inactiveColor;
+        tickColor =
+            inactiveColor;
       }
 
       final paint = Paint()
         ..color = tickColor
-        ..strokeWidth = tickWidth
-        ..strokeCap = StrokeCap.round;
+        ..strokeWidth =
+            tickWidth
+        ..strokeCap =
+            StrokeCap.round;
 
       canvas.drawLine(
-        Offset(outerX, outerY),
-        Offset(innerX, innerY),
+        Offset(
+          outerX,
+          outerY,
+        ),
+        Offset(
+          innerX,
+          innerY,
+        ),
         paint,
       );
     }
+
   }
 
   @override
-  bool shouldRepaint(_ArcPainter old) => old.volume != volume;
-}
-
-// ── Custom Thumb ─────────────────────────────────────────────────────────────
-
-class _CustomThumbShape extends SliderComponentShape {
-  const _CustomThumbShape();
-
-  @override
-  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
-      const Size(26, 26);
-
-  @override
-  void paint(
-      PaintingContext context,
-      Offset center, {
-        required Animation<double> activationAnimation,
-        required Animation<double> enableAnimation,
-        required bool isDiscrete,
-        required TextPainter labelPainter,
-        required RenderBox parentBox,
-        required SliderThemeData sliderTheme,
-        required TextDirection textDirection,
-        required double value,
-        required double textScaleFactor,
-        required Size sizeWithOverflow,
-      }) {
-    final canvas = context.canvas;
-
-    // Shadow
-    final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-    canvas.drawCircle(center + const Offset(0, 3), 14, shadowPaint);
-
-    // White thumb
-    final thumbPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, 13, thumbPaint);
-  }
+  bool shouldRepaint(
+      _ArcPainter old) =>
+      old.volume != volume ||
+          old.color != color;
 }

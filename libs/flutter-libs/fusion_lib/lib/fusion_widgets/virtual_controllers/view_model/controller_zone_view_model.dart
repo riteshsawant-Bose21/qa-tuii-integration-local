@@ -80,8 +80,6 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     ));
   }
 
-
-
   //  Volume change
   void updateVolume(WallSubZone sourceModel, double volume,{bool sendToService=false ,bool isMuted = false}) {
 
@@ -107,10 +105,10 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
         break;
       }
     }
-    print("foundZoneIndex");
-    print(foundZoneIndex);
-    print("foundSubZoneIndex");
-    print(foundSubZoneIndex);
+    // print("foundZoneIndex");
+    // print(foundZoneIndex);
+    // print("foundSubZoneIndex");
+    // print(foundSubZoneIndex);
 
     if(foundZoneIndex!=-1 && foundSubZoneIndex!=-1) {
 
