@@ -273,9 +273,9 @@ extension ControllerService on ProjectService {
 
     // Build WallController list (with pages embedded per controller).
     final List<WallController> wallControllers = allControllers.map(
-      (FusionController c) {
+      (FusionController controller) {
         /// Pages linked to this controller via controllerPages relationship.
-        final List<ControllerPageModel> pages = getControllerPages(c.id);
+        final List<ControllerPageModel> pages = getControllerPages(controller.id);
         final List<WallPages> controllerWallPages = <WallPages>[];
         for (final ControllerPageModel page in pages) {
           // Skip message pages — they are not included in WallControllerConfig.
@@ -306,11 +306,39 @@ extension ControllerService on ProjectService {
         }
 
         return WallController(
-          id: c.id,
-          name: c.name,
-          type: (c.sku.toLowerCase().contains('pro') || c.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
-          zoneIds: getAssignedZoneIds(c.id).toList(),
+          id: controller.id,
+          name: controller.name,
+          type: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
+          zoneIds: getAssignedZoneIds(controller.id).toList(),
           pages: controllerWallPages,
+          schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
+              ? WallSchedule(
+                  showUpcoming: controller.showUpcoming,
+                  selectedScheduleData: () {
+                    // schedule list based on the display mode.
+                    final List<ScheduleConfig> scheduleData;
+                    switch (controller.scheduleDisplayMode) {
+                      case 'none':
+                        scheduleData = <ScheduleConfig>[];
+                      case 'all':
+                        scheduleData = getAllSchedules();
+                      case 'selected':
+                      default:
+                        scheduleData = getSelectedScheduleIds(controller.id).map((String id) => getScheduleById(id)).whereType<ScheduleConfig>().toList();
+                    }
+                    return scheduleData.map((ScheduleConfig scheduleData) {
+                      return WallScheduleItem(
+                        id: scheduleData.id,
+                        name: scheduleData.name,
+                        isDisabled: scheduleData.status,
+                        color: scheduleData.colorHex,
+                        date: scheduleData.startDate,
+                        time: scheduleData.time,
+                      );
+                    }).toList();
+                  }(),
+                )
+              : null,
         );
       },
     ).toList();
