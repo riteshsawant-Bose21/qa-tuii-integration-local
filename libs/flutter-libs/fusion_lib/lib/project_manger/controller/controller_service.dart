@@ -271,17 +271,49 @@ extension ControllerService on ProjectService {
       );
     }
 
-    // Build WallController list.
-    final List<WallController> wallControllers = allControllers
-        .map(
-          (FusionController c) => WallController(
-            id: c.id,
-            name: c.name,
-            type: (c.sku.toLowerCase().contains('pro') || c.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
-            zoneIds: getAssignedZoneIds(c.id).toList(),
-          ),
-        )
-        .toList();
+    // Build WallController list (with pages embedded per controller).
+    final List<WallController> wallControllers = allControllers.map(
+      (FusionController c) {
+        /// Pages linked to this controller via controllerPages relationship.
+        final List<ControllerPageModel> pages = getControllerPages(c.id);
+        final List<WallPages> controllerWallPages = <WallPages>[];
+        for (final ControllerPageModel page in pages) {
+          // Skip message pages — they are not included in WallControllerConfig.
+          if (page.type == ControllerPageType.message) continue;
+
+          final bool isSnapshotPage = page.type == ControllerPageType.snapshotPage;
+
+          List<WallPageSnapshot> snapshotsList;
+          if (isSnapshotPage) {
+            final Set<String> snapshotIds = getSnapshotIdsForPage(page.id);
+            snapshotsList = snapshotIds.map((String id) {
+              final SnapshotsModel? snapshot = getSnapshotById(id);
+              return WallPageSnapshot(id: id, name: snapshot?.name ?? id);
+            }).toList();
+          } else {
+            final List<SnapshotsModel> sceneSnapshots = getSnapshotInSceneSet(page.id);
+            snapshotsList = sceneSnapshots.map((SnapshotsModel s) => WallPageSnapshot(id: s.id, name: s.name)).toList();
+          }
+
+          controllerWallPages.add(
+            WallPages(
+              pageId: page.id,
+              name: page.name,
+              isPage: isSnapshotPage,
+              snapshotsList: snapshotsList,
+            ),
+          );
+        }
+
+        return WallController(
+          id: c.id,
+          name: c.name,
+          type: (c.sku.toLowerCase().contains('pro') || c.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
+          zoneIds: getAssignedZoneIds(c.id).toList(),
+          pages: controllerWallPages,
+        );
+      },
+    ).toList();
 
     return WallControllerConfig(
       controllers: wallControllers,

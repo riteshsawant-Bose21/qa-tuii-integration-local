@@ -45,12 +45,14 @@ class WallController {
   /// Controller type: 'pro' or 'lt'.
   final String type;
   final List<String> zoneIds;
+  final List<WallPages> pages;
 
   const WallController({
     required this.id,
     required this.name,
     this.type = 'lt',
     this.zoneIds = const [],
+    this.pages = const [],
   });
 
   WallController copyWith({
@@ -58,12 +60,14 @@ class WallController {
     String? name,
     String? type,
     List<String>? zoneIds,
+    List<WallPages>? pages,
   }) {
     return WallController(
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       zoneIds: zoneIds ?? this.zoneIds,
+      pages: pages ?? this.pages,
     );
   }
 
@@ -72,6 +76,7 @@ class WallController {
     'name': name,
     'type': type,
     'zoneIds': zoneIds,
+    'pages': pages.map((p) => p.toJson()).toList(),
   };
 
   factory WallController.fromJson(Map<String, dynamic> json) => WallController(
@@ -79,6 +84,7 @@ class WallController {
     name: json['name'] as String,
     type: json['type'] as String? ?? 'lt',
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+    pages: (json['pages'] as List<dynamic>?)?.map((e) => WallPages.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
   );
 }
 
@@ -438,5 +444,84 @@ class WallSubZone {
     name: json['name'] as String,
     gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
     ono: WallSubZoneOno.fromJson(Map<String, dynamic>.from(json['ono'] as Map)),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallPageSnapshot – a snapshot/scene reference inside a WallPages entry
+// ---------------------------------------------------------------------------
+
+class WallPageSnapshot {
+  final String id;
+  final String name;
+
+  const WallPageSnapshot({
+    required this.id,
+    required this.name,
+  });
+
+  WallPageSnapshot copyWith({String? id, String? name}) => WallPageSnapshot(id: id ?? this.id, name: name ?? this.name);
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+  };
+
+  factory WallPageSnapshot.fromJson(Map<String, dynamic> json) => WallPageSnapshot(
+    id: json['id'] as String,
+    name: json['name'] as String,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallPages – a page entry in the wall-controller config
+//
+//   isPage: true  → snapshot page
+//   isPage: false → scene-set page
+// ---------------------------------------------------------------------------
+
+class WallPages {
+  final String pageId;
+  final String name;
+
+  /// true  = snapshot page
+  /// false = scene-set page
+  final bool isPage;
+
+  final List<WallPageSnapshot> snapshotsList;
+
+  const WallPages({
+    required this.pageId,
+    required this.name,
+    required this.isPage,
+    this.snapshotsList = const [],
+  });
+
+  WallPages copyWith({
+    String? pageId,
+    String? name,
+    bool? isPage,
+    List<WallPageSnapshot>? snapshotsList,
+  }) {
+    return WallPages(
+      pageId: pageId ?? this.pageId,
+      name: name ?? this.name,
+      isPage: isPage ?? this.isPage,
+      snapshotsList: snapshotsList ?? this.snapshotsList,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'pageId': pageId,
+    'name': name,
+    'isPage': isPage,
+    'snapshotsList': snapshotsList.map((s) => s.toJson()).toList(),
+  };
+
+  factory WallPages.fromJson(Map<String, dynamic> json) => WallPages(
+    pageId: json['pageId'] as String,
+    name: json['name'] as String,
+    isPage: json['isPage'] as bool? ?? true,
+    snapshotsList: (json['snapshotsList'] as List<dynamic>?)?.map((e) => WallPageSnapshot.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
   );
 }
