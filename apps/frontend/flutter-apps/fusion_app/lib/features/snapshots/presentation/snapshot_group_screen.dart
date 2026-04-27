@@ -1,89 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
-import 'package:fusion_app/features/snapshots/models/snapshot_model.dart';
-import 'package:fusion_app/features/snapshots/widgets/snapshot_selection_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-class SnapshotGroupScreen extends StatefulWidget {
-  const SnapshotGroupScreen({super.key});
+import 'package:fusion_app/features/snapshots/widgets/snapshot_card.dart';
 
-  @override
-  State<SnapshotGroupScreen> createState() => _SnapshotGroupScreenState();
-}
+class SnapshotsGroupsScreen extends StatelessWidget {
 
-class _SnapshotGroupScreenState extends State<SnapshotGroupScreen> {
-  int? selectedIndex;
-  final List<SnapshotModel> snapshots = [
-    const SnapshotModel(title: "Morning", label: "Label"),
-    const SnapshotModel(title: "Afternoon", label: "Label"),
-    const SnapshotModel(title: "Yoga Session 1", label: "Label"),
-    const SnapshotModel(title: "Yoga Session 2", label: "Label"),
-    const SnapshotModel(title: "Zumba", label: "Label"),
-    const SnapshotModel(title: "Aerobics", label: "Label"),
-    const SnapshotModel(title: "Evening", label: "Label"),
-  ];
-
-  @override
-  void initState() {
-
-    super.initState();
-  }
+  const SnapshotsGroupsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonMobileAppBar(title: 'Snapshot Group 1'),
-      body: Column(
-        children: [
+    final List<String> items = [
+      'Snapshot\nGroup 1',
+      'Snapshot\nGroup 2',
+      'Snapshot\nGroup 3',
+      'Snapshot\nGroup 4',
+      'Snapshot\nGroup 5',
+      'Snapshot\nGroup 6',
+      'Snapshot\nGroup 7',
+    ];
 
-          /// List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: snapshots.length,
-              itemBuilder: (context, index) {
-                final snapshot = snapshots[index];
-
-                return SnapshotSelectionCard(
-                  title: snapshot.title,
-                  label: snapshot.label,
-                  isSelected: selectedIndex == index,
-                  onTap: () {
-                    setState(() {
-                      selectedIndex = index;
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-
-          /// Save Button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.colorScheme.elevation2,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  "Save Changes",
-                  style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: context.colorScheme.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    return GridView.builder(
+      padding: EdgeInsets.only(left: 16,right: 16),
+      itemCount: items.length,
+      shrinkWrap: true,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.3
       ),
+      itemBuilder: (context, index) {
+        return  SnapshotCard(title: items[index]);
+      },
     );
+
   }
+
 }

@@ -12,7 +12,10 @@ class SnapshotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: (){
-          Navigator.pushNamed(context, Routes.snapshotGroupPage);
+          Navigator.pushNamed(context, Routes.snapshotGroupPage,arguments: {
+            "title": title,
+            "snapshots":[]
+          });
       },
       child: Container(
         padding: const EdgeInsets.all(16),
