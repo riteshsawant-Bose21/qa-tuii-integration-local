@@ -79,22 +79,24 @@ class SnapshotVcPanel extends StatelessWidget {
 
               // ── Snapshot list ─────────────────────────────────────────
               if (snapshots.isEmpty)
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: FusionAppText(
-                    text:
-                        state.selectedSnapshotPageId != null
-                            ? 'No snapshots linked to this page'
-                            : state.selectedSceneSetId != null
-                            ? 'No snapshots in this scene'
-                            : 'Select a page or scene to view',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.colorScheme.textSecondary,
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: FusionAppText(
+                      text:
+                          state.selectedSnapshotPageId != null
+                              ? 'No snapshots linked to this page'
+                              : state.selectedSceneSetId != null
+                              ? 'No snapshots in this scene'
+                              : 'Select a page or scene to view',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.textSecondary,
+                      ),
                     ),
                   ),
                 )
               else
-                 Flexible(
+                 Expanded(
                   child: SnapshotsScreen(snapshots: snapshots),
                 ),
             ],
