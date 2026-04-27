@@ -1,18 +1,16 @@
 info:
-  name: Delete
+  name: Delete All Snapshots
   type: http
-  seq: 4
+  seq: 14
 
 http:
   method: DELETE
-  url: "{{api_url}}/snapshots/:name"
-  params:
-    - name: name
-      value: ""
-      type: path
+  url: "{{api_url}}/snapshots"
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+
+docs: Deletes all snapshot definitions.

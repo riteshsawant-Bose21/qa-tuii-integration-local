@@ -46,7 +46,7 @@ func upsertSceneSets(t *testing.T, sets []api.SceneSet) {
 
 func activateSnapshotDef(t *testing.T, id string) *http.Response {
 	t.Helper()
-	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, id, 1)
+	activateURL := strings.Replace(snapshotDefsActivateURL, idParam, id, 1)
 	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("activateSnapshotDef: POST request failed: %v", err)
@@ -81,6 +81,27 @@ func getCurrentScene(t *testing.T, setID string) api.CurrentSceneResponse {
 		t.Fatalf("getCurrentScene: failed to decode response: %v", err)
 	}
 	return out
+}
+
+func deleteEndpoint(t *testing.T, endpoint string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodDelete, endpoint, nil)
+	if err != nil {
+		t.Fatalf("DELETE request build failed: %v", err)
+	}
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("DELETE request failed: %v", err)
+	}
+
+	return resp
+}
+
+func deleteEndpointByName(t *testing.T, endpointBase string, name string) *http.Response {
+	t.Helper()
+	endpoint := strings.TrimRight(endpointBase, "/") + "/" + name
+	return deleteEndpoint(t, endpoint)
 }
 
 func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
@@ -152,6 +173,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 
 func TestSceneCatalogActivateSnapshotDefMissingName(t *testing.T) {
 	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, "", 1)
+	activateURL = strings.Replace(activateURL, idParam, "", 1)
 	resp, err := http.Post(activateURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("POST /snapshots/activate/ failed: %v", err)
@@ -591,5 +613,293 @@ func TestSceneCatalogListAll(t *testing.T) {
 	}
 	if !slices.Contains(setIDs, setID) {
 		t.Errorf("Scene set %s missing from catalog scene sets: %v", setID, setIDs)
+	}
+}
+
+func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
+	prefix := fmt.Sprintf("snap-delete-all-%d", time.Now().UnixNano())
+	defs := []api.SnapshotDefinition{
+		{ID: prefix + "-a", Data: map[string]any{}},
+		{ID: prefix + "-b", Data: map[string]any{}},
+	}
+	upsertSnapshotDefs(t, defs)
+
+	resp := deleteEndpoint(t, snapshotDefsListURL)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /snapshots returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(snapshotDefsListURL)
+	if err != nil {
+		t.Fatalf("GET /snapshots failed after delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var listResp api.SnapshotListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		t.Fatalf("Failed to decode snapshot list response: %v", err)
+	}
+
+	for _, def := range defs {
+		for _, item := range listResp.Snapshots {
+			if item.ID == def.ID {
+				t.Fatalf("Snapshot definition %s still present after delete-all", def.ID)
+			}
+		}
+	}
+}
+
+func TestSceneCatalogDeleteSnapshotDefinitionByName(t *testing.T) {
+	prefix := fmt.Sprintf("snap-delete-one-%d", time.Now().UnixNano())
+	deleteID := prefix + "-delete"
+	keepID := prefix + "-keep"
+	upsertSnapshotDefs(t, []api.SnapshotDefinition{
+		{ID: deleteID, Data: map[string]any{}},
+		{ID: keepID, Data: map[string]any{}},
+	})
+
+	resp := deleteEndpointByName(t, snapshotDefsListURL, deleteID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /snapshots/%s returned %d: %s", deleteID, resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(snapshotDefsListURL)
+	if err != nil {
+		t.Fatalf("GET /snapshots failed after targeted delete: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var listResp api.SnapshotListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		t.Fatalf("Failed to decode snapshot list response: %v", err)
+	}
+
+	for _, item := range listResp.Snapshots {
+		if item.ID == deleteID {
+			t.Fatalf("Snapshot definition %s still present after targeted delete", deleteID)
+		}
+	}
+
+	foundKeep := false
+	for _, item := range listResp.Snapshots {
+		if item.ID == keepID {
+			foundKeep = true
+			break
+		}
+	}
+	if !foundKeep {
+		t.Fatalf("Snapshot definition %s should remain after deleting %s", keepID, deleteID)
+	}
+}
+
+func TestSceneCatalogDeleteSnapshotDefinitionByNameNotFound(t *testing.T) {
+	missingID := fmt.Sprintf("snap-delete-missing-%d", time.Now().UnixNano())
+	resp := deleteEndpointByName(t, snapshotDefsListURL, missingID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 404 for missing snapshot definition, got %d: %s", resp.StatusCode, string(body))
+	}
+}
+
+func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
+	prefix := fmt.Sprintf("scene-sets-delete-all-%d", time.Now().UnixNano())
+	setID := prefix + "-set"
+	sceneID := prefix + "-scene"
+	upsertSceneSets(t, []api.SceneSet{{
+		SetID:  setID,
+		Scenes: []api.Scene{{ID: sceneID, Data: map[string]any{}}},
+	}})
+
+	resp := deleteEndpoint(t, sceneSetsListURL)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /scene-sets returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(sceneSetsListURL)
+	if err != nil {
+		t.Fatalf("GET /scene-sets failed after delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var setsResp api.SceneSetListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&setsResp); err != nil {
+		t.Fatalf("Failed to decode scene set list response: %v", err)
+	}
+
+	for _, set := range setsResp.SceneSets {
+		if set.SetID == setID {
+			t.Fatalf("Scene set %s still present after delete-all", setID)
+		}
+	}
+
+	resp, err = http.Get(scenesListURL)
+	if err != nil {
+		t.Fatalf("GET /scenes failed after scene-set delete-all: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var scenesResp api.SceneListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scenesResp); err != nil {
+		t.Fatalf("Failed to decode scene list response: %v", err)
+	}
+
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == sceneID {
+			t.Fatalf("Scene %s still present after deleting all scene sets", sceneID)
+		}
+	}
+}
+
+func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
+	prefix := fmt.Sprintf("scene-set-delete-one-%d", time.Now().UnixNano())
+	deleteSetID := prefix + "-set-delete"
+	deleteSceneID := prefix + "-scene-delete"
+	keepSetID := prefix + "-set-keep"
+	keepSceneID := prefix + "-scene-keep"
+
+	upsertSceneSets(t, []api.SceneSet{
+		{SetID: deleteSetID, Scenes: []api.Scene{{ID: deleteSceneID, Data: map[string]any{}}}},
+		{SetID: keepSetID, Scenes: []api.Scene{{ID: keepSceneID, Data: map[string]any{}}}},
+	})
+
+	resp := deleteEndpointByName(t, sceneSetsListURL, deleteSetID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /scene-sets/%s returned %d: %s", deleteSetID, resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(sceneSetsListURL)
+	if err != nil {
+		t.Fatalf("GET /scene-sets failed after targeted delete: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var setsResp api.SceneSetListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&setsResp); err != nil {
+		t.Fatalf("Failed to decode scene set list response: %v", err)
+	}
+
+	for _, set := range setsResp.SceneSets {
+		if set.SetID == deleteSetID {
+			t.Fatalf("Scene set %s still present after targeted delete", deleteSetID)
+		}
+	}
+
+	foundKeepSet := false
+	for _, set := range setsResp.SceneSets {
+		if set.SetID == keepSetID {
+			foundKeepSet = true
+			break
+		}
+	}
+	if !foundKeepSet {
+		t.Fatalf("Scene set %s should remain after deleting %s", keepSetID, deleteSetID)
+	}
+
+	resp, err = http.Get(scenesListURL)
+	if err != nil {
+		t.Fatalf("GET /scenes failed after targeted scene-set delete: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var scenesResp api.SceneListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scenesResp); err != nil {
+		t.Fatalf("Failed to decode scene list response: %v", err)
+	}
+
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == deleteSceneID {
+			t.Fatalf("Scene %s still present after deleting scene set %s", deleteSceneID, deleteSetID)
+		}
+	}
+
+	foundKeepScene := false
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == keepSceneID {
+			foundKeepScene = true
+			break
+		}
+	}
+	if !foundKeepScene {
+		t.Fatalf("Scene %s should remain after deleting scene set %s", keepSceneID, deleteSetID)
+	}
+}
+
+func TestSceneCatalogDeleteSceneByName(t *testing.T) {
+	prefix := fmt.Sprintf("scene-delete-one-%d", time.Now().UnixNano())
+	setID := prefix + "-set"
+	deleteSceneID := prefix + "-scene-delete"
+	keepSceneID := prefix + "-scene-keep"
+
+	upsertSceneSets(t, []api.SceneSet{{
+		SetID: setID,
+		Scenes: []api.Scene{
+			{ID: deleteSceneID, Name: "Delete", Data: map[string]any{}},
+			{ID: keepSceneID, Name: "Keep", Data: map[string]any{}},
+		},
+	}})
+
+	resp := activateScene(t, setID, deleteSceneID)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Activate scene returned %d", resp.StatusCode)
+	}
+
+	resp = deleteEndpointByName(t, scenesListURL, deleteSceneID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE /scenes/%s returned %d: %s", deleteSceneID, resp.StatusCode, string(body))
+	}
+
+	resp, err := http.Get(scenesListURL)
+	if err != nil {
+		t.Fatalf("GET /scenes failed after targeted delete: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var scenesResp api.SceneListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scenesResp); err != nil {
+		t.Fatalf("Failed to decode scene list response: %v", err)
+	}
+
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == deleteSceneID {
+			t.Fatalf("Scene %s still present after targeted delete", deleteSceneID)
+		}
+	}
+
+	foundKeep := false
+	for _, scene := range scenesResp.Scenes {
+		if scene.ID == keepSceneID {
+			foundKeep = true
+			break
+		}
+	}
+	if !foundKeep {
+		t.Fatalf("Scene %s should remain after deleting %s", keepSceneID, deleteSceneID)
+	}
+
+	current := getCurrentScene(t, setID)
+	if current.CurrentScene.SceneID != "" {
+		t.Fatalf("Expected current scene to be cleared after deleting active scene, got %q", current.CurrentScene.SceneID)
+	}
+}
+
+func TestSceneCatalogDeleteSceneByNameNotFound(t *testing.T) {
+	missingID := fmt.Sprintf("scene-delete-missing-%d", time.Now().UnixNano())
+	resp := deleteEndpointByName(t, scenesListURL, missingID)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 404 for missing scene, got %d: %s", resp.StatusCode, string(body))
 	}
 }

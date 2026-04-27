@@ -100,9 +100,11 @@ const (
 
 	SceneCatalogEndpoint = "/scene-catalog"
 
-	ScenesEndpoint = "/scenes"
+	ScenesEndpoint     = "/scenes"
+	ScenesNameEndpoint = ScenesEndpoint + "/{id}"
 
-	ScenesSetsEndpoint        = "/scenes-sets"
+	ScenesSetsEndpoint        = "/scene-sets"
+	ScenesSetsNameEndpoint    = ScenesSetsEndpoint + "/{id}"
 	SceneSetsActivateEndpoint = ScenesSetsEndpoint + "/activate"
 	SceneSetsCurrentEndpoint  = ScenesSetsEndpoint + "/current-scene"
 
@@ -110,7 +112,8 @@ const (
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
 	SnapshotsEndpoint         = "/snapshots"
-	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
+	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{id}"
+	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{id}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"

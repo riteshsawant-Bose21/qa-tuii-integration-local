@@ -2,9 +2,18 @@ These manual tests should allow you as a human to prove that snapshots, scenes, 
 
 I've created some basic unit tests, but I have a tendency to want to assert that a feature works correctly using my own eyes and brain. By using these `curl` commands, you can also do exactly that.
 
-It's also helpful if you find the automated tests failing - there seems to be a lot of tenatiousness with automated testing when it spans IPC. By following these steps here, you can verify for yourself if the test run is glitching, the test might be broken, or if you broke something when you added a feature.
-
 **Setup**
+
+From the `fusion-server` directory:
+
+```sh
+# Build
+./build-fusion-server
+
+# Run
+./scripts/multipass/launch --instances 3
+```
+
 Set up the node IPs to match what you've go running on Multipass.
 (I find a fresh Multipass deployment works best).
 
@@ -73,19 +82,19 @@ curl -i -sS -X PATCH "$VIP/value" \
 ```
 
 ```bash
-curl -i -sS "$VIP/snapshots/list"
+curl -i -sS "$VIP/snapshots"
 ```
 
 ```bash
-curl -i -sS "$VIP/scenes/list"
+curl -i -sS "$VIP/scenes"
 ```
 
 ```bash
-curl -i -sS "$VIP/scene-sets/list"
+curl -i -sS "$VIP/scene-sets"
 ```
 
 ```bash
-curl -i -sS "$VIP/scene-catalog-list"
+curl -i -sS "$VIP/scene-catalog"
 ```
 
 **2) Activate snapshot and verify DB state patch**
@@ -170,17 +179,139 @@ curl -i -sS -X POST "$VIP/scene-sets/activate" \
   }'
 ```
 
-**6) Replication checks on each node**
+**6) Delete specific snapshot / scene / scene-set by ID**
 ```bash
-curl -i -sS "$NODE1/snapshots/list"
-curl -i -sS "$NODE2/snapshots/list"
-curl -i -sS "$NODE3/snapshots/list"
+curl -i -sS -X DELETE "$VIP/snapshots/snapshot-test-01"
 ```
 
 ```bash
-curl -i -sS "$NODE1/scene-sets/list"
-curl -i -sS "$NODE2/scene-sets/list"
-curl -i -sS "$NODE3/scene-sets/list"
+curl -i -sS "$VIP/snapshots"
+```
+
+Expect `snapshot-test-01` to be removed from the `snapshots` array.
+
+```bash
+curl -i -sS -X DELETE "$VIP/scenes/scene-evening-01"
+```
+
+```bash
+curl -i -sS "$VIP/scenes"
+```
+
+```bash
+curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "set_id": "scene-set-test-01"
+  }'
+```
+
+Expect `scene-evening-01` to be removed from the `scenes` array. If it was current, `current_scene.scene_id` should be empty.
+
+```bash
+curl -i -sS -X DELETE "$VIP/scene-sets/scene-set-test-01"
+```
+
+```bash
+curl -i -sS "$VIP/scene-sets"
+```
+
+Expect `scene-set-test-01` to be removed from the `scene_sets` array.
+
+```bash
+curl -i -sS -X DELETE "$VIP/snapshots/does-not-exist"
+curl -i -sS -X DELETE "$VIP/scenes/does-not-exist"
+curl -i -sS -X DELETE "$VIP/scene-sets/does-not-exist"
+```
+
+Expect `404` for each missing ID.
+
+**7) Re-create definitions for delete-all checks**
+```bash
+curl -i -sS -X PATCH "$VIP/value" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "snapshots": [
+      {
+        "id": "snapshot-test-01",
+        "name": "Snapshot Test",
+        "data": {
+          "feature_probe": {
+            "mode": "snapshot",
+            "level": 10
+          }
+        }
+      }
+    ],
+    "scene_sets": [
+      {
+        "set_id": "scene-set-test-01",
+        "name": "Dayparts",
+        "default_scene": "scene-morning-01",
+        "scenes": [
+          {
+            "id": "scene-morning-01",
+            "name": "Morning",
+            "data": {
+              "feature_probe": {
+                "mode": "morning",
+                "level": 1
+              }
+            }
+          },
+          {
+            "id": "scene-evening-01",
+            "name": "Evening",
+            "data": {
+              "feature_probe": {
+                "mode": "evening",
+                "level": 9
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }'
+```
+
+**8) Delete all snapshot definitions**
+```bash
+curl -i -sS -X DELETE "$VIP/snapshots"
+```
+
+```bash
+curl -i -sS "$VIP/snapshots"
+```
+
+Expect an empty `snapshots` array.
+
+**9) Delete all scene-sets (also removes all scenes in those sets)**
+```bash
+curl -i -sS -X DELETE "$VIP/scene-sets"
+```
+
+```bash
+curl -i -sS "$VIP/scene-sets"
+```
+
+```bash
+curl -i -sS "$VIP/scenes"
+```
+
+Expect empty `scene_sets` and `scenes` arrays.
+
+**10) Replication checks on each node**
+```bash
+curl -i -sS "$NODE1/snapshots"
+curl -i -sS "$NODE2/snapshots"
+curl -i -sS "$NODE3/snapshots"
+```
+
+```bash
+curl -i -sS "$NODE1/scene-sets"
+curl -i -sS "$NODE2/scene-sets"
+curl -i -sS "$NODE3/scene-sets"
 ```
 
 ```bash
@@ -196,3 +327,12 @@ curl -i -sS -X POST "$NODE3/scene-sets/current-scene" \
   -H "Content-Type: application/json" \
   -d '{"set_id":"scene-set-test-01"}'
 ```
+
+---
+
+# Automated Integration Tests
+
+```sh
+FUSION_TEST_VIP=192.168.2.100:8080 FUSION_TEST_NODES=192.168.2.150:8080,192.168.2.151:8080,192.168.2.152:8080 go test -v ./test -run '^TestSceneCatalog' -count=1
+```
+

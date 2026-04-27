@@ -304,14 +304,19 @@ func (app *App) setupPublicRoutes() {
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshotDefinition)
 
 	// Scenes
 	app.registerPublicGET(routes.ScenesEndpoint, app.Server.ListScenes)
+	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
 
 	// Scene Sets
 	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
 	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
 	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsEndpoint, app.Server.DeleteSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsNameEndpoint, app.Server.DeleteSceneSet)
 
 	// Scene Catalog
 	app.registerPublicGET(routes.SceneCatalogEndpoint, app.Server.ListSceneCatalog)
