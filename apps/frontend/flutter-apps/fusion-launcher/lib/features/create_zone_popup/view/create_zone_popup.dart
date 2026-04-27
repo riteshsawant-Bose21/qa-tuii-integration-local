@@ -448,7 +448,6 @@ class _FusionDrawerHeaderState extends State<FusionDrawerHeader> {
               ),
             ),
 
-            // Optional trailing widget (e.g. "Add Output Device" button)
             if (widget.trailing != null) ...<Widget>[
               const SizedBox(width: 16),
               widget.trailing!,

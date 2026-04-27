@@ -6,7 +6,8 @@ import '../../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_
 import '../../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
 import '../../view_model/create_zone_viewmodel.dart';
 import '../../view_model/create_zone_viewmodel_state.dart';
-import 'create_new_listening_area.dart';
+import 'CommonWidgets/create_zone_bordered_textfield.dart';
+import 'CommonWidgets/create_zone_label_field.dart';
 
 enum OutputType {
   mediaRecorder,
@@ -76,7 +77,7 @@ class _AddOutputDeviceHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.only(top: 20, bottom: 16, left: 16, right: 24),
+            padding: const EdgeInsets.only(top: 24, bottom: 16, left: 24, right: 24),
             child: Row(
               children: <Widget>[
                 // ← Back
@@ -86,23 +87,21 @@ class _AddOutputDeviceHeader extends StatelessWidget {
                     onTap: onBack,
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: FusionIcon.icon(
-                          Icons.arrow_back_ios,
-                          size: 16,
-                          color: context.colorScheme.iconWhite,
-                        ),
+                      child: FusionIcon.icon(
+                        Icons.arrow_back_ios,
+                        size: 16,
+                        color: context.colorScheme.iconWhite,
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 // Title
                 Expanded(
                   child: FusionAppText(
                     text: 'ADD OUTPUT DEVICE',
                     semanticId: 'add_output_device_header_title',
-                    style: Theme.of(context).textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
+                    style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
                   ),
                 ),
                 // ✕ Close
@@ -251,7 +250,7 @@ class _AddOutputDeviceContentState extends State<_AddOutputDeviceContent> {
             alignment: Alignment.centerLeft,
             child: FusionAppText(
               text: text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.l1Medium.copyWith(
                 color: context.colorScheme.onSurface,
               ),
             ),
@@ -274,29 +273,16 @@ class _AddOutputDeviceContentState extends State<_AddOutputDeviceContent> {
   Widget _connectionDropdown(BuildContext context, String text) {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, 'add_output_device_connection_dropdown'),
-      child: Column(
-        children: <Widget>[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FusionAppText(
-              text: text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: context.colorScheme.onSurface,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          FusionOutlinedDropdown<ConnectionType>(
-            value: _connection,
-            items: ConnectionType.values,
-            hint: 'Select Connection',
-            itemLabelBuilder: (ConnectionType t) => t.displayName,
-            onChanged: (ConnectionType v) {
-              setState(() => _connection = v);
-              _onChanged();
-            },
-          ),
-        ],
+      child: FusionOutlinedDropdown<ConnectionType>(
+        value: _connection,
+        label: text,
+        items: ConnectionType.values,
+        hint: 'Select Connection',
+        itemLabelBuilder: (ConnectionType t) => t.displayName,
+        onChanged: (ConnectionType v) {
+          setState(() => _connection = v);
+          _onChanged();
+        },
       ),
     );
   }
