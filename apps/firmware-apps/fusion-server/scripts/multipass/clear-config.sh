@@ -5,7 +5,7 @@ show_help() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Delete the saved config data stored in /var/lib/fusion/fusion.db
+Delete the saved config data stored in /persist/fusion/fusion.db
 
 Options:
     -h, --help          Show this help message
@@ -72,14 +72,14 @@ for instance in $instances; do
         # silence all internal output
         multipass exec "$instance" -- sudo bash -c '
             systemctl stop fusion-server
-            rm -f /var/lib/fusion/fusion.db
+            rm -f /persist/fusion/fusion.db
             systemctl set-environment FUSION_PROFILE=true
             systemctl start fusion-server
         ' >/dev/null 2>&1
     else
         multipass exec "$instance" -- sudo bash -c '
             systemctl stop fusion-server
-            rm -f /var/lib/fusion/fusion.db
+            rm -f /persist/fusion/fusion.db
             systemctl set-environment FUSION_PROFILE=true
             systemctl start fusion-server
             systemctl status fusion-server --no-pager

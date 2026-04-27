@@ -13,7 +13,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -207,10 +209,26 @@ void ignore_alsa_error(const char *file, int line, const char *function,
     (void)fmt;
 }
 
+static bool is_fusion_connect_stream_name(const std::string &device_name)
+{
+    return device_name.rfind("FC_", 0) == 0;
+}
+
+static bool is_bluealsa_device_name(const std::string &device_name)
+{
+    return device_name.compare(0, 9, "bluealsa:") == 0;
+}
+
+static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
+{
+    return is_fusion_connect_stream_name(device_name) && !use_asrc;
+}
+
+
 int open_pcm(snd_pcm_t **alsa, const std::string &full_device_name,
              snd_pcm_stream_t stream, int mode)
 {
-    if (full_device_name.compare(0, 9, "bluealsa:") != 0)
+    if (!is_bluealsa_device_name(full_device_name))
     {
         return snd_pcm_open(alsa, full_device_name.c_str(), stream, mode);
     }
@@ -234,6 +252,7 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    std::string device_name;
     bool use_asrc;
     int channels;
     int read_samples;
@@ -263,6 +282,7 @@ private:
     bosepro::DspStateMemory<servo::Servo> servo;
     bosepro::DspTempMemory<float []> asrc_in_buf;
     bosepro::DspTempMemory<float []> asrc_out_buf;
+    std::string device_name;
     bool use_asrc;
     int channels;
     int max_write_samples;
@@ -311,7 +331,7 @@ void AlsaDevice::open_device()
     // can open immediately.  If it doesn't, it's the name of a fusion connect
     // stream, and we need to look up its device number first.
     if ((device_name.compare(0, 3, "hw:") != 0)
-        && (device_name.compare(0, 9, "bluealsa:") != 0))
+        && !is_bluealsa_device_name(device_name))
     {
         SPDLOG_DEBUG("Getting device number for: {}", device_name);
         int device_number = get_device_number(device_name);
@@ -334,7 +354,10 @@ void AlsaDevice::open_device()
 
     if (error < 0)
     {
-        SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+        if (!is_bluealsa_device_name(full_device_name))
+        {
+            SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+        }
         pthread_mutex_unlock(&open_mutex);
         return;
     }
@@ -407,10 +430,19 @@ int AlsaDevice::get_buffer_depth()
 
     if (depth < 0)
     {
+        if (depth == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "ALSA stream suspended while getting {} buffer depth: {}",
+                                  device_name.c_str(), snd_strerror(depth));
+            return -1;
+        }
+
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Failed to get {} buffer depth: {}",
                               device_name.c_str(), snd_strerror(depth));
-        return 0;
+        close_device();
+        return -1;
     }
 
     return depth;
@@ -430,6 +462,12 @@ int AlsaDevice::adjust_buffer_depth(int samples)
         return 0;
     }
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
+        return -1;
+    }
+
     SPDLOG_TRACE("Adjusting ALSA buffer depth by {} samples", samples);
 
     if (samples < 0)
@@ -438,10 +476,19 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (forwarded < 0)
         {
+            if (forwarded == -ESTRPIPE)
+            {
+                ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                      "ALSA stream suspended while forwarding {} buffer depth: {}",
+                                      device_name.c_str(), snd_strerror(forwarded));
+                return -1;
+            }
+
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to forward {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(forwarded));
-            return 0;
+            close_device();
+            return -1;
         }
 
         if (forwarded != -samples)
@@ -457,10 +504,19 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound < 0)
         {
+            if (rewound == -ESTRPIPE)
+            {
+                ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                      "ALSA stream suspended while rewinding {} buffer depth: {}",
+                                      device_name.c_str(), snd_strerror(rewound));
+                return -1;
+            }
+
             ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                                   "Failed to rewind {} buffer depth: {}",
                                   device_name.c_str(), snd_strerror(rewound));
-            return 0;
+            close_device();
+            return -1;
         }
 
         if (rewound != samples)
@@ -488,13 +544,6 @@ int AlsaDevice::read(float *buffer, int samples)
     {
         SPDLOG_ERROR("Requested read size {} exceeds maximum {}",
                      samples, max_transfer_size);
-        std::memset(buffer, 0, samples * channels * sizeof(float));
-        return samples;
-    }
-
-    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
-    {
-        close_device();
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -531,9 +580,19 @@ int AlsaDevice::read(float *buffer, int samples)
             return samples;
         }
 
+        if (res == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Capture stream suspended on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
+            std::memset(buffer, 0, samples * channels * sizeof(float));
+            return samples;
+        }
+
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unable to read from {}: {}",
                               device_name.c_str(), snd_strerror(res));
+        close_device();
         std::memset(buffer, 0, samples * channels * sizeof(float));
         return samples;
     }
@@ -576,6 +635,12 @@ void AlsaDevice::write(const float *buffer, int samples)
         return;
     }
 
+    if (snd_pcm_state(alsa) == SND_PCM_STATE_DISCONNECTED)
+    {
+        close_device();
+        return;
+    }
+
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
     int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
@@ -607,9 +672,18 @@ void AlsaDevice::write(const float *buffer, int samples)
             return;
         }
 
+        if (res == -ESTRPIPE)
+        {
+            ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
+                                  "Playback stream suspended on {}: {}",
+                                  device_name.c_str(), snd_strerror(res));
+            return;
+        }
+
         ALSA_DEVICE_SET_STATE(DEVICE_STATE_UNKNOWN,
                               "Unable to write {}: {}",
                               device_name.c_str(), snd_strerror(res));
+        close_device();
         return;
     }
 
@@ -721,7 +795,8 @@ void AlsaDevice::set_hw_params()
     }
 
     // Set the number of periods in the buffer.
-    error = snd_pcm_hw_params_set_periods(alsa, hw_params, 64, 0);
+    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 16 : 32;
+    error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
@@ -1213,7 +1288,6 @@ void AlsaDevice::convert_write_s16_be(const float *src, uint8_t *dst,
 AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    std::string device_name;
     int_fast32_t period_size;
     int_fast32_t device_sample_rate;
 
@@ -1260,13 +1334,21 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
             target_depth += period_size - (target_depth % period_size);
         }
     }
+    else if (use_low_latency_fc_depths(device_name, use_asrc))
+    {
+        base_ratio = 1.0;
+        read_samples = get_frame_size();
+        min_depth = std::max(get_frame_size(), 4 * period_size);
+        target_depth = min_depth + period_size;
+        max_depth = target_depth + period_size;
+    }
     else
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = 2 * std::max(get_frame_size(), period_size);
-        max_depth = 2 * min_depth;
+        min_depth = 5 * std::max(get_frame_size(), period_size);
         target_depth = min_depth + period_size;
+        max_depth = 2 * min_depth;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
@@ -1308,7 +1390,8 @@ void AlsaIn::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth || depth < min_depth)
     {
-        depth = device->adjust_buffer_depth(target_depth - depth);
+        int adjust_frames = target_depth - depth;
+        depth = device->adjust_buffer_depth(adjust_frames);
 
         if (use_asrc)
         {
@@ -1353,7 +1436,6 @@ void AlsaIn::process()
 AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     : bosepro::Algorithm(configuration)
 {
-    std::string device_name;
     int_fast32_t period_size;
 
     get_property("use_asrc", use_asrc);
@@ -1386,12 +1468,21 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
             target_depth += period_size - (target_depth % period_size);
         }
     }
+    // FusionConnect is 4/5/6
+    else if (use_low_latency_fc_depths(device_name, use_asrc))
+    {
+        max_write_samples = get_frame_size();
+        min_depth = std::max(get_frame_size(), 4 * period_size);
+        target_depth = min_depth + period_size;
+        max_depth = target_depth + period_size;
+    }
+    // AES67 is 5/6/10
     else
     {
         max_write_samples = get_frame_size();
-        min_depth = 2 * std::max(get_frame_size(), period_size);
-        max_depth = 2 * min_depth;
+        min_depth = 5 * std::max(get_frame_size(), period_size);
         target_depth = min_depth + period_size;
+        max_depth = 2 * min_depth;
     }
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
