@@ -71,7 +71,7 @@ func DefaultConfig() Config {
 		WriterMode: WriterModeWS,
 		WriterHost: "localhost:8080",
 
-		EnableProfiling: false,
+		EnableProfiling: true,
 		ProfileHosts:    nil,
 
 		WSListenerHosts: []string{"localhost:8080"},
