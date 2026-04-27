@@ -41,7 +41,7 @@ const (
 )
 
 var (
-	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
 	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
 	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
 )
