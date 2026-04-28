@@ -8,7 +8,6 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/scene_catalog"
-	"fusion/internal/utils"
 	"fusion/internal/version"
 	"net/http"
 	"reflect"
@@ -191,32 +190,36 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 		return nil, nil
 	}
 
-	// Get full state before PATCH
-	before := h.StateManager.GetStateMap()
-
-	// Apply internal patch
-	afterPtr, err := h.StateManager.Patch(configPatch)
+	// Patch returns the diff and a ready-to-broadcast ConfigUpdate with the
+	// hash and version already computed — no need for separate GetStateMap,
+	// CalculateDiff, NewConfigUpdate, or ApplyUpdate calls.
+	result, err := h.StateManager.Patch(configPatch)
 	if err != nil {
 		return nil, err
 	}
 
 	// No changes
-	if afterPtr == nil {
+	if result == nil {
 		if featureUpdated {
 			return map[string]any{}, nil
 		}
 		return nil, nil
 	}
 
-	after := *afterPtr
+	// Attach the observer diff so UDP clients receive only changed keys.
+	result.ConfigUpdate.ObserverData = result.Diff
 
-	diff := utils.CalculateDiff(before, after)
+	message := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.clusterTransport.LocalNode().Name,
+		api.WithConfigUpdate(result.ConfigUpdate),
+	)
 
-	if err := h.handleConfigUpdate(after, diff, false); err != nil {
-		return nil, err
+	if err := h.hub.BroadcastToNodes(message); err != nil {
+		return nil, fmt.Errorf("failed to broadcast config update: %w", err)
 	}
 
-	return diff, nil
+	return result.Diff, nil
 }
 
 func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, sceneSets []api.SceneSet) error {
