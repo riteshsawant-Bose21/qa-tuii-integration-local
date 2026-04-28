@@ -343,6 +343,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_output_device_drawer/views/add_output_device_drawer.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 import '../view_model/create_zone_viewmodel_state.dart';
 import 'create_zone_content.dart';
 
@@ -376,17 +377,15 @@ class CreateZonePopup extends StatelessWidget {
           buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
           builder: (BuildContext ctx, CreateZoneViewModelState state) {
             return _AddOutputDeviceButton(
-              onTap:
-                  () => AddOutputDeviceDrawer.show(
-                    vm: vm,
-                    context: context,
-                    zoneColor: state.zoneColor,
-                    zoneName: state.zoneName,
-                    onBack: () => Navigator.of(context).maybePop(),
-                    onSave: (OutputDeviceFormData data) {
-                      // TODO: pass data to VM when implemented
-                    },
-                  ),
+              onTap: () {
+                AddOutputDeviceDrawer.show(
+                  vm: vm,
+                  context: context,
+                  zoneColor: state.zoneColor,
+                  zoneName: state.zoneName,
+                  onBack: () => Navigator.of(context).maybePop(),
+                );
+              },
             );
           },
         ),
