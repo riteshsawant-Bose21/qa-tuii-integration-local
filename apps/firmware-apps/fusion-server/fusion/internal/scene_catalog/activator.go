@@ -37,14 +37,19 @@ func (a *Activator) ActivateSnapshotByID(id string) error {
 		return err
 	}
 
-	afterPtr, err := a.stateManager.Patch(def.Data)
+	result, err := a.stateManager.Patch(def.Data)
 	if err != nil {
 		return err
 	}
 
-	if afterPtr != nil {
-		if err := a.applyConfigUpdate(*afterPtr, false); err != nil {
-			return err
+	if result != nil {
+		message := api.NewNotifyMessage(
+			api.NotifyOpConfigUpdate,
+			a.appConfig.NodeName,
+			api.WithConfigUpdate(result.ConfigUpdate),
+		)
+		if err := a.hub.BroadcastToNodes(message); err != nil {
+			return fmt.Errorf("failed to broadcast config update: %w", err)
 		}
 	}
 
@@ -66,7 +71,7 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 		return err
 	}
 
-	afterPtr, err := a.stateManager.Patch(scene.Data)
+	result, err := a.stateManager.Patch(scene.Data)
 	if err != nil {
 		return err
 	}
@@ -75,9 +80,14 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 		return err
 	}
 
-	if afterPtr != nil {
-		if err := a.applyConfigUpdate(*afterPtr, false); err != nil {
-			return err
+	if result != nil {
+		message := api.NewNotifyMessage(
+			api.NotifyOpConfigUpdate,
+			a.appConfig.NodeName,
+			api.WithConfigUpdate(result.ConfigUpdate),
+		)
+		if err := a.hub.BroadcastToNodes(message); err != nil {
+			return fmt.Errorf("failed to broadcast config update: %w", err)
 		}
 	}
 
@@ -88,30 +98,6 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 	)
 	if err := a.hub.BroadcastToNodes(msg); err != nil {
 		return fmt.Errorf("failed to broadcast scene activation: %w", err)
-	}
-
-	return nil
-}
-
-func (a *Activator) applyConfigUpdate(data map[string]any, clear bool) error {
-	configUpdate, err := a.stateManager.NewConfigUpdate(data)
-	if err != nil {
-		return err
-	}
-	configUpdate.Clear = clear
-
-	if _, err := a.stateManager.ApplyUpdate(*configUpdate); err != nil {
-		return fmt.Errorf("failed to apply local config update: %w", err)
-	}
-
-	message := api.NewNotifyMessage(
-		api.NotifyOpConfigUpdate,
-		a.appConfig.NodeName,
-		api.WithConfigUpdate(configUpdate),
-	)
-
-	if err := a.hub.BroadcastToNodes(message); err != nil {
-		return fmt.Errorf("failed to broadcast config update: %w", err)
 	}
 
 	return nil

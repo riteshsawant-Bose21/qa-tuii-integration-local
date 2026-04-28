@@ -59,6 +59,16 @@ func NewVersionedState() *VersionedState {
 	}
 }
 
+// PatchResult holds the outputs of a Patch operation so callers can avoid
+// redundant state copies, diffs, and checksum computations.
+type PatchResult struct {
+	// ConfigUpdate is the fully-formed update (with hash and version) ready
+	// to be broadcast. Callers may set ObserverData before broadcasting.
+	ConfigUpdate *api.ConfigUpdate
+	// Diff is the calculated difference between the pre-patch and post-patch state.
+	Diff map[string]any
+}
+
 // StateManager manages a synchronized in-memory application state across distributed nodes.
 // It supports versioning, and nested key access.
 type StateManager struct {
@@ -244,7 +254,7 @@ func (sm *StateManager) Set(key string, value any) error {
 }
 
 // Patch applies an updated patch to the internal state.
-func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
+func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	// Apply patch to full current state snapshot
@@ -257,34 +267,48 @@ func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	}
 
 	// Calculate the difference between the original and updated configuration.
-	changed := utils.CalculateDiff(before, existing)
-	if changed == nil {
+	diff := utils.CalculateDiff(before, existing)
+	if diff == nil {
 		sm.Unlock()
 		return nil, nil
+	}
+
+	// Compute the checksum once — this is the only JSONChecksum needed.
+	hash, err := utils.JSONChecksum(existing)
+	if err != nil {
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
 
 	sm.version.Counter++
 	localVersion := sm.version
 
-	sm.Unlock()
-
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
+		Hash:    hash,
 		Clear:   false,
 	}
 
-	hash, err := utils.JSONChecksum(existing)
+	// Apply the update to internal state entries while still holding the lock.
+	// This replaces the separate ApplyUpdate call and avoids a second lock
+	// acquisition plus a redundant updateChecksumUnsafe/JSONChecksum.
+	dirty, err := sm.applyWhileLocked(configUpdate, localVersion, localVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to apply patched config: %w", err)
 	}
-	configUpdate.Hash = hash
-
-	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
-		return nil, err
+	if dirty {
+		// Set checksum directly from the already-computed hash.
+		sm.state.Checksum = hash
 	}
 
-	return &existing, nil
+	sm.Unlock()
+
+	return &PatchResult{
+		ConfigUpdate: &configUpdate,
+		Diff:         diff,
+	}, nil
 }
 
 // ApplyUpdate applies a ConfigUpdate received via memberlist replication.
