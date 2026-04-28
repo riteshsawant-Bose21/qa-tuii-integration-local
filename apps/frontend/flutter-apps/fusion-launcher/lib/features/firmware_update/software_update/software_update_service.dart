@@ -563,7 +563,11 @@ class SoftwareUpdateService {
   /// Available when [state.showRollbackButton] is true.
   /// Emits [rollingBack] → [rolledBack] on success, or [failed] on error.
   Future<void> rollback() async {
-    final String rollbackVersion = (_rollbackBundleVersion ?? '').trim();
+    String rollbackVersion = (_rollbackBundleVersion ?? '').trim();
+    if (rollbackVersion.isEmpty) {
+      await _refreshRollbackVersionFromSocketInfo();
+      rollbackVersion = (_rollbackBundleVersion ?? '').trim();
+    }
     if (rollbackVersion.isEmpty) {
       _emit(
         _state.copyWith(
@@ -761,7 +765,7 @@ class SoftwareUpdateService {
 
       final List<FusionNetworkDevice> fusionNetworkDevices = state.fusionNetworkDevices;
       final FusionNetworkDevice? primaryDevice = fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-      _assertFleetMatchesPrimaryVersion(fusionNetworkDevices: fusionNetworkDevices, primaryDevice: primaryDevice);
+      await _assertFleetMatchesPrimaryVersion(fusionNetworkDevices: fusionNetworkDevices, primaryDevice: primaryDevice);
 
       dev.log("primaryDevice?.primaryDeviceVersion.  ${primaryDevice?.primaryDeviceVersion}.   ===. ${primaryDevice?.softwareUpdateVersion}");
 
@@ -846,7 +850,7 @@ class SoftwareUpdateService {
     dev.log('[SoftwareUpdateService] Update available: v$version', name: 'SoftwareUpdateService');
   }
 
-  void _assertFleetMatchesPrimaryVersion({required List<FusionNetworkDevice> fusionNetworkDevices, required FusionNetworkDevice? primaryDevice}) {
+  Future<void> _assertFleetMatchesPrimaryVersion({required List<FusionNetworkDevice> fusionNetworkDevices, required FusionNetworkDevice? primaryDevice}) async {
     if (fusionNetworkDevices.isEmpty || primaryDevice == null) {
       return;
     }
@@ -879,6 +883,8 @@ class SoftwareUpdateService {
     if (mismatchedDevices.isEmpty) {
       return;
     }
+
+    await _refreshRollbackVersionFromSocketInfo();
 
     final String primaryVersionText = primaryVersion.isEmpty ? 'unknown' : primaryVersion;
 
@@ -1444,6 +1450,91 @@ class SoftwareUpdateService {
     return '$_swUpdateInfoRequestIdPrefix-${DateTime.now().microsecondsSinceEpoch}-$_swUpdateInfoRequestCounter';
   }
 
+  String _normalizeVersionForCompare(String value) {
+    return value.split(RegExp(r'[-+]')).first.replaceAll('.', '');
+  }
+
+  String _selectRollbackVersionFromCurrentPrevious({
+    required Map<String, String> currentBySerial,
+    required Map<String, String> previousBySerial,
+  }) {
+    String? maxSerial;
+    int maxVersion = -1;
+
+    currentBySerial.forEach((String serial, String version) {
+      final int parsedVersion = int.tryParse(_normalizeVersionForCompare(version)) ?? -1;
+      if (parsedVersion > maxVersion) {
+        maxVersion = parsedVersion;
+        maxSerial = serial;
+      }
+    });
+
+    if (maxSerial == null) return '';
+    return (previousBySerial[maxSerial!] ?? '').trim();
+  }
+
+  Future<void> _refreshRollbackVersionFromSocketInfo() async {
+    try {
+      if (_state.fusionNetworkDevices.isEmpty) {
+        await _reloadFusionDevices();
+      }
+
+      final Set<String> expectedSerials =
+          _state.fusionNetworkDevices.map((FusionNetworkDevice d) => _normalizeSerialKey(d.serialNumber)).where((String s) => s.isNotEmpty).toSet();
+
+      if (expectedSerials.isEmpty) {
+        return;
+      }
+
+      final ResponseCallback<void> connect = await _networkClient.connectWebSocket<void>(url: wsHost);
+      if (!connect.success) {
+        dev.log('[SoftwareUpdateService] Could not connect WS to refresh rollback version: ${connect.message}', name: 'SoftwareUpdateService');
+        return;
+      }
+
+      final String requestId = _nextSwUpdateInfoRequestId();
+      final ResponseCallback<void> request = await _networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+        'id': requestId,
+        'version': 1,
+        'type': 'sw_update_info',
+      });
+
+      if (!request.success) {
+        dev.log('[SoftwareUpdateService] Failed to request sw_update_info for rollback version: ${request.message}', name: 'SoftwareUpdateService');
+        return;
+      }
+
+      final List<_SwUpdateInfoDevice> deviceInfo = await _awaitSwUpdateInfoPayload(
+        timeout: _config.rebootPollInterval,
+        requestId: requestId,
+      );
+
+      final Map<String, _SwUpdateInfoDevice> infoBySerial = <String, _SwUpdateInfoDevice>{
+        for (final _SwUpdateInfoDevice item in deviceInfo)
+          if (item.serialNumber.isNotEmpty) _normalizeSerialKey(item.serialNumber): item,
+      };
+
+      final Map<String, String> currentBySerial = <String, String>{
+        for (final String serial in expectedSerials) serial: (infoBySerial[serial]?.currentBundleVersion ?? '').trim(),
+      };
+      final Map<String, String> previousBySerial = <String, String>{
+        for (final String serial in expectedSerials) serial: (infoBySerial[serial]?.previousBundleVersion ?? '').trim(),
+      };
+
+      final String rollbackVersion = _selectRollbackVersionFromCurrentPrevious(
+        currentBySerial: currentBySerial,
+        previousBySerial: previousBySerial,
+      );
+
+      if (rollbackVersion.isNotEmpty) {
+        _rollbackBundleVersion = rollbackVersion;
+        dev.log('[SoftwareUpdateService] Rollback version refreshed from sw_update_info: $rollbackVersion', name: 'SoftwareUpdateService');
+      }
+    } catch (e) {
+      dev.log('[SoftwareUpdateService] Failed to refresh rollback version from sw_update_info: $e', name: 'SoftwareUpdateService');
+    }
+  }
+
   _SwUpdateInfoResponse? _parseSwUpdateInfoResponse(dynamic payload) {
     if (payload is! Map<String, dynamic>) return null;
     return _SwUpdateInfoResponse.fromJson(payload);
@@ -1500,16 +1591,12 @@ class SoftwareUpdateService {
       name: 'SoftwareUpdateService',
     );
 
-    // Normalize a version string for comparison: strip dots and any build
-    // metadata suffix (e.g. "0.1.12-dev.68+abc" → "0112", "0.1.12" → "0112").
-    String normalizeVersion(String v) => v.split(RegExp(r'[-+]')).first.replaceAll('.', '');
-
     // All devices where current == previous means this is a first install
     // (no prior version to upgrade from). Treat as success.
     final bool allFirstInstall = expectedSerials.every((String serial) {
       final String cur = currentBySerial[serial] ?? '';
       final String prev = previousBySerial[serial] ?? '';
-      return cur.isNotEmpty && prev.isNotEmpty && normalizeVersion(cur) == normalizeVersion(prev);
+      return cur.isNotEmpty && prev.isNotEmpty && _normalizeVersionForCompare(cur) == _normalizeVersionForCompare(prev);
     });
 
     if (allFirstInstall) {
@@ -1520,10 +1607,10 @@ class SoftwareUpdateService {
 
     // Compare normalized current versions against expected.
     final bool hasMissingCurrent = currentBySerial.values.any((String v) => v.isEmpty);
-    final Set<String> uniqueCurrentNormalized = currentBySerial.values.where((String v) => v.isNotEmpty).map(normalizeVersion).toSet();
+    final Set<String> uniqueCurrentNormalized = currentBySerial.values.where((String v) => v.isNotEmpty).map(_normalizeVersionForCompare).toSet();
 
     final String expectedVersion = (_state.availableVersion ?? '').trim();
-    final String expectedNormalized = normalizeVersion(expectedVersion);
+    final String expectedNormalized = _normalizeVersionForCompare(expectedVersion);
 
     final bool matchesExpected =
         expectedNormalized.isEmpty || (!hasMissingCurrent && uniqueCurrentNormalized.length == 1 && uniqueCurrentNormalized.first == expectedNormalized);
@@ -1534,18 +1621,11 @@ class SoftwareUpdateService {
       return;
     }
 
-    // Pick the lowest previous version across all devices (by stripping dots and
-    // comparing as integers, e.g. "3.4.6"→346, "3.4.5"→345 → pick "3.4.5").
-    final List<String> nonEmptyPrevious = previousBySerial.values.where((String v) => v.isNotEmpty).toList();
-    final String lowestPrevious =
-        nonEmptyPrevious.isEmpty
-            ? ''
-            : nonEmptyPrevious.reduce((String a, String b) {
-              final int aInt = int.tryParse(normalizeVersion(a)) ?? 0;
-              final int bInt = int.tryParse(normalizeVersion(b)) ?? 0;
-              return aInt <= bInt ? a : b;
-            });
-    _rollbackBundleVersion = lowestPrevious.trim();
+    final String rollbackVersion = _selectRollbackVersionFromCurrentPrevious(
+      currentBySerial: currentBySerial,
+      previousBySerial: previousBySerial,
+    );
+    _rollbackBundleVersion = rollbackVersion.trim();
 
     final String observedCurrent = currentBySerial.entries.map((MapEntry<String, String> e) => '${e.key}:${e.value.isEmpty ? 'unknown' : e.value}').join(', ');
     final String observedPrevious = previousBySerial.entries

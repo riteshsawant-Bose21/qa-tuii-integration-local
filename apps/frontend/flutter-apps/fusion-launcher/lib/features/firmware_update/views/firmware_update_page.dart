@@ -399,8 +399,8 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
   String _phaseLabel(UpdatePhase phase) {
     return switch (phase) {
       UpdatePhase.discovering => 'Discovering devices',
-      UpdatePhase.uploading => 'Uploading',
-      UpdatePhase.installing => 'Installing',
+      UpdatePhase.uploading => 'Uploading to system',
+      UpdatePhase.installing => 'Installing to devices',
       UpdatePhase.rebooting => 'Rebooting devices',
       _ => 'Working',
     };
