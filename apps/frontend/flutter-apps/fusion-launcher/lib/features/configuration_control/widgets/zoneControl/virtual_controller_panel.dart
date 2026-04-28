@@ -22,6 +22,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
 
   bool selectedController = false;
   WallController? controller;
+
   @override
   void initState() {
    final List<WallZone> zones = getZones();
@@ -43,6 +44,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
     }
     super.initState();
   }
+
   @override
   void didUpdateWidget(covariant VirtualControllerPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -64,6 +66,7 @@ class _VirtualControllerPanelState extends State<VirtualControllerPanel> {
       WebSocketService().connect('ws://${widget.vipAddress}:8080/ws');
     }
   }
+
   @override
   Widget build(BuildContext context) {
 

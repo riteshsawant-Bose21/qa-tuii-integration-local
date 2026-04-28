@@ -58,7 +58,7 @@ class ZoneControlPanel extends StatelessWidget {
                     return VirtualControllerPanel(
                       isDesignMode: !serviceLocator<ProjectViewModel>().isInControlMode,
                       controllerID: state.selectedControllerId ?? "",
-                      vipAddress: serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.1.110",
+                      vipAddress: serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.0.100",
                       config: serviceLocator<ProjectViewModel>().getWallControllerConfig(),
                     );
                   },

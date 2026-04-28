@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/appbar/mobile_app_bar.dart';
-import 'package:fusion_lib/fusion_widgets/virtual_controllers/widgets/snapshot_card.dart';
 
 
 class MobileSnapshotsScreen extends StatefulWidget {
@@ -27,7 +26,7 @@ class _MobileSnapshotsScreenState extends State<MobileSnapshotsScreen> {
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
       appBar: CommonMobileAppBar(title: 'Snapshot Group 1'),
-      body: SnapshotsScreen(),
+      body: SnapshotsScreen(snapshots: widget.snapshots,),
     );
   }
 }
