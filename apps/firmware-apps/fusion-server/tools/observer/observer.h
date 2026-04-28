@@ -1376,12 +1376,29 @@ private:
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
 
-    // Send a keepalive every KEEPALIVE_INTERVAL_S seconds to prevent the
-    // server from pruning this client (clientStaleTTL = 10s).
-    int keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
+    // Send a keepalive based on wall-clock time to prevent the server from
+    // pruning this client (clientStaleTTL = 10s). Using wall-clock time
+    // instead of poll-timeout counting ensures keepalives are sent even when
+    // the socket is busy receiving broadcasts (poll never times out).
+    auto lastKeepaliveSent = std::chrono::steady_clock::now();
 
     while (running_)
     {
+      // Send keepalive if enough wall-clock time has elapsed, regardless of
+      // whether poll returned data or timed out. This prevents the server
+      // from pruning us during sustained broadcast traffic.
+      if (receivedInitialState_)
+      {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - lastKeepaliveSent).count();
+        if (elapsed >= timingConfig_.keepaliveIntervalSeconds)
+        {
+          sendKeepalive(serverAddr_);
+          lastKeepaliveSent = now;
+        }
+      }
+
       const int pollResult = poll(&pfd, 1, 1000);
       if (pollResult < 0)
       {
@@ -1395,17 +1412,6 @@ private:
         if (!receivedInitialState_)
         {
           requestInitialDeviceInfo(serverAddr_);
-        }
-        else
-        {
-          // Keep our UDP client registration alive so the server continues
-          // broadcasting to us. Without this, the server prunes idle clients
-          // after 10 seconds and silently stops sending config_update packets.
-          if (--keepaliveCountdown <= 0)
-          {
-            sendKeepalive(serverAddr_);
-            keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
-          }
         }
         continue;
       }
