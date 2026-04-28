@@ -257,15 +257,16 @@ extension ControllerService on ProjectService {
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );
 
-      final String? functionId = getZoneFunction(zoneOrSubZoneId: zone.id)?.id;
+      final ZoneFunctions? functionId = getZoneFunction(zoneOrSubZoneId: zone.id);
 
       wallZones.add(
         WallZone(
-          id: zone.id,
+          // id: zone.id,
+          id: functionId?.paramName ?? zone.id,
           name: zone.name,
           gain: WallGainConfig(gainID: processingBlockModel?.id ?? ""),
           ono: zoneOno,
-          functionId: functionId,
+          functionId: functionId?.id,
           sources: wallSources,
           subZones: wallSubZones,
         ),
@@ -328,11 +329,14 @@ extension ControllerService on ProjectService {
         }
 
         String type = (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt';
+        Set<String> zoneId = getAssignedZoneIds(controller.id);
+        final ZoneFunctions? functionId = zoneId.isNotEmpty ? getZoneFunction(zoneOrSubZoneId: zoneId.first) : null;
         return WallController(
           id: type == "lt" ? "CONTROLLER350958744" : controller.id,
           name: controller.name,
           type: type,
-          zoneIds: getAssignedZoneIds(controller.id).toList(),
+          // zoneIds: getAssignedZoneIds(controller.id).toList(),
+          zoneIds: functionId != null ? [functionId.paramName] : getAssignedZoneIds(controller.id).toList(),
           pages: controllerWallPages,
           messagePlayer: controllerWallMessages,
           schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
