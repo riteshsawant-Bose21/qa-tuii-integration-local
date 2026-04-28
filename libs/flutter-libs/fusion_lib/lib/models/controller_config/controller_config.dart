@@ -46,6 +46,7 @@ class WallController {
   final String type;
   final List<String> zoneIds;
   final List<WallPages> pages;
+  final List<WallMessagePlayer> messagePlayer;
   final WallSchedule? schedule;
 
   const WallController({
@@ -54,6 +55,7 @@ class WallController {
     this.type = 'lt',
     this.zoneIds = const [],
     this.pages = const [],
+    this.messagePlayer = const [],
     this.schedule,
   });
 
@@ -63,6 +65,7 @@ class WallController {
     String? type,
     List<String>? zoneIds,
     List<WallPages>? pages,
+    List<WallMessagePlayer>? messages,
     WallSchedule? schedule,
   }) {
     return WallController(
@@ -71,6 +74,7 @@ class WallController {
       type: type ?? this.type,
       zoneIds: zoneIds ?? this.zoneIds,
       pages: pages ?? this.pages,
+      messagePlayer: messages ?? this.messagePlayer,
       schedule: schedule ?? this.schedule,
     );
   }
@@ -81,6 +85,7 @@ class WallController {
     'type': type,
     'zoneIds': zoneIds,
     'pages': pages.map((p) => p.toJson()).toList(),
+    'messages': messagePlayer.map((m) => m.toJson()).toList(),
     'schedule': schedule?.toJson(),
   };
 
@@ -90,7 +95,76 @@ class WallController {
     type: json['type'] as String? ?? 'lt',
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     pages: (json['pages'] as List<dynamic>?)?.map((e) => WallPages.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+    messagePlayer: (json['messages'] as List<dynamic>?)?.map((e) => WallMessagePlayer.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
     schedule: json['schedule'] != null ? WallSchedule.fromJson(Map<String, dynamic>.from(json['schedule'] as Map)) : const WallSchedule(),
+  );
+}
+
+class WallMessagePlayer {
+  final String id;
+  final String name;
+  final List<WallMessage> messages;
+  WallMessagePlayer({
+    required this.id,
+    required this.name,
+    this.messages = const [],
+  });
+
+  WallMessagePlayer copyWith({
+    String? id,
+    String? name,
+    List<WallMessage>? messages,
+  }) {
+    return WallMessagePlayer(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      messages: messages ?? this.messages,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'messages': messages.map((m) => m.toJson()).toList(),
+  };
+
+  factory WallMessagePlayer.fromJson(Map<String, dynamic> json) => WallMessagePlayer(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    messages: (json['messages'] as List<dynamic>?)?.map((e) => WallMessage.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+  );
+}
+
+class WallMessage {
+  final String id;
+  final String name;
+  final String? trigger;
+  WallMessage({
+    required this.id,
+    required this.name,
+    this.trigger,
+  });
+  WallMessage copyWith({
+    String? id,
+    String? name,
+    String? trigger,
+  }) {
+    return WallMessage(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      trigger: trigger ?? this.trigger,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'trigger': trigger,
+  };
+  factory WallMessage.fromJson(Map<String, dynamic> json) => WallMessage(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    trigger: json['trigger'] != null ? json['trigger'] as String : null,
   );
 }
 

@@ -277,9 +277,30 @@ extension ControllerService on ProjectService {
         /// Pages linked to this controller via controllerPages relationship.
         final List<ControllerPageModel> pages = getControllerPages(controller.id);
         final List<WallPages> controllerWallPages = <WallPages>[];
+        final List<WallMessagePlayer> controllerWallMessages = <WallMessagePlayer>[];
         for (final ControllerPageModel page in pages) {
-          // Skip message pages — they are not included in WallControllerConfig.
-          if (page.type == ControllerPageType.message) continue;
+          if (page.type == ControllerPageType.message) {
+            print('[WallMessagePlayer] id: ${page.id}, name: ${page.name}');
+
+            final List<WallMessage> wallMessages = getMessageIdsForPage(page.id).map((String id) {
+              final String? trigger = getMediaFileForMessage(id)?.triggerId;
+              final MessageModel? messageModel = messages.get(id);
+              return WallMessage(
+                id: messageModel?.id ?? id,
+                name: messageModel?.name ?? id,
+                trigger: trigger,
+              );
+            }).toList();
+
+            controllerWallMessages.add(
+              WallMessagePlayer(
+                id: page.id,
+                name: "Message Player",
+                messages: wallMessages,
+              ),
+            );
+            continue;
+          }
 
           final bool isSnapshotPage = page.type == ControllerPageType.snapshotPage;
 
@@ -311,6 +332,7 @@ extension ControllerService on ProjectService {
           type: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
           zoneIds: getAssignedZoneIds(controller.id).toList(),
           pages: controllerWallPages,
+          messagePlayer: controllerWallMessages,
           schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
               ? WallSchedule(
                   showUpcoming: controller.showUpcoming,
