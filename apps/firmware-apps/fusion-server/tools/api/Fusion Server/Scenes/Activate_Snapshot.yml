@@ -5,7 +5,11 @@ info:
 
 http:
   method: POST
-  url: "{{api_url}}/snapshots/activate/:name"
+  url: "{{api_url}}/snapshots/activate/:id"
+  params:
+    - name: id
+      value: snapshot-test-01
+      type: path
   headers:
     - name: Content-Type
       value: application/json

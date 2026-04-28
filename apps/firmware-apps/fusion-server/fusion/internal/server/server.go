@@ -24,15 +24,18 @@ import (
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node          string
-	handler       *handler.Handler
-	wsClients     map[*websocket.Conn]bool
-	wsWriteMutex  map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
-	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
-	wsLock        sync.RWMutex
-	upgrader      websocket.Upgrader
-	wsStats       *api.WebSocketStats
-	statsLock     sync.RWMutex
+	node                      string
+	handler                   *handler.Handler
+	wsClients                 map[*websocket.Conn]bool
+	wsWriteMutex              map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
+	subscriptions             map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock                    sync.RWMutex
+	configUpdateMu            sync.Mutex
+	configUpdatePending       bool
+	configUpdateDebounceTimer *time.Timer
+	upgrader                  websocket.Upgrader
+	wsStats                   *api.WebSocketStats
+	statsLock                 sync.RWMutex
 
 	maxConnections int
 }

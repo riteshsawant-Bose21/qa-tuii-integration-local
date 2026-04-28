@@ -317,7 +317,7 @@ func CalculateDiff(before, after any) map[string]any {
 	aarr, aIsArr := after.([]any)
 	if bIsArr || aIsArr {
 
-		// before not array → treat as empty
+		// before not array → treat as empty.
 		if !bIsArr && aIsArr {
 			barr = []any{}
 		}
