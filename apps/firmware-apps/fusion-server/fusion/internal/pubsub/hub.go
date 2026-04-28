@@ -9,7 +9,10 @@ import (
 	"fusion/internal/cluster/transport"
 	"fusion/internal/persistence"
 	"sync"
+	"time"
 )
+
+const configUpdateReliableDebounce = 250 * time.Millisecond
 
 type Broadcaster interface {
 	BroadcastMessage(msg *api.NotifyMessage) error
@@ -24,11 +27,20 @@ type ClusterObserverBroadcaster interface {
 
 type LocalBroadcaster func(*api.NotifyMessage)
 
+type configUpdateDebounceState struct {
+	mu      sync.Mutex
+	pending *api.NotifyMessage
+	timer   *time.Timer
+	window  time.Duration
+}
+
 type Hub struct {
 	broadcasters []Broadcaster
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
+
+	configUpdates configUpdateDebounceState
 
 	// SWUpdate progress monitoring
 	swUpdateMutex    sync.RWMutex
@@ -39,8 +51,11 @@ type Hub struct {
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
 	return &Hub{
-		stateManager:     stateManager,
-		persistence:      persistence,
+		stateManager: stateManager,
+		persistence:  persistence,
+		configUpdates: configUpdateDebounceState{
+			window: configUpdateReliableDebounce,
+		},
 		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
 }
@@ -136,6 +151,12 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		message.ConfigUpdate = &updated
 
 		h.persistence.MarkDirty()
+
+		if message.Node == localNode {
+			h.BroadcastToObservers(message)
+			h.queueConfigUpdate(message)
+			return nil
+		}
 
 	case api.NotifyOpTimeMachineActivate:
 		if message.SnapshotOperation == nil || message.SnapshotOperation.Name == "" {
@@ -343,6 +364,60 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	h.BroadcastToObservers(message)
 
 	return nil
+}
+
+func (h *Hub) queueConfigUpdate(message *api.NotifyMessage) {
+	if message == nil {
+		return
+	}
+
+	h.configUpdates.mu.Lock()
+	h.configUpdates.pending = cloneNotifyMessageForBroadcast(message)
+	if h.configUpdates.timer != nil {
+		h.configUpdates.timer.Stop()
+	}
+	h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
+	h.configUpdates.mu.Unlock()
+}
+
+func (h *Hub) flushConfigUpdate() {
+	h.configUpdates.mu.Lock()
+	message := h.configUpdates.pending
+	h.configUpdates.pending = nil
+	h.configUpdates.timer = nil
+	h.configUpdates.mu.Unlock()
+
+	if message == nil {
+		return
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		logging.GetLogger().Error("failed to marshal debounced config update: %v", err)
+		return
+	}
+	h.broadcastToNodes(data, false)
+}
+
+func cloneNotifyMessageForBroadcast(message *api.NotifyMessage) *api.NotifyMessage {
+	if message == nil {
+		return nil
+	}
+
+	cloned := *message
+	if message.ConfigUpdate != nil {
+		cfg := *message.ConfigUpdate
+		cloned.ConfigUpdate = &cfg
+	}
+	if message.ConfigValue != nil {
+		cfg := *message.ConfigValue
+		cloned.ConfigValue = &cfg
+	}
+	if message.DeviceInfo != nil {
+		info := *message.DeviceInfo
+		cloned.DeviceInfo = &info
+	}
+	return &cloned
 }
 
 func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {
