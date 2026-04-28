@@ -582,7 +582,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     u32 write_slot, buf_offset;
     u64 current_sac, global_sac;
     u32 packet_sac;
-    u64 current_phc_ns, ns_from_ms_boundary, reconstructed_phc_ns, sched_playout_ns;
+    u64 current_phc_ns, reconstructed_phc_ns, sched_playout_ns;
     int sample_physical_width_bits;
 
     bool marker, malformed, duplicate, reorder = false, late;

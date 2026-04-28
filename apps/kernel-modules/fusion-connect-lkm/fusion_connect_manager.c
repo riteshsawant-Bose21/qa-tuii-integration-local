@@ -591,21 +591,6 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
     return fusion_cn_alsa_driver_init(mgr, &fusion_cn_alsa_ops);
 }
 
-static bool fusion_cn_has_active_streams(struct fusion_cn_manager *mgr)
-{
-    bool has_active;
-    unsigned long flags;
-
-    read_lock_irqsave(&mgr->active_streams_lock, flags);
-    has_active = !list_empty(&mgr->active_streams.fn_sink) ||
-                 !list_empty(&mgr->active_streams.fn_source) ||
-                 !list_empty(&mgr->active_streams.aes67_sink) ||
-                 !list_empty(&mgr->active_streams.aes67_source);
-    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
-
-    return has_active;
-}
-
 /* --- Tick queue helper --- */
 static inline void fusion_cn_queue_process(struct fusion_cn_manager *mgr)
 {
