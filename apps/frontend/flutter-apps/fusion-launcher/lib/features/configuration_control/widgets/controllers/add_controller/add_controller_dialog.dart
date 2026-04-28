@@ -1176,7 +1176,7 @@ class AddControllerDialog {
       context: context,
       semanticId: 'add_controller',
       title: 'Add Controller',
-      buttonLabel: 'Save Source',
+      buttonLabel: 'Add Controller',
       buttonEnabledNotifier: buttonEnabled,
       onButtonPressed: () async {
         buttonEnabled.value = false; // ← local variable, not widget.
@@ -1210,7 +1210,7 @@ class AddControllerDialog {
       context: context,
       semanticId: 'edit_controller',
       title: 'Edit Controller',
-      buttonLabel: 'Save Source',
+      buttonLabel: 'Edit Controller',
       buttonEnabledNotifier: buttonEnabled,
       onButtonPressed: () async {
         buttonEnabled.value = false; // ← local variable, not widget.
@@ -1544,30 +1544,13 @@ class _DrawerContentState extends State<_DrawerContent> {
         final bool isZoneLocation = state.locationType == LocationType.zone;
         final String? thisZoneId = cubit.thisZoneId;
 
-        final List<_ZoneSelectItem> rawItems = _buildControlZoneSelectItems(
+        // ── Stable order — no sorting, no bubbling ───────────────────────────
+        final List<_ZoneSelectItem> items = _buildControlZoneSelectItems(
           cubit.availableZones,
           cubit,
           thisZoneId: thisZoneId,
           isZoneLocation: isZoneLocation,
         );
-
-        // ── Bubble selected items (and their parent headers) to the top ──────
-        final List<_ZoneSelectItem> selectedItems = rawItems.where((_ZoneSelectItem i) => i.isSelectable && selectedIds.contains(i.id)).toList();
-
-        // Collect parent header IDs that need to travel with selected subzones
-        final Set<String> selectedParentIds =
-            selectedItems.where((_ZoneSelectItem i) => i.isSubZone && i.parentZoneId != null).map((_ZoneSelectItem i) => i.parentZoneId!).toSet();
-
-        final List<_ZoneSelectItem> unselectedItems =
-            rawItems.where((_ZoneSelectItem i) => !(i.isSelectable && selectedIds.contains(i.id)) && !selectedParentIds.contains(i.id)).toList();
-
-        // selected headers + selected items first, then the rest
-        final List<_ZoneSelectItem> items = <_ZoneSelectItem>[
-          ...rawItems.where((_ZoneSelectItem i) => selectedParentIds.contains(i.id)),
-          ...selectedItems,
-          ...unselectedItems,
-        ];
-        // ─────────────────────────────────────────────────────────────────────
 
         _ZoneSelectItem? selectedItem;
         if (selectedIds.isNotEmpty) {
@@ -1581,10 +1564,11 @@ class _DrawerContentState extends State<_DrawerContent> {
           if (selectedIds.isEmpty) return '';
           if (selectedIds.length > 1) return '${selectedIds.length} Zones Selected';
           if (selectedItem != null) {
-            final bool isThisZone = isZoneLocation && selectedItem.id == thisZoneId;
-            // Match the "Parent - Sub" format shown in the list
+            final bool isThisZone = isZoneLocation && selectedItem!.id == thisZoneId;
             final String name =
-                selectedItem.isSubZone && selectedItem.parentZoneName != null ? '${selectedItem.parentZoneName} - ${selectedItem.name}' : selectedItem.name;
+                selectedItem!.isSubZone && selectedItem!.parentZoneName != null
+                    ? '${selectedItem!.parentZoneName} - ${selectedItem!.name}'
+                    : selectedItem!.name;
             return isThisZone ? 'This Zone - $name' : name;
           }
           return '';
@@ -1864,18 +1848,9 @@ class _RadioIndicator extends StatelessWidget {
     return FusionCheckbox(
       semanticId: '',
       value: isSelected,
-      shape: BoxShape.circle,
       // innerChild drives the "dot inside ring" look.
       // When selected: background=white, innerChild=dark dot → ◉
       // When not selected: background=transparent, no child → ○
-      innerChild: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: context.colorScheme.white,
-        ),
-      ),
       onChanged: () {},
     );
   }
