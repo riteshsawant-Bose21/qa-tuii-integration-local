@@ -317,8 +317,9 @@ class FusionCanvasEvents {
 class FusionPenToolEvents {
   final ValueChanged<List<FusionCanvasPoint>>? onPointsChanged;
   final ValueChanged<List<FusionCanvasPoint>>? onPathClosed;
+  final ValueChanged<List<FusionCanvasPoint>>? onPathCancelled;
 
-  FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
+  FusionPenToolEvents({this.onPointsChanged, this.onPathClosed, this.onPathCancelled});
 }
 
 ///

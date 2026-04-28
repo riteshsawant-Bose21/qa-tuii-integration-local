@@ -21,6 +21,12 @@ class ClosedPenToolState extends DrawingPenToolState {
   ClosedPenToolState({required super.points});
 }
 
+class CancelledPenToolState extends PenToolState {
+  final List<FusionCanvasPoint> points;
+
+  CancelledPenToolState({required this.points});
+}
+
 extension PenToolStateExtension on PenToolState {
   PenToolState addPoint(FusionCanvasPoint point) {
     if (this is ClosedPenToolState) {

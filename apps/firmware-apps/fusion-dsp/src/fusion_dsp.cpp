@@ -258,7 +258,7 @@ static void handle_parameter(const std::string &path,
 
     std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
 
-    Json::Value message_json; 
+    Json::Value message_json;
     message_json["target"] = path_parts[2].key;
     message_json["name"] = path_parts[3].key;
 
@@ -266,16 +266,62 @@ static void handle_parameter(const std::string &path,
     {
         Json::Value index_array(Json::arrayValue);
         index_array.append(static_cast<Json::Int>(path_parts[4].arrayIndex + 1));
-        
+
         if (path_parts.size() > 5 && path_parts[5].isArrayAccess)
         {
             index_array.append(static_cast<Json::Int>(path_parts[5].arrayIndex + 1));
         }
-        
+
         message_json["index"] = index_array;
+        message_json["value"] = new_value;
+    }
+    else if (new_value.isObject())
+    {
+        Json::Value::Members members = new_value.getMemberNames();
+
+        for (auto &m : members)
+        {
+            int param_index;
+            Json::Value index_array(Json::arrayValue);
+
+            try {
+                size_t pos;
+                param_index = std::stoi(m, &pos);
+                if (pos != m.size())
+                {
+                    SPDLOG_WARN("Unable to convert patch update index: too long: {}",
+                                new_value.asCString());
+                    continue;
+                }
+                index_array.append(static_cast<Json::Int>(param_index + 1));
+            } catch (const std::invalid_argument&) {
+                SPDLOG_WARN("Unable to convert patch update index: not an integer.: {}",
+                            new_value.asCString());
+                continue;
+            } catch (const std::out_of_range&) {
+                SPDLOG_WARN("Unable to convert patch update index: out of range.: {}",
+                            new_value.asCString());
+                continue;
+            }
+
+            message_json["index"] = index_array;
+            message_json["value"] = new_value[m];
+
+            Json::StreamWriterBuilder writer;
+            writer["indentation"] = "";
+            std::string message = Json::writeString(writer, message_json);
+
+            handle_update(message);
+        }
+
+        return;
+    }
+    else
+    {
+        // Scalar value
+        message_json["value"] = new_value;
     }
 
-    message_json["value"] = new_value;
 
     Json::StreamWriterBuilder writer;
     writer["indentation"] = "";

@@ -65,6 +65,18 @@ Defaults: 3 WS listeners, 5 UDP listeners, 100 updates/sec, 3000 total updates, 
 
 CLI flags override config file values.
 
+### With CPU profiling enabled
+
+```bash
+./stress_tester \
+  -config configs/mixed_topology.json \
+  -profile
+```
+
+By default, `-profile` infers unique node hosts from `writer_host`, `ws_listener_hosts`, and `udp_server_host`, then targets each host on port `9090` using `POST /debug/profile/start` before the run and `POST /debug/profile/stop` on exit.
+
+Override the exact debug endpoints with `-profile-hosts host:port,...` when the profiling port differs from `9090`.
+
 ## Configuration
 
 All settings are configurable via JSON file, CLI flags, or both.
@@ -73,6 +85,8 @@ All settings are configurable via JSON file, CLI flags, or both.
 |---------|----------|---------|-------------|
 | `writer_mode` | `-writer-mode` | `ws` | Writer transport: `ws` or `http` |
 | `writer_host` | `-writer-host` | `localhost:8080` | Writer target host:port |
+| `enable_profiling` | `-profile` | `false` | Start CPU profiling before the run and stop it on exit |
+| `profile_hosts` | `-profile-hosts` | inferred | Explicit `host:port` targets for profiling endpoints |
 | `ws_listener_hosts` | `-ws-hosts` | `["localhost:8080"]` | WS listener targets (comma-separated for CLI) |
 | `ws_listener_count` | `-ws-count` | `3` | Number of WebSocket listeners |
 | `udp_listener_bind_ips` | `-udp-bind-ips` | `["0.0.0.0"]` | Local IPs to bind UDP sockets |
@@ -98,6 +112,8 @@ All settings are configurable via JSON file, CLI flags, or both.
 {
   "writer_mode": "ws",
   "writer_host": "192.168.2.131:8080",
+  "enable_profiling": true,
+  "profile_hosts": ["192.168.2.131:9090", "192.168.2.132:9090"],
   "ws_listener_hosts": ["192.168.2.131:8080", "192.168.2.132:8080"],
   "ws_listener_count": 4,
   "udp_server_host": "192.168.2.131:7947",
@@ -153,6 +169,8 @@ Human-readable progress (every 5s) and a final summary table:
 
 Machine-readable `stress_test_report.json` with full `RunResult` including per-listener `LatencyStats`, `MissingGains`, and aggregate data.
 
+When profiling is enabled, the JSON report also includes `profile_results` with start/stop status and the profile path returned by each target.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -179,6 +197,8 @@ Detailed explanation of every configuration parameter:
 |-----------|------|---------|-------------|
 | `writer_mode` | `string` | `"ws"` | Transport protocol for sending patch updates. **`ws`** sends WebSocket `patch_config` messages to the `/ws` endpoint. **`http`** sends HTTP `PATCH /value` requests. WebSocket mode is recommended as it matches the primary client protocol and avoids per-request TCP overhead. |
 | `writer_host` | `string` | `"localhost:8080"` | The `host:port` of the fusion-server node that receives all writes. This is the node whose state is mutated. In cross-node tests, point this at one node and listeners at different nodes to measure cluster propagation. |
+| `enable_profiling` | `bool` | `false` | When `true`, the tool starts CPU profiling on each target node before creating listeners or sending traffic, and stops profiling on exit. |
+| `profile_hosts` | `[]string` | inferred from targets on port `9090` | Optional explicit debug endpoint `host:port` list for profiling. If omitted, the tool infers unique hosts from `writer_host`, `ws_listener_hosts`, and `udp_server_host`, then rewrites them to port `9090`. |
 
 ### WebSocket Listener Parameters
 

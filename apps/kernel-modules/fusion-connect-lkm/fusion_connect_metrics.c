@@ -66,6 +66,7 @@ void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m,
     m->snap.tx_iat_p50_ns            = m->win.tx_iat_p50_ns;
     m->snap.tx_iat_p99_ns            = m->win.tx_iat_p99_ns;
     m->snap.tx_sched_err_abs_p50_ns  = m->win.tx_sched_err_abs_p50_ns;
+    m->snap.tx_sched_err_abs_max_ns  = m->win.tx_sched_err_abs_max_ns;
 
     /* Stamp snapshot from the current worker tick to avoid a fresh PHC read here. */
     m->snap.ts_snapshot_ns = snapshot_ns;
@@ -205,13 +206,14 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     /* === 2) Fold per-CPU counters into snapshot === */
     {
         u64 pkts=0, bytes=0, dup=0, marked=0, mal=0, late_d=0, rxq_d=0;
+        u64 ksil=0, ksil_frames=0;
         u64 tx_pkts=0, tx_bytes=0;
         int cpu;
 
         for_each_possible_cpu(cpu) {
             const struct fusion_cn_metrics_pcpu *p = per_cpu_ptr(m->pcpu, cpu);
             unsigned int start;
-            u64 a,b,c,d,e,f,g, txp, txb;
+            u64 a,b,c,d,e,f,g,h,i, txp, txb;
 
             do {
                 start = u64_stats_fetch_begin(&p->syncp);
@@ -222,6 +224,8 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
                 e = p->malformed_count;
                 f = p->late_drop_count;
                 g = p->rx_queue_drop_count;
+                h = p->kernel_silence_sub_count;
+                i = p->kernel_silence_sub_frames;
                 txp = p->tx_packets_total;
                 txb = p->tx_bytes_total;
             } while (u64_stats_fetch_retry(&p->syncp, start));
@@ -229,6 +233,7 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
             pkts   += a; bytes += b; dup += c; marked += d; mal += e;
             late_d += f;
             rxq_d  += g;
+            ksil += h; ksil_frames += i;
             tx_pkts += txp; tx_bytes += txb;
         }
 
@@ -239,6 +244,8 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.malformed_count   = mal;
         m->snap.late_drop_count   = late_d;
         m->snap.rx_queue_drop_count = rxq_d;
+        m->snap.kernel_silence_sub_count = ksil;
+        m->snap.kernel_silence_sub_frames = ksil_frames;
 
         m->snap.packets_reordered = w->packets_reordered;
         m->snap.packets_lost      = w->packets_lost;
