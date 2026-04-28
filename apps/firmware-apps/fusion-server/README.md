@@ -198,7 +198,7 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 
 ## Scene Catalog
 - `POST /value` (with `snapshots` and/or `scene_sets` root keys to upsert definitions)
-- `POST /snapshots/activate/{name}`
+- `POST /snapshots/activate/{id}`
 - `GET  /snapshots/list`
 - `GET  /scenes/list`
 - `POST /scene-sets/activate`

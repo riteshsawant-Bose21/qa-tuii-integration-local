@@ -25,6 +25,7 @@ import (
 
 const (
 	nameParam                 = "{name}"
+	idParam                   = "{id}"
 	snapshotDefaultBucketName = "fusion"
 	snapshotSyncTime          = 5 * time.Second
 
