@@ -634,23 +634,22 @@ public:
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state)
   {
-    // Mutate state and compute diffs under state_mutex_
-    Json::Value oldData, newData, oldValue, newValue;
+    // Extract only the affected subtree before and after mutation instead of
+    // deep-copying the entire state tree twice.
+    Json::Value oldValue, newValue;
     {
       std::lock_guard<std::mutex> slk(state_mutex_);
       SPDLOG_DEBUG("Received update for path: {}", path);
 
-      oldData = data_;
+      oldValue = extractValue(data_, path);
       updateInternalState(path, new_state);
-      newData = data_;
+      newValue = extractValue(data_, path);
 
-      if (oldData == newData)
+      if (oldValue == newValue)
       {
         SPDLOG_DEBUG("No change detected for path: {}", path);
         return;
       }
-      oldValue = extractValue(oldData, path);
-      newValue = extractValue(newData, path);
     }
 
     // Collect callbacks under watchers_mutex_
