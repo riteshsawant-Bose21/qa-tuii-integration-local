@@ -191,8 +191,7 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 	}
 
 	// Patch returns the diff and a ready-to-broadcast ConfigUpdate with the
-	// hash and version already computed — no need for separate GetStateMap,
-	// CalculateDiff, NewConfigUpdate, or ApplyUpdate calls.
+	// hash and version already computed.
 	result, err := h.StateManager.Patch(configPatch)
 	if err != nil {
 		return nil, err
@@ -206,7 +205,7 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 		return nil, nil
 	}
 
-	// Attach the observer diff so UDP clients receive only changed keys.
+	// Attach the observer diff so transport observers can receive only changed keys.
 	result.ConfigUpdate.ObserverData = result.Diff
 
 	message := api.NewNotifyMessage(

@@ -43,13 +43,8 @@ func (a *Activator) ActivateSnapshotByID(id string) error {
 	}
 
 	if result != nil {
-		message := api.NewNotifyMessage(
-			api.NotifyOpConfigUpdate,
-			a.appConfig.NodeName,
-			api.WithConfigUpdate(result.ConfigUpdate),
-		)
-		if err := a.hub.BroadcastToNodes(message); err != nil {
-			return fmt.Errorf("failed to broadcast config update: %w", err)
+		if err := a.applyConfigUpdate(result.ConfigUpdate, result.Diff); err != nil {
+			return err
 		}
 	}
 
@@ -81,13 +76,8 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 	}
 
 	if result != nil {
-		message := api.NewNotifyMessage(
-			api.NotifyOpConfigUpdate,
-			a.appConfig.NodeName,
-			api.WithConfigUpdate(result.ConfigUpdate),
-		)
-		if err := a.hub.BroadcastToNodes(message); err != nil {
-			return fmt.Errorf("failed to broadcast config update: %w", err)
+		if err := a.applyConfigUpdate(result.ConfigUpdate, result.Diff); err != nil {
+			return err
 		}
 	}
 
@@ -98,6 +88,25 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 	)
 	if err := a.hub.BroadcastToNodes(msg); err != nil {
 		return fmt.Errorf("failed to broadcast scene activation: %w", err)
+	}
+
+	return nil
+}
+
+func (a *Activator) applyConfigUpdate(configUpdate *api.ConfigUpdate, diff map[string]any) error {
+	if configUpdate == nil {
+		return nil
+	}
+	configUpdate.ObserverData = diff
+
+	message := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		a.appConfig.NodeName,
+		api.WithConfigUpdate(configUpdate),
+	)
+
+	if err := a.hub.BroadcastToNodes(message); err != nil {
+		return fmt.Errorf("failed to broadcast config update: %w", err)
 	}
 
 	return nil

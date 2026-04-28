@@ -331,7 +331,6 @@ func (s *UDPServer) Close() error {
 // It injects metadata keys directly into data to avoid an intermediate map copy.
 // Callers must not reuse data after this call.
 func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp) ([]byte, error) {
-
 	data[api.FusionVersion] = version.Counter
 	data[api.FusionEpoch] = version.Epoch
 	if s.diagnosticsEnabled {
@@ -372,6 +371,9 @@ func (s *UDPServer) buildConfigPullRequiredPayload(version api.Version, msgID st
 }
 
 func (s *UDPServer) broadcastOrRequirePull(payload []byte, msgID string, version api.Version) {
+	s.lastBroadcastEpoch.Store(version.Epoch)
+	s.lastBroadcastVersion.Store(version.Counter)
+
 	if len(payload) <= maxUDPPayloadSize {
 		s.broadcast(payload, msgID)
 		return
