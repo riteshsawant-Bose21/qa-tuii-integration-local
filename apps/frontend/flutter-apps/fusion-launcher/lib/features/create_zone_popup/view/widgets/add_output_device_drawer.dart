@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/create_zone_popup/view/widgets/zone_name_field_with_color.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view/widgets/CommonWidgets/zone_name_field_with_color.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
 import '../../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';

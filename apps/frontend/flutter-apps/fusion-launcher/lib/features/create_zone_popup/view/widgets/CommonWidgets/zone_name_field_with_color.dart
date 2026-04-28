@@ -9,7 +9,7 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
-import '../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
+import '../../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
 
 class ZoneNameFieldWithColor extends StatefulWidget {
   const ZoneNameFieldWithColor({
