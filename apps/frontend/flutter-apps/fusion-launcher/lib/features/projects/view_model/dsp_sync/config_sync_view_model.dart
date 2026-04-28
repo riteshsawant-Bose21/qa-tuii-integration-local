@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/touch_ui_zone_config/touch_ui_zone_config.dart';
 import 'package:fusion_lib/service/dro/dro_config_service.dart';
 
 import '../audio_message_sync/audio_message_sync_view model.dart';
@@ -92,6 +93,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
 
     final Map<String, dynamic> blocksData = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
     final WallControllerConfig wallControllerConfig = serviceLocator<ProjectViewModel>().wallControllerConfig;
+    final TouchUIZoneConfig touchUIZoneConfig = serviceLocator<ProjectViewModel>().getTouchUIZoneConfig();
 
     final Map<String, dynamic> config = <String, dynamic>{
       "devices": droResponseData.result!.devices,
@@ -103,6 +105,8 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
 
     //add wall controller config to settings if not null
     config.addAll(wallControllerConfig.toJson());
+
+    config.addAll(touchUIZoneConfig.toJson());
 
     final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
       config: config,
