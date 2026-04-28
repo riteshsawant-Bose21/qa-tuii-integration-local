@@ -1176,7 +1176,7 @@ class AddControllerDialog {
       context: context,
       semanticId: 'add_controller',
       title: 'Add Controller',
-      buttonLabel: 'Add Controller',
+      buttonLabel: 'Save Controller',
       buttonEnabledNotifier: buttonEnabled,
       onButtonPressed: () async {
         buttonEnabled.value = false; // ← local variable, not widget.
@@ -1204,7 +1204,7 @@ class AddControllerDialog {
     final AddControllerCubit cubit = AddControllerCubit(
       projectViewModel: serviceLocator<ProjectViewModel>(),
     )..initForEdit(controller);
-    final ValueNotifier<bool> buttonEnabled = ValueNotifier<bool>(false); // ← start false
+    final ValueNotifier<bool> buttonEnabled = ValueNotifier<bool>(false);
 
     return FusionDrawer.show<bool>(
       context: context,
@@ -1526,8 +1526,8 @@ class _DrawerContentState extends State<_DrawerContent> {
         ),
         const SizedBox(width: 12),
         FusionAppText(
-          text: 'Automatically add connected source',
-          style: Theme.of(context).textTheme.l1Regular,
+          text: 'Assign Control',
+          style: Theme.of(context).textTheme.b3Regular,
         ),
       ],
     );
@@ -1564,11 +1564,9 @@ class _DrawerContentState extends State<_DrawerContent> {
           if (selectedIds.isEmpty) return '';
           if (selectedIds.length > 1) return '${selectedIds.length} Zones Selected';
           if (selectedItem != null) {
-            final bool isThisZone = isZoneLocation && selectedItem!.id == thisZoneId;
+            final bool isThisZone = isZoneLocation && selectedItem.id == thisZoneId;
             final String name =
-                selectedItem!.isSubZone && selectedItem!.parentZoneName != null
-                    ? '${selectedItem!.parentZoneName} - ${selectedItem!.name}'
-                    : selectedItem!.name;
+                selectedItem.isSubZone && selectedItem.parentZoneName != null ? '${selectedItem.parentZoneName} - ${selectedItem.name}' : selectedItem.name;
             return isThisZone ? 'This Zone - $name' : name;
           }
           return '';
@@ -1641,7 +1639,6 @@ class _DrawerContentState extends State<_DrawerContent> {
               style: Theme.of(context).textTheme.l1Regular,
             ),
           ),
-          _RadioIndicator(isSelected: isSelected),
         ],
       ),
     );
@@ -1687,6 +1684,7 @@ class _DrawerContentState extends State<_DrawerContent> {
               style: Theme.of(context).textTheme.l1Regular,
             ),
           ),
+          _ColorDot(color: item.color),
         ],
       ),
     );
