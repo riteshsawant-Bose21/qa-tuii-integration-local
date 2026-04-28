@@ -51,6 +51,9 @@ type UDPServer struct {
 	wg         sync.WaitGroup
 	numWorkers int
 
+	// Raw file descriptor for sendmmsg batching (Linux only, -1 if unavailable)
+	rawFd int
+
 	// ACK handling
 	pendingMu            sync.Mutex
 	pending              map[string]*pendingBroadcast
@@ -121,6 +124,7 @@ func NewUDPServer(addr string, handler *handler.Handler, diagnosticsEnabled bool
 		pending:            make(map[string]*pendingBroadcast),
 		stopCh:             make(chan struct{}),
 		diagnosticsEnabled: diagnosticsEnabled,
+		rawFd:              -1,
 	}
 
 	srv.Listener = NewListener(
@@ -129,6 +133,12 @@ func NewUDPServer(addr string, handler *handler.Handler, diagnosticsEnabled bool
 		time.Second,
 		srv.enqueuePacket,
 	)
+
+	// Extract raw fd for sendmmsg batching (Linux only)
+	if fd, err := extractUDPConnFd(conn); err == nil && fd >= 0 {
+		srv.rawFd = fd
+		logging.GetLogger().Info("UDP sendmmsg batching enabled (fd=%d)", fd)
+	}
 
 	for i := 0; i < srv.numWorkers; i++ {
 		srv.wg.Add(1)
@@ -399,18 +409,42 @@ func (s *UDPServer) broadcast(payload []byte, msgID string) {
 	}
 	s.clientsMu.RUnlock()
 
+	if len(targets) == 0 {
+		return
+	}
+
 	awaiting := make(map[string]*net.UDPAddr, len(targets))
 	var failed []string
 
-	for _, t := range targets {
-		if _, err := s.conn.WriteToUDP(payload, t.addr); err != nil {
-			logging.GetLogger().Warn("udp broadcast to %s failed: %v", t.key, err)
-			failed = append(failed, t.key)
-			continue
+	// Try batched sendmmsg on Linux when fd is available
+	if s.rawFd >= 0 {
+		failedIdxs := sendBatch(s.rawFd, payload, targets)
+		failedSet := make(map[int]bool, len(failedIdxs))
+		for _, idx := range failedIdxs {
+			failedSet[idx] = true
 		}
-		awaiting[t.key] = t.addr
-		if s.diagnosticsEnabled {
-			s.broadcastDatagrams.Add(1)
+		for i, t := range targets {
+			if failedSet[i] {
+				failed = append(failed, t.key)
+			} else {
+				awaiting[t.key] = t.addr
+				if s.diagnosticsEnabled {
+					s.broadcastDatagrams.Add(1)
+				}
+			}
+		}
+	} else {
+		// Fallback: individual sendto per client
+		for _, t := range targets {
+			if _, err := s.conn.WriteToUDP(payload, t.addr); err != nil {
+				logging.GetLogger().Warn("udp broadcast to %s failed: %v", t.key, err)
+				failed = append(failed, t.key)
+				continue
+			}
+			awaiting[t.key] = t.addr
+			if s.diagnosticsEnabled {
+				s.broadcastDatagrams.Add(1)
+			}
 		}
 	}
 

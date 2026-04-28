@@ -40,6 +40,23 @@ func (s *FusionServer) safeWriteJSON(conn *websocket.Conn, v interface{}) error 
 	return conn.WriteJSON(v)
 }
 
+// safeWriteRaw writes pre-serialized bytes to a WebSocket connection as a text message.
+// Use this when broadcasting the same payload to multiple clients to avoid
+// repeated json.Marshal calls.
+func (s *FusionServer) safeWriteRaw(conn *websocket.Conn, data []byte) error {
+	s.wsLock.RLock()
+	mutex, exists := s.wsWriteMutex[conn]
+	s.wsLock.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("connection not found")
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	return conn.WriteMessage(websocket.TextMessage, data)
+}
+
 // safeWriteControl safely writes control messages to a WebSocket connection using per-connection mutex
 func (s *FusionServer) safeWriteControl(conn *websocket.Conn, messageType int, data []byte, deadline time.Time) error {
 	s.wsLock.RLock()
@@ -301,10 +318,12 @@ func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
 func (s *FusionServer) enqueueConfigUpdate() {
 	s.configUpdateMu.Lock()
 	s.configUpdatePending = true
-	if s.configUpdateDebounceTimer != nil {
-		s.configUpdateDebounceTimer.Stop()
+	if s.configUpdateDebounceTimer == nil {
+		// No timer running — start one. It will fire after the debounce window
+		// regardless of how many updates arrive in the meantime.
+		s.configUpdateDebounceTimer = time.AfterFunc(wsConfigUpdateDebounce, s.flushConfigUpdateQueue)
 	}
-	s.configUpdateDebounceTimer = time.AfterFunc(wsConfigUpdateDebounce, s.flushConfigUpdateQueue)
+	// Timer already running: just mark pending; flush will pick it up when it fires.
 	s.configUpdateMu.Unlock()
 }
 
@@ -382,10 +401,16 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 	}
 	s.wsLock.RUnlock()
 
-	// Send to all subscribers of this topic
+	// Pre-serialize once for all clients
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
+	}
+
+	// Send pre-serialized bytes to all subscribers
 	var failedConnections []*websocket.Conn
 	for _, conn := range connections {
-		if err := s.safeWriteJSON(conn, message); err != nil {
+		if err := s.safeWriteRaw(conn, data); err != nil {
 			logging.GetLogger().Error("Error sending message to WebSocket client on topic %s: %v", topic, err)
 			failedConnections = append(failedConnections, conn)
 		}
@@ -436,9 +461,15 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	}
 	s.wsLock.RUnlock()
 
+	// Pre-serialize once for all clients
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket broadcast: %w", err)
+	}
+
 	var failedConnections []*websocket.Conn
 	for _, conn := range clients {
-		if err := s.safeWriteJSON(conn, message); err != nil {
+		if err := s.safeWriteRaw(conn, data); err != nil {
 			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
 			failedConnections = append(failedConnections, conn)
 		}
