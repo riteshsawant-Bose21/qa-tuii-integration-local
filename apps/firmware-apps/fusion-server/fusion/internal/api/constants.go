@@ -130,8 +130,8 @@ const (
 )
 
 var (
-	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
-	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/persist/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/persist/pki/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"

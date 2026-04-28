@@ -3,6 +3,7 @@
 /// -------------------
 enum RelationshipType {
   floorAreas,
+  floorWalls,
   zoneAreas,
   zoneSourceSet,
   zoneSources,

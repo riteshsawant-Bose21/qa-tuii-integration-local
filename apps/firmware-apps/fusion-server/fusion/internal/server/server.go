@@ -24,17 +24,20 @@ import (
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node               string
-	handler            *handler.Handler
-	wsClients          map[*websocket.Conn]bool
-	wsWriteMutex       map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
-	subscriptions      map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
-	wsLock             sync.RWMutex
-	upgrader           websocket.Upgrader
-	wsStats            *api.WebSocketStats
-	statsLock          sync.RWMutex
-	meterFilterManager *MeterFilterManager
-	telemetrySub       *TelemetrySubscriber
+	node                      string
+	handler                   *handler.Handler
+	wsClients                 map[*websocket.Conn]bool
+	wsWriteMutex              map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
+	subscriptions             map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock                    sync.RWMutex
+	configUpdateMu            sync.Mutex
+	configUpdatePending       bool
+	configUpdateDebounceTimer *time.Timer
+	upgrader                  websocket.Upgrader
+	wsStats                   *api.WebSocketStats
+	statsLock                 sync.RWMutex
+	meterFilterManager        *MeterFilterManager
+	telemetrySub              *TelemetrySubscriber
 
 	maxConnections int
 }
@@ -260,13 +263,11 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	state := s.handler.StateManager.GetFullState()
 
 	// Write the JSON response.
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(state); err != nil {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
-		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
 }
 

@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	wsBufferSize     = 1024        // Increased buffer size for better performance
-	wsPingTime       = 30          // Ping interval in seconds
-	wsPongTime       = 60          // Pong timeout in seconds
-	wsTimeout        = 10          // Connection timeout in seconds
-	wsMaxMessageSize = 1024 * 1024 // Max message size (1MB)
-	wsMaxConnections = 1000        // Max concurrent connections
+	wsBufferSize           = 1024        // Increased buffer size for better performance
+	wsPingTime             = 30          // Ping interval in seconds
+	wsPongTime             = 60          // Pong timeout in seconds
+	wsTimeout              = 10          // Connection timeout in seconds
+	wsMaxMessageSize       = 1024 * 1024 // Max message size (1MB)
+	wsMaxConnections       = 1000        // Max concurrent connections
+	wsConfigUpdateDebounce = 50 * time.Millisecond
 )
 
 // safeWriteJSON safely writes JSON to a WebSocket connection using per-connection mutex
@@ -310,18 +311,51 @@ func (s *FusionServer) BroadcastToClusterObservers(message *api.NotifyMessage) e
 }
 
 func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
-	configUpdateMessage := &api.WebSocketResponse{
+	s.enqueueConfigUpdate()
+	return nil
+}
+
+func (s *FusionServer) enqueueConfigUpdate() {
+	s.configUpdateMu.Lock()
+	s.configUpdatePending = true
+	if s.configUpdateDebounceTimer != nil {
+		s.configUpdateDebounceTimer.Stop()
+	}
+	s.configUpdateDebounceTimer = time.AfterFunc(wsConfigUpdateDebounce, s.flushConfigUpdateQueue)
+	s.configUpdateMu.Unlock()
+}
+
+func (s *FusionServer) flushConfigUpdateQueue() {
+	s.configUpdateMu.Lock()
+	pending := s.configUpdatePending
+	s.configUpdatePending = false
+	s.configUpdateDebounceTimer = nil
+	s.configUpdateMu.Unlock()
+
+	if !pending {
+		return
+	}
+
+	state, err := s.handler.GetInitialState()
+	if err != nil {
+		logging.GetLogger().Error("Error reading current state for coalesced config update: %v", err)
+		return
+	}
+
+	message := &api.WebSocketResponse{
 		ID:        nil,
 		Version:   api.WSCurrentVersion,
 		Type:      api.WSMsgTypeConfigUpdate,
 		Code:      api.WSCodeUpdated,
 		Status:    api.WSStatusEvent,
 		Message:   "Configuration updated",
-		Data:      message.ConfigUpdate.Data,
+		Data:      state,
 		Timestamp: time.Now(),
 	}
 
-	return s.BroadcastToTopic(api.WSTopicConfigUpdates, configUpdateMessage)
+	if err := s.BroadcastToTopic(api.WSTopicConfigUpdates, message); err != nil {
+		logging.GetLogger().Error("Error broadcasting coalesced config update: %v", err)
+	}
 }
 
 // SubscribeToTopic subscribes a WebSocket connection to a specific topic

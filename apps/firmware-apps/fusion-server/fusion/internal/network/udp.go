@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	maxConcurrent    = 32
-	queueElementSize = 2048
-	ackRetryInterval = 500 * time.Millisecond
-	ackMaxAttempts   = 6
-	clientStaleTTL   = 10 * time.Second
+	maxConcurrent     = 32
+	queueElementSize  = 2048
+	ackRetryInterval  = 500 * time.Millisecond
+	ackMaxAttempts    = 6
+	clientStaleTTL    = 10 * time.Second
+	maxUDPPayloadSize = 65507
 )
 
 type packet struct {
@@ -257,7 +258,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 			return err
 		}
 
-		s.broadcast(payload, msg.ID)
+		s.broadcastOrRequirePull(payload, msg.ID, sm.GetVersion())
 
 		return nil
 	}
@@ -271,29 +272,6 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return fmt.Errorf("udp broadcast: config_update missing payload")
 	}
 
-	// Normal config updates: apply Lamport version gating
-	if msg.Operation == api.NotifyOpConfigUpdate &&
-		msg.ConfigUpdate != nil {
-
-		v := msg.ConfigUpdate.Version
-
-		last := api.Version{
-			Epoch:   s.lastBroadcastEpoch.Load(),
-			Counter: s.lastBroadcastVersion.Load(),
-		}
-
-		if v.Less(last) {
-			logger.Debug(
-				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
-				v, last,
-			)
-			return nil
-		}
-
-		s.lastBroadcastEpoch.Store(v.Epoch)
-		s.lastBroadcastVersion.Store(v.Counter)
-	}
-
 	if msg.ID == "" {
 		msg.ID = ulid.Make().String()
 	}
@@ -303,7 +281,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		return err
 	}
 
-	s.broadcast(payload, msg.ID)
+	s.broadcastOrRequirePull(payload, msg.ID, msg.ConfigUpdate.Version)
 
 	return nil
 }
@@ -348,6 +326,44 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, m
 	}
 
 	return json, nil
+}
+
+func (s *UDPServer) buildConfigPullRequiredPayload(version api.Version, msgID string) ([]byte, error) {
+	payload := map[string]any{
+		api.FusionVersion:   version.Counter,
+		api.FusionEpoch:     version.Epoch,
+		api.FusionOperation: api.NotifyOpConfigPullRequired,
+	}
+	if s.diagnosticsEnabled {
+		payload[api.FusionSentAtNS] = time.Now().UnixNano()
+	}
+	if msgID != "" {
+		payload[api.FusionMessageID] = msgID
+	}
+	json, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal config pull notification: %w", err)
+	}
+	return json, nil
+}
+
+func (s *UDPServer) broadcastOrRequirePull(payload []byte, msgID string, version api.Version) {
+	if len(payload) <= maxUDPPayloadSize {
+		s.broadcast(payload, msgID)
+		return
+	}
+
+	pullRequiredPayload, err := s.buildConfigPullRequiredPayload(version, msgID)
+	if err != nil {
+		logging.GetLogger().Error("udp config pull notification build failed: %v", err)
+		return
+	}
+	logging.GetLogger().Warn(
+		"udp payload size %d exceeds max %d; broadcasting config_pull_required notification",
+		len(payload),
+		maxUDPPayloadSize,
+	)
+	s.broadcast(pullRequiredPayload, msgID)
 }
 
 func (s *UDPServer) broadcast(payload []byte, msgID string) {

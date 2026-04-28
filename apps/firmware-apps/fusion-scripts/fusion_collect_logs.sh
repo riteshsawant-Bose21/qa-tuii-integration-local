@@ -138,11 +138,10 @@ collect_service_logs() {
 
   failures=0
 
-  for service in fusion-dsp fusion-system-monitor fusion-server jackd.service ptp4l@lan1 phc2sys@lan1; do
+  for service in fusion-dsp fusion-system-monitor jackd.service ptp4l@lan1 phc2sys@lan1; do
     case "$service" in
       fusion-dsp) outfile="$outdir/fusion-dsp.log" ;;
       fusion-system-monitor) outfile="$outdir/fusion-system-monitor.log" ;;
-      fusion-server) outfile="$outdir/fusion-server.log" ;;
       jackd.service) outfile="$outdir/jackd.log" ;;
       ptp4l@lan1) outfile="$outdir/ptp4l.log" ;;
       phc2sys@lan1) outfile="$outdir/phc2sys.log" ;;
@@ -156,6 +155,42 @@ collect_service_logs() {
   done
 
   return $failures
+}
+
+collect_fusion_server_data() {
+  local device="$1"
+  local outdir="$2"
+  local prof_files serverdir
+
+  # Check for profiling files on the device; suppress errors if absent
+  prof_files=$(ssh "${SSH_OPTS[@]}" "$device" 'ls /tmp/fusion_server_*.prof 2>/dev/null' || true)
+
+  if [[ -z "$prof_files" ]]; then
+    # No profiling files — collect the log at the standard location and return silently
+    if ! remote_to_file "$device" "journalctl -u 'fusion-server' --no-pager -l" "$outdir/fusion-server.log"; then
+      print_warn "[$device] Failed to collect service log: fusion-server"
+      return 1
+    fi
+    return 0
+  fi
+
+  print_info "[$device] Found profiling files, collecting into fusion-server/ subfolder"
+
+  serverdir="$outdir/fusion-server"
+  mkdir -p "$serverdir"
+
+  if ! remote_to_file "$device" "journalctl -u 'fusion-server' --no-pager -l" "$serverdir/fusion-server.log"; then
+    print_warn "[$device] Failed to collect service log: fusion-server"
+  fi
+
+  while IFS= read -r prof_file; do
+    [[ -z "$prof_file" ]] && continue
+    if ! scp "${SSH_OPTS[@]}" "${device}:${prof_file}" "$serverdir/" >/dev/null 2>&1; then
+      print_warn "[$device] Failed to copy profiling file: $prof_file"
+    fi
+  done <<< "$prof_files"
+
+  return 0
 }
 
 collect_kernel_log() {
@@ -264,6 +299,10 @@ Details: ${SSH_FAILURE_REASON}"
 
   if $CAPTURE_SERVICE_LOGS; then
     collect_service_logs "$device" "$outdir"
+    tmp=$?
+    local_failures=$((local_failures + tmp))
+
+    collect_fusion_server_data "$device" "$outdir"
     tmp=$?
     local_failures=$((local_failures + tmp))
   fi
