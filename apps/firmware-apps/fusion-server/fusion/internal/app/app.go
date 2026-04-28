@@ -41,9 +41,10 @@ const (
 )
 
 var (
-	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
 	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
 	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+	corsWarningOnce    sync.Once
 )
 
 func getEnvOrDefault(key string, fallback string) string {
@@ -78,6 +79,7 @@ type App struct {
 	Hub                 *pubsub.Hub
 	discoveryReconciler *DiscoveryReconciler
 	vipEventCoordinator *VIPEventCoordinator
+	profiler            *cpuProfiler
 }
 
 // NewApp is a factory function to set up the application
@@ -144,6 +146,7 @@ func NewApp(config *api.AppConfig) *App {
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
 		Hub:               hub,
+		profiler:          newCPUProfiler(),
 	}
 	app.discoveryReconciler = NewDiscoveryReconciler(app)
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
@@ -153,6 +156,9 @@ func NewApp(config *api.AppConfig) *App {
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
+	if _, err := app.profiler.Stop(); err != nil {
+		app.Logger.Error("Failed to stop CPU profiler: %v", err)
+	}
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
@@ -304,14 +310,19 @@ func (app *App) setupPublicRoutes() {
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshotDefinition)
 
 	// Scenes
 	app.registerPublicGET(routes.ScenesEndpoint, app.Server.ListScenes)
+	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
 
 	// Scene Sets
 	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
 	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
 	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsEndpoint, app.Server.DeleteSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsNameEndpoint, app.Server.DeleteSceneSet)
 
 	// Scene Catalog
 	app.registerPublicGET(routes.SceneCatalogEndpoint, app.Server.ListSceneCatalog)
@@ -368,6 +379,10 @@ func (app *App) setupPrivateRoutes() {
 
 	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
 	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
+	app.registerPrivateGET(routes.DebugProfileStatusEndpoint, app.HandleProfileStatus)
+	app.registerPrivatePOST(routes.DebugProfileHeapEndpoint, app.HandleHeapProfileCapture)
+	app.registerPrivatePOST(routes.DebugProfileStartEndpoint, app.HandleProfileStart)
+	app.registerPrivatePOST(routes.DebugProfileStopEndpoint, app.HandleProfileStop)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -768,9 +783,11 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // corsMiddleware adds CORS headers to all responses
 func corsMiddleware() mux.MiddlewareFunc {
-	logging.GetLogger().Warn(
-		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
-	)
+	corsWarningOnce.Do(func() {
+		logging.GetLogger().Warn(
+			"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+		)
+	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set CORS headers

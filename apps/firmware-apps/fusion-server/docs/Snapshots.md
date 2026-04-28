@@ -355,7 +355,7 @@ Returns **404** if the set does not exist.
 #### List Snapshot Definitions
 
 ```
-GET /snapshots/list
+GET /snapshots
 ```
 
 Returns all stored snapshot definitions (full objects including `id`, `name`, `data`).
@@ -363,7 +363,7 @@ Returns all stored snapshot definitions (full objects including `id`, `name`, `d
 #### List All Scenes (flat)
 
 ```
-GET /scenes/list
+GET /scenes
 ```
 
 Returns all scenes across all scene sets as a flat list.
@@ -371,10 +371,63 @@ Returns all scenes across all scene sets as a flat list.
 #### List Scene Sets
 
 ```
-GET /scene-sets/list
+GET /scene-sets
 ```
 
 Returns all stored scene sets (full objects including nested scenes and `current_scene_id`).
+
+#### Delete All Snapshot Definitions
+
+```
+DELETE /snapshots
+```
+
+- Removes every stored snapshot definition from persistent storage
+- Broadcasts `snapshot_defs_delete_all` to the cluster so all nodes are cleared
+- Returns **204** on success
+
+#### Delete All Scene Sets
+
+```
+DELETE /scene-sets
+```
+
+- Removes every stored scene set from persistent storage
+- Because scenes are embedded in their parent set, this also removes all scenes
+- Broadcasts `scene_sets_delete_all` to the cluster so all nodes are cleared
+- Returns **204** on success
+
+#### Delete a Snapshot Definition by ID
+
+```
+DELETE /snapshots/<snapshot-id>
+```
+
+- Removes the single snapshot definition with the given ID from persistent storage
+- Broadcasts `snapshot_def_delete` to the cluster so all nodes remove the entry
+- Returns **204** on success, **404** if the ID does not exist
+
+#### Delete a Scene Set by ID
+
+```
+DELETE /scene-sets/<set-id>
+```
+
+- Removes the single scene set with the given ID from persistent storage
+- Because scenes are embedded in their parent set, this also removes all scenes belonging to that set
+- Broadcasts `scene_set_delete` to the cluster so all nodes remove the entry
+- Returns **204** on success, **404** if the ID does not exist
+
+#### Delete a Scene by ID
+
+```
+DELETE /scenes/<scene-id>
+```
+
+- Scans all scene sets and removes the scene with the given ID from whichever set contains it
+- If the deleted scene was the `current_scene_id` or `default_scene_id` for its parent set, those fields are cleared on all nodes
+- Broadcasts `scene_delete` to the cluster so all nodes apply the removal
+- Returns **204** on success, **404** if the ID does not exist in any scene set
 
 #### List Full Scene Catalog
 

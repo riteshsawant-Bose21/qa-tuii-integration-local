@@ -198,7 +198,7 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 
 ## Scene Catalog
 - `POST /value` (with `snapshots` and/or `scene_sets` root keys to upsert definitions)
-- `POST /snapshots/activate/{name}`
+- `POST /snapshots/activate/{id}`
 - `GET  /snapshots/list`
 - `GET  /scenes/list`
 - `POST /scene-sets/activate`
@@ -273,6 +273,37 @@ Run a subset:
 
 ```bash
 ./scripts/multipass/run-tests --snapshot
+```
+
+Collect CPU profiles during a stress test:
+
+```bash
+GOWORK=off go build -o stress_tester .
+./stress_tester \
+  -writer-host 192.168.2.100:8080 \
+  -ws-hosts 192.168.2.100:8080 \
+  -udp-server-host 192.168.2.100:7947 \
+  -profile \
+  -profile-hosts 192.168.2.100:9090
+```
+
+Inspect a saved CPU profile with Go `pprof`:
+
+```bash
+go tool pprof ./stress_tester /tmp/fusion_server_cpu_YYYYMMDD_HHMMSS.prof
+```
+
+Useful `pprof` commands:
+
+- `top` shows the hottest functions
+- `list <func>` annotates source for a function
+- `web` opens the call graph if Graphviz is installed
+- `svg` writes an SVG call graph
+
+Start the interactive web UI:
+
+```bash
+go tool pprof -http=:0 ./stress_tester /tmp/fusion_server_cpu_YYYYMMDD_HHMMSS.prof
 ```
 
 # Documentation

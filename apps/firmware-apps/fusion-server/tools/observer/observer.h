@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
@@ -851,8 +852,9 @@ public:
   };
 
   UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true,
-                  TimingConfig timingConfig = {})
-      : jsonMonitor_(Json::objectValue), timingConfig_(timingConfig)
+                  TimingConfig timingConfig = {}, int httpPort = 8080)
+      : serverIP_(serverIP), jsonMonitor_(Json::objectValue),
+        timingConfig_(timingConfig), httpPort_(httpPort)
   {
     // Enable trace logging for debugging (dont push this to git).
     // spdlog::set_level(spdlog::level::trace);
@@ -1182,6 +1184,188 @@ private:
     }
   }
 
+  bool connectTCPWithTimeout(int sockfd, sockaddr_in addr, int timeoutMs)
+  {
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags == -1)
+    {
+      return false;
+    }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+      return false;
+    }
+
+    const int rc = connect(sockfd, reinterpret_cast<sockaddr *>(&addr),
+                           sizeof(addr));
+    if (rc == 0)
+    {
+      fcntl(sockfd, F_SETFL, flags);
+      return true;
+    }
+    if (errno != EINPROGRESS)
+    {
+      return false;
+    }
+
+    pollfd pfd;
+    pfd.fd = sockfd;
+    pfd.events = POLLOUT;
+    const int pollResult = poll(&pfd, 1, timeoutMs);
+    if (pollResult <= 0)
+    {
+      return false;
+    }
+
+    int socketError = 0;
+    socklen_t socketErrorLen = sizeof(socketError);
+    if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &socketError,
+                   &socketErrorLen) != 0 ||
+        socketError != 0)
+    {
+      errno = socketError;
+      return false;
+    }
+
+    fcntl(sockfd, F_SETFL, flags);
+    return true;
+  }
+
+  bool httpGet(const std::string &path, std::string *body)
+  {
+    if (body == nullptr)
+    {
+      return false;
+    }
+    body->clear();
+
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+      SPDLOG_WARN("HTTP GET {} failed to create socket: {}", path,
+                  std::string(strerror(errno)));
+      return false;
+    }
+
+    timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in httpAddr = serverAddr_;
+    httpAddr.sin_port = htons(static_cast<uint16_t>(httpPort_));
+    if (!connectTCPWithTimeout(sockfd, httpAddr, 2000))
+    {
+      SPDLOG_WARN("HTTP GET {} failed to connect to {}:{}: {}", path, serverIP_,
+                  httpPort_, std::string(strerror(errno)));
+      close(sockfd);
+      return false;
+    }
+
+    std::ostringstream request;
+    request << "GET " << path << " HTTP/1.0\r\n"
+            << "Host: " << serverIP_ << ":" << httpPort_ << "\r\n"
+            << "Accept: application/json\r\n"
+            << "Connection: close\r\n\r\n";
+    const std::string requestStr = request.str();
+
+    size_t sentTotal = 0;
+    while (sentTotal < requestStr.size())
+    {
+      ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
+                          requestStr.size() - sentTotal, 0);
+      if (sent < 0)
+      {
+        if (errno == EINTR)
+        {
+          continue;
+        }
+        SPDLOG_WARN("HTTP GET {} send failed: {}", path,
+                    std::string(strerror(errno)));
+        close(sockfd);
+        return false;
+      }
+      sentTotal += static_cast<size_t>(sent);
+    }
+
+    std::string response;
+    char readBuf[4096];
+    constexpr size_t kMaxHTTPResponseBytes = 16 * 1024 * 1024;
+    while (true)
+    {
+      ssize_t received = recv(sockfd, readBuf, sizeof(readBuf), 0);
+      if (received == 0)
+      {
+        break;
+      }
+      if (received < 0)
+      {
+        if (errno == EINTR)
+        {
+          continue;
+        }
+        SPDLOG_WARN("HTTP GET {} recv failed: {}", path,
+                    std::string(strerror(errno)));
+        close(sockfd);
+        return false;
+      }
+      response.append(readBuf, static_cast<size_t>(received));
+      if (response.size() > kMaxHTTPResponseBytes)
+      {
+        SPDLOG_WARN("HTTP GET {} response exceeded {} bytes", path,
+                    kMaxHTTPResponseBytes);
+        close(sockfd);
+        return false;
+      }
+    }
+    close(sockfd);
+
+    const size_t headerEnd = response.find("\r\n\r\n");
+    if (headerEnd == std::string::npos)
+    {
+      SPDLOG_WARN("HTTP GET {} returned malformed response", path);
+      return false;
+    }
+
+    const std::string statusLine = response.substr(0, response.find("\r\n"));
+    if (statusLine.find(" 200 ") == std::string::npos)
+    {
+      SPDLOG_WARN("HTTP GET {} failed: {}", path, statusLine);
+      return false;
+    }
+
+    *body = response.substr(headerEnd + 4);
+    return true;
+  }
+
+  bool pullFullConfig(long long expectedEpoch, long long expectedVersion)
+  {
+    std::string body;
+    if (!httpGet("/value", &body))
+    {
+      return false;
+    }
+
+    Json::Value state;
+    Json::CharReaderBuilder readerBuilder;
+    std::string errs;
+    std::istringstream bodyStream(body);
+    if (!Json::parseFromStream(readerBuilder, bodyStream, &state, &errs))
+    {
+      SPDLOG_WARN("Failed to parse HTTP config pull response: {}", errs);
+      return false;
+    }
+
+    handleUpdateMessage(state, false);
+    lastEpoch_ = expectedEpoch;
+    lastCounter_ = expectedVersion;
+    receivedInitialState_ = true;
+    SPDLOG_INFO("Pulled full config epoch={} version={}", expectedEpoch,
+                expectedVersion);
+    return true;
+  }
+
   void receiveLoop()
   {
     pollfd pfd;
@@ -1264,14 +1448,20 @@ private:
           {
             msgId = response["data"]["_fusion_msg_id"].asString();
           }
-          if (!msgId.empty())
+
+          std::string op;
+          if (response.isMember("_fusion_op"))
+          {
+            op = response["_fusion_op"].asString();
+          }
+
+          if (!msgId.empty() && op != "config_pull_required")
           {
             sendAck(msgId);
           }
 
-          if (response.isMember("_fusion_op"))
+          if (!op.empty())
           {
-            const std::string op = response["_fusion_op"].asString();
             // This is to get the device information
             // Called only at the start or failure to get initial state
             // Once we have the device information, we can request the initial state
@@ -1296,6 +1486,33 @@ private:
             else if (op == "config_update") // request originated from server
             {
               handleUpdateMessage(response, true);
+              continue;
+            }
+            else if (op == "config_pull_required")
+            {
+              if (!response.isMember("_fusion_epoch") ||
+                  !response.isMember("_fusion_version"))
+              {
+                SPDLOG_WARN("Ignoring config_pull_required without version {}",
+                            summarizeUpdateMetadata(response));
+                continue;
+              }
+              const long long incomingEpoch =
+                  response["_fusion_epoch"].asInt64();
+              const long long incomingVersion =
+                  response["_fusion_version"].asInt64();
+              long long candidateEpoch = lastEpoch_;
+              long long candidateCounter = lastCounter_;
+              if (!shouldAcceptUpdate(incomingEpoch, incomingVersion,
+                                      candidateEpoch, candidateCounter))
+              {
+                continue;
+              }
+              if (pullFullConfig(incomingEpoch, incomingVersion) &&
+                  !msgId.empty())
+              {
+                sendAck(msgId);
+              }
               continue;
             }
             else if (op == "device_update") // request originated from server
@@ -1403,6 +1620,7 @@ private:
   std::thread receiveThread_;
   bool started_{false};
   std::mutex start_mutex_;
+  std::string serverIP_;
   std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
   mutable std::mutex targetPaths_mutex_;
@@ -1413,6 +1631,7 @@ private:
   long long lastEpoch_{-1};
   long long lastCounter_{-1};
   TimingConfig timingConfig_{};
+  int httpPort_{8080};
 
   // Timestamp of the last noop ACK received from the server. Used to detect
   // server prunes: a gap > SERVER_PRUNE_THRESHOLD_S means the server was
