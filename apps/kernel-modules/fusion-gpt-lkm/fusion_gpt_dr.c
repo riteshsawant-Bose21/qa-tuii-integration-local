@@ -13,6 +13,7 @@
 #include <linux/math64.h>
 #include <linux/seqlock.h>
 #include <linux/clk.h>
+#include <linux/string.h>
 #include "fusion_gpt_client.h"
 
 /* VCXO disciplining */
@@ -66,6 +67,7 @@
 #define DISCIPLINE_LOCK_CONSECUTIVE 5U
 #define DISCIPLINE_GM_LOCK_TIMEOUT_MS 1500U
 #define MODEL_MAX_SAMPLES 16U
+#define PPS_CAPTURE_RING_SIZE 4U
 
 static bool pps_debug_param;
 module_param(pps_debug_param, bool, 0644);
@@ -121,114 +123,67 @@ static uint model_jump_min_error_param = 10;
 module_param(model_jump_min_error_param, uint, 0644);
 MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
+static uint reacquire_delta_threshold_param = 20;
+module_param(reacquire_delta_threshold_param, uint, 0644);
+MODULE_PARM_DESC(reacquire_delta_threshold_param, "Maximum tick difference between pre-blackout and post-return PPS intervals when validating holdover continuity");
+
 int fusion_gpt_reset_timing_state(void);
 int fusion_gpt_reset_timing_session(void);
+
+enum gpt_reset_type {
+	GPT_RESET_COLD_START = 0,
+	GPT_RESET_HOLDOVER,
+	GPT_RESET_SESSION,
+};
+
 enum gpt_dac_restore_reason {
 	GPT_DAC_RESTORE_REASON_NONE = 0,
 	GPT_DAC_RESTORE_REASON_TIMING_RESET,
 	GPT_DAC_RESTORE_REASON_TIMING_SESSION_RESET,
 };
 
-struct gpt_reset_spec {
-	const char *profile_name;
-	bool reset_timing_session_domain;
-	bool reset_control_domain;
-	bool reset_model_domain;
-	bool preserve_dac_baseline;
-	bool preserve_continuity_for_reacquire;
-	bool preserve_model_history;
+struct gpt_reset_request {
+	enum gpt_reset_type type;
 	bool simulate_pps_gap;
-	bool preserve_last_pps_jiffies_on_reacquire;
 	bool queue_dac_restore_work;
 	enum gpt_dac_restore_reason dac_restore_reason;
 };
 
 struct gpt_reset_runtime_ctx {
-	u32 prev_pps_seq;
-	long prev_freq_error;
-	bool prev_epoch_valid;
-	bool prev_aligned;
 	bool prev_continuity;
-	bool prev_gm_locked;
-	bool prev_pending_anchor;
-	bool prev_pps_valid;
 	bool prev_reacquire_pending;
-	u64 prev_pps_cap64;
-	u64 prev_reacquire_cap64;
+	u64 prev_pre_blackout_delta;
 	unsigned long prev_last_pps_jiffies;
 	int preserved_dac;
-	bool changed;
 };
 
-static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec);
+static int fusion_gpt_apply_reset_request(const struct gpt_reset_request *request);
 static int fusion_gpt_simulate_pps_gap_only(void);
 
-static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_STATE = {
-	.profile_name = "timing_state",
-	.reset_timing_session_domain = true,
-	.reset_control_domain = true,
-	.reset_model_domain = false,
-	.preserve_dac_baseline = true,
-	.preserve_continuity_for_reacquire = true,
-	.preserve_model_history = true,
+static const struct gpt_reset_request GPT_RESET_REQUEST_HOLDOVER = {
+	.type = GPT_RESET_HOLDOVER,
 	.simulate_pps_gap = false,
-	.preserve_last_pps_jiffies_on_reacquire = true,
 	.queue_dac_restore_work = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_RESET,
 };
 
-static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_SESSION = {
-	.profile_name = "timing_session",
-	.reset_timing_session_domain = true,
-	.reset_control_domain = true,
-	.reset_model_domain = false,
-	.preserve_dac_baseline = true,
-	.preserve_continuity_for_reacquire = false,
-	.preserve_model_history = true,
+static const struct gpt_reset_request GPT_RESET_REQUEST_SESSION = {
+	.type = GPT_RESET_SESSION,
 	.simulate_pps_gap = false,
-	.preserve_last_pps_jiffies_on_reacquire = false,
 	.queue_dac_restore_work = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_SESSION_RESET,
 };
 
-static const struct gpt_reset_spec GPT_RESET_PROFILE_TIMING_RESET_SIM = {
-	.profile_name = "timing_reset_sim",
-	.reset_timing_session_domain = true,
-	.reset_control_domain = true,
-	.reset_model_domain = false,
-	.preserve_dac_baseline = true,
-	.preserve_continuity_for_reacquire = true,
-	.preserve_model_history = true,
+static const struct gpt_reset_request GPT_RESET_REQUEST_HOLDOVER_SIM = {
+	.type = GPT_RESET_HOLDOVER,
 	.simulate_pps_gap = true,
-	.preserve_last_pps_jiffies_on_reacquire = true,
 	.queue_dac_restore_work = true,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_TIMING_RESET,
 };
 
-static const struct gpt_reset_spec GPT_RESET_PROFILE_PPS_GAP_ONLY = {
-	.profile_name = "pps_gap_only",
-	.reset_timing_session_domain = false,
-	.reset_control_domain = false,
-	.reset_model_domain = false,
-	.preserve_dac_baseline = true,
-	.preserve_continuity_for_reacquire = true,
-	.preserve_model_history = true,
-	.simulate_pps_gap = true,
-	.preserve_last_pps_jiffies_on_reacquire = true,
-	.queue_dac_restore_work = false,
-	.dac_restore_reason = GPT_DAC_RESTORE_REASON_NONE,
-};
-
-static const struct gpt_reset_spec GPT_RESET_PROFILE_COLD_START = {
-	.profile_name = "cold_start",
-	.reset_timing_session_domain = true,
-	.reset_control_domain = true,
-	.reset_model_domain = true,
-	.preserve_dac_baseline = false,
-	.preserve_continuity_for_reacquire = false,
-	.preserve_model_history = false,
+static const struct gpt_reset_request GPT_RESET_REQUEST_COLD_START = {
+	.type = GPT_RESET_COLD_START,
 	.simulate_pps_gap = false,
-	.preserve_last_pps_jiffies_on_reacquire = false,
 	.queue_dac_restore_work = false,
 	.dac_restore_reason = GPT_DAC_RESTORE_REASON_NONE,
 };
@@ -294,7 +249,7 @@ static int gpt_param_set_timing_reset_sim_trigger(const char *val,
 		return 0;
 	}
 
-	ret = fusion_gpt_apply_reset_profile(&GPT_RESET_PROFILE_TIMING_RESET_SIM);
+	ret = fusion_gpt_apply_reset_request(&GPT_RESET_REQUEST_HOLDOVER_SIM);
 	*trigger_param = 0;
 	return ret;
 }
@@ -426,12 +381,18 @@ struct fusion_gpt
 	bool discipline_continuity_ready;
 	bool discipline_gm_locked;
 	bool discipline_reacquire_pending;
-	u64 discipline_reacquire_cap64;
-	bool discipline_reacquire_jump_pending;
+	u64 discipline_pre_blackout_delta;
+	u64 discipline_post_return_cap64;
+	u32 discipline_post_return_capture_count;
+	bool discipline_reacquire_jump_available;
+	bool discipline_holdover_active;
 	u32 discipline_lock_streak;
 	unsigned long pps_diag_next_jiffies;
 	bool discipline_model_jump_ready;
 	bool discipline_model_jump_consumed;
+	u64 pps_capture_ring[PPS_CAPTURE_RING_SIZE];
+	u32 pps_capture_head;
+	u32 pps_capture_count;
 
 	/* MODEL domain, protected by ctrl_lock. */
 	int model_dac_samples[MODEL_MAX_SAMPLES];
@@ -456,18 +417,18 @@ static const char *gpt_dac_restore_reason_name(enum gpt_dac_restore_reason reaso
 static void gpt_capture_reset_runtime_ctx_locked(struct fusion_gpt *g,
 						 struct gpt_reset_runtime_ctx *ctx);
 static void gpt_reset_timing_session_domain_locked(struct fusion_gpt *g);
-static void gpt_reset_control_domain_locked(struct fusion_gpt *g,
-					    const struct gpt_reset_runtime_ctx *ctx,
-					    const struct gpt_reset_spec *spec);
+static void gpt_reset_control_domain_locked(struct fusion_gpt *g);
 static void gpt_reset_model_domain_locked(struct fusion_gpt *g);
-static void gpt_apply_dac_baseline_policy_locked(struct fusion_gpt *g,
-						 const struct gpt_reset_runtime_ctx *ctx,
-						 const struct gpt_reset_spec *spec);
-static void gpt_apply_simulation_policy_locked(struct fusion_gpt *g,
-					       const struct gpt_reset_spec *spec);
-static void gpt_apply_reset_profile_locked(struct fusion_gpt *g,
+static void gpt_reset_pps_capture_ring_locked(struct fusion_gpt *g);
+static void gpt_apply_preserved_dac_locked(struct fusion_gpt *g,
 					   const struct gpt_reset_runtime_ctx *ctx,
-					   const struct gpt_reset_spec *spec);
+					   enum gpt_dac_restore_reason reason,
+					   bool queue_dac_restore_work);
+static void gpt_apply_simulation_policy_locked(struct fusion_gpt *g,
+					       const struct gpt_reset_request *request);
+static void gpt_apply_reset_request_locked(struct fusion_gpt *g,
+					   const struct gpt_reset_runtime_ctx *ctx,
+					   const struct gpt_reset_request *request);
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -488,27 +449,28 @@ static const char *gpt_dac_restore_reason_name(enum gpt_dac_restore_reason reaso
 static void gpt_capture_reset_runtime_ctx_locked(struct fusion_gpt *g,
 						 struct gpt_reset_runtime_ctx *ctx)
 {
-	ctx->prev_pps_seq = g->pps_seq;
-	ctx->prev_freq_error = g->latest_freq_error;
-	ctx->prev_epoch_valid = g->phc_epoch_valid;
-	ctx->prev_aligned = g->phc_aligned;
 	ctx->prev_continuity = READ_ONCE(g->discipline_continuity_ready);
-	ctx->prev_gm_locked = READ_ONCE(g->discipline_gm_locked);
-	ctx->prev_pending_anchor = g->pending_future_anchor;
-	ctx->prev_pps_valid = g->pps_valid;
 	ctx->prev_reacquire_pending = g->discipline_reacquire_pending;
-	ctx->prev_pps_cap64 = g->pps_icr1_last64;
-	ctx->prev_reacquire_cap64 = g->discipline_reacquire_cap64;
+	ctx->prev_pre_blackout_delta = g->discipline_pre_blackout_delta;
 	ctx->prev_last_pps_jiffies = g->last_pps_jiffies;
 	ctx->preserved_dac = (g->current_dac_value >= DAC_MIN_VALUE &&
 			      g->current_dac_value <= DAC_MAX_VALUE) ?
 		g->current_dac_value : clamp(g->dac_target, DAC_MIN_VALUE,
 					       DAC_MAX_VALUE);
-	ctx->changed = g->pps_valid || g->if2_valid || g->phc_epoch_valid ||
-		g->pending_future_anchor || g->pps_seq ||
-		ctx->prev_continuity || ctx->prev_gm_locked ||
-		g->discipline_lock_streak || g->latest_freq_error ||
-		g->error_integrator;
+}
+
+static const char *gpt_reset_type_name(enum gpt_reset_type type)
+{
+	switch (type) {
+	case GPT_RESET_COLD_START:
+		return "cold_start";
+	case GPT_RESET_HOLDOVER:
+		return "holdover";
+	case GPT_RESET_SESSION:
+		return "session";
+	default:
+		return "unknown";
+	}
 }
 
 static void gpt_reset_timing_session_domain_locked(struct fusion_gpt *g)
@@ -549,24 +511,26 @@ static void gpt_reset_model_domain_locked(struct fusion_gpt *g)
 	g->discipline_model_valid = false;
 }
 
-static void gpt_reset_control_domain_locked(struct fusion_gpt *g,
-					    const struct gpt_reset_runtime_ctx *ctx,
-					    const struct gpt_reset_spec *spec)
+static void gpt_reset_pps_capture_ring_locked(struct fusion_gpt *g)
 {
-	bool keep_continuity = spec->preserve_continuity_for_reacquire &&
-		((ctx->prev_continuity && ctx->prev_pps_valid) ||
-		 ctx->prev_reacquire_pending);
+	memset(g->pps_capture_ring, 0, sizeof(g->pps_capture_ring));
+	g->pps_capture_head = 0;
+	g->pps_capture_count = 0;
+}
 
+static void gpt_reset_control_domain_locked(struct fusion_gpt *g)
+{
 	g->latest_freq_error = 0;
 	g->error_integrator = 0;
 	g->sq_err_sum = 0;
 	g->err_count = 0;
-	g->discipline_reacquire_pending = keep_continuity;
-	g->discipline_reacquire_cap64 = keep_continuity ?
-		(ctx->prev_reacquire_pending ?
-		 ctx->prev_reacquire_cap64 : ctx->prev_pps_cap64) : 0;
-	g->discipline_reacquire_jump_pending = keep_continuity;
-	WRITE_ONCE(g->discipline_continuity_ready, keep_continuity);
+	g->discipline_reacquire_pending = false;
+	g->discipline_pre_blackout_delta = 0;
+	g->discipline_post_return_cap64 = 0;
+	g->discipline_post_return_capture_count = 0;
+	g->discipline_reacquire_jump_available = false;
+	g->discipline_holdover_active = false;
+	WRITE_ONCE(g->discipline_continuity_ready, false);
 	WRITE_ONCE(g->discipline_gm_locked, false);
 	g->discipline_lock_streak = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
@@ -574,63 +538,115 @@ static void gpt_reset_control_domain_locked(struct fusion_gpt *g,
 	g->discipline_model_jump_consumed = false;
 }
 
-static void gpt_apply_dac_baseline_policy_locked(struct fusion_gpt *g,
-						 const struct gpt_reset_runtime_ctx *ctx,
-						 const struct gpt_reset_spec *spec)
+static bool gpt_delta_is_valid_interval(u64 delta)
 {
-	if (spec->preserve_dac_baseline) {
-		if (spec->queue_dac_restore_work) {
-			g->dac_target = ctx->preserved_dac;
-			g->current_dac_value = DAC_INVALID_VALUE;
-			g->baseline_restore_pending = true;
-			g->baseline_restore_reason = spec->dac_restore_reason;
-		} else {
-			g->baseline_restore_pending = false;
-			g->baseline_restore_reason = GPT_DAC_RESTORE_REASON_NONE;
-		}
-		return;
-	}
+	long err;
 
-	gpt_init_dac_baseline_locked(g);
-	g->baseline_restore_pending = false;
-	g->baseline_restore_reason = GPT_DAC_RESTORE_REASON_NONE;
+	if (!delta)
+		return false;
+
+	err = (long)delta - (long)PPS_TICKS;
+	return abs(err) <= READ_ONCE(max_valid_pps_error_param);
+}
+
+static void gpt_log_holdover_enter_locked(struct fusion_gpt *g)
+{
+	if (g->discipline_holdover_active)
+		return;
+
+	g->discipline_holdover_active = true;
+	pr_info("fusion_gpt: holdover_enter pre_blackout_delta=%llu dac=%d model_valid=%u\n",
+		g->discipline_pre_blackout_delta, g->dac_target,
+		g->discipline_model_valid ? 1U : 0U);
+}
+
+static void gpt_arm_holdover_validation_locked(struct fusion_gpt *g,
+					       const struct gpt_reset_runtime_ctx *ctx)
+{
+	bool keep_continuity = (ctx->prev_continuity || ctx->prev_reacquire_pending) &&
+		gpt_delta_is_valid_interval(ctx->prev_pre_blackout_delta);
+
+	g->latest_freq_error = 0;
+	g->error_integrator = 0;
+	g->discipline_pre_blackout_delta = ctx->prev_pre_blackout_delta;
+	g->discipline_post_return_cap64 = 0;
+	g->discipline_post_return_capture_count = 0;
+	g->discipline_reacquire_pending = keep_continuity;
+	g->discipline_reacquire_jump_available = false;
+	g->discipline_model_jump_ready = false;
+	g->discipline_model_jump_consumed = false;
+	g->discipline_lock_streak = 0;
+	WRITE_ONCE(g->discipline_gm_locked, false);
+	WRITE_ONCE(g->discipline_continuity_ready, keep_continuity);
+
+	if (keep_continuity)
+		gpt_log_holdover_enter_locked(g);
+	else
+		g->discipline_holdover_active = false;
+}
+
+static void gpt_apply_preserved_dac_locked(struct fusion_gpt *g,
+					   const struct gpt_reset_runtime_ctx *ctx,
+					   enum gpt_dac_restore_reason reason,
+					   bool queue_dac_restore_work)
+{
+	if (queue_dac_restore_work) {
+		g->dac_target = ctx->preserved_dac;
+		g->current_dac_value = DAC_INVALID_VALUE;
+		g->baseline_restore_pending = true;
+		g->baseline_restore_reason = reason;
+	} else {
+		g->baseline_restore_pending = false;
+		g->baseline_restore_reason = GPT_DAC_RESTORE_REASON_NONE;
+	}
 }
 
 static void gpt_apply_simulation_policy_locked(struct fusion_gpt *g,
-					       const struct gpt_reset_spec *spec)
+					       const struct gpt_reset_request *request)
 {
 	unsigned long suppress_until = 0;
 
-	if (spec->simulate_pps_gap)
+	if (request->simulate_pps_gap)
 		suppress_until = jiffies +
 			msecs_to_jiffies(READ_ONCE(timing_reset_sim_duration_ms_param));
 
 	g->pps_suppress_until_jiffies = suppress_until;
 }
 
-static void gpt_apply_reset_profile_locked(struct fusion_gpt *g,
+static void gpt_apply_reset_request_locked(struct fusion_gpt *g,
 					   const struct gpt_reset_runtime_ctx *ctx,
-					   const struct gpt_reset_spec *spec)
+					   const struct gpt_reset_request *request)
 {
-	if (spec->reset_timing_session_domain)
+	switch (request->type) {
+	case GPT_RESET_COLD_START:
 		gpt_reset_timing_session_domain_locked(g);
-
-	gpt_apply_simulation_policy_locked(g, spec);
-
-	if (spec->reset_model_domain)
+		gpt_reset_control_domain_locked(g);
+		gpt_reset_pps_capture_ring_locked(g);
 		gpt_reset_model_domain_locked(g);
+		gpt_init_dac_baseline_locked(g);
+		g->baseline_restore_pending = false;
+		g->baseline_restore_reason = GPT_DAC_RESTORE_REASON_NONE;
+		break;
+	case GPT_RESET_HOLDOVER:
+		gpt_reset_timing_session_domain_locked(g);
+		gpt_arm_holdover_validation_locked(g, ctx);
+		if (READ_ONCE(g->discipline_continuity_ready) ||
+		    g->discipline_reacquire_pending)
+			g->last_pps_jiffies = ctx->prev_last_pps_jiffies;
+		gpt_apply_preserved_dac_locked(g, ctx, request->dac_restore_reason,
+					       request->queue_dac_restore_work);
+		break;
+	case GPT_RESET_SESSION:
+	default:
+		gpt_reset_timing_session_domain_locked(g);
+		gpt_reset_control_domain_locked(g);
+		gpt_reset_pps_capture_ring_locked(g);
+		gpt_apply_preserved_dac_locked(g, ctx, request->dac_restore_reason,
+					       request->queue_dac_restore_work);
+		break;
+	}
 
-	if (spec->reset_control_domain)
-		gpt_reset_control_domain_locked(g, ctx, spec);
-
-	if (spec->preserve_last_pps_jiffies_on_reacquire &&
-	    (READ_ONCE(g->discipline_continuity_ready) ||
-	     g->discipline_reacquire_pending))
-		g->last_pps_jiffies = ctx->prev_last_pps_jiffies;
-
-	if (spec->reset_control_domain || !spec->preserve_dac_baseline ||
-	    spec->queue_dac_restore_work)
-		gpt_apply_dac_baseline_policy_locked(g, ctx, spec);
+	gpt_apply_simulation_policy_locked(g, request);
 }
 
 static struct fusion_gpt *fusion_gpt_get_locked(void)
@@ -873,7 +889,7 @@ int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status)
 }
 EXPORT_SYMBOL(fusion_gpt_get_timing_status);
 
-static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
+static int fusion_gpt_apply_reset_request(const struct gpt_reset_request *request)
 {
 	struct fusion_gpt *g;
 	unsigned long flags;
@@ -886,33 +902,19 @@ static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
 	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	raw_spin_lock(&g->ctrl_lock);
 	gpt_capture_reset_runtime_ctx_locked(g, &ctx);
-	gpt_apply_reset_profile_locked(g, &ctx, spec);
+	gpt_apply_reset_request_locked(g, &ctx, request);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset profile=%s domains{timing_session=%u control=%u model=%u simulation=%u} preserve{continuity=%u last_pps_jiffies=%u model_history=%u dac_baseline=%u} dac_restore=%s\n",
-		spec->profile_name,
-		spec->reset_timing_session_domain ? 1U : 0U,
-		spec->reset_control_domain ? 1U : 0U,
-		spec->reset_model_domain ? 1U : 0U,
-		spec->simulate_pps_gap ? 1U : 0U,
-		spec->preserve_continuity_for_reacquire ? 1U : 0U,
-		spec->preserve_last_pps_jiffies_on_reacquire ? 1U : 0U,
-		spec->preserve_model_history ? 1U : 0U,
-		spec->preserve_dac_baseline ? 1U : 0U,
-		gpt_dac_restore_reason_name(spec->dac_restore_reason));
-	if (spec->simulate_pps_gap) {
-		if (spec->reset_timing_session_domain || spec->reset_control_domain ||
-		    spec->reset_model_domain)
-			pr_info("fusion_gpt: simulating PPS gap for %u ms after profile=%s\n",
-				READ_ONCE(timing_reset_sim_duration_ms_param),
-				spec->profile_name);
-		else
-			pr_info("fusion_gpt: simulating PPS gap only for %u ms profile=%s\n",
-				READ_ONCE(timing_reset_sim_duration_ms_param),
-				spec->profile_name);
-	}
-	if (spec->queue_dac_restore_work)
+	pr_info("fusion_gpt: reset type=%s simulate_pps_gap=%u dac_restore=%s\n",
+		gpt_reset_type_name(request->type),
+		request->simulate_pps_gap ? 1U : 0U,
+		gpt_dac_restore_reason_name(request->dac_restore_reason));
+	if (request->simulate_pps_gap)
+		pr_info("fusion_gpt: pps_gap_sim duration_ms=%u reset_type=%s\n",
+			READ_ONCE(timing_reset_sim_duration_ms_param),
+			gpt_reset_type_name(request->type));
+	if (request->queue_dac_restore_work)
 		schedule_work(&g->dac_work);
 	fusion_gpt_put_locked(g);
 	return 0;
@@ -920,19 +922,40 @@ static int fusion_gpt_apply_reset_profile(const struct gpt_reset_spec *spec)
 
 int fusion_gpt_reset_timing_state(void)
 {
-	return fusion_gpt_apply_reset_profile(&GPT_RESET_PROFILE_TIMING_STATE);
+	return fusion_gpt_apply_reset_request(&GPT_RESET_REQUEST_HOLDOVER);
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_state);
 
 int fusion_gpt_reset_timing_session(void)
 {
-	return fusion_gpt_apply_reset_profile(&GPT_RESET_PROFILE_TIMING_SESSION);
+	return fusion_gpt_apply_reset_request(&GPT_RESET_REQUEST_SESSION);
 }
 EXPORT_SYMBOL(fusion_gpt_reset_timing_session);
 
 static int fusion_gpt_simulate_pps_gap_only(void)
 {
-	return fusion_gpt_apply_reset_profile(&GPT_RESET_PROFILE_PPS_GAP_ONLY);
+	struct fusion_gpt *g;
+	unsigned long flags;
+	unsigned int duration_ms = READ_ONCE(timing_reset_sim_duration_ms_param);
+
+	g = fusion_gpt_get_locked();
+	if (!g)
+		return -ENODEV;
+
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock(&g->ctrl_lock);
+	g->pps_suppress_until_jiffies = duration_ms ?
+		jiffies + msecs_to_jiffies(duration_ms) : 0;
+	if (duration_ms && READ_ONCE(g->discipline_continuity_ready) &&
+	    gpt_delta_is_valid_interval(g->discipline_pre_blackout_delta))
+		gpt_log_holdover_enter_locked(g);
+	raw_spin_unlock(&g->ctrl_lock);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	pr_info("fusion_gpt: pps_gap_sim duration_ms=%u reset_type=none\n",
+		duration_ms);
+	fusion_gpt_put_locked(g);
+	return 0;
 }
 
 u64 fusion_gpt_read_phc_ns(void)
@@ -1059,43 +1082,126 @@ static bool gpt_is_valid_pps_interval(long freq_error)
 	return abs(freq_error) <= READ_ONCE(max_valid_pps_error_param);
 }
 
-static void gpt_update_discipline_state_locked(struct fusion_gpt *g, u64 cap64,
-					       bool have_freq_error,
-					       bool valid_pps_interval,
-					       long freq_error)
+static u64 gpt_abs_diff_u64(u64 a, u64 b)
+{
+	return (a >= b) ? (a - b) : (b - a);
+}
+
+static void gpt_push_pps_capture_locked(struct fusion_gpt *g, u64 cap64)
+{
+	g->pps_capture_ring[g->pps_capture_head] = cap64;
+	g->pps_capture_head = (g->pps_capture_head + 1) % PPS_CAPTURE_RING_SIZE;
+	if (g->pps_capture_count < PPS_CAPTURE_RING_SIZE)
+		g->pps_capture_count++;
+}
+
+static void gpt_record_valid_pps_interval_locked(struct fusion_gpt *g,
+						 u64 prev_cap64, u64 cap64)
+{
+	if (!g->pps_capture_count)
+		gpt_push_pps_capture_locked(g, prev_cap64);
+	gpt_push_pps_capture_locked(g, cap64);
+	g->discipline_pre_blackout_delta = cap64 - prev_cap64;
+}
+
+static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64,
+					    const char *reason)
+{
+	if (!READ_ONCE(g->discipline_continuity_ready) ||
+	    !gpt_delta_is_valid_interval(g->discipline_pre_blackout_delta))
+		return false;
+
+	gpt_log_holdover_enter_locked(g);
+	g->discipline_reacquire_pending = true;
+	g->discipline_post_return_cap64 = cap64;
+	g->discipline_post_return_capture_count = 1;
+	g->discipline_reacquire_jump_available = false;
+	g->discipline_model_jump_consumed = false;
+	g->discipline_lock_streak = 0;
+	WRITE_ONCE(g->discipline_gm_locked, false);
+	pr_info("fusion_gpt: reacquire_wait reason=%s pre_delta=%llu first_cap=%llu dac=%d\n",
+		reason, g->discipline_pre_blackout_delta, cap64, g->dac_target);
+
+	return true;
+}
+
+static bool gpt_update_reacquire_state_locked(struct fusion_gpt *g, u64 cap64,
+					      bool have_freq_error,
+					      bool valid_pps_interval)
+{
+	u64 pre_delta;
+	u64 post_delta = 0;
+	u64 delta_diff = 0;
+	u32 threshold = READ_ONCE(reacquire_delta_threshold_param);
+	const char *reason = "none";
+	bool pre_valid;
+	bool post_valid = false;
+	bool matched = false;
+
+	if (!g->discipline_reacquire_pending)
+		return false;
+
+	if (!g->discipline_post_return_capture_count) {
+		g->discipline_post_return_cap64 = cap64;
+		g->discipline_post_return_capture_count = 1;
+		WRITE_ONCE(g->discipline_gm_locked, false);
+		g->discipline_lock_streak = 0;
+		pr_info("fusion_gpt: reacquire_wait reason=first_post_return pre_delta=%llu first_cap=%llu dac=%d\n",
+			g->discipline_pre_blackout_delta, cap64, g->dac_target);
+		return true;
+	}
+
+	pre_delta = g->discipline_pre_blackout_delta;
+	pre_valid = gpt_delta_is_valid_interval(pre_delta);
+	if (have_freq_error) {
+		post_delta = cap64 - g->discipline_post_return_cap64;
+		post_valid = valid_pps_interval &&
+			gpt_delta_is_valid_interval(post_delta);
+	}
+
+	if (!pre_valid) {
+		reason = "invalid_pre_delta";
+	} else if (!post_valid) {
+		reason = "invalid_post_delta";
+	} else {
+		delta_diff = gpt_abs_diff_u64(post_delta, pre_delta);
+		if (delta_diff <= threshold)
+			matched = true;
+		else
+			reason = "delta_mismatch";
+	}
+
+	g->discipline_reacquire_pending = false;
+	g->discipline_post_return_cap64 = 0;
+	g->discipline_post_return_capture_count = 0;
+	WRITE_ONCE(g->discipline_gm_locked, false);
+
+	if (matched) {
+		WRITE_ONCE(g->discipline_continuity_ready, true);
+		g->discipline_reacquire_jump_available = false;
+		g->discipline_holdover_active = false;
+		pr_info("fusion_gpt: reacquire_valid pre_delta=%llu post_delta=%llu diff=%llu threshold=%u dac=%d\n",
+			pre_delta, post_delta, delta_diff, threshold, g->dac_target);
+		return false;
+	}
+
+	WRITE_ONCE(g->discipline_continuity_ready, false);
+	g->discipline_reacquire_jump_available = post_valid;
+	g->discipline_holdover_active = false;
+	g->discipline_lock_streak = 0;
+	pr_warn("fusion_gpt: reacquire_invalid reason=%s pre_delta=%llu post_delta=%llu diff=%llu threshold=%u dac=%d\n",
+		reason, pre_delta, post_delta, delta_diff, threshold, g->dac_target);
+	return false;
+}
+
+static void gpt_update_lock_state_locked(struct fusion_gpt *g,
+					 bool have_freq_error,
+					 bool valid_pps_interval,
+					 long freq_error)
 {
 	u32 thresh = READ_ONCE(error_thresh_param);
 	u32 needed = max_t(u32, 1, DISCIPLINE_LOCK_CONSECUTIVE);
 	long abs_err;
-
-	if (g->discipline_reacquire_pending) {
-		long reacquire_error =
-			gpt_compute_freq_error(cap64, g->discipline_reacquire_cap64);
-		bool reacquire_valid_pps_interval =
-			gpt_is_valid_pps_interval(reacquire_error);
-
-		g->discipline_reacquire_pending = false;
-		g->discipline_reacquire_cap64 = 0;
-		abs_err = abs(reacquire_error);
-
-		if (!reacquire_valid_pps_interval || abs_err >= thresh) {
-			WRITE_ONCE(g->discipline_continuity_ready, false);
-			WRITE_ONCE(g->discipline_gm_locked, false);
-			g->discipline_reacquire_jump_pending = false;
-			g->discipline_lock_streak = 0;
-			pr_warn("fusion_gpt: discipline continuity lost on reacquire err=%ld thresh=%u valid=%u max_valid_err=%u\n",
-				reacquire_error, thresh,
-				reacquire_valid_pps_interval ? 1U : 0U,
-				READ_ONCE(max_valid_pps_error_param));
-			return;
-		}
-
-		WRITE_ONCE(g->discipline_gm_locked, false);
-		g->discipline_lock_streak = 1;
-		pr_info("fusion_gpt: discipline continuity preserved on reacquire err=%ld thresh=%u lock_streak=%u\n",
-			reacquire_error, thresh, g->discipline_lock_streak);
-		return;
-	}
 
 	if (!have_freq_error)
 		return;
@@ -1118,8 +1224,8 @@ static void gpt_update_discipline_state_locked(struct fusion_gpt *g, u64 cap64,
 	if (!g->discipline_gm_locked && g->discipline_lock_streak >= needed) {
 		WRITE_ONCE(g->discipline_continuity_ready, true);
 		WRITE_ONCE(g->discipline_gm_locked, true);
-		pr_info("fusion_gpt: discipline GM locked (|err| < %u ticks for %u PPS) dac=%d\n",
-			thresh, needed, g->dac_target);
+		pr_info("fusion_gpt: gm_locked threshold=%u streak=%u dac=%d\n",
+			thresh, g->discipline_lock_streak, g->dac_target);
 	}
 }
 
@@ -1317,13 +1423,13 @@ static bool gpt_maybe_apply_reacquire_model_jump_locked(struct fusion_gpt *g,
 {
 	long abs_error = abs(freq_error);
 	u32 jump_min_error = READ_ONCE(model_jump_min_error_param);
+	int old_dac = g->dac_target;
 
-	if (!g->discipline_reacquire_jump_pending)
+	if (!g->discipline_reacquire_jump_available)
 		return false;
 
-	g->discipline_reacquire_jump_pending = false;
-	if (!g->discipline_model_valid || g->discipline_model_jump_consumed ||
-	    abs_error < jump_min_error)
+	g->discipline_reacquire_jump_available = false;
+	if (!g->discipline_model_valid || abs_error < jump_min_error)
 		return false;
 
 	g->discipline_model_jump_ready = true;
@@ -1338,9 +1444,10 @@ static bool gpt_maybe_apply_reacquire_model_jump_locked(struct fusion_gpt *g,
 	g->error_integrator = 0;
 	g->discipline_model_jump_ready = false;
 
-	pr_info("fusion_gpt: discipline reacquire model jump applied dac=%d from=%d err=%ld slope_q16=%d residual=%u span=%u\n",
-		g->dac_target, observed_dac, freq_error, g->model_slope_q16,
-		g->model_mean_abs_residual, g->model_dac_span);
+	pr_info("fusion_gpt: model_jump old_dac=%d observed_dac=%d predicted_dac=%d error=%ld residual=%u span=%u slope_q16=%d\n",
+		old_dac, observed_dac, g->dac_target, freq_error,
+		g->model_mean_abs_residual, g->model_dac_span,
+		g->model_slope_q16);
 
 	return true;
 }
@@ -1351,10 +1458,8 @@ static bool gpt_should_schedule_dac_work_locked(const struct fusion_gpt *g)
 		(g->dac_target != g->current_dac_value);
 }
 
-static void gpt_maybe_reset_diag_window_locked(struct fusion_gpt *g)
+static void gpt_advance_diag_window_locked(struct fusion_gpt *g)
 {
-	g->sq_err_sum = 0;
-	g->err_count = 0;
 	g->pps_diag_next_jiffies = jiffies + HZ;
 }
 
@@ -1369,6 +1474,7 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 	unsigned int elapsed_ms = 0;
 	bool expired = false;
 	bool gm_lock_expired = false;
+	bool continuity_at_gm_expire = false;
 
 	gm_lock_timeout_jiffies = msecs_to_jiffies(gm_lock_timeout_ms);
 	timeout_jiffies = timeout_ms ? msecs_to_jiffies(timeout_ms) : 0;
@@ -1381,6 +1487,10 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 	    time_after_eq(jiffies, last_pps + gm_lock_timeout_jiffies)) {
 		WRITE_ONCE(g->discipline_gm_locked, false);
 		g->discipline_lock_streak = 0;
+		continuity_at_gm_expire =
+			READ_ONCE(g->discipline_continuity_ready);
+		if (continuity_at_gm_expire)
+			gpt_log_holdover_enter_locked(g);
 		gm_lock_expired = true;
 	}
 	if (last_pps &&
@@ -1391,8 +1501,10 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 		WRITE_ONCE(g->discipline_continuity_ready, false);
 		WRITE_ONCE(g->discipline_gm_locked, false);
 		g->discipline_reacquire_pending = false;
-		g->discipline_reacquire_cap64 = 0;
-		g->discipline_reacquire_jump_pending = false;
+		g->discipline_post_return_cap64 = 0;
+		g->discipline_post_return_capture_count = 0;
+		g->discipline_reacquire_jump_available = false;
+		g->discipline_holdover_active = false;
 		g->discipline_lock_streak = 0;
 		elapsed_ms = jiffies_to_msecs(jiffies - last_pps);
 		expired = true;
@@ -1402,10 +1514,10 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
 	if (gm_lock_expired)
-		pr_info("fusion_gpt: discipline GM lock expired after %u ms without PPS\n",
-			gm_lock_timeout_ms);
+		pr_info("fusion_gpt: gm_lock_expired timeout_ms=%u continuity=%u\n",
+			gm_lock_timeout_ms, continuity_at_gm_expire ? 1U : 0U);
 	if (expired)
-		pr_warn("fusion_gpt: discipline holdover expired after %u ms without PPS (timeout=%u ms)\n",
+		pr_warn("fusion_gpt: holdover_expired elapsed_ms=%u timeout_ms=%u\n",
 			elapsed_ms, timeout_ms);
 }
 
@@ -1462,6 +1574,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		long i_term_log = 0;
 		long integrator_log = 0;
 		bool model_jump_log = false;
+		bool wait_for_reacquire_interval = false;
+		bool invalid_interval_armed_reacquire = false;
 		int observed_dac = DAC_INVALID_VALUE;
 		bool model_valid_log = false;
 		bool model_jump_consumed_log = false;
@@ -1482,45 +1596,60 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				diff = cap64 - prev_cap64;
 				freq_error = gpt_compute_freq_error(cap64, prev_cap64);
 				valid_pps_interval = gpt_is_valid_pps_interval(freq_error);
+			}
 
-				if (valid_pps_interval) {
-					rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
-					observed_dac = gpt_get_observed_dac_locked(g);
-					model_jump_log = gpt_maybe_apply_reacquire_model_jump_locked(g,
+			if (g->discipline_reacquire_pending) {
+				wait_for_reacquire_interval =
+					gpt_update_reacquire_state_locked(g, cap64,
+									  have_freq_error,
+									  valid_pps_interval);
+			} else if (had_prev && !valid_pps_interval) {
+				invalid_interval_armed_reacquire =
+					gpt_begin_reacquire_wait_locked(g, cap64,
+									"invalid_interval");
+				wait_for_reacquire_interval =
+					invalid_interval_armed_reacquire;
+			}
+
+			if (had_prev && valid_pps_interval &&
+			    !wait_for_reacquire_interval) {
+				rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
+				observed_dac = gpt_get_observed_dac_locked(g);
+				model_jump_log = gpt_maybe_apply_reacquire_model_jump_locked(g,
 									     observed_dac,
 									     freq_error);
-					if (!model_jump_log)
-						gpt_pi_step_locked(g, freq_error, &p_term_log,
-								   &i_term_log,
-								   &integrator_log);
-					gpt_store_model_sample_locked(g, observed_dac, freq_error);
-					gpt_fit_jump_model_locked(g);
-					integrator_log = g->error_integrator;
-					g->latest_freq_error = freq_error;
-					dac_target = g->dac_target;
-					model_valid_log = g->discipline_model_valid;
-					model_jump_consumed_log =
-						g->discipline_model_jump_consumed;
-					model_mean_abs_residual_log = g->model_mean_abs_residual;
-					model_dac_span_log = g->model_dac_span;
-					model_predicted_dac_log = g->model_predicted_dac;
-					need_dac_work = gpt_should_schedule_dac_work_locked(g);
-				}
+				if (!model_jump_log)
+					gpt_pi_step_locked(g, freq_error, &p_term_log,
+							   &i_term_log,
+							   &integrator_log);
+				gpt_store_model_sample_locked(g, observed_dac, freq_error);
+				gpt_fit_jump_model_locked(g);
+				gpt_record_valid_pps_interval_locked(g, prev_cap64, cap64);
+				gpt_update_lock_state_locked(g, have_freq_error,
+							     valid_pps_interval,
+							     freq_error);
+				integrator_log = g->error_integrator;
+				g->latest_freq_error = freq_error;
+				model_valid_log = g->discipline_model_valid;
+				model_jump_consumed_log =
+					g->discipline_model_jump_consumed;
+				model_mean_abs_residual_log = g->model_mean_abs_residual;
+				model_dac_span_log = g->model_dac_span;
+				model_predicted_dac_log = g->model_predicted_dac;
+				need_dac_work = gpt_should_schedule_dac_work_locked(g);
 			}
-			gpt_update_discipline_state_locked(g, cap64, have_freq_error,
-							   valid_pps_interval,
-							   freq_error);
+			dac_target = g->dac_target;
 			continuity_ready_log = READ_ONCE(g->discipline_continuity_ready);
 			gm_locked_log = READ_ONCE(g->discipline_gm_locked);
 			if (had_prev) {
 				do_pps_log = READ_ONCE(pps_debug_param);
 				if (valid_pps_interval)
-					gpt_maybe_reset_diag_window_locked(g);
+					gpt_advance_diag_window_locked(g);
 			}
 			raw_spin_unlock(&g->ctrl_lock);
 
 			if (had_prev) {
-				if (!valid_pps_interval)
+				if (!valid_pps_interval && !invalid_interval_armed_reacquire)
 					pr_warn_ratelimited("fusion_gpt: ignoring invalid PPS interval diff=%llu err=%ld max_valid_err=%u\n",
 							    diff, freq_error,
 							    READ_ONCE(max_valid_pps_error_param));
@@ -1658,10 +1787,13 @@ static int gpt_start(struct fusion_gpt *g)
 		struct gpt_reset_runtime_ctx ctx;
 
 		gpt_capture_reset_runtime_ctx_locked(g, &ctx);
-		gpt_apply_reset_profile_locked(g, &ctx, &GPT_RESET_PROFILE_COLD_START);
+		gpt_apply_reset_request_locked(g, &ctx, &GPT_RESET_REQUEST_COLD_START);
 	}
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
+
+	pr_info("fusion_gpt: reset type=%s simulate_pps_gap=0 dac_restore=none\n",
+		gpt_reset_type_name(GPT_RESET_COLD_START));
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
 	wrl(g, g->next_ocr1, GPT_OCR1);
