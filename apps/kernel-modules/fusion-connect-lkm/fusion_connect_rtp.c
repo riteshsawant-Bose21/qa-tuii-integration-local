@@ -16,6 +16,31 @@
 #include "fusion_connect_metrics.h"
 
 #define TIMER_BASE_INTERVAL_NS 333333
+static inline u64 fusion_cn_fc_snap_time(u64 time_ns)
+{
+    u64 ns_from_ms_boundary = time_ns % NSEC_PER_MSEC;
+
+    time_ns -= ns_from_ms_boundary;
+    if (ns_from_ms_boundary == 0)
+        return time_ns;
+    if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS)
+        return time_ns + TIMER_BASE_INTERVAL_NS;
+    if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS)
+        return time_ns + 2 * TIMER_BASE_INTERVAL_NS;
+
+    return time_ns + NSEC_PER_MSEC;
+}
+
+static inline u64 fusion_cn_fc_advance_time(u64 action_time)
+{
+    u64 ns_from_ms_boundary = action_time % NSEC_PER_MSEC;
+
+    if (ns_from_ms_boundary == (2 * TIMER_BASE_INTERVAL_NS))
+        return action_time + TIMER_BASE_INTERVAL_NS + 1;
+
+    return action_time + TIMER_BASE_INTERVAL_NS;
+}
+
 #define HASH_KEY(handle) hash_64(handle, FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_UC(ip, port) hash_64(((u64)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_MC(ip) hash_64((u64)(ip), FUSION_CN_RTP_HASH_BITS)
@@ -557,7 +582,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     u32 write_slot, buf_offset;
     u64 current_sac, global_sac;
     u32 packet_sac;
-    u64 current_phc_ns, ns_from_ms_boundary, reconstructed_phc_ns, sched_playout_ns;
+    u64 current_phc_ns, reconstructed_phc_ns, sched_playout_ns;
     int sample_physical_width_bits;
 
     bool marker, malformed, duplicate, reorder = false, late;
@@ -658,18 +683,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
 
-            if (stream->info.is_fusion_connect) {
-                ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
-                reconstructed_phc_ns -= ns_from_ms_boundary;
-                if (ns_from_ms_boundary == 0) {
-                } else if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += TIMER_BASE_INTERVAL_NS;
-                } else if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += 2 * TIMER_BASE_INTERVAL_NS;
-                } else {
-                    reconstructed_phc_ns += NSEC_PER_MSEC;
-                }
-            }
+            if (stream->info.is_fusion_connect)
+                reconstructed_phc_ns = fusion_cn_fc_snap_time(reconstructed_phc_ns);
 
             sched_playout_ns = reconstructed_phc_ns + stream->info.playout_delay;
             late = (sched_playout_ns <= current_phc_ns);
@@ -714,8 +729,15 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             }
 
             stream->next_action_times[write_slot] = sched_playout_ns;
-            if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
+            if (stream->info.is_fusion_connect &&
+                stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                u64 next_action_time = fusion_cn_fc_advance_time(stream->next_action_times[write_slot]);
+
+                if (stream->next_action_time < next_action_time)
+                    stream->next_action_time = next_action_time;
+            } else if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time)) {
                 stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
+            }
             
             stream->current_seq_num = seq_num;
 
