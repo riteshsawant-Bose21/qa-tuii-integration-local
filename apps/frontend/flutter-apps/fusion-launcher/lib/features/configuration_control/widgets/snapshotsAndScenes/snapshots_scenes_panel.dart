@@ -52,7 +52,8 @@ class SnapshotsScenesPanel extends StatelessWidget {
                     return SnapshotVcPanel(
                       isDesignMode: !serviceLocator<ProjectViewModel>().isInControlMode,
                       controllerID: state.selectedControllerId ?? "",
-                      selectedSnapShotId: snapState.selectedSnapshotPageId ?? "",
+                      selectedSnapShotId: snapState.selectedSnapshotPageId,
+                      selectedSceneSetId: snapState.selectedSceneSetId,
                       vipAddress: serviceLocator<ProjectViewModel>().virtualIP ?? "192.168.0.100",
                       config: serviceLocator<ProjectViewModel>().getWallControllerConfig(),
                     );

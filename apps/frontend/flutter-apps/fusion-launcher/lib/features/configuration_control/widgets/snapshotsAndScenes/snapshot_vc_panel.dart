@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
-import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Right panel — Virtual Controller (snapshot/scene tab).
@@ -9,12 +8,14 @@ class SnapshotVcPanel extends StatefulWidget {
   final String controllerID;
   final String vipAddress;
   final String? selectedSnapShotId;
+  final String? selectedSceneSetId;
   final bool isDesignMode;
   final WallControllerConfig config;
   const SnapshotVcPanel({
     super.key,
     this.isDesignMode = true,
     this.selectedSnapShotId,
+    this.selectedSceneSetId,
     required this.controllerID,
     required this.vipAddress,
     required this.config,
@@ -26,6 +27,9 @@ class SnapshotVcPanel extends StatefulWidget {
 
 class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
   WallController? controller;
+  WallPages? wallPages;
+  bool isLoading = false;
+  int? selectedIndex;
   //final List<WallPages> _pages = <WallPages>[];
   // @override
   // void initState() {
@@ -61,7 +65,7 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
                     .snapshotAndScenesTabVirtualControllerHeader,
             title: 'VIRTUAL CONTROLLER',
           ),
-          Expanded(child: _buildContent(context, getWallPages())),
+          Expanded(child: _buildContent(context)),
         ],
       ),
     );
@@ -78,47 +82,32 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
 
     if (controller != null) {
       final List<WallPages> pages = controller!.pages;
-      final List<WallPageSnapshot> wallPageSnapshots =
-          pages
-              .where(
-                (WallPages page) => page.pageId == widget.selectedSnapShotId,
-              )
-              .expand(
-                (WallPages page) => page.snapshotsList,
-              )
-              .toList();
-
-      filteredSnapshots.addAll(
-        wallPageSnapshots
-            .map(
-              (WallPageSnapshot snap) => SnapshotsModel(
-                id: snap.id,
-                name: snap.name,
-              ),
-            )
-            .toList(),
+      final String filterId = widget.selectedSnapShotId ?? widget.selectedSceneSetId ?? "";
+      final WallPages filteredPages = pages.firstWhere(
+        (WallPages page) => page.pageId == filterId,
       );
+
+        wallPages = filteredPages;
+        filteredSnapshots.addAll(
+          filteredPages.snapshotsList
+              .map(
+                (WallPageSnapshot snap) =>
+                SnapshotsModel(
+                  id: snap.id,
+                  name: snap.name,
+                )
+          ).toList(),
+        );
+      selectedIndex = null ;
     }
 
     return filteredSnapshots;
   }
 
-  Widget _buildContent(BuildContext context, List<SnapshotsModel> snapshots) {
-    // String title;
-    // List<SnapshotsModel> snapshots;
-    //
-    // if (selectedSnapshotPageId != null) {
-    //   final WallPages? page = _findSnapshotPage(pages, selectedSnapshotPageId!);
-    //   title = page?.name ?? 'Snapshot Page';
-    //   snapshots = _resolveSnapshots(state, page);
-    // } else if (selectedSceneSetId != null) {
-    //   final SceneSetModel? sceneSet = _findSceneSet(widget.sceneSets,selectedSceneSetId!);
-    //   title = sceneSet?.name ?? 'Scene';
-    //   snapshots = widget.snapshotsInSceneSets[selectedSceneSetId] ?? <SnapshotsModel>[];
-    // } else {
-    //   title = 'Snapshots';
-    //   snapshots = <SnapshotsModel>[];
-    // }
+  Widget _buildContent(BuildContext context) {
+
+      final List<SnapshotsModel> snapshots = getWallPages();
+
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -144,7 +133,7 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
                   vertical: 16,
                 ),
                 child: FusionAppText(
-                  text: "title",
+                  text: wallPages?.name ?? "",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.textPrimary,
@@ -170,39 +159,9 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
               else
                 Expanded(
                   child: SnapshotsScreen(
-                    onSelected: (String snapShotId) async {
-                      final SnapshotActivateService snapshotActivateService =
-                          fusionLibLocator<SnapshotActivateService>();
-                      if (true) {
-                        try {
-                          final ResponseCallback<bool> result =
-                              await snapshotActivateService.activateSnapshot(
-                                vip: widget.vipAddress,
-                                name: snapShotId,
-                              );
-                          if (context.mounted) {
-                            if (result.success) {
-                              FusionToast.success(
-                                context,
-                                message: "Snapshot recalled successfully",
-                              );
-                            } else {
-                              FusionToast.error(
-                                context,
-                                message: "Failed to recall snapshot",
-                              );
-                            }
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            FusionToast.error(
-                              context,
-                              message: "Failed to recall snapshot",
-                            );
-                          }
-                        }
-                      }
-                    },
+                    vipAddress: widget.vipAddress,
+                    sceneSetId: widget.selectedSceneSetId,
+                    snapshotId: widget.selectedSnapShotId,
                     snapshots: snapshots,
                   ),
                 ),
