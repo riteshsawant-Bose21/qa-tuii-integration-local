@@ -8,9 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime/debug"
-	"runtime/pprof"
 	"strconv"
 	"strings"
 	"syscall"
@@ -108,29 +106,17 @@ func main() {
 
 	config := parseFlags()
 
-	if config.Profile {
-		// Create profile dump
-		timestamp := time.Now().Format("20060102_150405")
-		profilePath := filepath.Join("/tmp", fmt.Sprintf("fusion_server_cpu_%s.prof", timestamp))
-
-		f, err := os.Create(profilePath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create profile file: %v\n", err)
-			os.Exit(1)
-		}
-		defer f.Close()
-
-		// Start CPU profiling
-		fmt.Printf("Writing CPU profile to %s\n", profilePath)
-		if err := pprof.StartCPUProfile(f); err != nil {
-			fmt.Fprintf(os.Stderr, "could not start CPU profile: %v\n", err)
-			os.Exit(1)
-		}
-		defer pprof.StopCPUProfile()
-	}
-
 	app := app.NewApp(config)
 	defer app.Close()
+
+	if config.Profile {
+		profilePath, err := app.StartCPUProfile()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not start cpu profile: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Writing CPU profile to %s\n", profilePath)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

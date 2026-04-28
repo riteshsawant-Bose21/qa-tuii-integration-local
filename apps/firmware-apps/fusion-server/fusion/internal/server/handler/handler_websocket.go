@@ -47,7 +47,7 @@ func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Co
 		return createErrorResponse(&request.ID, api.WSCodeMissingField, "Missing required field: type"), nil
 	}
 
-	logger.Info("Processing WebSocket message: %s (ID: %s)", request.Type, request.ID)
+	logger.Debug("Processing WebSocket message: %s (ID: %s)", request.Type, request.ID)
 
 	// Route to appropriate handler based on message type
 	response, err := h.routeWebSocketMessageWithConn(&request, conn, server)

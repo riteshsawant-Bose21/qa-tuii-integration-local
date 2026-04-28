@@ -54,6 +54,11 @@ const (
 	DeviceReloadVIPEndpoint       = DeviceReloadEndpoint + "/vip"
 	DeviceReloadVIPStatusEndpoint = DeviceReloadVIPEndpoint + "/status"
 	DeviceIDEndpoint              = DeviceEndpoint + "/{id}"
+	DebugProfileEndpoint          = "/debug/profile"
+	DebugProfileHeapEndpoint      = DebugProfileEndpoint + "/heap"
+	DebugProfileStartEndpoint     = DebugProfileEndpoint + "/start"
+	DebugProfileStatusEndpoint    = DebugProfileEndpoint + "/status"
+	DebugProfileStopEndpoint      = DebugProfileEndpoint + "/stop"
 
 	DevicesEndpoint                    = "/devices"
 	DevicesIDEndpoint                  = DevicesEndpoint + "/{id}"
