@@ -340,7 +340,7 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/create_zone_popup/view/widgets/add_output_device_drawer.dart';
+import 'package:fusion_launcher/features/add_output_device_drawer/views/add_output_device_drawer.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../view_model/create_zone_viewmodel_state.dart';

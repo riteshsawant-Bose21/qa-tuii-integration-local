@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// A reusable right-side drawer dialog.
 ///
 /// Displays a titled panel that slides in from the right with user-provided
 /// content and an optional action button at the bottom.
 class FusionDrawer extends StatelessWidget {
-  FusionDrawer({
+  const FusionDrawer({
     required this.semanticId,
     super.key,
     this.title,
@@ -18,6 +19,7 @@ class FusionDrawer extends StatelessWidget {
     this.backgroundColor,
     this.buttonEnabledNotifier,
     this.header,
+    this.showBackButton = false,
   }) : assert(
          header != null || title != null,
          'Either a custom header or a title must be provided.',
@@ -50,6 +52,9 @@ class FusionDrawer extends StatelessWidget {
 
   /// Called when the action button is pressed.
   final VoidCallback? onButtonPressed;
+
+  /// When true, shows a back button instead of a close icon in the header.
+  final bool showBackButton;
 
   /// Called when the close icon is tapped. Defaults to popping the route.
   final VoidCallback? onClose;
@@ -129,6 +134,18 @@ class FusionDrawer extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
+            if (showBackButton) ...[
+              GestureDetector(
+                onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                child: FusionIcon.icon(
+                  semanticId: '${semanticId}_drawer_back_icon',
+                  LucideIcons.arrowLeft200,
+                  size: 16,
+                  color: context.colorScheme.iconWhite,
+                ),
+              ),
+              const SizedBox(width: 2),
+            ],
             Expanded(
               child: FusionAppText(
                 text: title!.toUpperCase(),
@@ -158,6 +175,7 @@ class FusionDrawer extends StatelessWidget {
     VoidCallback? onButtonPressed,
     Color? backgroundColor,
     ValueNotifier<bool>? buttonEnabledNotifier,
+    bool showBackButton = false,
   }) {
     assert(
       header != null || title != null,
@@ -185,6 +203,7 @@ class FusionDrawer extends StatelessWidget {
                 width: width,
                 buttonLabel: buttonLabel,
                 onButtonPressed: onButtonPressed,
+                showBackButton: showBackButton,
                 onClose: () => Navigator.of(ctx).pop(),
                 buttonEnabledNotifier: buttonEnabledNotifier,
               ),

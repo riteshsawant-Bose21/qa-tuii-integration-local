@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/widgets/CommonWidgets/zone_name_field_with_color.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import '../../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
-import '../../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
-import '../../view_model/create_zone_viewmodel.dart';
-import '../../view_model/create_zone_viewmodel_state.dart';
-import 'CommonWidgets/create_zone_bordered_textfield.dart';
-import 'CommonWidgets/create_zone_label_field.dart';
+
+import '../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
+import '../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
+import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
+import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
+import '../../create_zone_popup/view_model/create_zone_viewmodel.dart';
+import '../../create_zone_popup/view_model/create_zone_viewmodel_state.dart';
 
 enum OutputType {
   mediaRecorder,
@@ -61,6 +62,49 @@ class OutputDeviceFormData {
     required this.audioChannel,
     required this.connectionType,
   });
+}
+
+// ─── Public API ───────────────────────────────────────────────
+
+class AddOutputDeviceDrawer {
+  AddOutputDeviceDrawer._();
+
+  static Future<void> show({
+    required BuildContext context,
+    required String zoneColor,
+    required String zoneName,
+    required void Function(OutputDeviceFormData data) onSave,
+    required VoidCallback onBack,
+    required CreateZoneViewModel vm, // ← add this
+  }) {
+    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
+    OutputDeviceFormData? latestData;
+
+    return FusionDrawer.show<void>(
+      context: context,
+      semanticId: 'add_output_device',
+      title: 'Add Output Device',
+      showBackButton: true,
+      buttonLabel: 'Save',
+      buttonEnabledNotifier: saveEnabled,
+      onButtonPressed: () {
+        if (latestData != null) {
+          onSave(latestData!);
+          Navigator.of(context).maybePop();
+        }
+      },
+      header: _AddOutputDeviceHeader(onBack: onBack),
+      content: BlocProvider<CreateZoneViewModel>.value(
+        value: vm,
+        child: _AddOutputDeviceContent(
+          zoneColor: zoneColor,
+          zoneName: zoneName,
+          saveEnabledNotifier: saveEnabled,
+          onDataChanged: (OutputDeviceFormData? data) => latestData = data,
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Header: ← ADD OUTPUT DEVICE ·············· ✕ ───────────
@@ -283,48 +327,6 @@ class _AddOutputDeviceContentState extends State<_AddOutputDeviceContent> {
           setState(() => _connection = v);
           _onChanged();
         },
-      ),
-    );
-  }
-}
-
-// ─── Public API ───────────────────────────────────────────────
-
-class AddOutputDeviceDrawer {
-  AddOutputDeviceDrawer._();
-
-  static Future<void> show({
-    required BuildContext context,
-    required String zoneColor,
-    required String zoneName,
-    required void Function(OutputDeviceFormData data) onSave,
-    required VoidCallback onBack,
-    required CreateZoneViewModel vm, // ← add this
-  }) {
-    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
-    OutputDeviceFormData? _latestData;
-
-    return FusionDrawer.show<void>(
-      context: context,
-      semanticId: 'add_output_device',
-      title: 'Add Output Device',
-      buttonLabel: 'Save',
-      buttonEnabledNotifier: saveEnabled,
-      onButtonPressed: () {
-        if (_latestData != null) {
-          onSave(_latestData!);
-          Navigator.of(context).maybePop();
-        }
-      },
-      header: _AddOutputDeviceHeader(onBack: onBack),
-      content: BlocProvider<CreateZoneViewModel>.value(
-        value: vm,
-        child: _AddOutputDeviceContent(
-          zoneColor: zoneColor,
-          zoneName: zoneName,
-          saveEnabledNotifier: saveEnabled,
-          onDataChanged: (OutputDeviceFormData? data) => _latestData = data,
-        ),
       ),
     );
   }
