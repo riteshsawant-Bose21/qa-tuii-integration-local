@@ -44,6 +44,7 @@ var (
 	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
 	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
 	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+	corsWarningOnce    sync.Once
 )
 
 func getEnvOrDefault(key string, fallback string) string {
@@ -78,6 +79,7 @@ type App struct {
 	Hub                 *pubsub.Hub
 	discoveryReconciler *DiscoveryReconciler
 	vipEventCoordinator *VIPEventCoordinator
+	profiler            *cpuProfiler
 }
 
 // NewApp is a factory function to set up the application
@@ -144,6 +146,7 @@ func NewApp(config *api.AppConfig) *App {
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
 		Hub:               hub,
+		profiler:          newCPUProfiler(),
 	}
 	app.discoveryReconciler = NewDiscoveryReconciler(app)
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
@@ -153,6 +156,9 @@ func NewApp(config *api.AppConfig) *App {
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
+	if _, err := app.profiler.Stop(); err != nil {
+		app.Logger.Error("Failed to stop CPU profiler: %v", err)
+	}
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
@@ -373,6 +379,10 @@ func (app *App) setupPrivateRoutes() {
 
 	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
 	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
+	app.registerPrivateGET(routes.DebugProfileStatusEndpoint, app.HandleProfileStatus)
+	app.registerPrivatePOST(routes.DebugProfileHeapEndpoint, app.HandleHeapProfileCapture)
+	app.registerPrivatePOST(routes.DebugProfileStartEndpoint, app.HandleProfileStart)
+	app.registerPrivatePOST(routes.DebugProfileStopEndpoint, app.HandleProfileStop)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -773,9 +783,11 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // corsMiddleware adds CORS headers to all responses
 func corsMiddleware() mux.MiddlewareFunc {
-	logging.GetLogger().Warn(
-		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
-	)
+	corsWarningOnce.Do(func() {
+		logging.GetLogger().Warn(
+			"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+		)
+	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set CORS headers
