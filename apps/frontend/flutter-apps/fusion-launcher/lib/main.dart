@@ -23,6 +23,8 @@ import 'package:universal_platform/universal_platform.dart';
 import 'core/config/app_config.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 // import 'features/home/presentation/pages/launcher_home_page.dart';
+import 'features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
+import 'features/configuration_events/viewModel/events_viewmodel/config_events_viewmodel.dart';
 import 'features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import 'features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
@@ -146,6 +148,14 @@ class MyApp extends StatelessWidget {
 
         BlocProvider<ConfigSnapshotActionsViewModel>(
           create: (BuildContext context) => serviceLocator<ConfigSnapshotActionsViewModel>(),
+        ),
+
+        BlocProvider<ConfigEventsViewmodel>(
+          create: (BuildContext context) => serviceLocator<ConfigEventsViewmodel>(),
+        ),
+
+        BlocProvider<ConfigEventActionsViewmodel>(
+          create: (BuildContext context) => serviceLocator<ConfigEventActionsViewmodel>(),
         ),
       ],
       child: FusionThemeBuilder(
