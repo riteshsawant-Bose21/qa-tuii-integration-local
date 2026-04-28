@@ -29,7 +29,7 @@ class SnapshotsGroupsScreen extends StatelessWidget {
         childAspectRatio: 1.3
       ),
       itemBuilder: (context, index) {
-        return  SnapshotCard(title: items[index]);
+        return SnapshotCard(title: items[index]);
       },
     );
 

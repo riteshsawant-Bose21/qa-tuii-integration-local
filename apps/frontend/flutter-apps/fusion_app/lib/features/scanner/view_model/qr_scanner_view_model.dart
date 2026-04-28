@@ -20,6 +20,7 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
         super(QrInitial());
 
   final List<WallZone> _zones = [];
+  final List<WallPages> _pages = [];
 
   List<WallZone> get getZones =>_zones;
   String vipAddress = "";
@@ -96,12 +97,16 @@ class QrScannerViewModel extends Cubit<QrScannerState> {
           WallController? controller = schemaModel.controllers
               .firstWhereOrNull((ctrl) => ctrl.id == details.configId);
 
+
+
           if(controller == null){ //dead code itseems
             print("No Controllers Found");
             emit(QrError("Invalid QR Code"));
           }
 
-            zoneIds.addAll(controller?.zoneIds ?? []);
+          _pages.addAll(controller?.pages ?? []);
+
+          zoneIds.addAll(controller?.zoneIds ?? []);
 
 
           for (WallZone item in schemaModel.zones ?? []) {

@@ -4,12 +4,14 @@ class SnapshotSelectionCard extends StatelessWidget {
   final String title;
   final String label;
   final bool isSelected;
+  final bool isLoading;
   final VoidCallback onTap;
 
   const SnapshotSelectionCard({
     super.key,
     required this.title,
     required this.label,
+    required this.isLoading,
     required this.isSelected,
     required this.onTap,
   });
@@ -58,6 +60,11 @@ class SnapshotSelectionCard extends StatelessWidget {
             ),
 
             /// Radio / Check
+            (isLoading && isSelected) ? Container(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2,)
+            ):
             Container(
               width: 20,
               height: 20,

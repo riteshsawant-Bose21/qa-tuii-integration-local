@@ -1,6 +1,7 @@
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
+import '../../models/touch_ui_zone_config/touch_ui_zone_config.dart';
 
 /// Extension on [ProjectService] providing FusionController-specific data access.
 ///
@@ -277,9 +278,30 @@ extension ControllerService on ProjectService {
         /// Pages linked to this controller via controllerPages relationship.
         final List<ControllerPageModel> pages = getControllerPages(controller.id);
         final List<WallPages> controllerWallPages = <WallPages>[];
+        final List<WallMessagePlayer> controllerWallMessages = <WallMessagePlayer>[];
         for (final ControllerPageModel page in pages) {
-          // Skip message pages — they are not included in WallControllerConfig.
-          if (page.type == ControllerPageType.message) continue;
+          if (page.type == ControllerPageType.message) {
+            print('[WallMessagePlayer] id: ${page.id}, name: ${page.name}');
+
+            final List<WallMessage> wallMessages = getMessageIdsForPage(page.id).map((String id) {
+              final String? trigger = getMediaFileForMessage(id)?.triggerId;
+              final MessageModel? messageModel = messages.get(id);
+              return WallMessage(
+                id: messageModel?.id ?? id,
+                name: messageModel?.name ?? id,
+                trigger: trigger,
+              );
+            }).toList();
+
+            controllerWallMessages.add(
+              WallMessagePlayer(
+                id: page.id,
+                name: "Message Player",
+                messages: wallMessages,
+              ),
+            );
+            continue;
+          }
 
           final bool isSnapshotPage = page.type == ControllerPageType.snapshotPage;
 
@@ -312,6 +334,7 @@ extension ControllerService on ProjectService {
           type: type,
           zoneIds: getAssignedZoneIds(controller.id).toList(),
           pages: controllerWallPages,
+          messagePlayer: controllerWallMessages,
           schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
               ? WallSchedule(
                   showUpcoming: controller.showUpcoming,
@@ -348,5 +371,35 @@ extension ControllerService on ProjectService {
       controllers: wallControllers,
       zones: wallZones,
     );
+  }
+
+  /// Returns all zone data for Touch UI in the required format, including all zones in the project.
+  TouchUIZoneConfig getTouchUIZoneConfig() {
+    resetOnoCounter();
+    final List<Zone> allZones = zones.getAll();
+    final List<TouchUIZone> zonesList = <TouchUIZone>[];
+    for (final Zone zone in allZones) {
+      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
+      final List<TouchUIZoneSource> sourcesList = sources.asMap().entries.map((e) => TouchUIZoneSource(index: e.key + 1, name: e.value.name)).toList();
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: zone.id, includeUserBlocks: true);
+      final ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
+        (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+      );
+      zonesList.add(
+        TouchUIZone(
+          zoneId: zone.id,
+          zoneName: zone.name,
+          gain: TouchUIGainConfig(
+            id: processingBlockModel?.id ?? '',
+            min: 0,
+            max: 100,
+            defGain: 50,
+            defMute: false,
+          ),
+          sources: sourcesList,
+        ),
+      );
+    }
+    return TouchUIZoneConfig(zones: zonesList);
   }
 }

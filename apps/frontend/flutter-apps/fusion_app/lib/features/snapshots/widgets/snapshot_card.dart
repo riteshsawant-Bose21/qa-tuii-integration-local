@@ -14,7 +14,7 @@ class SnapshotCard extends StatelessWidget {
       onTap: (){
           Navigator.pushNamed(context, Routes.snapshotGroupPage,arguments: {
             "title": title,
-            "snapshots":[]
+            "snapshots":<SnapshotsModel>[]
           });
       },
       child: Container(
