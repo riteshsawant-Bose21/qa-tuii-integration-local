@@ -209,7 +209,7 @@ class _PeqBandSection extends StatelessWidget {
                             width: 60,
                             height: 35,
                             onChanged: (bool value) {
-                              controller.updateBypass(index, value);
+                              controller.updateBypass(index, !value);
                             },
                           ),
                         ),
