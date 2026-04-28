@@ -150,7 +150,7 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
         final String inUseVersion = state.fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice element) => element.isPrimary)?.primaryDeviceVersion ?? '';
         final String availableVersion = state.availableVersion?.trim() ?? '';
         final bool shouldShowAvailableVersion = state.updateAvailable && availableVersion.isNotEmpty;
-        final String headlineVersion = shouldShowAvailableVersion ? availableVersion : inUseVersion;
+        final String headlineVersion = shouldShowAvailableVersion ? (availableVersion.split("+").firstOrNull ?? '') : inUseVersion;
 
         return Padding(
           padding: const EdgeInsets.all(24),
@@ -523,7 +523,7 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
               children: <Widget>[
                 const Expanded(flex: 2, child: _TableHeaderText('STATUS')),
                 const Expanded(flex: 3, child: _TableHeaderText('SERIAL NUMBER')),
-                const Expanded(flex: 3, child: _TableHeaderText('NODE')),
+                const Expanded(flex: 3, child: _TableHeaderText('DEVICE')),
                 const Expanded(flex: 2, child: _TableHeaderText('STEP')),
                 Expanded(
                   flex: 4,
