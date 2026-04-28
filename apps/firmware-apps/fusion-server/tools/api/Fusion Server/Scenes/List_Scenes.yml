@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{api_url}}/scenes/list"
+  url: "{{api_url}}/scenes"
 
 settings:
   encodeUrl: true
