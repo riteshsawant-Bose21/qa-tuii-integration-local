@@ -17,7 +17,7 @@ func TestRegisterEndpointTracksFullPattern(t *testing.T) {
 	RegisterPublicPOST(mux.NewRouter(), SnapshotsActivateEndpoint, func(w http.ResponseWriter, r *http.Request) {})
 
 	got := Endpoints
-	want := []string{"POST /snapshots/activate/{name}"}
+	want := []string{"POST /snapshots/activate/{id}"}
 	if len(got) != len(want) || got[0] != want[0] {
 		t.Fatalf("Endpoints = %v, want %v", got, want)
 	}
