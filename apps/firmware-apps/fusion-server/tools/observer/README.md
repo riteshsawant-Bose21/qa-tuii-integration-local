@@ -176,6 +176,16 @@ GTEST_FILTER=UDPValueMonitorTest.IntegrationOversizedUpdatePullsConfigFromFusion
 make -C tools/observer test
 ```
 
+Run the live delete integration test, which seeds a value through HTTP,
+calls real `DELETE /value`, and verifies the observer receives the UDP clear:
+
+```bash
+FUSION_UDP_INTEGRATION=1 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+GTEST_FILTER=UDPValueMonitorTest.IntegrationDeleteValueBroadcastClearsObserverState \
+make -C tools/observer test
+```
+
 ## Notes
 
 - Array indices start at 0

@@ -5,7 +5,7 @@ function show_help() {
     echo "Options:"
     echo "  --list              List tests for the selected category"
     echo "  --list-all          List all tests in fusion/test"
-    echo "  --test-name         Run only a specific Go test name or subtest"
+    echo "  --test-name         Run only a specific test name or subtest"
     echo "  --vip               VIP address and port passed to multipass/package tests (default: 192.168.2.100:8080)"
     echo "Tests:"
     echo "  --all               Run all tests (default)"
@@ -222,14 +222,18 @@ if [[ "$list_tests" = true ]]; then
     if [[ "$test_type" == "logger" ]]; then
         list_tests_from_file "./$file"
         echo "Tests in ../../fusion-services-core/logging:"
-        (cd ../../../fusion-services-core && go test -list . ./logging)
+        (cd ../../../fusion-services-core/logging && for f in *_test.go; do
+            echo "Tests in ./logging/$f:"
+            rg -o '^func (Test[^(: ]+)' "$f" -r '$1' | sort
+            echo ""
+        done)
         echo ""
         exit 0
     fi
 
     if [[ "$test_type" == "udp-chaos" ]]; then
         echo "Tests in package ./ matching UDP chaos:"
-        go test -list . ./ | grep 'Chaos\|UDP' | sort
+        rg -o '^func (Test[^(: ]+)' ./*_test.go -r '$1' | grep 'Chaos\|UDP' | sort
         echo ""
         exit 0
     fi
@@ -278,16 +282,6 @@ function run_logger_tests() {
 
     return "$status"
 }
-
-# # Helper for tests without extra args
-# function run_simple_test() {
-#     local file="$1"
-#     if [[ -n "$test_name" ]]; then
-#         go test -v --race "$file" -run "$test_name"
-#     else
-#         go test -v --race "$file"
-#     fi
-# }
 
 cd fusion/test || exit 1
 

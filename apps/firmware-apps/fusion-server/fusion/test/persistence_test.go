@@ -47,7 +47,7 @@ func newPersistenceForTest(t *testing.T, dbPath string, sm *persistence.StateMan
 }
 
 // TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
-// (Run this test with `go test -race`.)
+// Run it through scripts/multipass/run-tests so the standard repo test path enables race detection.
 func TestMarkDirtyConcurrent(t *testing.T) {
 
 	// Create a temporary directory and file for our test state.

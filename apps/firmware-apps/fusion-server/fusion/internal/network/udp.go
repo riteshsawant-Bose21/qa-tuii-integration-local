@@ -276,7 +276,13 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		msg.ID = ulid.Make().String()
 	}
 
-	payload, err := s.buildJSONPayload(configObserverPayload(msg.ConfigUpdate), msg.ConfigUpdate.Version, msg.ID, msg.Operation)
+	payload, err := s.buildJSONPayload(
+		configObserverPayload(msg.ConfigUpdate),
+		msg.ConfigUpdate.Version,
+		msg.ID,
+		msg.Operation,
+		msg.ConfigUpdate.Clear,
+	)
 	if err != nil {
 		return err
 	}
@@ -304,7 +310,7 @@ func (s *UDPServer) Close() error {
 }
 
 // buildPayload creates a JSON byte stream including authoritative Lamport version
-func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp) ([]byte, error) {
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp, clear ...bool) ([]byte, error) {
 
 	payload := make(map[string]any, len(data)+4)
 	maps.Copy(payload, data)
@@ -318,6 +324,9 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, m
 	}
 	if op != "" {
 		payload[api.FusionOperation] = op
+	}
+	if len(clear) > 0 && clear[0] {
+		payload[api.FusionClear] = true
 	}
 
 	json, err := json.Marshal(payload)

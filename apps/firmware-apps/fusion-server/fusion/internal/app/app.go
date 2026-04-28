@@ -84,6 +84,7 @@ type App struct {
 
 // NewApp is a factory function to set up the application
 func NewApp(config *api.AppConfig) *App {
+	configureRuntimePaths(config)
 
 	logger := initLogging(config)
 
@@ -152,6 +153,46 @@ func NewApp(config *api.AppConfig) *App {
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
 	vipMonitor.SetCallback(app.vipEventCoordinator.Handle)
 	return app
+}
+
+func configureRuntimePaths(config *api.AppConfig) {
+	fusionDataPath = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
+	fusionLogDir = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+
+	audioDir := os.Getenv("FUSION_AUDIO_DIR")
+	identityDir := os.Getenv("FUSION_IDENTITY_DIR")
+
+	if config.Local {
+		localRoot := os.Getenv("FUSION_LOCAL_ROOT")
+		if localRoot == "" {
+			localRoot = filepath.Join(os.TempDir(), "fusion-local")
+		}
+
+		if os.Getenv("FUSION_DATA_DIR") == "" {
+			fusionDataPath = filepath.Join(localRoot, "data")
+		}
+		if audioDir == "" {
+			audioDir = filepath.Join(localRoot, "audio")
+		}
+		if identityDir == "" {
+			identityDir = filepath.Join(localRoot, "pki") + string(os.PathSeparator)
+		}
+		if os.Getenv("FUSION_LOG_DIR") == "" {
+			fusionLogDir = ""
+		}
+	}
+
+	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
+
+	if audioDir == "" {
+		audioDir = "/persist/fusion/audio"
+	}
+	if identityDir == "" {
+		identityDir = "/persist/pki/"
+	}
+
+	api.AudioFilesLocation = audioDir
+	api.DefaultIdentityFilePath = identityDir
 }
 
 // Close shuts down all components gracefully.

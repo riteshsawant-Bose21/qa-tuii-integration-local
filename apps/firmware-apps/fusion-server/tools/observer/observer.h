@@ -22,6 +22,7 @@
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 /**
@@ -1104,6 +1105,77 @@ private:
     }
   }
 
+  bool isPatternSubscription(const std::string &path) const
+  {
+    return path.find('*') != std::string::npos;
+  }
+
+  void collectMatchingPathsForClear(const Json::Value &node,
+                                    std::vector<PathComponent> &currentPath,
+                                    const std::vector<PatternComponent> &parsedPattern,
+                                    std::unordered_set<std::string> &matches)
+  {
+    if (patternMatchesPath(parsedPattern, currentPath))
+    {
+      matches.insert(constructPath(currentPath));
+    }
+    if (node.isObject())
+    {
+      for (const auto &key : node.getMemberNames())
+      {
+        currentPath.push_back(PathComponent(key));
+        collectMatchingPathsForClear(node[key], currentPath, parsedPattern,
+                                     matches);
+        currentPath.pop_back();
+      }
+    }
+    else if (node.isArray())
+    {
+      for (Json::ArrayIndex i = 0; i < node.size(); ++i)
+      {
+        currentPath.push_back(PathComponent(static_cast<int>(i)));
+        collectMatchingPathsForClear(node[i], currentPath, parsedPattern,
+                                     matches);
+        currentPath.pop_back();
+      }
+    }
+  }
+
+  void handleClearMessage(const std::vector<std::string> &targetPaths)
+  {
+    const Json::Value currentState = jsonMonitor_.get("");
+    std::unordered_set<std::string> pathsToClear;
+
+    for (const auto &path : targetPaths)
+    {
+      if (path.empty())
+      {
+        continue;
+      }
+
+      if (isPatternSubscription(path))
+      {
+        const auto &parsedPattern = jsonMonitor_.getParsedPattern(path);
+        std::vector<PathComponent> currentPath;
+        collectMatchingPathsForClear(currentState, currentPath, parsedPattern,
+                                     pathsToClear);
+        continue;
+      }
+
+      if (!jsonMonitor_.get(path).isNull())
+      {
+        pathsToClear.insert(path);
+      }
+    }
+
+    for (const auto &path : pathsToClear)
+    {
+      jsonMonitor_.handleExternalUpdate(path, Json::Value());
+    }
+
+    jsonMonitor_.handleExternalUpdate("", Json::objectValue);
+  }
+
   void handleUpdateMessage(const Json::Value &update, bool useVersion = true)
   {
     SPDLOG_TRACE("Received update {}", summarizeUpdateMetadata(update));
@@ -1139,9 +1211,15 @@ private:
       targetPaths = targetPaths_;
     }
 
+    if (update.isMember("_fusion_clear") && update["_fusion_clear"].asBool())
+    {
+      handleClearMessage(targetPaths);
+      return;
+    }
+
     for (const auto &path : targetPaths)
     {
-      if (path.find('*') != std::string::npos)
+      if (isPatternSubscription(path))
       {
         const auto &parsedPattern = jsonMonitor_.getParsedPattern(path);
         std::vector<PathComponent> currentPath;
