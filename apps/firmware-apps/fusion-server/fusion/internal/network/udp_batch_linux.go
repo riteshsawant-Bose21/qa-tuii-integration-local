@@ -19,20 +19,20 @@ type iovec struct {
 type msghdr struct {
 	Name       *byte
 	Namelen    uint32
-	_          [4]byte // padding on 64-bit
+	_          [4]byte
 	Iov        *iovec
 	Iovlen     uint64
 	Control    *byte
 	Controllen uint64
 	Flags      int32
-	_          [4]byte // padding
+	_          [4]byte
 }
 
 // mmsghdr matches the C struct mmsghdr (for sendmmsg).
 type mmsghdr struct {
 	Hdr msghdr
 	Len uint32
-	_   [4]byte // padding
+	_   [4]byte
 }
 
 // sendBatch sends the same payload to multiple destinations in a single
@@ -58,7 +58,6 @@ func sendBatch(fd int, payload []byte, targets []clientTarget) []int {
 		}
 
 		addrs[i].Family = unix.AF_INET
-		// Port must be in network byte order (big-endian)
 		p := uint16(t.addr.Port)
 		addrs[i].Port = (p >> 8) | (p << 8)
 		copy(addrs[i].Addr[:], ip4)
@@ -74,7 +73,6 @@ func sendBatch(fd int, payload []byte, targets []clientTarget) []int {
 
 	sent, err := doSendmmsg(fd, msgs)
 	if err != nil {
-		// Syscall failed entirely — treat all as failed
 		failed := make([]int, n)
 		for i := range failed {
 			failed[i] = i
@@ -82,7 +80,6 @@ func sendBatch(fd int, payload []byte, targets []clientTarget) []int {
 		return failed
 	}
 
-	// Any messages beyond `sent` were not transmitted
 	if sent < n {
 		failed := make([]int, 0, n-sent)
 		for i := sent; i < n; i++ {
@@ -100,7 +97,7 @@ func doSendmmsg(fd int, msgs []mmsghdr) (int, error) {
 		uintptr(fd),
 		uintptr(unsafe.Pointer(&msgs[0])),
 		uintptr(len(msgs)),
-		0, // flags
+		0,
 		0,
 		0,
 	)
@@ -111,7 +108,6 @@ func doSendmmsg(fd int, msgs []mmsghdr) (int, error) {
 }
 
 // extractUDPConnFd extracts the raw file descriptor from a *net.UDPConn.
-// The caller must ensure the connection is not garbage-collected while the fd is in use.
 func extractUDPConnFd(conn *net.UDPConn) (int, error) {
 	rawConn, err := conn.SyscallConn()
 	if err != nil {
