@@ -58,6 +58,23 @@ func (s *FusionServer) safeWriteRaw(conn *websocket.Conn, data []byte) error {
 	return conn.WriteMessage(websocket.TextMessage, data)
 }
 
+// safeWriteRaw writes pre-serialized bytes to a WebSocket connection as a text message.
+// Use this when broadcasting the same payload to multiple clients to avoid
+// repeated json.Marshal calls.
+func (s *FusionServer) safeWriteRaw(conn *websocket.Conn, data []byte) error {
+	s.wsLock.RLock()
+	mutex, exists := s.wsWriteMutex[conn]
+	s.wsLock.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("connection not found")
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	return conn.WriteMessage(websocket.TextMessage, data)
+}
+
 // safeWriteControl safely writes control messages to a WebSocket connection using per-connection mutex
 func (s *FusionServer) safeWriteControl(conn *websocket.Conn, messageType int, data []byte, deadline time.Time) error {
 	client := s.getWSClient(conn)

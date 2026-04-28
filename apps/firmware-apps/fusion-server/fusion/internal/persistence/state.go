@@ -277,12 +277,20 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 		return nil, nil
 	}
 
+	// Compute the checksum once — this is the only JSONChecksum needed.
+	hash, err := utils.JSONChecksum(existing)
+	if err != nil {
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
+	}
+
 	sm.version.Counter++
 	localVersion := sm.version
 
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
+		Hash:    hash,
 		Clear:   false,
 	}
 
