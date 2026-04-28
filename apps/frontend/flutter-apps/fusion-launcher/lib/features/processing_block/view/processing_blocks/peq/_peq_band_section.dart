@@ -213,14 +213,21 @@ class _PeqBandSection extends StatelessWidget {
                             },
                           ),
                         ),
-                        InkWell(
-                          onTap: () {
-                            controller.removeBand(index);
-                          },
-                          child: Icon(
-                            LucideIcons.trash200,
-                            size: 16,
-                            color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                        SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "peq_band_delete_button_$index",
+                          ),
+                          isEnabled: controller.canDelete,
+                          child: InkWell(
+                            onTap: () {
+                              controller.removeBand(index);
+                            },
+                            child: Icon(
+                              LucideIcons.trash200,
+                              size: 16,
+                              color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                            ),
                           ),
                         ),
                       ],
