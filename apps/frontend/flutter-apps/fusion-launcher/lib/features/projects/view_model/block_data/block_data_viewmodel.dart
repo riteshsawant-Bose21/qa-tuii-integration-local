@@ -627,6 +627,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     required String parameter,
     required dynamic value,
     int? dimension,
+    ProcessingBlockModel? processingBlock,
   }) async {
     final String key = '$blockId.$parameter';
 
@@ -652,12 +653,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
       dimension: dimension,
       timer: Timer(_kSendDebounce, () async {
         _pendingSends.remove(key);
-        await _flushParameterUpdate(
-          blockId: blockId,
-          parameter: parameter,
-          value: value,
-          dimension: dimension,
-        );
+        await _flushParameterUpdate(blockId: blockId, parameter: parameter, value: value, dimension: dimension, processingBlock: processingBlock);
       }),
     );
   }
@@ -730,6 +726,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     required String parameter,
     required dynamic value,
     int? dimension,
+    ProcessingBlockModel? processingBlock,
   }) async {
     try {
       final Map<String, dynamic> audioPayload =
@@ -745,7 +742,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
                 'settings': <String, dynamic>{
                   'audio': <String, dynamic>{
                     blockId: <String, dynamic>{
-                      parameter: _buildDimensionList(value, dimension),
+                      parameter: _buildDimensionList(value, dimension, parameter, processingBlock),
                     },
                   },
                 },
@@ -822,7 +819,28 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
 
   /// Builds a sparse list so a single array dimension can be patched without
   /// overwriting sibling dimensions on the server.
-  List<dynamic> _buildDimensionList(dynamic value, int dimension) {
-    return List<dynamic>.filled(dimension + 1, null)..[dimension] = value;
+  List<dynamic> _buildDimensionList(dynamic value, int dimension, String param, ProcessingBlockModel? processingBlock) {
+    if (processingBlock == null) {
+      return List<dynamic>.filled(dimension + 1, null)..[dimension] = value;
+    }
+
+    final List<PropertySetting> existingProps = processingBlock.properties.where((PropertySetting val) => val.name == param && val.dimension != null).toList();
+
+    final List<dynamic> valueList = <dynamic>[];
+    for (final PropertySetting property in existingProps) {
+      final int index = property.dimension!;
+      if (valueList.length <= index) {
+        valueList.addAll(List<dynamic>.filled(index - valueList.length + 1, null));
+      }
+      valueList[index] = property.value;
+    }
+
+    // Ensure the list is large enough to hold the new value at [dimension].
+    if (valueList.length <= dimension) {
+      valueList.addAll(List<dynamic>.filled(dimension - valueList.length + 1, null));
+    }
+    valueList[dimension] = value;
+
+    return valueList;
   }
 }

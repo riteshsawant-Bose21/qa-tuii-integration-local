@@ -115,16 +115,16 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
       final ResponseCallback<bool> snapshotSyncResponse = await serviceLocator<SnapshotSyncViewModel>().updateSnapshotAndSceneSet();
       FusionLogger.log(
         tag: LogTag.dspConfig,
-        message: "Config sync response for audio messages: ${snapshotSyncResponse.success}, ${snapshotSyncResponse.message}",
+        message: "Config sync response for Snapshosts: ${snapshotSyncResponse.success}, ${snapshotSyncResponse.message}",
       );
 
       final ResponseCallback<bool> eventSyncResponse = await serviceLocator<FusionEventsSyncViewModel>().syncAllFusionEvents();
-      FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for audio messages: ${eventSyncResponse.success}, ${eventSyncResponse.message}");
+      FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for scheduled events: ${eventSyncResponse.success}, ${eventSyncResponse.message}");
 
       if (response.success && snapshotSyncResponse.success && eventSyncResponse.success) {
         emit(ConfigSyncedWithDsp());
       } else {
-        emit(ConfigSyncFailure(message: "Config synced but failed to sync audio messages: ${response.message}"));
+        emit(ConfigSyncFailure(message: "Config synced but failed to sync all config}: ${response.message}"));
       }
       // initializeTelemetryData();
     } else {

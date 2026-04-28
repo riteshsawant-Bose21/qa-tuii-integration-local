@@ -305,10 +305,11 @@ extension ControllerService on ProjectService {
           );
         }
 
+        String type = (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt';
         return WallController(
-          id: controller.id,
+          id: type == "lt" ? "CONTROLLER350958744" : controller.id,
           name: controller.name,
-          type: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt',
+          type: type,
           zoneIds: getAssignedZoneIds(controller.id).toList(),
           pages: controllerWallPages,
           schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
