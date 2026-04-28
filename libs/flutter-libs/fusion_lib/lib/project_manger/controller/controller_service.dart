@@ -389,9 +389,12 @@ extension ControllerService on ProjectService {
       final ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );
+      final ZoneFunctions? functionId = getZoneFunction(zoneOrSubZoneId: zone.id);
+
       zonesList.add(
         TouchUIZone(
-          zoneId: zone.id,
+          // zoneId: zone.id,
+          zoneId: functionId?.paramName ?? zone.id,
           zoneName: zone.name,
           gain: TouchUIGainConfig(
             id: processingBlockModel?.id ?? '',
