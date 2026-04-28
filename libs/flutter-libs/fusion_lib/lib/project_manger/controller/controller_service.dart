@@ -379,7 +379,7 @@ extension ControllerService on ProjectService {
     final List<TouchUIZone> zonesList = <TouchUIZone>[];
     for (final Zone zone in allZones) {
       final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
-      final List<TouchUIZoneSource> sourcesList = sources.asMap().entries.map((e) => TouchUIZoneSource(index: e.key, name: e.value.name)).toList();
+      final List<TouchUIZoneSource> sourcesList = sources.asMap().entries.map((e) => TouchUIZoneSource(index: e.key + 1, name: e.value.name)).toList();
       final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: zone.id, includeUserBlocks: true);
       final ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
