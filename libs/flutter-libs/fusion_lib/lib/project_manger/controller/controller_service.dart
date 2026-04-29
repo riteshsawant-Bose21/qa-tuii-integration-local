@@ -398,9 +398,9 @@ extension ControllerService on ProjectService {
           zoneName: zone.name,
           gain: TouchUIGainConfig(
             id: processingBlockModel?.id ?? '',
-            min: 0,
-            max: 100,
-            defGain: 50,
+            min: -60,
+            max: 12,
+            defGain: 0,
             defMute: false,
           ),
           sources: sourcesList,
