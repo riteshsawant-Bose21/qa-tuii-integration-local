@@ -1,5 +1,5 @@
 info:
-  name: UN-SUBSCRIBE to meter data copy
+  name: UN-SUBSCRIBE to meter data
   type: websocket
   seq: 7
 

@@ -9,12 +9,9 @@ websocket:
     type: json
     data: |
       {
-        "id": "device-001",
+        "id": "req-1",
         "version": 1,
-        "type": "device_by_id",
-        "data": {
-          "device_id": "fusion_dha3vl5kxmdn_1md6_instance"
-        }
+        "type": "subscribe_meter_data"
       }
   auth: inherit
 

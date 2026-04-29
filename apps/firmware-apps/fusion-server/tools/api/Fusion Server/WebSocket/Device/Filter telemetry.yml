@@ -11,7 +11,12 @@ websocket:
       {
         "id": "req-1",
         "version": 1,
-        "type": "subscribe_meter_data"
+        "type": "update_meter_data_filter",
+        "data": {
+          "filter": [
+            "system_info"
+          ]
+        }
       }
   auth: inherit
 
