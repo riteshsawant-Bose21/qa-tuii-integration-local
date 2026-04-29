@@ -11,11 +11,12 @@ class DeviceTableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         // borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        border: Border(bottom: BorderSide(color: context.colorScheme.elevation3)),
+        border: Border(
+          bottom: BorderSide(color: context.colorScheme.elevation3),
+        ),
       ),
       child: Row(
         children: [
-
           /// DEVICE
           Expanded(
             flex: 3,
@@ -23,12 +24,11 @@ class DeviceTableHeader extends StatelessWidget {
               children: [
                 FusionAppText(
                   text: "Device",
-                  style: context.textTheme.labelLarge
+                  style: context.textTheme.labelLarge,
                 ),
               ],
             ),
           ),
-      
 
           const SizedBox(width: 12),
 
@@ -36,9 +36,9 @@ class DeviceTableHeader extends StatelessWidget {
           Expanded(
             flex: 2,
             child: FusionAppText(
-                  text: "Project",
-                  style: context.textTheme.labelLarge
-                ),
+              text: "Project",
+              style: context.textTheme.labelLarge,
+            ),
           ),
 
           const SizedBox(width: 12),
@@ -47,20 +47,29 @@ class DeviceTableHeader extends StatelessWidget {
           Expanded(
             flex: 2,
             child: FusionAppText(
-                  text: "Location",
-                  style: context.textTheme.labelLarge
-                ),
+              text: "Location",
+              style: context.textTheme.labelLarge,
+            ),
           ),
 
           const SizedBox(width: 12),
+
+          // Registered At
+          Expanded(
+            flex: 2,
+            child: FusionAppText(
+              text: "Registered At",
+              style: context.textTheme.labelLarge,
+            ),
+          ),
 
           /// STATUS
           Expanded(
             flex: 2,
             child: FusionAppText(
-                  text: "Status",
-                  style: context.textTheme.labelLarge
-                ),
+              text: "Status",
+              style: context.textTheme.labelLarge,
+            ),
           ),
 
           const SizedBox(width: 12),
