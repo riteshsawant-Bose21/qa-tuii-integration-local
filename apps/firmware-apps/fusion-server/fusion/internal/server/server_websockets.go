@@ -104,18 +104,6 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure cleanup when the function returns
 	defer func() {
-		conn.Close()
-		s.wsLock.Lock()
-		delete(s.wsClients, conn)
-		// Clean up all topic subscriptions for this connection
-		for topic, subscribers := range s.subscriptions {
-			delete(subscribers, conn)
-			// Clean up empty topic maps
-			if len(subscribers) == 0 {
-				delete(s.subscriptions, topic)
-			}
-		}
-		s.wsLock.Unlock()
 		s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
 		s.removeConnection(conn)
 		logger.Debug("WebSocket connection closed")
@@ -182,10 +170,18 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		if messageType == websocket.TextMessage {
-			// Process the message
-			s.handleWebSocketMessage(conn, data)
+		if messageType != websocket.TextMessage {
+			logger.Warn("Unsupported WebSocket message type: %d", messageType)
+			deadline := time.Now().Add(10 * time.Second)
+			if err := s.safeWriteControl(conn, websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "text messages only"), deadline); err != nil {
+				logger.Error("Failed to send close frame for unsupported message type: %v", err)
+			}
+			break
 		}
+
+		// Process the message
+		s.handleWebSocketMessage(conn, data)
 	}
 }
 
