@@ -135,16 +135,19 @@ class FusionDrawer extends StatelessWidget {
         child: Row(
           children: <Widget>[
             if (showBackButton) ...[
-              GestureDetector(
-                onTap: onClose ?? () => Navigator.of(context).maybePop(),
-                child: FusionIcon.icon(
-                  semanticId: '${semanticId}_drawer_back_icon',
-                  LucideIcons.arrowLeft200,
-                  size: 16,
-                  color: context.colorScheme.iconWhite,
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                  child: FusionIcon.icon(
+                    semanticId: '${semanticId}_drawer_back_icon',
+                    LucideIcons.arrowLeft200,
+                    size: 16,
+                    color: context.colorScheme.iconWhite,
+                  ),
                 ),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 10),
             ],
             Expanded(
               child: FusionAppText(
@@ -153,9 +156,12 @@ class FusionDrawer extends StatelessWidget {
                 style: Theme.of(context).textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
               ),
             ),
-            GestureDetector(
-              onTap: onClose ?? () => Navigator.of(context).maybePop(),
-              child: FusionIcon.icon(semanticId: '${semanticId}_drawer_close_icon', Icons.close, size: 16, color: context.colorScheme.iconWhite),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                child: FusionIcon.icon(semanticId: '${semanticId}_drawer_close_icon', Icons.close, size: 16, color: context.colorScheme.iconWhite),
+              ),
             ),
           ],
         ),

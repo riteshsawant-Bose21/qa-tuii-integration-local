@@ -23,7 +23,7 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 class FusionBorderedTextField extends StatefulWidget {
   const FusionBorderedTextField({
     super.key,
-    required this.controller,
+    this.controller,
     required this.semanticId,
     this.hintText = 'Enter value',
     this.maxLength,
@@ -32,7 +32,7 @@ class FusionBorderedTextField extends StatefulWidget {
     this.leading,
   });
 
-  final TextEditingController controller;
+  final TextEditingController? controller;
   final String semanticId;
   final String hintText;
   final int? maxLength;

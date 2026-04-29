@@ -37,8 +37,7 @@ class _ZoneNameFieldWithColorState extends State<ZoneNameFieldWithColor> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final math.Random random = math.Random();
-    final String randomColor = Zone.zoneColors[random.nextInt(Zone.zoneColors.length)];
+    final String randomColor = Zone.zoneColors.first;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onColorChanged(randomColor);
     });

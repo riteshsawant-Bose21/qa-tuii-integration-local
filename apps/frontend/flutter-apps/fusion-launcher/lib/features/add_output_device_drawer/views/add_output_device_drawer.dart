@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/add_output_device_drawer/viewmodel/add_
 import 'package:fusion_launcher/features/create_zone_popup/view/widgets/CommonWidgets/zone_name_field_with_color.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../add_source_popup/view/widgets/aes67_stream_section.dart';
 import '../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
 import '../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
 import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
@@ -21,7 +22,7 @@ class AddOutputDeviceDrawer {
     required String zoneName,
     required VoidCallback onBack,
   }) {
-    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
+    final AddOutputDeviceViewModel addOutputDeviceVm = AddOutputDeviceViewModel();
 
     return FusionDrawer.show<void>(
       context: context,
@@ -29,19 +30,20 @@ class AddOutputDeviceDrawer {
       title: 'Add Output Device',
       showBackButton: true,
       buttonLabel: 'Save',
-      buttonEnabledNotifier: saveEnabled,
-      onButtonPressed: () {
-        //
-      },
-      header: _AddOutputDeviceHeader(onBack: onBack),
-      content: BlocProvider<CreateZoneViewModel>.value(
-        value: vm,
+      buttonEnabledNotifier: addOutputDeviceVm.isSaveEnabled,
+      onButtonPressed: addOutputDeviceVm.onSaveTap,
+      // header: _AddOutputDeviceHeader(onBack: onBack),
+      content: MultiBlocProvider(
+        providers: <BlocProvider<dynamic>>[
+          BlocProvider<CreateZoneViewModel>.value(value: vm),
+          BlocProvider<AddOutputDeviceViewModel>.value(value: addOutputDeviceVm),
+        ],
         child: _AddOutputDeviceContent(
           zoneColor: zoneColor,
           zoneName: zoneName,
         ),
       ),
-    );
+    ).whenComplete(addOutputDeviceVm.close);
   }
 }
 
@@ -55,35 +57,34 @@ class _AddOutputDeviceContent extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<AddOutputDeviceViewModel>(
-      create: (BuildContext context) => AddOutputDeviceViewModel(),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-              buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
-              builder: (BuildContext context, CreateZoneViewModelState state) {
-                return ZoneNameFieldWithColor(
-                  zoneName: state.zoneName,
-                  zoneColor: state.zoneColor,
-                  onNameChanged: context.read<CreateZoneViewModel>().setZoneName,
-                  onColorChanged: context.read<CreateZoneViewModel>().setZoneColor,
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            _outputNameField(context, 'Output Name'),
-            const SizedBox(height: 20),
-            _outputTypes(context, 'Output Type'),
-            const SizedBox(height: 20),
-            _audioChannelToggle(context, "Audio Channel"),
-            const SizedBox(height: 20),
-            _connectionDropdown(context, "Connection"),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
+            buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
+            builder: (BuildContext context, CreateZoneViewModelState state) {
+              return ZoneNameFieldWithColor(
+                zoneName: state.zoneName,
+                zoneColor: state.zoneColor,
+                onNameChanged: context.read<CreateZoneViewModel>().setZoneName,
+                onColorChanged: context.read<CreateZoneViewModel>().setZoneColor,
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          _outputNameField(context, 'Output Name'),
+          const SizedBox(height: 20),
+          _outputTypes(context, 'Output Type'),
+          const SizedBox(height: 20),
+          _audioChannelToggle(context, "Audio Channel"),
+          const SizedBox(height: 20),
+          _connectionDropdown(context, "Connection"),
+
+          _aes67Config(context),
+        ],
       ),
     );
   }
@@ -93,10 +94,10 @@ class _AddOutputDeviceContent extends StatelessWidget {
       label: text,
       semanticId: 'output_name_label',
       child: FusionBorderedTextField(
-        controller: context.read<AddOutputDeviceViewModel>().outputDeviceNameCtrl,
         semanticId: 'output_name_textfield',
         hintText: 'Enter area name',
         contentPadding: const EdgeInsets.all(16),
+        onChanged: context.read<AddOutputDeviceViewModel>().updateOutputDeviceName,
       ),
     );
   }
@@ -116,7 +117,6 @@ class _AddOutputDeviceContent extends StatelessWidget {
             onChanged: (OutputDeviceType? v) {
               if (v == null) return;
               context.read<AddOutputDeviceViewModel>().updateOutputType(v);
-              // _onChanged();
             },
           );
         },
@@ -176,6 +176,41 @@ class _AddOutputDeviceContent extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _aes67Config(BuildContext context) {
+    return BlocBuilder<AddOutputDeviceViewModel, AddOutputDeviceVmState>(
+      builder: (BuildContext context, AddOutputDeviceVmState state) {
+        if (state.connection != OutputDeviceConnectionType.aes67) return const SizedBox.shrink();
+
+        final AddOutputDeviceViewModel addOutputDeviceVm = context.read<AddOutputDeviceViewModel>();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: 20),
+            // ── AES67 Stream & Channel assignment ────
+            Aes67StreamSection<AddOutputDeviceVmState>(
+              state: state,
+              selectedStreamSelector: (AddOutputDeviceVmState s) => s.selectedStream,
+              onStreamSelected: addOutputDeviceVm.setSelectedStream,
+            ),
+            const SizedBox(height: 20),
+            ChannelAssignmentSection<AddOutputDeviceVmState>(
+              state: state,
+              selectedStreamSelector: (AddOutputDeviceVmState s) => s.selectedStream,
+              selectedSignalTypeSelector: (AddOutputDeviceVmState s) => s.audioChannel == AudioChannel.stereo ? SignalType.stereo : SignalType.mono,
+              selectedMonoChannelSelector: (AddOutputDeviceVmState s) => s.selectedMonoChannel,
+              selectedLeftChannelSelector: (AddOutputDeviceVmState s) => s.selectedLeftChannel,
+              selectedRightChannelSelector: (AddOutputDeviceVmState s) => s.selectedRightChannel,
+              onMonoChannelChanged: addOutputDeviceVm.setSelectedMonoChannel,
+              onLeftChannelChanged: addOutputDeviceVm.setSelectedLeftChannel,
+              onRightChannelChanged: addOutputDeviceVm.setSelectedRightChannel,
+            ),
+          ],
+        );
+      },
     );
   }
 }
