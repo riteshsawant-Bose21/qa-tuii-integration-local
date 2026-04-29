@@ -1033,7 +1033,7 @@ const struct base_device bd_fusion_fm6 = {
         }
     },
     .cfg_seq = {
-        .num_pwrup_cmds = 10,
+        .num_pwrup_cmds = 8,
         .pwrup_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "tca9544_config",
@@ -1082,28 +1082,11 @@ const struct base_device bd_fusion_fm6 = {
                 .seq_delay_ms = 25
             },
             {
-                .name = "hdmi_psw",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) { 
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x05 }
-                },
-                .seq_delay_ms = 25
-            },
-            {
-                .name = "hdmi_reset",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x15 }
-                }
-            },
-            {
                 .name = "gpio_psw",
                 .parent_ep_name = "ep_ioexp_tcal6408",
                 .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) { 
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x17 }
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x03 }
                 },
                 .seq_delay_ms = 25
             },
