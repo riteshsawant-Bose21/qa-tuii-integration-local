@@ -722,7 +722,10 @@ private:
     bool ptp_sync_good;
     bool ptp_anchor_pending;
     bool ptp_anchor_armed;
+    bool ptp_force_reanchor;
+    bool ptp_force_reanchor_have_armed_pps_seq;
     bool ptp_have_timing_pps_seq;
+    uint32_t ptp_force_reanchor_armed_pps_seq;
     uint32_t ptp_last_timing_pps_seq;
     int ptp_good_streak;
     int ptp_bad_streak;
@@ -769,7 +772,9 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
       gpt_discipline_continuity_logged(false), sap_announcer(""),
       audio_streams_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_anchor_armed(false),
-      ptp_have_timing_pps_seq(false), ptp_last_timing_pps_seq(0), ptp_good_streak(0),
+      ptp_force_reanchor(false), ptp_force_reanchor_have_armed_pps_seq(false),
+      ptp_have_timing_pps_seq(false), ptp_force_reanchor_armed_pps_seq(0),
+      ptp_last_timing_pps_seq(0), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET), ptp_wait_lock_from_holdover(false) {
     system_ip = "";
@@ -1296,6 +1301,8 @@ void FusionConnectClient::reset_timing_session(const char *reason)
     ptp_anchor_armed = false;
     ptp_have_timing_pps_seq = false;
     ptp_last_timing_pps_seq = 0;
+    ptp_force_reanchor_have_armed_pps_seq = false;
+    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
     ptp_wait_lock_from_holdover = false;
 
@@ -1312,6 +1319,9 @@ void FusionConnectClient::reset_timing_holdover(const char *reason)
     ptp_anchor_armed = false;
     ptp_have_timing_pps_seq = false;
     ptp_last_timing_pps_seq = 0;
+    ptp_force_reanchor = false;
+    ptp_force_reanchor_have_armed_pps_seq = false;
+    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
 
     SPDLOG_INFO("Timing holdover reset due to {}", reason);
@@ -1334,8 +1344,16 @@ void FusionConnectClient::start_timing_session(TimingResetType reset_type)
     ptp_anchor_armed = false;
     ptp_have_timing_pps_seq = false;
     ptp_last_timing_pps_seq = 0;
+    ptp_force_reanchor_have_armed_pps_seq = false;
+    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
     ptp_wait_lock_from_holdover = false;
+}
+
+static bool pps_seq_advanced(uint32_t previous, uint32_t current)
+{
+    const uint32_t delta = current - previous;
+    return current != 0 && delta != 0 && delta < 0x80000000U;
 }
 
 void FusionConnectClient::update_ptp_state()
@@ -1376,6 +1394,9 @@ void FusionConnectClient::update_ptp_state()
         ptp_have_timing_pps_seq = false;
         ptp_last_timing_pps_seq = 0;
         ptp_role_flag = -1;
+        ptp_force_reanchor = false;
+        ptp_force_reanchor_have_armed_pps_seq = false;
+        ptp_force_reanchor_armed_pps_seq = 0;
         ptp_wait_lock_from_holdover = false;
         reset_timing_session("reset state");
         ptp_state = PtpState::WAIT_GM;
@@ -1396,6 +1417,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed = false;
                 ptp_have_timing_pps_seq = false;
                 ptp_last_timing_pps_seq = 0;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = false;
                 ptp_state = PtpState::WAIT_LOCK;
                 ptp_state_since = now;
@@ -1409,6 +1433,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed = false;
                 ptp_have_timing_pps_seq = false;
                 ptp_last_timing_pps_seq = 0;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
                 SPDLOG_INFO("No GM after {}s; assuming GM role", GM_WAIT.count());
@@ -1426,6 +1453,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed = false;
                 ptp_have_timing_pps_seq = false;
                 ptp_last_timing_pps_seq = 0;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_state = PtpState::WAIT_GM;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM lost before lock; restarting GM detection");
@@ -1447,6 +1477,8 @@ void FusionConnectClient::update_ptp_state()
                     ptp_anchor_armed = false;
                     ptp_have_timing_pps_seq = false;
                     ptp_last_timing_pps_seq = 0;
+                    ptp_force_reanchor_have_armed_pps_seq = false;
+                    ptp_force_reanchor_armed_pps_seq = 0;
                     ptp_state = PtpState::SYNCED;
                     ptp_state_since = now;
                     start_timing_session(use_holdover_reset ?
@@ -1469,6 +1501,9 @@ void FusionConnectClient::update_ptp_state()
                     ptp_anchor_armed = false;
                     ptp_have_timing_pps_seq = false;
                     ptp_last_timing_pps_seq = 0;
+                    ptp_force_reanchor = true;
+                    ptp_force_reanchor_have_armed_pps_seq = false;
+                    ptp_force_reanchor_armed_pps_seq = 0;
                     ptp_wait_lock_from_holdover = false;
                     ptp_state = PtpState::WAIT_LOCK;
                     ptp_state_since = now;
@@ -1484,6 +1519,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_state = PtpState::HOLDOVER;
                 ptp_state_since = now;
                 SPDLOG_WARN("GM lost; keeping timing session active during GPT holdover");
@@ -1522,6 +1560,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = true;
                 ptp_state = PtpState::WAIT_LOCK;
                 ptp_state_since = now;
@@ -1597,20 +1638,39 @@ void FusionConnectClient::maybe_set_phc_anchor()
         return;
     }
 
-    if (discipline_gm_locked && epoch_valid && aligned) {
+    if (ptp_force_reanchor && ptp_anchor_armed &&
+        ptp_force_reanchor_have_armed_pps_seq &&
+        pps_seq_advanced(ptp_force_reanchor_armed_pps_seq, pps_seq) &&
+        epoch_valid && aligned) {
+        SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after GM-to-follower transition",
+                    pps_seq);
+        ptp_force_reanchor = false;
+        ptp_force_reanchor_have_armed_pps_seq = false;
+        ptp_force_reanchor_armed_pps_seq = 0;
+        ptp_anchor_pending = false;
+        ptp_anchor_armed = false;
+        return;
+    }
+
+    if (!ptp_force_reanchor && discipline_gm_locked && epoch_valid && aligned) {
         ptp_anchor_pending = false;
         ptp_anchor_armed = false;
         return;
     }
 
     if (!pps_intake_active) {
-        SPDLOG_DEBUG("GPT timing epoch invalid; waiting for PPS intake before PHC anchor (pps_seq={})",
+        SPDLOG_DEBUG("GPT timing {} waiting for PPS intake before PHC anchor (pps_seq={})",
+                     ptp_force_reanchor ? "force re-anchor;" : "epoch invalid;",
                      pps_seq);
         return;
     }
 
     if (!ptp_anchor_pending && !ptp_anchor_armed) {
-        SPDLOG_WARN("GPT timing needs PHC re-anchor while PTP is synced");
+        if (ptp_force_reanchor) {
+            SPDLOG_WARN("Forcing PHC re-anchor after GM-to-follower transition");
+        } else {
+            SPDLOG_WARN("GPT timing needs PHC re-anchor while PTP is synced");
+        }
         ptp_anchor_pending = true;
     }
 
@@ -1618,6 +1678,8 @@ void FusionConnectClient::maybe_set_phc_anchor()
         SPDLOG_WARN("GPT timing epoch still invalid after PHC anchor; retrying");
         ptp_anchor_pending = true;
         ptp_anchor_armed = false;
+        ptp_force_reanchor_have_armed_pps_seq = false;
+        ptp_force_reanchor_armed_pps_seq = 0;
     }
 
     if (!ptp_anchor_pending) return;
@@ -1636,7 +1698,14 @@ void FusionConnectClient::maybe_set_phc_anchor()
         ptp_anchor_pending = false;
         ptp_anchor_armed = true;
         ptp_last_anchor = now;
-        SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+        if (ptp_force_reanchor) {
+            ptp_force_reanchor_have_armed_pps_seq = true;
+            ptp_force_reanchor_armed_pps_seq = pps_seq;
+            SPDLOG_INFO("Armed forced PHC anchor for next PPS at {} ns after GM-to-follower transition (lead {} ns, pps_seq={})",
+                        next_pps_ns, delta, pps_seq);
+        } else {
+            SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+        }
     }
 }
 

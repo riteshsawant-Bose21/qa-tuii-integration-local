@@ -735,9 +735,6 @@ static void gpt_rebase_phc_epoch_locked(struct fusion_gpt *g, u64 cap64,
 		bool had_prev, u64 prev_cap64)
 {
 	if (g->pending_future_anchor) {
-		u64 prev_epoch_ns = g->phc_epoch_ns;
-		u64 prev_epoch_cnt64 = g->pps_epoch_cnt64;
-
 		g->phc_epoch_ns = g->pending_future_phc_ns;
 		g->pps_epoch_cnt64 = cap64;
 		g->phc_epoch_valid = true;
@@ -831,7 +828,7 @@ EXPORT_SYMBOL(fusion_gpt_unregister_client); /* non-GPL */
 /*
  * Bind the *next* GPT ICR1 (1PPS) edge to the provided PHC time.
  * - Arms a pending anchor that will be consumed on the next ICR1 interrupt.
- * - Leaves the current local timeline running while a new anchor is pending.
+ * - Invalidates the current local timeline while a new anchor is pending.
  * - Forces a one-shot OF1 phase realign after the new epoch is established.
  */
 int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
@@ -857,6 +854,8 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
 	/* Touch shared PPS/epoch state from process context: IRQ-safe */
 	g->pending_future_anchor = true;
 	g->pending_future_phc_ns = phc_ns_at_pps;
+	g->phc_epoch_valid = false;
+	g->phc_aligned = false;
 
 	pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
@@ -1938,4 +1937,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1-linear-model");
+MODULE_VERSION("1.0.1-phc-anchor");
