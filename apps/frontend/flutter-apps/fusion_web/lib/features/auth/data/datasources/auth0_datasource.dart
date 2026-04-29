@@ -85,6 +85,7 @@ class Auth0DataSource {
         parameters: {
           'scope': 'openid profile email',
           'response_type': 'id_token token',
+          'prompt': 'select_account',
         },
       );
 

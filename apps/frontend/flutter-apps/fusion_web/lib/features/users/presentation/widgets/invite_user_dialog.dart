@@ -95,7 +95,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
       ),
       backgroundColor: context.colorScheme.elevation1,
       child: Container(
-        width: 600,
+        width: 700,
         constraints: const BoxConstraints(maxHeight: 500),
         padding: const EdgeInsets.all(32),
         child: Form(
@@ -154,7 +154,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                             children: [
                               // Full Name Field
                               Expanded(
-                                flex: 2,
+                                flex: 3,
                                 child: TextFormField(
                                   controller: row.fullNameController,
                                   style: TextStyle(
@@ -196,11 +196,11 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
 
                               // Email Field
                               Expanded(
-                                flex: 2,
+                                flex: 3,
                                 child: TextFormField(
                                   controller: row.emailController,
                                   style: TextStyle(
@@ -247,10 +247,11 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
 
                               // Role Dropdown
                               Expanded(
+                                flex: 2,
                                 child: DropdownButtonFormField<String>(
                                   value: row.selectedRole,
                                   dropdownColor: context.colorScheme.elevation2,

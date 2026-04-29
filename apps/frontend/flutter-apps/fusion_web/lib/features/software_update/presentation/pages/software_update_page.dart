@@ -95,8 +95,8 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const PageHeader(
-              title: 'Firmware Update Manager',
-              subtitle: 'Manage firmware bundles across your devices',
+              title: 'Software Update Manager',
+              subtitle: 'Manage software bundles across your devices',
             ),
             const SizedBox(height: 24),
             _buildToolbar(context),
@@ -248,8 +248,6 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
                 DataColumn(label: Text('#')),
                 DataColumn(label: Text('Version')),
                 DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Min Prev Version')),
-                DataColumn(label: Text('Min Desktop App')),
                 DataColumn(label: Text('Release Notes')),
                 DataColumn(label: Text('Created At')),
                 DataColumn(label: Text('Updated At')),
@@ -287,7 +285,7 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
     return DataRow(
       cells: [
         DataCell(Text('$rowNumber')),
-        DataCell(SelectableText(bundle.version)),
+        DataCell(SelectableText(bundle.version.split('+').first)),
         DataCell(
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -304,8 +302,6 @@ class _SoftwareUpdatePageState extends State<SoftwareUpdatePage> {
             ),
           ),
         ),
-        DataCell(SelectableText(bundle.minPrevVersion)),
-        DataCell(SelectableText(bundle.minDesktopAppVersion)),
         DataCell(
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 250),

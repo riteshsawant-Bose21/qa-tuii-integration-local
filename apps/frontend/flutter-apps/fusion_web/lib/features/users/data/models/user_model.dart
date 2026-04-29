@@ -112,13 +112,15 @@ class UserModel {
         json['isActive'] ??
         (statusStr.toLowerCase() == 'active');
 
+    final email = getString(json['email'] ?? json['emailAddress'], '');
+
     return UserModel(
       id: getString(json['id'], ''),
       name: getString(
         json['full_name'] ?? json['name'] ?? json['display_name'],
-        'Unknown User',
+        email.contains('@') ? email.split('@').first : email,
       ),
-      email: getString(json['email'] ?? json['emailAddress'], ''),
+      email: email,
       roles: getRolesList(json['roles'] ?? json['role']),
       status: UserStatus.fromString(statusStr),
       userType: UserType.fromString(userTypeStr),
