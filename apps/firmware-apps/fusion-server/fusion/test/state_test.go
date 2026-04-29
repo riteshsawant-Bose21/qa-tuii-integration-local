@@ -677,17 +677,15 @@ func TestPatchDiffPreservesArrayInUpdates(t *testing.T) {
 		},
 	}
 
-	before := sm.GetStateMap()
-
-	afterPtr, err := sm.Patch(patch)
+	result, err := sm.Patch(patch)
 	if err != nil {
 		t.Fatalf("Patch failed: %v", err)
 	}
-	if afterPtr == nil {
+	if result == nil {
 		t.Fatal("Expected non-nil result from Patch")
 	}
 
-	diff := utils.CalculateDiff(before, *afterPtr)
+	diff := result.Diff
 
 	settings, ok := diff["settings"].(map[string]any)
 	if !ok {
