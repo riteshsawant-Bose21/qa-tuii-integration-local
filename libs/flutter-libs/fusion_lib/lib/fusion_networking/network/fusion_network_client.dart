@@ -506,11 +506,11 @@ enum FusionApiEndpoint {
   setVip('/devices/vip', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
-  sceneSetsActivate('/scenes-sets/activate', FusionApiType.fusionServer),
+  sceneSetsActivate('/scene-sets/activate', FusionApiType.fusionServer),
   snapshotsActivate('/snapshots/activate', FusionApiType.fusionServer),
   tasks('/tasks', FusionApiType.fusionServer),
-  clusterReboot('/cluster/reboot', FusionApiType.fusionServer);
-  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer),
+  clusterReboot('/cluster/reboot', FusionApiType.fusionServer),
+  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer);
 
   final String path;
   final FusionApiType type;

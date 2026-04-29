@@ -394,10 +394,17 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
   // ═══════════════════════════════════════════════════════════════════════════
 
   void _onDataReceived(ResponseCallback<dynamic> message) {
-    if (!message.success || message.data == null) return;
+    if (!message.success || message.data == null) {
+      debugPrint('[BlockData] Message dropped (success=${message.success}, data=${message.data})');
+      return;
+    }
 
-    final dynamic rawData = message.data;
-    if (rawData is! Map<String, dynamic>) return;
+    // Tolerate Map<dynamic, dynamic> (sometimes produced by nested decoding paths).
+    final Map<String, dynamic>? rawData = _asStringKeyedMap(message.data);
+    if (rawData == null) {
+      debugPrint('[BlockData] Message dropped — not a map: ${message.data.runtimeType}');
+      return;
+    }
 
     final String? type = rawData['type'] as String?;
 
@@ -408,7 +415,10 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     }
 
     // ── Config data ────────────────────────────────────────────────────────
-    if (type != 'config' && type != 'config_update') return;
+    if (type != 'config' && type != 'config_update') {
+      debugPrint('[BlockData] Message dropped — unhandled type: "$type"');
+      return;
+    }
 
     // Receiving config data proves the socket is alive; snap back to connected
     // in case we somehow received data during a verifying window.
@@ -421,22 +431,53 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     }
 
     try {
-      final Map<String, dynamic>? data = rawData['data'] as Map<String, dynamic>?;
-      final Map<String, dynamic>? audio = (data?['settings'] as Map<String, dynamic>?)?['audio'] as Map<String, dynamic>?;
-      if (audio == null) return;
+      final Map<String, dynamic>? data = _asStringKeyedMap(rawData['data']);
+
+      // Two payload shapes are produced by the server:
+      //
+      // 1. Initial 'config' snapshot:
+      //      data: { settings: { audio: { <blockId>: {...} } } }
+      //
+      // 2. Incremental 'config_update' (mode == 'patch'):
+      //      data: {
+      //        mode: 'patch',
+      //        updates: {
+      //          _fusion_epoch: ..., _fusion_msg_id: ..., _fusion_version: ...,
+      //          settings: { audio: { <blockId>: {...} } }
+      //        }
+      //      }
+      //
+      // Look in both locations so we handle either case.
+      final Map<String, dynamic>? updates = _asStringKeyedMap(data?['updates']);
+      final Map<String, dynamic>? settings = _asStringKeyedMap(data?['settings']) ?? _asStringKeyedMap(updates?['settings']);
+      final Map<String, dynamic>? audio = _asStringKeyedMap(settings?['audio']);
+
+      if (audio == null) {
+        debugPrint(
+          '[BlockData] No audio payload found. type=$type '
+          'dataKeys=${data?.keys.toList()} '
+          'updatesKeys=${updates?.keys.toList()} '
+          'settingsKeys=${settings?.keys.toList()}',
+        );
+        return;
+      }
 
       final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData);
       bool anyAccepted = false;
 
       audio.forEach((String blockId, dynamic value) {
-        if (value is! Map<String, dynamic>) return;
+        final Map<String, dynamic>? blockMap = _asStringKeyedMap(value);
+        if (blockMap == null) {
+          debugPrint('[BlockData] Skipping $blockId — value is not a map (${value.runtimeType})');
+          return;
+        }
 
         final Map<String, dynamic> merged = Map<String, dynamic>.from(
           updated[blockId] ?? <String, dynamic>{},
         );
         bool blockAccepted = false;
 
-        value.forEach((String param, dynamic paramValue) {
+        blockMap.forEach((String param, dynamic paramValue) {
           final String key = '$blockId.$param';
           if (_activeInteractions.containsKey(key)) {
             // User is still editing this control — suppress the server echo.
@@ -452,6 +493,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
       });
 
       if (anyAccepted && !isClosed) {
+        // debugPrint('[BlockData] Emitting update for blocks: ${audio.keys.toList()}');
         emit(
           state.copyWith(
             allBlockData: updated,
@@ -459,10 +501,30 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
             clearInactiveReason: true,
           ),
         );
+      } else {
+        debugPrint('[BlockData] No block accepted (all suppressed or empty)');
       }
-    } catch (e) {
-      debugPrint('[BlockData] Parse error: $e');
+    } catch (e, st) {
+      debugPrint('[BlockData] Parse error: $e\n$st');
     }
+  }
+
+  /// Defensively coerces a `dynamic` JSON value into a `Map<String, dynamic>`.
+  ///
+  /// `jsonDecode` in Dart normally produces `Map<String, dynamic>`, but values
+  /// coming from FFI bridges, `Map.from` / spreads, or platform channels can
+  /// arrive as `Map<dynamic, dynamic>` or `Map<Object?, Object?>`. A direct
+  /// `as Map<String, dynamic>` cast on those throws / returns null and the
+  /// payload is silently dropped — which is exactly the symptom reported.
+  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map<String, dynamic>(
+        (dynamic k, dynamic v) => MapEntry<String, dynamic>(k.toString(), v),
+      );
+    }
+    return null;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

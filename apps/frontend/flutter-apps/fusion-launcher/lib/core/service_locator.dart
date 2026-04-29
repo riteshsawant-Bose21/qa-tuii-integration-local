@@ -40,7 +40,6 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
-import '../features/firmware_update/viewmodel/firmware_update_vm.dart';
 import '../features/devices/view_model/reboot/reboot_viewmodel.dart';
 import '../features/home/domain/usecases/create_project_usecase.dart';
 import '../features/home/domain/usecases/delete_project_usecase.dart';
