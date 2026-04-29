@@ -45,7 +45,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
 
     // Register as meter observer so telemetry stays alive while this widget is mounted.
-    _meterDataViewModel.registerObserver(this, blockIds : <String>{widget.zoneFunctions.id});
+    _meterDataViewModel.registerObserver(this, <String>{widget.zoneFunctions.id});
 
     // Fetch the latest server values on load.
     _sourceMixViewModel.updateParamsAsPerServer(function: widget.zoneFunctions);

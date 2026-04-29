@@ -37,7 +37,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver(this, blockIds : <String>{'system_info'});
+    serviceLocator<MeterDataViewModel>().registerObserver(this, <String>{'system_info'});
   }
 
   @override
