@@ -209,6 +209,16 @@ static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
     return READ_ONCE(cn_mgr->timing_ready);
 }
 
+static inline u64 fusion_cn_fc_advance_time(u64 action_time)
+{
+    u64 ns_from_ms_boundary = action_time % NSEC_PER_MSEC;
+
+    if (ns_from_ms_boundary == (2 * TIMER_BASE_INTERVAL_NS))
+        return action_time + TIMER_BASE_INTERVAL_NS + 1;
+
+    return action_time + TIMER_BASE_INTERVAL_NS;
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
 {
@@ -252,7 +262,11 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
                                             s->info.frames_per_packet);
                 fusion_cn_metrics_kernel_silence_sub(s->metrics,
                                                      s->info.frames_per_packet);
-                s->next_action_time += s->packet_time;
+                if (s->info.is_fusion_connect &&
+                    s->packet_time == TIMER_BASE_INTERVAL_NS)
+                    s->next_action_time = fusion_cn_fc_advance_time(s->next_action_time);
+                else
+                    s->next_action_time += s->packet_time;
             }
 
             s->played_action_time = action_time;
@@ -578,7 +592,7 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
 }
 
 /* --- Tick queue helper --- */
-static inline void fusion_cn_queue_process(void)
+static inline void fusion_cn_queue_process(struct fusion_cn_manager *mgr)
 {
     struct kthread_worker *worker = READ_ONCE(process_worker);
 
@@ -589,9 +603,7 @@ static inline void fusion_cn_queue_process(void)
     /* Coalesce: only queue if not already pending */
     if (atomic_cmpxchg(&process_pending, 0, 1) == 0) {
         kthread_queue_work(worker, &process_work);
-    } else {
-        printk(KERN_WARNING "fusion_cn: tick arrived but previous tick still pending processing\n");
-    }
+    } 
 }
 
 /* --- GPT client callback --- */
@@ -602,7 +614,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
     WRITE_ONCE(mgr->tick_ns, tick_ns);
     WRITE_ONCE(mgr->timing_ready, true);
 
-    fusion_cn_queue_process();
+    fusion_cn_queue_process(mgr);
 }
 
 static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {

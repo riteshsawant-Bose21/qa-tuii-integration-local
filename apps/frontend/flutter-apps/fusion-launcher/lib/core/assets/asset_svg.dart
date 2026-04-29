@@ -21,4 +21,5 @@ class AssetSvg {
   static const String autoplaceSquare = '$_path/autoplace_square.svg';
   static const String autoplaceHexagonal = '$_path/autoplace_hexagonal.svg';
   static const String sadFace = '$_path/sad_face.svg';
+  static const String smilyFace = '$_path/smily_face.svg';
 }

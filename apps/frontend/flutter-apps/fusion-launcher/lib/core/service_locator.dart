@@ -215,10 +215,6 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
-    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
-  );
-
   serviceLocator.registerLazySingleton<RebootViewmodelCubit>(
     () => RebootViewmodelCubit(fusionDeviceService: serviceLocator<FusionDeviceService>()),
   );
