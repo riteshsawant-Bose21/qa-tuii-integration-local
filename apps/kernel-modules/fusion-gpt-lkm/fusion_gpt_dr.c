@@ -549,13 +549,13 @@ static bool gpt_delta_is_valid_interval(u64 delta)
 	return abs(err) <= READ_ONCE(max_valid_pps_error_param);
 }
 
-static void gpt_log_holdover_enter_locked(struct fusion_gpt *g)
+static void gpt_log_holdover_reacquire_armed_locked(struct fusion_gpt *g)
 {
 	if (g->discipline_holdover_active)
 		return;
 
 	g->discipline_holdover_active = true;
-	pr_info("fusion_gpt: holdover_enter pre_blackout_delta=%llu dac=%d model_valid=%u\n",
+	pr_info("fusion_gpt: holdover_reacquire_armed pre_blackout_delta=%llu dac=%d model_valid=%u\n",
 		g->discipline_pre_blackout_delta, g->dac_target,
 		g->discipline_model_valid ? 1U : 0U);
 }
@@ -580,7 +580,7 @@ static void gpt_arm_holdover_validation_locked(struct fusion_gpt *g,
 	WRITE_ONCE(g->discipline_continuity_ready, keep_continuity);
 
 	if (keep_continuity)
-		gpt_log_holdover_enter_locked(g);
+		gpt_log_holdover_reacquire_armed_locked(g);
 	else
 		g->discipline_holdover_active = false;
 }
@@ -906,9 +906,8 @@ static int fusion_gpt_apply_reset_request(const struct gpt_reset_request *reques
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset type=%s simulate_pps_gap=%u dac_restore=%s\n",
+	pr_info("fusion_gpt: reset type=%s dac_restore=%s\n",
 		gpt_reset_type_name(request->type),
-		request->simulate_pps_gap ? 1U : 0U,
 		gpt_dac_restore_reason_name(request->dac_restore_reason));
 	if (request->simulate_pps_gap)
 		pr_info("fusion_gpt: pps_gap_sim duration_ms=%u reset_type=%s\n",
@@ -948,7 +947,7 @@ static int fusion_gpt_simulate_pps_gap_only(void)
 		jiffies + msecs_to_jiffies(duration_ms) : 0;
 	if (duration_ms && READ_ONCE(g->discipline_continuity_ready) &&
 	    gpt_delta_is_valid_interval(g->discipline_pre_blackout_delta))
-		gpt_log_holdover_enter_locked(g);
+		gpt_log_holdover_reacquire_armed_locked(g);
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -1111,7 +1110,7 @@ static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64,
 	    !gpt_delta_is_valid_interval(g->discipline_pre_blackout_delta))
 		return false;
 
-	gpt_log_holdover_enter_locked(g);
+	gpt_log_holdover_reacquire_armed_locked(g);
 	g->discipline_reacquire_pending = true;
 	g->discipline_post_return_cap64 = cap64;
 	g->discipline_post_return_capture_count = 1;
@@ -1490,7 +1489,7 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 		continuity_at_gm_expire =
 			READ_ONCE(g->discipline_continuity_ready);
 		if (continuity_at_gm_expire)
-			gpt_log_holdover_enter_locked(g);
+			gpt_log_holdover_reacquire_armed_locked(g);
 		gm_lock_expired = true;
 	}
 	if (last_pps &&
@@ -1722,15 +1721,12 @@ static void fusion_dac_work_handler(struct work_struct *work)
 	int ret;
 	int target;
 	int current_dac;
-	bool dac_updated = false;
 	bool baseline_restore_pending;
-	enum gpt_dac_restore_reason baseline_restore_reason;
 
 	raw_spin_lock_irqsave(&g->ctrl_lock, flags);
 	target = clamp(g->dac_target, DAC_MIN_VALUE, DAC_MAX_VALUE);
 	current_dac = g->current_dac_value;
 	baseline_restore_pending = g->baseline_restore_pending;
-	baseline_restore_reason = g->baseline_restore_reason;
 	raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
 
 	if (target != current_dac) {
@@ -1744,8 +1740,6 @@ static void fusion_dac_work_handler(struct work_struct *work)
 			raw_spin_lock_irqsave(&g->ctrl_lock, flags);
 			g->current_dac_value = target;
 			raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
-			current_dac = target;
-			dac_updated = true;
 		}
 	}
 
@@ -1754,10 +1748,6 @@ static void fusion_dac_work_handler(struct work_struct *work)
 		g->baseline_restore_pending = false;
 		g->baseline_restore_reason = GPT_DAC_RESTORE_REASON_NONE;
 		raw_spin_unlock_irqrestore(&g->ctrl_lock, flags);
-
-		pr_info("fusion_gpt: dac restore complete: reason=%s target=%d action=%s\n",
-			gpt_dac_restore_reason_name(baseline_restore_reason),
-			target, dac_updated ? "applied" : "already_set");
 	}
 }
 static int gpt_start(struct fusion_gpt *g)
@@ -1792,7 +1782,7 @@ static int gpt_start(struct fusion_gpt *g)
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset type=%s simulate_pps_gap=0 dac_restore=none\n",
+	pr_info("fusion_gpt: reset type=%s dac_restore=none\n",
 		gpt_reset_type_name(GPT_RESET_COLD_START));
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
