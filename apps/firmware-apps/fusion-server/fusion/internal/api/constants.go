@@ -6,113 +6,6 @@ import (
 )
 
 const (
-	SoftwareUpdateVersionUnknown = "Unknown"
-	BranchNameUnknown            = "Unknown"
-	CommitHashUnknown            = "Unknown"
-	JenkinsBuildNumberUnknown    = "Unknown"
-	PreReleaseTagUnknown         = "Unknown"
-	SoftwareUpdateOTAPath        = "/mnt/ota"
-	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
-	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
-
-	FusionEpoch     = "_fusion_epoch"
-	FusionVersion   = "_fusion_version"
-	FusionMessageID = "_fusion_msg_id"
-	FusionOperation = "_fusion_op"
-	FusionSentAtNS  = "_fusion_sent_at_ns"
-
-	HTTPTimeout       = 5 * time.Second
-	HTTPUploadTimeout = 30 * time.Second
-
-	MacUnknown = "Unknown"
-
-	MessageIDKey        = "id"
-	MessagePriorityKey  = "priority"
-	MessageTimestampKey = "timestamp"
-	MessageZonesKey     = "zones"
-	ModelUnknown        = "Unknown"
-
-	Protocol = "http://"
-
-	SerialUnknown = "Unknown"
-
-	SnapshotIDKey           = "snapshot_id"
-	SnapshotDefinitionIDKey = "snapshot_definition_id"
-	SceneSetIDKey           = "set_id"
-	SceneIDKey              = "scene_id"
-
-	VIPHighPriority        = "high"
-	VIPvrrpHighPriority    = 120
-	VIPDefaultPriority     = "default"
-	VIPvrrpDefaultPriority = 100
-	VIPLowPriority         = "low"
-	VIPvrrpLowPriority     = 90
-
-	// WS Request types (client -> server)
-	WSMsgTypeDevices               = "devices"
-	WSMsgTypeDeviceByID            = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo      = "update_device_info"
-	WSMsgTypeConfiguration         = "config"
-	WSMsgTypePatchConfiguration    = "patch_config"
-	WSMsgTypeUnsubscribeConfig     = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices    = "unsubscribe_devices"
-	WSMsgTypePing                  = "ping"
-	WSMsgTypePong                  = "pong"
-	WSMsgTypeError                 = "error"
-	WSMsgTypeStartUpdate           = "start_update"
-	WSMsgTypeUpdateMeterDataFilter = "update_meter_data_filter"
-	WSMsgTypeSubscribeMeterData    = "subscribe_meter_data"
-	WSMsgTypeUnsubscribeMeterData  = "unsubscribe_meter_data"
-	WSMsgTypeMeterData             = "meter_data"
-	WSMsgTypeUpdateProgress        = "update_progress"
-	WSMsgTypeSwUpdateInfo          = "sw_update_info"
-	WSMsgTypeListSoftwareUpdates   = "list_sw_update_files"
-
-	// WS event types (server -> client)
-	WSMsgTypeDeviceUpdate = "device_update"
-	WSMsgTypeConfigUpdate = "config_update"
-
-	// WS topic names
-	WSTopicConfigUpdates = "config_updates"
-	WSTopicDeviceUpdates = "device_updates"
-	WSTopicMeterData     = "meter_data"
-
-	// WebSocket response data field keys
-	WSDataFieldDeviceID   = "device_id"
-	WSDataFieldDeviceData = "device_data"
-
-	WSCurrentVersion = 1
-
-	WSStatusSuccess = "success"
-	WSStatusError   = "error"
-	WSStatusEvent   = "event"
-
-	// Standard WebSocket close codes (1xxx)
-	WSCodeNormalClosure = 1000 // Normal closure (for connection close only)
-	WSCodeProtocolError = 1002 // Protocol error (for connection close only)
-	WSCodeInternalError = 1011 // Internal server error (for connection close only)
-
-	// Application success codes (3xxx) - Available for framework use
-	WSCodeOK            = 3000 // Success response
-	WSCodeUpdated       = 3001 // Resource updated successfully
-	WSCodeConnected     = 3002 // Connection established
-	WSCodePong          = 3003 // Pong response
-	WSCodeDeviceUpdated = 3004 // Device updated (for push notifications)
-	WSCodeUpdateStarted = 3005 // Software update started successfully
-
-	// Application client error codes (4xxx) - Available for private use
-	WSCodeInvalidJSON      = 4000 // Invalid JSON in request
-	WSCodeMissingField     = 4001 // Required field missing
-	WSCodeInvalidType      = 4002 // Invalid message type
-	WSCodeInvalidPayload   = 4003 // Invalid request payload
-	WSCodeMissingDeviceID  = 4004 // Device ID missing
-	WSCodeDeviceNotFound   = 4005 // Device not found
-	WSCodeUpdateFailed     = 4006 // Update operation failed
-	WSCodeApplicationError = 4500 // General application error
-
-)
-
-const (
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
 	TextMIMEType = "text/plain"
@@ -141,12 +34,40 @@ var (
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
 
-func getenvDefault(key string, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
+const (
+	FusionEpoch     = "_fusion_epoch"
+	FusionMessageID = "_fusion_msg_id"
+	FusionOperation = "_fusion_op"
+	FusionSentAtNS  = "_fusion_sent_at_ns"
+	FusionVersion   = "_fusion_version"
+)
+
+const (
+	HTTPTimeout       = 5 * time.Second
+	HTTPUploadTimeout = 30 * time.Second
+)
+
+const (
+	MessageIDKey        = "id"
+	MessagePriorityKey  = "priority"
+	MessageTimestampKey = "timestamp"
+	MessageZonesKey     = "zones"
+)
+
+const (
+	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
+	Protocol                     = "http://"
+	SoftwareUpdateOTAPath        = "/mnt/ota"
+	Unknown                      = "Unknown"
+)
+
+const (
+	SceneIDKey              = "scene_id"
+	SceneSetIDKey           = "set_id"
+	SnapshotIDKey           = "snapshot_id"
+	SnapshotDefinitionIDKey = "snapshot_definition_id"
+)
 
 // RECOVERY_STATUS enum values from SWUpdate
 const (
@@ -163,13 +84,13 @@ const (
 
 // SWUpdate progress socket constants
 const (
-	SWUpdateSocketPath       = "/tmp/swupdateprog"
 	SWUpdateConnectAckSize   = 8
+	SWUpdateExpectedAckMagic = "ACK"
 	SWUpdateMsgSizeV200      = 2408
 	SWUpdateMsgSizeV210      = 2416
-	SWUpdateExpectedAckMagic = "ACK"
 	SWUpdateProgressAPIV200  = uint32(0x00020000)
 	SWUpdateProgressAPIV210  = uint32(0x00020100)
+	SWUpdateSocketPath       = "/tmp/swupdateprog"
 )
 
 // SWUpdate progress message byte offsets
@@ -188,3 +109,83 @@ const (
 	SWUpdateOffInfo         = 360
 	SWUpdateOffSerialNumber = 2408
 )
+
+const (
+	VIPHighPriority        = "high"
+	VIPvrrpHighPriority    = 120
+	VIPDefaultPriority     = "default"
+	VIPvrrpDefaultPriority = 100
+	VIPLowPriority         = "low"
+	VIPvrrpLowPriority     = 90
+)
+
+const (
+	// WS Request types (client -> server)
+	WSMsgTypeConfiguration         = "config"
+	WSMsgTypeDeviceByID            = "device_by_id"
+	WSMsgTypeDevices               = "devices"
+	WSMsgTypeError                 = "error"
+	WSMsgTypeListSoftwareUpdates   = "list_sw_update_files"
+	WSMsgTypeMeterData             = "meter_data"
+	WSMsgTypePatchConfiguration    = "patch_config"
+	WSMsgTypePing                  = "ping"
+	WSMsgTypePong                  = "pong"
+	WSMsgTypeStartUpdate           = "start_update"
+	WSMsgTypeSubscribeMeterData    = "subscribe_meter_data"
+	WSMsgTypeSwUpdateInfo          = "sw_update_info"
+	WSMsgTypeUnsubscribeConfig     = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices    = "unsubscribe_devices"
+	WSMsgTypeUnsubscribeMeterData  = "unsubscribe_meter_data"
+	WSMsgTypeUpdateDeviceInfo      = "update_device_info"
+	WSMsgTypeUpdateMeterDataFilter = "update_meter_data_filter"
+	WSMsgTypeUpdateProgress        = "update_progress"
+
+	// WS event types (server -> client)
+	WSMsgTypeConfigUpdate = "config_update"
+	WSMsgTypeDeviceUpdate = "device_update"
+
+	// WS topic names
+	WSTopicConfigUpdates = "config_updates"
+	WSTopicDeviceUpdates = "device_updates"
+	WSTopicMeterData     = "meter_data"
+
+	// WebSocket response data field keys
+	WSDataFieldDeviceData = "device_data"
+	WSDataFieldDeviceID   = "device_id"
+
+	WSCurrentVersion = 1
+
+	WSStatusEvent   = "event"
+	WSStatusError   = "error"
+	WSStatusSuccess = "success"
+
+	// Standard WebSocket close codes (1xxx)
+	WSCodeNormalClosure = 1000 // Normal closure (for connection close only)
+	WSCodeProtocolError = 1002 // Protocol error (for connection close only)
+	WSCodeInternalError = 1011 // Internal server error (for connection close only)
+
+	// Application success codes (3xxx) - Available for framework use
+	WSCodeOK            = 3000 // Success response
+	WSCodeUpdated       = 3001 // Resource updated successfully
+	WSCodeConnected     = 3002 // Connection established
+	WSCodePong          = 3003 // Pong response
+	WSCodeDeviceUpdated = 3004 // Device updated (for push notifications)
+	WSCodeUpdateStarted = 3005 // Software update started successfully
+
+	// Application client error codes (4xxx) - Available for private use
+	WSCodeInvalidJSON      = 4000 // Invalid JSON in request
+	WSCodeMissingField     = 4001 // Required field missing
+	WSCodeInvalidType      = 4002 // Invalid message type
+	WSCodeInvalidPayload   = 4003 // Invalid request payload
+	WSCodeMissingDeviceID  = 4004 // Device ID missing
+	WSCodeDeviceNotFound   = 4005 // Device not found
+	WSCodeUpdateFailed     = 4006 // Update operation failed
+	WSCodeApplicationError = 4500 // General application error
+)
+
+func getenvDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}

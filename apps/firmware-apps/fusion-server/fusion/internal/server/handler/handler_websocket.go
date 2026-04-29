@@ -107,7 +107,7 @@ func (h *Handler) handleConfigurationWithSubscription(request *api.WebSocketRequ
 	}
 
 	server.SubscribeToTopic(conn, api.WSTopicConfigUpdates)
-	logging.GetLogger().Info("Client subscribed to configuration updates for request %s", request.ID)
+	logging.GetLogger().Debug("Client subscribed to configuration updates for request %s", request.ID)
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeConfiguration, api.WSCodeOK, "OK - subscribed to configuration updates", state), nil
 }
@@ -116,7 +116,7 @@ func (h *Handler) handleConfigurationWithSubscription(request *api.WebSocketRequ
 func (h *Handler) handleDevicesWithSubscription(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
 	// Subscribe client to device updates for push notifications
 	server.SubscribeToTopic(conn, api.WSTopicDeviceUpdates)
-	logging.GetLogger().Info("Client subscribed to device updates for request %s", request.ID)
+	logging.GetLogger().Debug("Client subscribed to device updates for request %s", request.ID)
 
 	// Get actual device information from persistence
 	devices, err := h.getDevicesList()
@@ -144,7 +144,7 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *api.WebSocketRequest
 
 	// Subscribe client to device updates for push notifications
 	server.SubscribeToTopic(conn, api.WSTopicDeviceUpdates)
-	logging.GetLogger().Info("Client subscribed to device updates for device %s", payload.DeviceID)
+	logging.GetLogger().Debug("Client subscribed to device updates for device %s", payload.DeviceID)
 
 	// Get actual device by ID from persistence
 	device, err := h.getDeviceByID(payload.DeviceID)
@@ -178,7 +178,7 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *api.WebSocketR
 
 	// Return success immediately - updated device info will be sent via push notification
 	// when gossip protocol propagates the change across cluster nodes
-	logging.GetLogger().Info("Device %s updated successfully, push notification will be sent when cluster sync completes", payload.DeviceID)
+	logging.GetLogger().Debug("Device %s updated successfully, push notification will be sent when cluster sync completes", payload.DeviceID)
 	return createSuccessResponse(&request.ID, api.WSMsgTypeUpdateDeviceInfo, api.WSCodeUpdated, "Device updated successfully", map[string]interface{}{
 		"device_id": payload.DeviceID,
 		"message":   "Device updated successfully. Updated device info will be sent via push notification.",
@@ -235,7 +235,7 @@ func (h *Handler) handlePing(request *api.WebSocketRequest) (*api.WebSocketRespo
 func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
 	logger := logging.GetLogger()
 
-	logger.Info("Received software update start request - broadcasting to cluster")
+	logger.Debug("Received software update start request - broadcasting to cluster")
 
 	// Check that at least one .swu file is present in the OTA directory before triggering an update
 	swuFiles, err := filepath.Glob(filepath.Join(api.SoftwareUpdateOTAPath, "*.swu"))
@@ -247,7 +247,7 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 		logger.Warn("Software update requested but no .swu files found in %s", api.SoftwareUpdateOTAPath)
 		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("No .swu bundle found in %s — upload a bundle before triggering an update", api.SoftwareUpdateOTAPath)), nil
 	}
-	logger.Info("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
+	logger.Debug("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
 
 	// Count followers and ensure every .swu file is present on all followers
 	// before triggering the update. And gossip + HTTP-pull sync as the upload API.
@@ -258,7 +258,7 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 		return createErrorResponse(&request.ID, api.WSCodeApplicationError,
 			fmt.Sprintf("Failed to sync SWU files to cluster before triggering update: %v", syncErr)), nil
 	}
-	logger.Info("[StartUpdate] %d follower(s) confirmed — all SWU files present on all nodes, proceeding with trigger", followerCount)
+	logger.Debug("[StartUpdate] %d follower(s) confirmed — all SWU files present on all nodes, proceeding with trigger", followerCount)
 
 	// All nodes have the files — broadcast the update trigger
 	// Create a cluster message to broadcast the software update trigger to all nodes
@@ -277,7 +277,7 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to broadcast software update: %v", err)), nil
 	}
 
-	logger.Info("Successfully broadcasted software update trigger to cluster")
+	logger.Debug("Successfully broadcasted software update trigger to cluster")
 	return createSuccessResponse(&request.ID, api.WSMsgTypeStartUpdate, api.WSCodeUpdateStarted, "Software update broadcasted to all cluster nodes", map[string]interface{}{
 		"action": "broadcast_cluster",
 		"nodes":  h.clusterTransport.MemberListMembers(),
@@ -289,7 +289,7 @@ func (h *Handler) handleMeterDataWithSubscription(request *api.WebSocketRequest,
 	logger := logging.GetLogger()
 
 	server.SubscribeToTopic(conn, api.WSTopicMeterData)
-	logger.Info("Client subscribed to meter data")
+	logger.Debug("Client subscribed to meter data")
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeSubscribeMeterData, api.WSCodeOK, "OK - subscribed to meter data", nil), nil
 }
@@ -297,6 +297,10 @@ func (h *Handler) handleMeterDataWithSubscription(request *api.WebSocketRequest,
 // handlePatchMeterDataFilter handles requests to update the meter data filter for a connection.
 // It also ensures the client is subscribed to meter data topic so filtered data is delivered.
 func (h *Handler) handlePatchMeterDataFilter(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
+	if len(request.Data) == 0 || string(request.Data) == "null" {
+		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
+	}
+
 	var payload struct {
 		Filter []string `json:"filter"`
 	}
@@ -308,7 +312,7 @@ func (h *Handler) handlePatchMeterDataFilter(request *api.WebSocketRequest, conn
 	// Ensure client is subscribed to meter data topic so routeMeterData delivers to this connection.
 	server.SubscribeToTopic(conn, api.WSTopicMeterData)
 	server.SetMeterFilter(conn, payload.Filter)
-	logging.GetLogger().Info("Client updated meter data filter: %d IDs", len(payload.Filter))
+	logging.GetLogger().Debug("Client updated meter data filter: %d IDs", len(payload.Filter))
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeUpdateMeterDataFilter, api.WSCodeUpdated, "Meter data filter updated", map[string]interface{}{
 		"filter_count": len(payload.Filter),
@@ -321,7 +325,7 @@ func (h *Handler) handleUnsubscribeMeterData(request *api.WebSocketRequest, conn
 
 	server.UnsubscribeFromTopic(conn, api.WSTopicMeterData)
 	server.RemoveMeterFilter(conn)
-	logger.Info("Client unsubscribed from meter data")
+	logger.Debug("Client unsubscribed from meter data")
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeUnsubscribeMeterData, api.WSCodeOK, "Unsubscribed from meter data", nil), nil
 }

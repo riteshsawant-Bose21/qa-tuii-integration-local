@@ -135,7 +135,7 @@ func TestWebSocketUpdateMeterDataFilterInvalidPayload(t *testing.T) {
 		ID:      "meter-filter-bad",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
-		Data:    json.RawMessage(`not valid json`),
+		Data:    json.RawMessage(`"not an object"`),
 	}
 	sendWebSocketRequest(t, conn, request)
 
@@ -480,7 +480,7 @@ func TestWebSocketMeterDataErrorCases(t *testing.T) {
 				ID:      "err-invalid-json",
 				Version: api.WSCurrentVersion,
 				Type:    api.WSMsgTypeUpdateMeterDataFilter,
-				Data:    json.RawMessage(`{broken`),
+				Data:    json.RawMessage(`"not an object"`),
 			},
 			expectedCode: api.WSCodeInvalidPayload,
 			expectedType: api.WSMsgTypeError,

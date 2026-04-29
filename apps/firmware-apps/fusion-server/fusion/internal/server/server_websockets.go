@@ -118,10 +118,10 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.wsLock.Unlock()
 		s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
 		s.removeConnection(conn)
-		logger.Info("WebSocket connection closed")
+		logger.Debug("WebSocket connection closed")
 	}()
 
-	logger.Info("WebSocket connection established")
+	logger.Debug("WebSocket connection established")
 
 	// Send initial state to the client
 	initialState, err := s.handler.GetInitialState()
@@ -497,7 +497,7 @@ func (s *FusionServer) SubscribeToTopic(conn *websocket.Conn, topic string) {
 	s.subscriptions[topic][conn] = true
 	client.topics[topic] = struct{}{}
 	s.wsLock.Unlock()
-	logging.GetLogger().Info("WebSocket client subscribed to topic: %s", topic)
+	logging.GetLogger().Debug("WebSocket client subscribed to topic: %s", topic)
 }
 
 // UnsubscribeFromTopic unsubscribes a WebSocket connection from a specific topic
@@ -514,7 +514,7 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 		}
 	}
 	s.wsLock.Unlock()
-	logging.GetLogger().Info("WebSocket client unsubscribed from topic: %s", topic)
+	logging.GetLogger().Debug("WebSocket client unsubscribed from topic: %s", topic)
 }
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
