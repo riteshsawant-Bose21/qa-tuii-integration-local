@@ -46,7 +46,8 @@ func NewMeterFilterManager() *MeterFilterManager {
 }
 
 // SetFilter replaces the meter ID filter for conn with ids and recomputes the
-// master list. Passing an empty slice clears the connection's filter.
+// master list. Passing an empty slice stores an empty filter for the connection,
+// which removes its contribution from the master list.
 func (m *MeterFilterManager) SetFilter(conn *websocket.Conn, ids []string, deviceAddressArray []string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
