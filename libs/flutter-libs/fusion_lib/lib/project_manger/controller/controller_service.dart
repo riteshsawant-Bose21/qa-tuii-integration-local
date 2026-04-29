@@ -331,12 +331,16 @@ extension ControllerService on ProjectService {
         String type = (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt';
         Set<String> zoneId = getAssignedZoneIds(controller.id);
         final ZoneFunctions? functionId = zoneId.isNotEmpty ? getZoneFunction(zoneOrSubZoneId: zoneId.first) : null;
+
+        final List<String> assignedZoneFunctionId =
+            getAssignedZoneIds(controller.id).toList().map((String id) => getZoneFunction(zoneOrSubZoneId: id)?.paramName).whereType<String>().toList() ?? [];
+
         return WallController(
           id: type == "lt" ? "CONTROLLER350958744" : controller.id,
           name: controller.name,
           type: type,
           // zoneIds: getAssignedZoneIds(controller.id).toList(),
-          zoneIds: functionId != null ? [functionId.paramName] : getAssignedZoneIds(controller.id).toList(),
+          zoneIds: assignedZoneFunctionId,
           pages: controllerWallPages,
           messagePlayer: controllerWallMessages,
           schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
