@@ -26,12 +26,14 @@ import (
 type FusionServer struct {
 	node                      string
 	handler                   *handler.Handler
-	wsClients                 map[*websocket.Conn]bool
-	wsWriteMutex              map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
+	wsClients                 map[*websocket.Conn]*wsClientState
 	subscriptions             map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
 	wsLock                    sync.RWMutex
 	configUpdateMu            sync.Mutex
 	configUpdatePending       bool
+	configUpdateData          map[string]any
+	configUpdateSnapshot      bool
+	configUpdateClear         bool
 	configUpdateDebounceTimer *time.Timer
 	upgrader                  websocket.Upgrader
 	wsStats                   *api.WebSocketStats
@@ -42,6 +44,11 @@ type FusionServer struct {
 	maxConnections int
 }
 
+type wsClientState struct {
+	writeMu sync.Mutex
+	topics  map[string]struct{}
+}
+
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
 func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
@@ -49,12 +56,11 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	server := &FusionServer{
 		node:               node,
 		handler:            handler,
-		wsClients:          make(map[*websocket.Conn]bool),
-		wsWriteMutex:       make(map[*websocket.Conn]*sync.Mutex),
+		wsClients:          make(map[*websocket.Conn]*wsClientState),
 		subscriptions:      make(map[string]map[*websocket.Conn]bool),
-		maxConnections:     wsMaxConnections,
 		meterFilterManager: NewMeterFilterManager(),
 		telemetrySub:       NewTelemetrySubscriber(hub, api.TelemetryCoreZMQPort),
+		maxConnections:     wsMaxConnections,
 		wsStats: &api.WebSocketStats{
 			Connections:    0,
 			Messages:       0,

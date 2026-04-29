@@ -16,7 +16,6 @@ require (
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.11.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
 )
 
@@ -25,6 +24,7 @@ require (
 	github.com/go-zeromq/zmq4 v0.17.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 )
+require github.com/vishvananda/netlink v1.3.1 // indirect
 
 replace github.com/go-ble/ble => ../third-party/go-ble
 
