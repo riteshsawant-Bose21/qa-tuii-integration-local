@@ -17,6 +17,7 @@ function show_help() {
     echo "  --fusion            Run only fusion tests"     
     echo "  --integration       Run only integration tests (ex: --integration --size 5) (build tag integration)"
     echo "  --logger            Run only logger tests"     
+    echo "  --meter-data        Run only meter data tests"
     echo "  --persistence       Run only persistence tests"     
     echo "  --sap               Run only SAP tests"     
     echo "  --scheduler         Run only scheduler tests"     
@@ -51,6 +52,7 @@ while [[ $# -gt 0 ]]; do
         --controllers)      test_type="controllers"; shift ;;
         --fusion)           test_type="fusion"; shift ;;
         --logger)           test_type="logger"; shift ;;
+        --meter-data)       test_type="meter-data"; shift ;;
         --persistence)      test_type="persistence"; shift ;;
         --sap)              test_type="sap"; shift ;;
         --scheduler)        test_type="scheduler"; shift ;;
@@ -178,6 +180,7 @@ function test_file_for_type() {
         controllers)            echo "controllers_test.go" ;;
         fusion)                 echo "fusion_test.go" ;;
         logger)                 echo "logger_test.go" ;;
+        meter-data)             echo "meter_data_test.go" ;;
         persistence)            echo "persistence_test.go" ;;
         sap)                    echo "sap_test.go" ;;
         scheduler)              echo "scheduler_test.go" ;;
@@ -307,6 +310,7 @@ case "$test_type" in
     controllers)        run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
     fusion)             run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
     logger)             run_logger_tests ;;
+    meter-data)         run_package_tests "$(regex_for_test_file ./meter_data_test.go)" ;;
     persistence)        run_package_tests "$(regex_for_test_file ./persistence_test.go)" ;;
     sap)                run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
     scheduler)          run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;

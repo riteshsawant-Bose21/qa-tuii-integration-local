@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
@@ -11,6 +12,13 @@ import (
 
 	"github.com/go-zeromq/zmq4"
 	json "github.com/goccy/go-json"
+)
+
+const (
+	zmqReconnectBaseDelay = 1 * time.Second
+	zmqReconnectMaxDelay  = 30 * time.Second
+
+	zmqShutdownMsg = "TelemetrySubscriber: shutting down subscription to %s"
 )
 
 // TelemetrySubscriber manages per-device ZMQ SUB connections on the VIP node.
@@ -66,11 +74,6 @@ func (t *TelemetrySubscriber) Start(deviceIPs []string) {
 	}
 }
 
-// Reconcile updates subscriptions to match deviceIPs — equivalent to Start.
-func (t *TelemetrySubscriber) Reconcile(deviceIPs []string) {
-	t.Start(deviceIPs)
-}
-
 // Stop cancels all active device subscriptions.
 func (t *TelemetrySubscriber) Stop() {
 	t.mu.Lock()
@@ -90,28 +93,56 @@ func (t *TelemetrySubscriber) subscribeDevice(deviceIP string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.devices[deviceIP] = cancel
 
-	addr := fmt.Sprintf("ws://%s:%s", deviceIP, t.zmqPort)
-	go t.listenLoop(ctx, deviceIP, addr)
-	logging.GetLogger().Info("TelemetrySubscriber: subscribing to %s", addr)
+	go t.listenLoop(ctx, deviceIP)
+	logging.GetLogger().Info("TelemetrySubscriber: subscribing to %s:%s", deviceIP, t.zmqPort)
 }
 
-// listenLoop connects to a single ZMQ PUB socket and reads meter_data messages
-// until the context is cancelled or a fatal socket error occurs.
-func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP, addr string) {
+// listenLoop connects to a single ZMQ PUB socket and reads meter_data messages.
+// On transient errors it reconnects with exponential backoff until the context
+// is cancelled (clean shutdown via Stop or Reconcile).
+func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
+	logger := logging.GetLogger()
+	addr := fmt.Sprintf("tcp://%s:%s", deviceIP, t.zmqPort)
+	delay := zmqReconnectBaseDelay
+
+	for {
+		if ctx.Err() != nil {
+			logger.Info(zmqShutdownMsg, addr)
+			return
+		}
+
+		err := t.connectAndRecv(ctx, deviceIP, addr)
+		if ctx.Err() != nil {
+			logger.Info(zmqShutdownMsg, addr)
+			return
+		}
+
+		// Transient error — back off and retry
+		logger.Warn("TelemetrySubscriber: connection to %s lost (%v), reconnecting in %s", addr, err, delay)
+		select {
+		case <-time.After(delay):
+			delay = min(delay*2, zmqReconnectMaxDelay)
+		case <-ctx.Done():
+			logger.Info(zmqShutdownMsg, addr)
+			return
+		}
+	}
+}
+
+// connectAndRecv establishes a ZMQ SUB connection and reads messages until an
+// error occurs or the context is cancelled. Returns the error that caused exit.
+func (t *TelemetrySubscriber) connectAndRecv(ctx context.Context, deviceIP, addr string) error {
 	logger := logging.GetLogger()
 
 	sub := zmq4.NewSub(ctx)
 	defer sub.Close()
 
 	if err := sub.Dial(addr); err != nil {
-		logger.Error("TelemetrySubscriber: failed to dial %s: %v", addr, err)
-		return
+		return fmt.Errorf("failed to dial: %w", err)
 	}
 
-	// Subscribe to all topics (empty string = receive everything)
 	if err := sub.SetOption(zmq4.OptionSubscribe, ""); err != nil {
-		logger.Error("TelemetrySubscriber: failed to set subscribe option for %s: %v", addr, err)
-		return
+		return fmt.Errorf("failed to set subscribe option: %w", err)
 	}
 
 	logger.Info("TelemetrySubscriber: connected to %s", addr)
@@ -119,13 +150,10 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP, addr str
 	for {
 		msg, err := sub.Recv()
 		if err != nil {
-			// Context cancelled → clean shutdown
 			if ctx.Err() != nil {
-				logger.Info("TelemetrySubscriber: shutting down subscription to %s", addr)
-				return
+				return ctx.Err()
 			}
-			logger.Error("TelemetrySubscriber: recv error from %s: %v", addr, err)
-			return
+			return fmt.Errorf("recv error: %w", err)
 		}
 
 		if len(msg.Frames) == 0 {

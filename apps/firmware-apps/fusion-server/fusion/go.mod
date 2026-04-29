@@ -8,6 +8,7 @@ require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
 	github.com/go-ping/ping v1.2.0
+	github.com/go-zeromq/zmq4 v0.17.0
 	github.com/goccy/go-json v0.10.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -21,10 +22,9 @@ require (
 
 require (
 	github.com/go-zeromq/goczmq/v4 v4.2.2 // indirect
-	github.com/go-zeromq/zmq4 v0.17.0 // indirect
+	github.com/vishvananda/netlink v1.3.1 // indirect
 	golang.org/x/text v0.23.0 // indirect
 )
-require github.com/vishvananda/netlink v1.3.1 // indirect
 
 replace github.com/go-ble/ble => ../third-party/go-ble
 
@@ -76,5 +76,5 @@ require (
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	golang.org/x/net v0.38.0
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.31.0
 )

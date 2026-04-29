@@ -284,7 +284,7 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 	}), nil
 }
 
-// handlerMeterDataWithSubscription handles meter data filter requests and subscribes client to meter data updates
+// handleMeterDataWithSubscription subscribes client to meter data updates (Pull-then-Push)
 func (h *Handler) handleMeterDataWithSubscription(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
 	logger := logging.GetLogger()
 
@@ -294,6 +294,8 @@ func (h *Handler) handleMeterDataWithSubscription(request *api.WebSocketRequest,
 	return createSuccessResponse(&request.ID, api.WSMsgTypeSubscribeMeterData, api.WSCodeOK, "OK - subscribed to meter data", nil), nil
 }
 
+// handlePatchMeterDataFilter handles requests to update the meter data filter for a connection.
+// It also ensures the client is subscribed to meter data topic so filtered data is delivered.
 func (h *Handler) handlePatchMeterDataFilter(request *api.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*api.WebSocketResponse, error) {
 	var payload struct {
 		Filter []string `json:"filter"`
@@ -303,6 +305,8 @@ func (h *Handler) handlePatchMeterDataFilter(request *api.WebSocketRequest, conn
 		return createErrorResponse(&request.ID, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
 
+	// Ensure client is subscribed to meter data topic so routeMeterData delivers to this connection.
+	server.SubscribeToTopic(conn, api.WSTopicMeterData)
 	server.SetMeterFilter(conn, payload.Filter)
 	logging.GetLogger().Info("Client updated meter data filter: %d IDs", len(payload.Filter))
 

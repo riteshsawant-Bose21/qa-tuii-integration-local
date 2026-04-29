@@ -610,21 +610,16 @@ func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
 	}
 
 	if len(failedConnections) > 0 {
+		addrs := s.clusterMemberFilterAddrs()
+		for _, conn := range failedConnections {
+			s.meterFilterManager.RemoveFilter(conn, addrs)
+		}
+
 		s.wsLock.Lock()
 		for _, conn := range failedConnections {
-			if s.subscriptions[api.WSTopicMeterData] != nil {
-				delete(s.subscriptions[api.WSTopicMeterData], conn)
-			}
-			delete(s.wsClients, conn)
-			conn.Close()
-		}
-		if len(s.subscriptions[api.WSTopicMeterData]) == 0 {
-			delete(s.subscriptions, api.WSTopicMeterData)
+			s.removeConnectionLocked(conn)
 		}
 		s.wsLock.Unlock()
-		for _, conn := range failedConnections {
-			s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
-		}
 	}
 
 	return nil

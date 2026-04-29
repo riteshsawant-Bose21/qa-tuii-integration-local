@@ -131,7 +131,7 @@ func (s *FusionServer) StopTelemetrySubscriptions() {
 // cluster membership. Call this when cluster topology changes while VIP.
 func (s *FusionServer) ReconcileTelemetrySubscriptions() {
 	ips := s.clusterMemberZMQIPs()
-	s.telemetrySub.Reconcile(ips)
+	s.telemetrySub.Start(ips)
 }
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.

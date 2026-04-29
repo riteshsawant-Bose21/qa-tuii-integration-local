@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
@@ -36,6 +37,7 @@ type MeterFilterManager struct {
 }
 
 // NewMeterFilterManager creates a manager that will send filter updates to
+// the telemetry core on each cluster device via UDP.
 func NewMeterFilterManager() *MeterFilterManager {
 	return &MeterFilterManager{
 		connFilters: make(map[*websocket.Conn]map[string]bool),
@@ -89,7 +91,7 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 		return nil
 	}
 
-	filtered := make([]api.MeterDataSample, 0, len(filter))
+	filtered := make([]api.MeterDataSample, 0, min(len(msg.Parameters.Value), len(filter)))
 	for _, sample := range msg.Parameters.Value {
 		if filter[sample.BlockName] {
 			filtered = append(filtered, sample)
@@ -190,6 +192,7 @@ func (m *MeterFilterManager) sendFilterRequest(ids []string, packetID uint64, de
 			logger.Error("MeterFilterManager: failed to connect to telemetry core at %s: %v", addr, err)
 			continue
 		}
+		conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		if _, err := conn.Write(data); err != nil {
 			logger.Error("MeterFilterManager: failed to send filter request to %s: %v", addr, err)
 		}
