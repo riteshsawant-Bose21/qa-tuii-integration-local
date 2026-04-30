@@ -202,7 +202,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return err
 		}
 
-		logging.GetLogger().Info("Snapshot '%s' activated successfully via task", snapID)
+		logging.GetLogger().Debug("Snapshot '%s' activated successfully via task", snapID)
 
 		return nil
 	}

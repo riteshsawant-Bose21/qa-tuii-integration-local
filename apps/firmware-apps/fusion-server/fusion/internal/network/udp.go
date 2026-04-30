@@ -245,7 +245,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	logger := logging.GetLogger()
 
 	if !msg.IsPublic() {
-		logger.Warn("message not public")
+		logger.Debug("udp broadcast: ignoring non-public operation=%s", msg.Operation)
 		return nil
 	}
 

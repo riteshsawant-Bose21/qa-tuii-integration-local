@@ -438,7 +438,7 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 
 	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
 		Id:          "end-window-task",
-		CronExpr:    "* * * * *",
+		CronExpr:    "*/5 * * * * *",
 		Description: "test end window",
 		EndAt:       timestamppb.New(end),
 		SnapshotId:  "default",
@@ -448,24 +448,33 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 	resp.Body.Close()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	// Wait for EndAt + window manager evaluation
-	time.Sleep(35 * time.Second)
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		resp, err = http.Get(tasksURL + "/end-window-task")
+		require.NoError(t, err)
 
-	resp, err = http.Get(tasksURL + "/end-window-task")
-	require.NoError(t, err)
-	defer resp.Body.Close()
+		ret := decodeTaskResponse(t, resp.Body)
+		resp.Body.Close()
 
-	ret := decodeTaskResponse(t, resp.Body)
+		if !ret.Enabled && !ret.Scheduled {
+			break
+		}
 
-	assert.False(t, ret.Enabled, "Task must auto-disable after EndAt")
-	assert.False(t, ret.Scheduled, "Task should be unscheduled after EndAt")
+		if time.Now().After(deadline) {
+			assert.False(t, ret.Enabled, "Task must auto-disable after EndAt")
+			assert.False(t, ret.Scheduled, "Task should be unscheduled after EndAt")
+			break
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 	clearTasks(t)
 	createTask(t)
 
-	newStart := time.Now().Add(3 * time.Second)
+	newStart := time.Now().Add(30 * time.Second)
 
 	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
 		StartAt: timestamppb.New(newStart),
@@ -479,14 +488,26 @@ func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 
-	resp, err = http.Get(tasksURL + "/test-task")
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		resp, err = http.Get(tasksURL + "/test-task")
+		require.NoError(t, err)
 
-	ret := decodeTaskResponse(t, resp.Body)
+		ret := decodeTaskResponse(t, resp.Body)
+		resp.Body.Close()
 
-	assert.True(t, ret.Enabled)
-	assert.False(t, ret.Scheduled, "Task should be unscheduled after updating StartAt into the future")
+		if ret.Enabled && !ret.Scheduled {
+			break
+		}
+
+		if time.Now().After(deadline) {
+			assert.True(t, ret.Enabled)
+			assert.False(t, ret.Scheduled, "Task should be unscheduled after updating StartAt into the future")
+			break
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 func TestTaskSchedulesAfterStartAt(t *testing.T) {
@@ -522,7 +543,7 @@ func TestTaskSchedulesAfterStartAt(t *testing.T) {
 }
 
 func createSnapshot(t *testing.T, id string) {
-	url := tasksServerURL + "/snapshots/" + id
+	url := tasksServerURL + routes.TimeMachineEndpoint + "/" + id
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	require.NoError(t, err)
 
@@ -542,8 +563,10 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 	clearHistory(t)
 
 	now := time.Now()
-	start := now.Add(2 * time.Minute)
-	end := now.Add(4 * time.Minute)
+	// RecurringWindow is only precise to HH:MM, so choose a whole-minute boundary
+	// that stays safely beyond the 70s observation period.
+	start := now.Truncate(time.Minute).Add(3 * time.Minute)
+	end := start.Add(2 * time.Minute)
 
 	recurrence := &fusionpb.RecurringWindow{
 		StartTime: fmt.Sprintf("%02d:%02d", start.Hour(), start.Minute()),

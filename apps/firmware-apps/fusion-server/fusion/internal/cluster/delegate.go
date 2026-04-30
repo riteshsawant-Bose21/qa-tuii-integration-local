@@ -225,7 +225,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			return
 		}
 
-		logger.Info("[Delegate] SnapActivate on %s for %s (from=%s)",
+		logger.Debug("[Delegate] SnapActivate on %s for %s (from=%s)",
 			d.appConfig.NodeName,
 			message.SnapshotOperation.Name,
 			message.Node,
@@ -339,7 +339,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		d.handleDeviceUpdate(&message)
 
 	case api.NotifyOpSoftwareUpdate:
-		logger.Info("[Delegate] Processing NotifyOpSoftwareUpdate from node %s", message.Node)
+		logger.Debug("[Delegate] Processing NotifyOpSoftwareUpdate from node %s", message.Node)
 		d.handleSoftwareUpdate(&message)
 
 	case api.NotifyOpSoftwareUpdateAvailable:
@@ -370,7 +370,7 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 		return
 	}
 
-	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
+	logger.Debug("[DeviceUpdate] Received device update from %s for device %s",
 		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToClusterObservers(message)
@@ -380,7 +380,7 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
 	logger := logging.GetLogger()
 
-	logger.Info("[SoftwareUpdate] Received software update trigger from %s on node %s",
+	logger.Debug("[SoftwareUpdate] Received software update trigger from %s on node %s",
 		message.Node, d.appConfig.NodeName)
 
 	if out, err := exec.Command("systemctl", "reset-failed", "swupdate-ota-install.service").CombinedOutput(); err != nil {
@@ -400,14 +400,14 @@ func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
 		return
 	}
 
-	logger.Info("[SoftwareUpdate] Successfully queued swupdate-ota-install.service on node %s",
+	logger.Debug("[SoftwareUpdate] Successfully queued swupdate-ota-install.service on node %s",
 		d.appConfig.NodeName)
 
 	// Each node monitors its own /tmp/swupdateprog socket, stops any previous monitor, and resets progress for a clean start.
 	if d.hub != nil {
 		d.hub.StopSWUpdateProgressMonitoring()
 		d.hub.StartSWUpdateProgressMonitoring()
-		logger.Info("[SoftwareUpdate] Started local progress monitoring on node %s",
+		logger.Debug("[SoftwareUpdate] Started local progress monitoring on node %s",
 			d.appConfig.NodeName)
 	}
 }
@@ -416,8 +416,8 @@ func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
 func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessage) {
 	logger := logging.GetLogger()
 
-	logger.Info("[SoftwareUpdateAvailable] Processing software update notification from %s", message.Node)
-	logger.Info("[SoftwareUpdateAvailable] Local node: %s, Message from: %s", d.appConfig.NodeName, message.Node)
+	logger.Debug("[SoftwareUpdateAvailable] Processing software update notification from %s", message.Node)
+	logger.Debug("[SoftwareUpdateAvailable] Local node: %s, Message from: %s", d.appConfig.NodeName, message.Node)
 
 	if message.SoftwareUpdate == nil {
 		logger.Error("SoftwareUpdateAvailable message with nil payload from %s", message.Node)
@@ -429,7 +429,7 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {
-		logger.Info("[SoftwareUpdateAvailable] Ignoring self-originated software update notification from %s", message.Node)
+		logger.Debug("[SoftwareUpdateAvailable] Ignoring self-originated software update notification from %s", message.Node)
 		return
 	}
 
@@ -437,14 +437,14 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Filename)
 	if _, err := os.Stat(finalPath); err == nil {
 		// File exists, but we need to check if it's the same version
-		logger.Info("[SoftwareUpdateAvailable] File %s exists locally, checking checksum", message.SoftwareUpdate.Filename)
+		logger.Debug("[SoftwareUpdateAvailable] File %s exists locally, checking checksum", message.SoftwareUpdate.Filename)
 
 		// Calculate checksum of existing file
 		if existingChecksum, csErr := d.calculateFileChecksum(finalPath); csErr != nil {
 			logger.Warn("[SoftwareUpdateAvailable] Could not checksum existing file %s: %v — proceeding with download", finalPath, csErr)
 		} else if strings.EqualFold(existingChecksum, message.SoftwareUpdate.Checksum) {
 			// Checksums match - we already have the correct file
-			logger.Info("[SoftwareUpdateAvailable] File %s already up-to-date (checksum: %s), skipping download",
+			logger.Debug("[SoftwareUpdateAvailable] File %s already up-to-date (checksum: %s), skipping download",
 				message.SoftwareUpdate.Filename, existingChecksum)
 
 			// Send acknowledgment if sync ID is provided since we already have the correct file
@@ -457,20 +457,20 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 			return
 		} else {
 			// Checksums differ - need to download the new version
-			logger.Info("[SoftwareUpdateAvailable] File %s exists but checksum differs (local: %s, remote: %s) — downloading update",
+			logger.Debug("[SoftwareUpdateAvailable] File %s exists but checksum differs (local: %s, remote: %s) — downloading update",
 				message.SoftwareUpdate.Filename, existingChecksum, message.SoftwareUpdate.Checksum)
 		}
 	}
 
 	// Trigger Software Update sync in background
 	go func() {
-		logger.Info("[SoftwareUpdateSync] Starting background sync for %s from %s",
+		logger.Debug("[SoftwareUpdateSync] Starting background sync for %s from %s",
 			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SourceIP)
 
 		// // Add 10-second delay for testing
-		// logger.Info("[SoftwareUpdateSync] Adding 30-second delay for testing purposes")
+		// logger.Debug("[SoftwareUpdateSync] Adding 30-second delay for testing purposes")
 		// time.Sleep(30 * time.Second)
-		// logger.Info("[SoftwareUpdateSync] Delay complete, starting actual sync")
+		// logger.Debug("[SoftwareUpdateSync] Delay complete, starting actual sync")
 
 		if err := d.persistence.SyncSoftwareUpdateFile(message.SoftwareUpdate); err != nil {
 			logger.Error("[SoftwareUpdateSync] Failed to sync %s from %s: %v",
@@ -482,7 +482,7 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 					message.SoftwareUpdate.Checksum, false, err.Error())
 			}
 		} else {
-			logger.Info("[SoftwareUpdateSync] Successfully synced %s from %s",
+			logger.Debug("[SoftwareUpdateSync] Successfully synced %s from %s",
 				message.SoftwareUpdate.Filename, message.SoftwareUpdate.SourceIP)
 
 			// Send success acknowledgment if sync ID is provided
@@ -596,7 +596,7 @@ func (d *ClusterDelegate) handleSoftwareUpdateSyncAck(message *api.NotifyMessage
 		return
 	}
 
-	logger.Info("[SoftwareUpdateSyncAck] Received sync acknowledgment from %s for file %s (sync ID: %s)",
+	logger.Debug("[SoftwareUpdateSyncAck] Received sync acknowledgment from %s for file %s (sync ID: %s)",
 		message.Node, message.SoftwareUpdateAck.Filename, message.SoftwareUpdateAck.SyncID)
 
 	if d.handler != nil {
@@ -654,7 +654,7 @@ func (d *ClusterDelegate) sendSyncAck(syncID, filename, checksum string, success
 	if err := d.hub.BroadcastToNodes(msg); err != nil {
 		logger.Error("[SoftwareUpdateSyncAck] Failed to broadcast sync acknowledgment: %v", err)
 	} else {
-		logger.Info("[SoftwareUpdateSyncAck] Sent acknowledgment for %s (success: %v, sync ID: %s)",
+		logger.Debug("[SoftwareUpdateSyncAck] Sent acknowledgment for %s (success: %v, sync ID: %s)",
 			filename, success, syncID)
 	}
 }

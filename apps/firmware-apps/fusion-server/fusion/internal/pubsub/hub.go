@@ -291,6 +291,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			}
 		}
 
+	case api.NotifyOpTaskCreate, api.NotifyOpTaskUpdate, api.NotifyOpTaskDelete:
+		if message.Task == nil {
+			return fmt.Errorf("Task required for operation")
+		}
+
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo == nil {
 			return fmt.Errorf("DeviceInfo required for operation")

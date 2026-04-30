@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -19,12 +20,18 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var task api.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
+
+	task, err := tm.decodeCreateTaskBody(body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
 
 	task.ID = strings.TrimSpace(task.ID)
 	task.CronExpr = strings.TrimSpace(task.CronExpr)
@@ -39,6 +46,11 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 		task.Params = map[string]any{}
 	}
 
+	if err := normalizeTaskParams(task); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if err := validateTaskParams(task.Type, task.Params); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -49,12 +61,12 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if status, err := tm.validateTaskReferences(&task); err != nil {
+	if status, err := tm.validateTaskReferences(task); err != nil {
 		http.Error(w, err.Error(), status)
 		return
 	}
 
-	exists, err := tm.persistence.TaskExists(&task)
+	exists, err := tm.persistence.TaskExists(task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
 		return
@@ -64,8 +76,13 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := tm.AddTask(&task); err != nil {
+	if err := tm.AddTask(task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskCreate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -96,6 +113,34 @@ func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	defer r.Body.Close()
+
+	if len(body) == 0 {
+		http.Error(w, "Invalid JSON format: empty body", http.StatusBadRequest)
+		return
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if _, ok := raw["snapshot_id"]; ok {
+		tm.updateSnapshotTaskFromProto(w, task, body)
+		return
+	}
+	if _, ok := raw["message_id"]; ok {
+		tm.updateMessageTaskFromProto(w, task, body)
+		return
+	}
+	if _, ok := raw["priority"]; ok {
+		tm.updateMessageTaskFromProto(w, task, body)
+		return
+	}
+	if _, ok := raw["zones"]; ok {
+		tm.updateMessageTaskFromProto(w, task, body)
+		return
+	}
 
 	var patch api.TaskPatchRequest
 	if err := json.Unmarshal(body, &patch); err != nil {
@@ -192,6 +237,253 @@ func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, err
+	}
+
+	if _, ok := raw["type"]; ok {
+		var task api.Task
+		if err := json.Unmarshal(body, &task); err != nil {
+			return nil, err
+		}
+		return &task, nil
+	}
+	if _, ok := raw["params"]; ok {
+		var task api.Task
+		if err := json.Unmarshal(body, &task); err != nil {
+			return nil, err
+		}
+		return &task, nil
+	}
+	if _, ok := raw["snapshot_id"]; ok {
+		var request fusionpb.SnapshotTaskCreateRequest
+		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
+			return nil, err
+		}
+		return snapshotCreateRequestToTask(&request), nil
+	}
+
+	var request fusionpb.MessageTaskCreateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err == nil {
+		if request.MessageId != "" || request.Priority != 0 || request.Zones != "" {
+			task := messageCreateRequestToTask(&request)
+			if err := normalizeTaskParams(task); err != nil {
+				return nil, err
+			}
+			return task, nil
+		}
+	}
+
+	var task api.Task
+	if err := json.Unmarshal(body, &task); err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+func normalizeTaskParams(task *api.Task) error {
+	if task == nil {
+		return fmt.Errorf("task is nil")
+	}
+
+	if task.Params == nil {
+		task.Params = map[string]any{}
+	}
+
+	switch task.Type {
+	case api.TaskTypeMessage:
+		messageID, _ := task.Params[api.MessageIDKey].(string)
+		if strings.TrimSpace(messageID) == "" {
+			return fmt.Errorf("params.%s is required", api.MessageIDKey)
+		}
+
+		zones, _ := task.Params[api.MessageZonesKey].(string)
+		zones = strings.TrimSpace(zones)
+		if zones == "" {
+			zones = defaultZones
+		}
+		task.Params[api.MessageZonesKey] = zones
+
+		priority, err := int64Param(task.Params[api.MessagePriorityKey])
+		if err != nil {
+			priority = 0
+		}
+		if priority == 0 {
+			priority = defaultMaxPriority
+		}
+		if priority < defaultMinPriority {
+			priority = defaultMinPriority
+		}
+		if priority > defaultMaxPriority {
+			priority = defaultMaxPriority
+		}
+		task.Params[api.MessagePriorityKey] = priority
+	}
+
+	return nil
+}
+
+func (tm *TaskManager) updateSnapshotTaskFromProto(w http.ResponseWriter, task *api.Task, body []byte) {
+	var patch fusionpb.SnapshotTaskUpdateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	hasSnapshot := patch.SnapshotId != nil && strings.TrimSpace(patch.GetSnapshotId()) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(patch.GetCronExpr()) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(patch.GetDescription()) != ""
+	hasStart := patch.StartAt != nil
+	hasEnd := patch.EndAt != nil
+	hasRecurrence := patch.Recurrence != nil
+
+	if !(hasSnapshot || hasCron || hasDesc || hasStart || hasEnd || hasRecurrence) {
+		http.Error(w, "At least one field must be provided", http.StatusBadRequest)
+		return
+	}
+
+	if hasDesc {
+		task.Description = patch.GetDescription()
+	}
+	if hasCron {
+		task.CronExpr = patch.GetCronExpr()
+	}
+	if hasSnapshot {
+		task.Params[api.SnapshotIDKey] = patch.GetSnapshotId()
+	}
+	if hasStart {
+		task.StartAt = patch.StartAt.AsTime()
+	}
+	if hasEnd {
+		task.EndAt = patch.EndAt.AsTime()
+	}
+	if hasRecurrence {
+		task.Recurrence = recurringWindowFromProto(patch.Recurrence)
+	}
+
+	if err := validateRecurringWindow(task.Recurrence); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+		return
+	}
+	if err := validateTaskParams(task.Type, task.Params); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if status, err := tm.validateTaskReferences(task); err != nil {
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	taskFunc, err := tm.makeTaskFunc(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := tm.UpdateTask(task, taskFunc); err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (tm *TaskManager) updateMessageTaskFromProto(w http.ResponseWriter, task *api.Task, body []byte) {
+	var patch fusionpb.MessageTaskUpdateRequest
+	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	hasMessageID := patch.MessageId != nil && strings.TrimSpace(patch.GetMessageId()) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(patch.GetCronExpr()) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(patch.GetDescription()) != ""
+	hasZones := patch.Zones != nil
+	hasPriority := patch.Priority != nil
+	hasStart := patch.StartAt != nil
+	hasEnd := patch.EndAt != nil
+	hasRecurrence := patch.Recurrence != nil
+
+	if !(hasMessageID || hasCron || hasDesc || hasZones || hasPriority || hasStart || hasEnd || hasRecurrence) {
+		http.Error(w, "At least one field must be provided", http.StatusBadRequest)
+		return
+	}
+
+	if hasDesc {
+		task.Description = patch.GetDescription()
+	}
+	if hasCron {
+		task.CronExpr = patch.GetCronExpr()
+	}
+	if hasMessageID {
+		task.Params[api.MessageIDKey] = patch.GetMessageId()
+	}
+	if hasZones {
+		task.Params[api.MessageZonesKey] = patch.GetZones()
+	}
+	if hasPriority {
+		task.Params[api.MessagePriorityKey] = patch.GetPriority()
+	}
+	if hasStart {
+		task.StartAt = patch.StartAt.AsTime()
+	}
+	if hasEnd {
+		task.EndAt = patch.EndAt.AsTime()
+	}
+	if hasRecurrence {
+		task.Recurrence = recurringWindowFromProto(patch.Recurrence)
+	}
+
+	if err := validateRecurringWindow(task.Recurrence); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+		return
+	}
+	if err := normalizeTaskParams(task); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validateTaskParams(task.Type, task.Params); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if status, err := tm.validateTaskReferences(task); err != nil {
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	taskFunc, err := tm.makeTaskFunc(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := tm.UpdateTask(task, taskFunc); err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

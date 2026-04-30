@@ -5,11 +5,11 @@ surfaces in `fusion-server` and the internal replicated state model.
 
 ## Purpose
 
-`fusion-server` now exposes several kinds of APIs:
+`fusion-server` exposes several kinds of APIs:
 
-- generic replicated configuration/state
-- domain-specific resources with lifecycle and behavior
-- operational and control-plane endpoints
+- Generic replicated configuration/state
+- Domain-specific resources with lifecycle and behavior
+- Operational and control-plane endpoints
 
 The goal of this policy is to keep those responsibilities from collapsing into a
 single ambiguous API model.
@@ -99,10 +99,10 @@ Each top-level internal state section should have an explicit owner.
 
 An owner is responsible for:
 
-- schema or structural validation
-- normalization rules
-- reconciliation behavior
-- compatibility rules for that subtree
+- Schema or structural validation
+- Normalization rules
+- Reconciliation behavior
+- Compatibility rules for that subtree
 
 Top-level internal sections should not be treated as unowned arbitrary blobs
 once the server is expected to understand and act on them.
@@ -113,11 +113,11 @@ once the server is expected to understand and act on them.
 
 It should:
 
-- accept a typed deployment package
-- represent conditioned DRO output plus Fusion Connect additions
-- map into existing internal sections without creating a second public config
+- Accept a typed deployment package
+- Represent conditioned DRO output plus Fusion Connect additions
+- Map into existing internal sections without creating a second public config
   tree API
-- be treated as authoritative provisioning input, not generic live tree
+- Be treated as authoritative provisioning input, not generic live tree
   mutation
 
 ## Tasks Policy
@@ -126,10 +126,10 @@ It should:
 
 Reasons:
 
-- tasks are not just data; they are executable domain resources
-- tasks have lifecycle operations
-- tasks have history and runtime effects
-- tasks require scheduler-specific validation and behavior
+- Tasks are not just data; they are executable domain resources
+- Tasks have lifecycle operations
+- Tasks have history and runtime effects
+- Tasks require scheduler-specific validation and behavior
 
 If task-related configuration needs to be persisted in replicated state, that
 should be an implementation detail behind the `/tasks` API, not a second public
@@ -143,12 +143,12 @@ ownership model exposed through a generic config tree.
 
 Current contract direction:
 
-- snapshot metadata and operation endpoints are typed
+- Snapshot metadata and operation endpoints are typed
 - `GET /snapshots`
   returns typed metadata
 - `GET /snapshots/meta/active`
   returns typed metadata
-- create, activate, delete, and save operations return typed status payloads
+- Create, Activate, Delete, and Save operations return typed status payloads
 - `GET /snapshots/{name}` still returns the raw stored snapshot payload
 
 That split is intentional. Full snapshot bodies should only be typed if the
@@ -187,11 +187,11 @@ state is not the public API model anymore.
 
 ## Why `/settings` Instead Of Generic Config Mutation
 
-- it matches the actual launcher usage pattern
-- it makes settings ownership explicit
-- it removes arbitrary path-based tree mutation from the public API
-- it allows parameter-specific validation and normalization
-- it is a cleaner long-term public contract than exposing internal state paths
+- It matches the actual launcher usage pattern
+- It makes settings ownership explicit
+- It removes arbitrary path-based tree mutation from the public API
+- It allows parameter-specific validation and normalization
+- It is a cleaner long-term public contract than exposing internal state paths
 
 ## Scope Rules For `/settings`
 
@@ -199,7 +199,7 @@ Data under `/settings` should still follow ownership rules.
 
 - `/settings/audio/...`
   Owned by the audio/settings domain
-- additional settings namespaces may be added only when they are still
+- Additional settings namespaces may be added only when they are still
   configuration-oriented and do not require separate resource lifecycle APIs
 
 If a resource has commands, lifecycle, history, or runtime workflow semantics,
@@ -214,7 +214,7 @@ Examples to avoid:
 
 - `PATCH /settings?key=...`
 - `PATCH /config?path=...`
-- generic subtree mutation that preserves the same arbitrary tree semantics
+- Generic subtree mutation that preserves the same arbitrary tree semantics
 
 The replacement should be an owned, domain-shaped API, not the same mechanism
 with different routing.
@@ -236,14 +236,14 @@ If not, it should get a dedicated endpoint.
 
 ## Summary
 
-- internal state is the configuration substrate.
-- dedicated endpoints own public resources and configuration domains.
+- Internal state is the configuration substrate.
+- Dedicated endpoints own public resources and configuration domains.
 - `/device` is the typed provisioning/import contract.
 - `/tasks` is the typed task management contract.
 - `/snapshots` metadata and operations are typed, while raw snapshot bodies
   remain untyped for now.
 - `/devices` uses typed metadata contracts.
 - `/settings/audio` remains the runtime patch surface.
-- control-plane and operational APIs remain separate.
+- Control-plane and operational APIs remain separate.
 - `tasks` should stay under `/tasks`, not become a first-class generic config
   subtree for public mutation.

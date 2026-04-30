@@ -135,15 +135,17 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	if _, exists := tm.tasks[task.ID]; !exists {
+	existing, exists := tm.tasks[task.ID]
+	if !exists {
 		return ErrTaskNotFound
 	}
 
-	// Remove old cron entry
-	if task.CronEntryID != 0 {
-		tm.cron.Remove(task.CronEntryID)
-		task.CronEntryID = 0
+	// Remove the currently-registered cron entry for this task on this node.
+	// The incoming task payload may have CronEntryID unset because it is not serialized.
+	if existing.CronEntryID != 0 {
+		tm.cron.Remove(existing.CronEntryID)
 	}
+	task.CronEntryID = 0
 
 	now := time.Now()
 	if !task.EndAt.IsZero() && now.After(task.EndAt) {
@@ -192,6 +194,9 @@ func (tm *TaskManager) ListTasks() []api.Task {
 
 	tasks := make([]api.Task, 0, len(tm.tasks))
 	for _, task := range tm.tasks {
+		if task.Enabled && !task.EndAt.IsZero() && time.Now().After(task.EndAt) {
+			tm.disableTaskLocked(task)
+		}
 		tasks = append(tasks, *task)
 	}
 
@@ -253,7 +258,7 @@ func (tm *TaskManager) Start() {
 
 	// Window manager loop
 	go func() {
-		ticker := time.NewTicker(30 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
 		for range ticker.C {
 			tm.evalTaskWindows()
 		}
@@ -341,6 +346,11 @@ func (tm *TaskManager) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskDelete, &api.Task{ID: id}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -411,6 +421,11 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 	tm.tasks[id] = task
 	tm.saveTasks()
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -443,7 +458,22 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 
 	tm.saveTasks()
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (tm *TaskManager) broadcastTaskOperation(op api.NotifyOp, task *api.Task) error {
+	if tm.hub == nil || task == nil {
+		return nil
+	}
+
+	taskCopy := *task
+	msg := api.NewNotifyMessage(op, tm.node, api.WithTask(&taskCopy))
+	return tm.hub.BroadcastToNodes(msg)
 }
 
 // wrapTask wraps a task function to track execution history and handle panics.
@@ -571,6 +601,9 @@ func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 	if !ok {
 		return nil, ErrTaskNotFound
 	}
+	if task.Enabled && !task.EndAt.IsZero() && time.Now().After(task.EndAt) {
+		tm.disableTaskLocked(task)
+	}
 	return task, nil
 }
 
@@ -677,7 +710,7 @@ func (tm *TaskManager) disableTask(task *api.Task) {
 	tm.mu.Unlock()
 }
 
-// Reevaluates windows every 30 seconds in case StartAt/EndAt change or clock drift
+// Reevaluates windows every few seconds in case StartAt/EndAt change or clock drift.
 func (tm *TaskManager) evalTaskWindows() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
