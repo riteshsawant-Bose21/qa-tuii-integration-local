@@ -1,14 +1,19 @@
 package main
 
 import (
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
+	"unsafe"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/cluster"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
+	json "github.com/goccy/go-json"
 )
 
 var stateConfig = api.AppConfig{
@@ -525,6 +530,217 @@ func stateToInt(v any) int {
 		return n
 	default:
 		return 0
+	}
+}
+
+func readTimeField(obj any, path ...string) time.Time {
+	v := reflect.ValueOf(obj).Elem()
+	for _, name := range path {
+		v = v.FieldByName(name)
+	}
+	return *(*time.Time)(unsafe.Pointer(v.UnsafeAddr()))
+}
+
+func waitForRepairToSettle(t *testing.T) {
+	t.Helper()
+	time.Sleep(50 * time.Millisecond)
+}
+
+func TestTriggerDataRepairDoesNotMarkSuccessOnFailure(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+
+	sm.TriggerDataRepair("test failure path")
+	waitForRepairToSettle(t)
+
+	lastSuccessful := readTimeField(sm, "dataRepair", "lastSuccessful")
+	if !lastSuccessful.IsZero() {
+		t.Fatalf("expected failed repair not to set lastSuccessful, got %v", lastSuccessful)
+	}
+}
+
+func TestTriggerDataRepairCoalescesRapidCalls(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+
+	sm.TriggerDataRepair("first")
+	firstRun := readTimeField(sm, "dataRepair", "lastRun")
+	if firstRun.IsZero() {
+		t.Fatal("expected first trigger to record lastRun")
+	}
+
+	sm.TriggerDataRepair("second")
+	secondRun := readTimeField(sm, "dataRepair", "lastRun")
+
+	if !secondRun.Equal(firstRun) {
+		t.Fatalf("expected rapid second trigger to be suppressed, first=%v second=%v", firstRun, secondRun)
+	}
+}
+
+func TestNotifyMsgVersionUpdateIgnoresSameHash(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+	if err := sm.Set("key", "value"); err != nil {
+		t.Fatalf("sm.Set failed: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "delegate.db")
+	p, err := persistence.NewPersistence(dbPath, sm)
+	if err != nil {
+		t.Fatalf("NewPersistence failed: %v", err)
+	}
+	defer p.Close()
+
+	if err := p.SaveState(); err != nil {
+		t.Fatalf("SaveState failed: %v", err)
+	}
+
+	delegate := &cluster.ClusterDelegate{}
+	delegateValue := reflect.ValueOf(delegate).Elem()
+
+	setUnexported := func(field string, value any) {
+		f := delegateValue.FieldByName(field)
+		reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+	}
+
+	setUnexported("appConfig", &api.AppConfig{NodeName: "local-node"})
+	setUnexported("persistence", p)
+	setUnexported("stateManager", sm)
+
+	meta, err := p.GetDatabaseMetadata()
+	if err != nil {
+		t.Fatalf("GetDatabaseMetadata failed: %v", err)
+	}
+
+	before := readTimeField(sm, "dataRepair", "lastRun")
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpVersionUpdate,
+		"peer-node",
+		api.WithVersionUpdate(&api.VersionUpdate{
+			Version: meta.Version,
+			Hash:    meta.Hash,
+			NodeID:  "peer-node",
+		}),
+	)
+	msg.SentAt = time.Time{}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	delegate.NotifyMsg(data)
+
+	after := readTimeField(sm, "dataRepair", "lastRun")
+	if !after.Equal(before) {
+		t.Fatalf("expected same-hash version update to be ignored, before=%v after=%v", before, after)
+	}
+}
+
+func TestNotifyMsgVersionUpdateTriggersRepairOnDivergence(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+	if err := sm.Set("key", "value"); err != nil {
+		t.Fatalf("sm.Set failed: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "delegate.db")
+	p, err := persistence.NewPersistence(dbPath, sm)
+	if err != nil {
+		t.Fatalf("NewPersistence failed: %v", err)
+	}
+	defer p.Close()
+
+	if err := p.SaveState(); err != nil {
+		t.Fatalf("SaveState failed: %v", err)
+	}
+
+	delegate := &cluster.ClusterDelegate{}
+	delegateValue := reflect.ValueOf(delegate).Elem()
+	setUnexported := func(field string, value any) {
+		f := delegateValue.FieldByName(field)
+		reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+	}
+	setUnexported("appConfig", &api.AppConfig{NodeName: "local-node"})
+	setUnexported("persistence", p)
+	setUnexported("stateManager", sm)
+
+	before := readTimeField(sm, "dataRepair", "lastRun")
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpVersionUpdate,
+		"peer-node",
+		api.WithVersionUpdate(&api.VersionUpdate{
+			Version: api.Version{Counter: 999, NodeID: "peer-node"},
+			Hash:    "different-hash",
+			NodeID:  "peer-node",
+		}),
+	)
+	msg.SentAt = time.Time{}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	delegate.NotifyMsg(data)
+
+	after := readTimeField(sm, "dataRepair", "lastRun")
+	if after.IsZero() || !after.After(before) {
+		t.Fatalf("expected divergent version update to trigger repair, before=%v after=%v", before, after)
+	}
+}
+
+func TestNotifyMsgVersionUpdateIgnoresDuplicatePayload(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+	if err := sm.Set("key", "value"); err != nil {
+		t.Fatalf("sm.Set failed: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "delegate.db")
+	p, err := persistence.NewPersistence(dbPath, sm)
+	if err != nil {
+		t.Fatalf("NewPersistence failed: %v", err)
+	}
+	defer p.Close()
+
+	if err := p.SaveState(); err != nil {
+		t.Fatalf("SaveState failed: %v", err)
+	}
+
+	delegate := &cluster.ClusterDelegate{}
+	delegateValue := reflect.ValueOf(delegate).Elem()
+	setUnexported := func(field string, value any) {
+		f := delegateValue.FieldByName(field)
+		reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+	}
+	setUnexported("appConfig", &api.AppConfig{NodeName: "local-node"})
+	setUnexported("persistence", p)
+	setUnexported("stateManager", sm)
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpVersionUpdate,
+		"peer-node",
+		api.WithVersionUpdate(&api.VersionUpdate{
+			Version: api.Version{Counter: 999, NodeID: "peer-node"},
+			Hash:    "different-hash",
+			NodeID:  "peer-node",
+		}),
+	)
+	msg.SentAt = time.Time{}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	delegate.NotifyMsg(data)
+	firstRun := readTimeField(sm, "dataRepair", "lastRun")
+	if firstRun.IsZero() {
+		t.Fatal("expected first divergent update to trigger repair")
+	}
+
+	waitForRepairToSettle(t)
+	time.Sleep(1100 * time.Millisecond)
+
+	delegate.NotifyMsg(data)
+	secondRun := readTimeField(sm, "dataRepair", "lastRun")
+	if !secondRun.Equal(firstRun) {
+		t.Fatalf("expected duplicate version update to be ignored, first=%v second=%v", firstRun, secondRun)
 	}
 }
 

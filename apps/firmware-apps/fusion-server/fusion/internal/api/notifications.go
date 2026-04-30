@@ -44,6 +44,7 @@ const (
 	NotifyOpValuePut                  NotifyOp = "put"
 	NotifyOpValuePatch                NotifyOp = "patch"
 	NotifyOpValueSet                  NotifyOp = "set"
+	NotifyOpVersionUpdate             NotifyOp = "version_update"
 	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
 	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 	NotifyOpSoftwareUpdate            NotifyOp = "software_update"

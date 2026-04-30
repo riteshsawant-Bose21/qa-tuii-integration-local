@@ -58,7 +58,7 @@ func (p *Persistence) SetDeviceInfo(info *api.DevicePatch) error {
 	if err != nil {
 		return err
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }
 
 // GetDeviceName retrieves the "name" attribute.
@@ -162,5 +162,5 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 	if !changed {
 		return nil
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }

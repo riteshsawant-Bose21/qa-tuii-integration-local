@@ -40,7 +40,7 @@ func (p *Persistence) UpsertSnapshotDefinitions(items []api.SnapshotDefinition) 
 		return nil
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // GetSnapshotDefinition returns a snapshot definition by ID.
@@ -112,7 +112,7 @@ func (p *Persistence) DeleteAllSnapshotDefinitions() error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // DeleteSnapshotDefinition removes one stored snapshot definition by ID.
@@ -137,7 +137,7 @@ func (p *Persistence) DeleteSnapshotDefinition(id string) error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // SnapshotDefinitionExists checks if a snapshot definition exists.
@@ -187,7 +187,7 @@ func (p *Persistence) UpsertSceneSets(items []api.SceneSet) error {
 		return nil
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // GetSceneSet returns a scene set by set_id.
@@ -262,7 +262,7 @@ func (p *Persistence) DeleteAllSceneSets() error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // DeleteSceneSet removes one stored scene set by set_id.
@@ -287,7 +287,7 @@ func (p *Persistence) DeleteSceneSet(setID string) error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // DeleteScene removes one scene by ID from any scene set that contains it.
@@ -364,7 +364,7 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // SceneSetExists checks if a scene set exists.
@@ -418,7 +418,7 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 		return err
 	}
 
-	return p.updateHash()
+	return p.updateHashWithVersionBump(true)
 }
 
 // GetSceneInSet returns the scene by ID if it belongs to the specified scene set.
