@@ -1,11 +1,13 @@
 package persistence
 
 import (
+	"bytes"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"strconv"
 
 	json "github.com/goccy/go-json"
-	"strconv"
 
 	"go.etcd.io/bbolt"
 )
@@ -37,13 +39,26 @@ func (p *Persistence) SetDeviceInfo(info *api.DevicePatch) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal device info: %w", err)
 	}
-	return p.db.Update(func(tx *bbolt.Tx) error {
+	existing, err := p.getValue(bucketDevice, keyDeviceInfo)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(existing, data) {
+		logging.GetLogger().Debug("Device info write skipped: unchanged")
+		return nil
+	}
+
+	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketDevice))
 		if bucket == nil {
 			return fmt.Errorf("device bucket not found")
 		}
 		return bucket.Put([]byte(keyDeviceInfo), data)
 	})
+	if err != nil {
+		return err
+	}
+	return p.updateHash()
 }
 
 // GetDeviceName retrieves the "name" attribute.
@@ -105,7 +120,8 @@ func (p *Persistence) getDeviceJSONField(deviceID, field string) (string, error)
 
 // setDeviceStringField updates exactly one JSON string‐valued field for the device.
 func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error {
-	return p.db.Update(func(tx *bbolt.Tx) error {
+	var changed bool
+	err := p.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketDevice))
 		if b == nil {
 			return fmt.Errorf("bucket %q not found", bucketDevice)
@@ -129,9 +145,22 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 			return fmt.Errorf("failed to marshal updated data for device %q: %w", deviceID, err)
 		}
 
+		if bytes.Equal(raw, updated) {
+			logging.GetLogger().Debug("Device field write skipped: device=%s field=%s unchanged", deviceID, field)
+			return nil
+		}
+
+		changed = true
 		if err := b.Put(key, updated); err != nil {
 			return fmt.Errorf("failed to save updated device %q: %w", deviceID, err)
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return nil
+	}
+	return p.updateHash()
 }
