@@ -225,17 +225,18 @@ function list_all() {
 # Determine the file for a given category
 function test_file_for_type() {
     case "$test_type" in
-
+    
         audio)                  echo "audio_test.go" ;;
         bluetooth)              echo "bluetooth_test.go" ;;
         certs)                  echo "cluster_certs_test.go" ;;
-        cluster)                echo "cluster_test.go" ;;
+        cluster)                echo "cluster_test.go, reboot_test.go" ;;
         controllers)            echo "controllers_test.go" ;;
         fusion)                 echo "fusion_test.go" ;;
         logger)                 echo "logger_test.go" ;;
         persistence)            echo "persistence" ;;
         sap)                    echo "sap_test.go" ;;
         scheduler)              echo "scheduler_test.go" ;;
+        snapshot)               echo "snapshot_test.go" ;;
         software-update)        echo "software_update_test.go" ;;
         state)                  echo "state_test.go" ;;
         tasks)                  echo "tasks_test.go" ;;
@@ -249,7 +250,7 @@ function test_file_for_type() {
         vip-convergence)        echo "setup_vip_test.go" ;;
         websocket)              echo "websocket_test.go" ;;
         integration)            echo "integration tests" ;;
-        all)                    echo "" ;;
+        all)    
     esac
 }
 
