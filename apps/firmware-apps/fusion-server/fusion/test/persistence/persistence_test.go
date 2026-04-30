@@ -213,6 +213,13 @@ func TestNewPersistenceInitializesMetadataHashMatchingCurrentDatabaseContents(t 
 func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "audio_sync_test.db")
+	audioDir := t.TempDir()
+
+	previousAudioFilesLocation := api.AudioFilesLocation
+	api.AudioFilesLocation = audioDir
+	t.Cleanup(func() {
+		api.AudioFilesLocation = previousAudioFilesLocation
+	})
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "test-node"})
 	p, err := persistence.NewPersistence(dbPath, sm)
@@ -233,6 +240,9 @@ func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testin
 		_ = os.Remove(finalPath)
 		_ = os.Remove(partPath)
 	})
+
+	err = os.MkdirAll(api.AudioFilesLocation, 0755)
+	require.NoError(t, err)
 
 	err = os.WriteFile(finalPath, []byte("already-downloaded"), 0644)
 	require.NoError(t, err)
