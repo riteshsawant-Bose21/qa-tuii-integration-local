@@ -39,7 +39,7 @@ func (p *Persistence) SaveAudioMeta(meta *api.AudioMetadata) error {
 	if err != nil {
 		return err
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }
 
 // GetAudioMetadata fetches metadata by ID.
@@ -112,7 +112,7 @@ func (p *Persistence) DeleteAudioMetadata(id string) error {
 	if err != nil {
 		return err
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }
 
 func (p *Persistence) ListAllTags(ctx context.Context) ([]string, error) {

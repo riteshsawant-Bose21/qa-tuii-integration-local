@@ -150,7 +150,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 	}
 
 	// Update the database hash
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(true); err != nil {
 		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotName, err)
 	}
 

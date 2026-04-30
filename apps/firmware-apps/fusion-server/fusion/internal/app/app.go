@@ -93,6 +93,9 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
+	persistence.SetMetadataNotifier(func(metadata *api.DatabaseMetadata) {
+		hub.BroadcastVersionUpdate(config.NodeName, metadata)
+	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
 	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
@@ -831,13 +834,12 @@ func corsMiddleware() mux.MiddlewareFunc {
 	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Set CORS headers
+
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 
-			// Handle preflight OPTIONS request
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return

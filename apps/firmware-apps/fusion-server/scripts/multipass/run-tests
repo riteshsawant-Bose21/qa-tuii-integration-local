@@ -5,7 +5,8 @@ function show_help() {
     echo "Options:"
     echo "  --list              List tests for the selected category"
     echo "  --list-all          List all tests in fusion/test"
-    echo "  --test-name         Run only a specific test name or subtest"
+    echo "  --profile           Start CPU profiling on all multipass fusion nodes before the run and stop it on exit"
+    echo "  --test-name         Run only a specific Go test name or subtest"
     echo "  --vip               VIP address and port passed to multipass/package tests (default: 192.168.2.100:8080)"
     echo "Tests:"
     echo "  --all               Run all tests (default)"
@@ -40,6 +41,7 @@ test_name=""
 list_tests=false
 list_all_tests=false
 cluster_size="3"
+enable_profile=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -79,6 +81,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --list)
             list_tests=true
+            shift
+            ;;
+        --profile)
+            enable_profile=true
             shift
             ;;
         --list-all)
@@ -141,6 +147,43 @@ function clear_udp_diagnostics_on_instances() {
     done
 }
 
+function start_cpu_profile_on_instances() {
+    local prefix="${1:-fusion}"
+    local instances
+    instances=$(multipass_instances_for_prefix "$prefix")
+    if [[ -z "$instances" ]]; then
+        echo "No multipass instances found with prefix '$prefix' to enable profiling" >&2
+        return 1
+    fi
+
+    echo "Starting CPU profiling on instances with prefix '$prefix'..."
+    for instance in $instances; do
+        echo "  -> $instance"
+        multipass exec "$instance" -- bash -lc '
+            set -euo pipefail
+            curl -sfS -X POST http://127.0.0.1:9090/debug/profile/start
+        '
+    done
+}
+
+function stop_cpu_profile_on_instances() {
+    local prefix="${1:-fusion}"
+    local instances
+    instances=$(multipass_instances_for_prefix "$prefix")
+    if [[ -z "$instances" ]]; then
+        return 0
+    fi
+
+    echo "Stopping CPU profiling on instances with prefix '$prefix'..."
+    for instance in $instances; do
+        echo "  -> $instance"
+        multipass exec "$instance" -- bash -lc '
+            set -euo pipefail
+            curl -sfS -X POST http://127.0.0.1:9090/debug/profile/stop || true
+        '
+    done
+}
+
 function first_multipass_instance_ip() {
     local prefix="${1:-fusion}"
     local first
@@ -149,6 +192,11 @@ function first_multipass_instance_ip() {
         | awk -F',' -v prefix="$prefix" '$1 ~ ("^" prefix) { print $3; exit }')
     printf '%s' "$first"
 }
+
+if [[ "$enable_profile" = true ]]; then
+    trap 'stop_cpu_profile_on_instances "fusion"' EXIT
+    start_cpu_profile_on_instances "fusion"
+fi
 
 # Helper to list tests from a file
 function list_tests_from_file() {
@@ -344,7 +392,11 @@ case "$test_type" in
         fi
         ;;        
     udp-latency)
-        trap 'clear_udp_diagnostics_on_instances "fusion"' EXIT
+        if [[ "$enable_profile" = true ]]; then
+            trap 'clear_udp_diagnostics_on_instances "fusion"; stop_cpu_profile_on_instances "fusion"' EXIT
+        else
+            trap 'clear_udp_diagnostics_on_instances "fusion"' EXIT
+        fi
         set_udp_diagnostics_on_instances "fusion"
         export FUSION_UDP_OBSERVER_LATENCY_TEST=1
         run_package_tests "$(regex_for_test_file ./udp_observer_latency_test.go)"
