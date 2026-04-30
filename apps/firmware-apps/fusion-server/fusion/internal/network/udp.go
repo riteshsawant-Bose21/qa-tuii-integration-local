@@ -336,7 +336,7 @@ func (s *UDPServer) Close() error {
 // buildJSONPayload creates a JSON byte stream including authoritative Lamport version.
 // It injects metadata keys directly into data to avoid an intermediate map copy.
 // Callers must not reuse data after this call.
-func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp) ([]byte, error) {
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp, clear ...bool) ([]byte, error) {
 	data[api.FusionVersion] = version.Counter
 	data[api.FusionEpoch] = version.Epoch
 	if s.diagnosticsEnabled {
@@ -349,7 +349,7 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, m
 		data[api.FusionOperation] = op
 	}
 	if len(clear) > 0 && clear[0] {
-		payload[api.FusionClear] = true
+		data[api.FusionClear] = true
 	}
 
 	b, err := json.Marshal(data)
