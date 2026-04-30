@@ -485,11 +485,9 @@ func TestSceneSetAntiEntropyRepairsMissedWriteAfterNodeRejoin(t *testing.T) {
 	startFusionOnNode(t, nodeB.name)
 	waitForNodeReachable(t, nodeB, 15*time.Second)
 
-	// Confirm the restarted node did not already have the missed write before we trigger a fresh metadata update.
-	require.Eventually(t, func() bool {
-		return !sceneSetExistsOnNode(t, nodeB, set1ID)
-	}, 2*time.Second, 200*time.Millisecond)
-
+	// A rejoined node may repair immediately on startup via metadata gossip, or
+	// after the next fresh metadata update. The required contract is eventual
+	// convergence on both scene sets.
 	upsertSceneSetsOnNode(t, nodeA, []api.SceneSet{set2})
 
 	require.Eventually(t, func() bool {
