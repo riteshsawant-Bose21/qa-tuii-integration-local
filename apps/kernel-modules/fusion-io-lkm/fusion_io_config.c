@@ -459,7 +459,7 @@ const struct base_device bd_fusion_fm6 = {
         },
         SI5351B_ENDPOINT_INIT
     },
-    .num_ics = 3,
+    .num_ics = 2,
     .io_cards = (struct io_card[]) {
         {
             .data = {
@@ -798,70 +798,7 @@ const struct base_device bd_fusion_fm6 = {
                     //.is_irq = true
                 }
             },
-            .num_eps = 2,
-            .endpoints = (struct endpoint[]) {
-                {
-                    .name = "ep_src_ak4137",
-                    .type = EP_TYPE_SRC_AK4137,
-                    .export = true,
-                    .i2c_addr = 0x13,
-                    .num_gpios = 1,
-                    .gpios = (struct endpoint_gpio[]) {
-                        {
-                            .name = "gpio_hdmi_reset",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .export = true,
-                            .ioexp_id = 1
-                        }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        {
-                            .name = "cmd_regop",
-                            .type = EP_CMD_TYPE_REGOP,
-                            .export = true
-                        }
-                    }
-                },
-                {
-                    .name = "ep_hdmi_ep9512t",
-                    .type = EP_TYPE_HDMI_EP9512T,
-                    .export = true,
-                    .i2c_addr = 0x3c,
-                    .ep_handle_irq = ep9512t_handle_irq,
-                    .ep_configure = ep9512t_configure,
-                    .num_gpios = 3,
-                    .gpios = (struct endpoint_gpio[]) {
-                        {
-                            // not sure exactly, but export for reading
-                            .name = "gpio_a_mute_out",
-                            .type = EP_GPIO_TYPE_PHYS,
-                            .export = true,
-                            //.is_irq = true
-                        },
-                        {
-                            .name = "gpio_hmcu_int",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .is_irq = true,
-                            .trigger_type = IRQ_TYPE_EDGE_FALLING
-                        },
-                        {
-                            .name = "gpio_hdmi_reset",
-                            .type = EP_GPIO_TYPE_VIRT,
-                            .export = true,
-                            .ioexp_id = 1
-                        }
-                    },
-                    .num_cmds = 1,
-                    .cmds = (struct endpoint_cmd[]) {
-                        {
-                            .name = "cmd_regop",
-                            .type = EP_CMD_TYPE_REGOP,
-                            .export = true
-                        }
-                    }
-                }
-            }
+            .num_eps = 0,
         },
         {
             .data = {
@@ -1096,7 +1033,7 @@ const struct base_device bd_fusion_fm6 = {
         }
     },
     .cfg_seq = {
-        .num_pwrup_cmds = 10,
+        .num_pwrup_cmds = 8,
         .pwrup_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "tca9544_config",
@@ -1145,28 +1082,11 @@ const struct base_device bd_fusion_fm6 = {
                 .seq_delay_ms = 25
             },
             {
-                .name = "hdmi_psw",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) { 
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x05 }
-                },
-                .seq_delay_ms = 25
-            },
-            {
-                .name = "hdmi_reset",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x15 }
-                }
-            },
-            {
                 .name = "gpio_psw",
                 .parent_ep_name = "ep_ioexp_tcal6408",
                 .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) { 
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x17 }
+                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x03 }
                 },
                 .seq_delay_ms = 25
             },
@@ -1200,7 +1120,7 @@ const struct base_device bd_fusion_fm6 = {
                 }
             }
         },
-        .num_cfg_cmds = 3,
+        .num_cfg_cmds = 1,
         .cfg_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "tca9535-0_config",
@@ -1211,24 +1131,6 @@ const struct base_device bd_fusion_fm6 = {
                     { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
                 }
             },
-            {
-                .name = "ak4137_config",
-                .parent_ep_name = "ep_src_ak4137",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 } // input format i2s
-                }
-            },
-            {
-                .name = "ep9512t_config",
-                .parent_ep_name = "ep_hdmi_ep9512t",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    // from tests, this turns on arc and 5v en
-                    // also, prevents tv from going black for a second.
-                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
-                }
-            }
         },
         .num_post_cfg_cmds = 1,
         .post_cfg_cmds = (struct config_sequence_cmd[]) {
