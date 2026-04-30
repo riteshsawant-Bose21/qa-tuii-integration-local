@@ -20,6 +20,7 @@ class FusionDrawer extends StatelessWidget {
     this.buttonEnabledNotifier,
     this.header,
     this.showBackButton = false,
+    this.scrollable = true,
   }) : assert(
          header != null || title != null,
          'Either a custom header or a title must be provided.',
@@ -59,6 +60,10 @@ class FusionDrawer extends StatelessWidget {
   /// Called when the close icon is tapped. Defaults to popping the route.
   final VoidCallback? onClose;
 
+  /// When true, the content will be wrapped in a SingleChildScrollView to allow scrolling.
+  /// If false, the content will be displayed as-is, and it's the caller's responsibility to ensure it handles overflow appropriately.
+  final bool scrollable;
+
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
@@ -74,9 +79,7 @@ class FusionDrawer extends StatelessWidget {
             Expanded(
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_content'),
-                child: SingleChildScrollView(
-                  child: content,
-                ),
+                child: scrollable ? SingleChildScrollView(child: content) : content,
               ),
             ),
             if (buttonLabel != null) ...<Widget>[
@@ -182,6 +185,7 @@ class FusionDrawer extends StatelessWidget {
     Color? backgroundColor,
     ValueNotifier<bool>? buttonEnabledNotifier,
     bool showBackButton = false,
+    bool scrollable = true,
   }) {
     assert(
       header != null || title != null,
@@ -212,6 +216,7 @@ class FusionDrawer extends StatelessWidget {
                 showBackButton: showBackButton,
                 onClose: () => Navigator.of(ctx).pop(),
                 buttonEnabledNotifier: buttonEnabledNotifier,
+                scrollable: scrollable,
               ),
             ),
           ),

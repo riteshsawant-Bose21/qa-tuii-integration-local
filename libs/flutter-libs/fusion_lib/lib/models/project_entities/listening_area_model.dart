@@ -96,7 +96,7 @@ enum WiringType {
   highImpedance,
   lowImpedance;
 
-  String get name {
+  String get displayName {
     switch (this) {
       case highImpedance:
         return 'Hi-Z';
