@@ -220,7 +220,11 @@ Example task list response:
 ```
 "snapshot": { "snapshot_id": "<id>" }
 ```
-Activates the specified snapshot.
+Activates the specified **Time Machine** entry by name (e.g. `"default"`).  
+This performs a full-state restore with an epoch bump — the same behaviour as `POST /time-machine/activate/<name>`.
+
+> **Note:** The Task system currently triggers Time Machine activations only.  
+> Support for activating **Scene Catalog** Snapshot Definitions and Scenes via scheduled tasks is planned as a future extension. See `docs/Snapshots.md` for the Scene Catalog API.
 
 ### Message Task
 ```

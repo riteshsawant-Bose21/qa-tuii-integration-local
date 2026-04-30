@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -8,17 +10,59 @@ part 'zone_control_state.dart';
 
 /// Per-zone cubit that manages **gain** and **mute** state by talking to the
 /// device via [BlockDataViewmodel.getBlockData] / [updateBlockParameter].
+///
+/// Subscribes to [BlockDataViewmodel.stream] for real-time WebSocket-pushed
+/// gain/mute updates so the UI stays in sync with the device.
 class ZoneControlViewModel extends Cubit<ZoneControlState> {
   ZoneControlViewModel({
     required this.zoneId,
   }) : super(ZoneControlState(blockId: processingBlockFor(zoneId)?.id)) {
     _fetchInitialValues();
+    _subscribeToBlockDataStream();
   }
   final String zoneId;
+
+  /// Subscription to [BlockDataViewmodel] state changes for real-time
+  /// WebSocket-pushed block data updates.
+  StreamSubscription<Map<String, dynamic>?>? _blockDataSubscription;
 
   static const double _minGain = -60.0;
   static const double _maxGain = 12.0;
   static const double _stepGain = 1.0;
+
+  @override
+  Future<void> close() {
+    _blockDataSubscription?.cancel();
+    return super.close();
+  }
+
+  // ── WebSocket push subscription ────────────────────────────────────────
+
+  /// Listens to [BlockDataViewmodel.stream] and applies incoming WebSocket
+  /// gain/mute updates for this zone's processing block in real time.
+  void _subscribeToBlockDataStream() {
+    final String? blockId = processingBlock?.id;
+    if (blockId == null) return;
+
+    final BlockDataViewmodel blockDataVM = serviceLocator<BlockDataViewmodel>();
+    _blockDataSubscription = blockDataVM.stream.map((BlockDataState s) => s.allBlockData[blockId]).distinct().listen((Map<String, dynamic>? blockData) {
+      if (blockData == null || blockData.isEmpty || isClosed) return;
+
+      final double? gain = _parseDouble(blockData['gain']);
+      final bool? muted = _parseBool(blockData['mute']);
+
+      // Only emit if something actually changed to avoid loops.
+      if ((gain != null && gain != state.gain) || (muted != null && muted != state.muted)) {
+        emit(
+          state.copyWith(
+            gain: gain ?? state.gain,
+            muted: muted ?? state.muted,
+            clearError: true,
+          ),
+        );
+      }
+    });
+  }
 
   // ── zone data accessors ────────────────────────────────────────────────
 

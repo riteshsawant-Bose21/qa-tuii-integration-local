@@ -2,10 +2,134 @@ package handler
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"time"
 )
+
+// HandleListSnapshotDefinitions returns all stored snapshot definitions.
+func (h *Handler) HandleListSnapshotDefinitions() ([]api.SnapshotDefinition, error) {
+	return h.persistence.ListSnapshotDefinitions()
+}
+
+// HandleListSceneSets returns all stored scene sets.
+func (h *Handler) HandleListSceneSets() ([]api.SceneSet, error) {
+	return h.persistence.ListSceneSets()
+}
+
+// HandleGetSceneSet returns a single scene set by set_id.
+func (h *Handler) HandleGetSceneSet(setID string) (*api.SceneSet, error) {
+	return h.persistence.GetSceneSet(setID)
+}
+
+// HandleActivateSnapshotByID patches the snapshot data onto DB State.
+func (h *Handler) HandleActivateSnapshotByID(id string) error {
+	return h.sceneCatalog.ActivateSnapshotByID(id)
+}
+
+// HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
+func (h *Handler) HandleActivateScene(setID, sceneID string) error {
+	return h.sceneCatalog.ActivateScene(setID, sceneID)
+}
+
+// HandleDeleteAllSnapshotDefinitions removes all stored snapshot definitions and notifies the cluster.
+func (h *Handler) HandleDeleteAllSnapshotDefinitions() error {
+	if err := h.persistence.DeleteAllSnapshotDefinitions(); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSnapshotDefsDeleteAll,
+		h.appConfig.NodeName,
+		func(m *api.NotifyMessage) {},
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast snapshot definitions delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteSnapshotDefinition removes one snapshot definition and notifies the cluster.
+func (h *Handler) HandleDeleteSnapshotDefinition(id string) error {
+	if err := h.persistence.DeleteSnapshotDefinition(id); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSnapshotDefDelete,
+		h.appConfig.NodeName,
+		api.WithSnapshotOperation(&api.SnapshotOperation{
+			Name:      id,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast snapshot definition delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteAllSceneSets removes all stored scene sets and notifies the cluster.
+func (h *Handler) HandleDeleteAllSceneSets() error {
+	if err := h.persistence.DeleteAllSceneSets(); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneSetsDeleteAll,
+		h.appConfig.NodeName,
+		func(m *api.NotifyMessage) {},
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene sets delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteSceneSet removes one scene set and notifies the cluster.
+func (h *Handler) HandleDeleteSceneSet(setID string) error {
+	if err := h.persistence.DeleteSceneSet(setID); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneSetDelete,
+		h.appConfig.NodeName,
+		api.WithSceneSetOperation(&api.SceneSetOperation{
+			SetID:     setID,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene set delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteScene removes one scene from scene sets and notifies the cluster.
+func (h *Handler) HandleDeleteScene(sceneID string) error {
+	if err := h.persistence.DeleteScene(sceneID); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneDelete,
+		h.appConfig.NodeName,
+		api.WithSceneOperation(&api.SceneOperation{
+			SceneID:   sceneID,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene delete: %w", err)
+	}
+
+	return nil
+}
 
 // HandleListSnapshots returns a list of all available snapshot names.
 func (h *Handler) HandleListSnapshots() ([]string, error) {
@@ -14,7 +138,7 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapActivate); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineActivate); err != nil {
 		return fmt.Errorf("failed to handle snapshot activate: %w", err)
 	}
 
@@ -23,7 +147,7 @@ func (h *Handler) HandleActivateSnapshot(snapshot string) error {
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
 func (h *Handler) HandleCreateSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapCreate); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineCreate); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
@@ -33,7 +157,7 @@ func (h *Handler) HandleCreateSnapshot(snapshot string) error {
 func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
 
 	// First, broadcast delete operation (this removes snapshot everywhere)
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapDelete); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
 	}
 
@@ -42,7 +166,7 @@ func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
 
 // HandleSaveSnapshot updates a snapshot and broadcasts it to the cluster with the current system state.
 func (h *Handler) HandleSaveSnapshot(snapshot string) error {
-	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapSave); err != nil {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpTimeMachineSave); err != nil {
 		return fmt.Errorf("failed to handle snapshot save: %w", err)
 	}
 	return nil

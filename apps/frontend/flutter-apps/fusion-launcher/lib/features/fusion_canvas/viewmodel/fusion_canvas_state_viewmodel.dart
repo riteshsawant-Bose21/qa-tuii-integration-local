@@ -8,36 +8,34 @@ import '../view/painters/fusion_canvas_painter.dart';
 class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   FusionCanvasStateViewModel() : super(IdleFusionCanvasState(offset: Offset.zero, scale: 1.0));
 
-  double get minScale => 0.05;
+  double get minScale => 0.02;
   double get maxScale => 2.0;
 
   Size? _canvasSize;
 
   Size? get canvasSize => _canvasSize;
 
-  Size? _contentSize;
-
-  Size? get contentSize => _contentSize;
-
+  Size? get contentSize => contentRect?.size;
+  Rect? contentRect;
   void updateContentSize(List<FusionBasePainter> painters, FusionCanvasPainter cPainter) {
     Rect contentRect = Rect.zero;
     for (final FusionBasePainter painter in painters) {
       final Rect bounds = painter.getBounds(cPainter);
       contentRect = contentRect.expandToInclude(bounds);
     }
-    final bool isInitialZetting = _contentSize == null;
+    final bool isInitialSetting = contentSize == null;
 
-    _contentSize = contentRect.size;
-    if (isInitialZetting) {
+    this.contentRect = contentRect;
+    if (isInitialSetting) {
       fitToScreen();
     }
   }
 
   void setCanvasSize(Size size) {
-    final bool isInitialZetting = _canvasSize == null;
+    final bool isInitialSetting = _canvasSize == null;
 
     _canvasSize = size;
-    if (isInitialZetting) {
+    if (isInitialSetting) {
       fitToScreen();
     }
   }
@@ -134,23 +132,26 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
     return (position * scale) + offset;
   }
 
-  void fitToScreen() {
-    final Size? contSize = contentSize;
-    Size? viewportSize = canvasSize;
-    if (contSize == null || viewportSize == null || contSize.width == 0 || contSize.height == 0) return;
-    viewportSize = viewportSize * 0.6; // Add some padding around the content
-    final double scaleX = viewportSize.width / contSize.width;
-    final double scaleY = viewportSize.height / contSize.height;
-    final double scale = scaleX < scaleY ? scaleX : scaleY;
+  void fitToScreen({EdgeInsets padding = EdgeInsets.zero}) {
+    final Rect? contRect = contentRect;
+    final Size? contSize = contRect?.size;
+    final Size? viewportSize = canvasSize;
+    if (contRect == null || contSize == null || viewportSize == null || contSize.width == 0 || contSize.height == 0) return;
+    final double availableWidth = (viewportSize.width - padding.left - padding.right).clamp(0.0, double.infinity);
+    final double availableHeight = (viewportSize.height - padding.top - padding.bottom).clamp(0.0, double.infinity);
+    if (availableWidth == 0 || availableHeight == 0) return;
 
-    final Offset offset = Offset(contSize.width / 2, contSize.height / 2);
+    final double scaleX = availableWidth / contSize.width;
+    final double scaleY = availableHeight / contSize.height;
+    final double scale = (scaleX < scaleY ? scaleX : scaleY).clamp(minScale, maxScale);
 
-    setCanvasState(
-      state
-          .scaleCanvas(
-            scale,
-          )
-          .recenter(offset, viewportSize),
-    );
+    // Keep content centered in the padded viewport after scaling.
+    final double fittedWidth = contSize.width * scale;
+    final double fittedHeight = contSize.height * scale;
+    final double targetDx = padding.left + (availableWidth - fittedWidth) / 2 - (contRect.left * scale);
+    final double targetDy = padding.top + (availableHeight - fittedHeight) / 2 - (contRect.top * scale);
+    final Offset targetOffset = Offset(targetDx, targetDy);
+
+    setCanvasState(state.scaleCanvas(scale, offset: targetOffset - state.offset));
   }
 }

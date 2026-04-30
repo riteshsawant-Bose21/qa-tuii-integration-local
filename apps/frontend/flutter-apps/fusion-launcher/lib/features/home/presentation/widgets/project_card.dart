@@ -76,9 +76,8 @@ class ProjectCard extends StatelessWidget {
                                 child: FittedBox(
                                   fit: BoxFit.contain,
                                   alignment: Alignment.topLeft,
-                                  child: Image.asset(
-                                    assetPath ??
-                                        "assets/images/floor_plans/floor_plan_placeholder.png",
+                                  child: FusionImageAuto(
+                                    path: assetPath ?? "assets/images/floor_plans/floor_plan_placeholder.png",
                                   ),
                                 ),
                               ),

@@ -93,9 +93,19 @@ class _FusionMultiSelectPopupMenuState<T> extends State<FusionMultiSelectPopupMe
   void _showDropdown() {
     _tempSelectedItems = Set<T>.from(widget.selectedItems);
 
+    _tempSelectedItems = Set<T>.from(widget.selectedItems);
+
     final RenderBox box = _buttonKey.currentContext!.findRenderObject() as RenderBox;
     final Offset offset = box.localToGlobal(Offset.zero);
     final Size size = box.size;
+    final double screenHeight = MediaQuery.of(context).size.height;
+
+    // Check if there's enough space below
+    final double spaceBelow = screenHeight - (offset.dy + size.height + widget.popupOffset.dy);
+    final double spaceAbove = offset.dy - widget.popupOffset.dy;
+    final bool openAbove = spaceBelow < widget.maxHeight && spaceAbove > spaceBelow;
+
+    final double topPosition = openAbove ? offset.dy - widget.maxHeight - widget.popupOffset.dy : offset.dy + size.height + widget.popupOffset.dy;
 
     final String semanticId =
         widget.semanticsId ??
@@ -116,7 +126,7 @@ class _FusionMultiSelectPopupMenuState<T> extends State<FusionMultiSelectPopupMe
           // Dropdown content
           Positioned(
             left: offset.dx + widget.popupOffset.dx,
-            top: offset.dy + size.height + widget.popupOffset.dy,
+            top: topPosition,
             width: widget.matchChildWidth ? size.width : null,
             child: Material(
               color: Colors.transparent,

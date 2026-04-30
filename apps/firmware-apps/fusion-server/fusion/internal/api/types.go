@@ -161,10 +161,11 @@ type VersionUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash    string         `json:"hash"`
-	Data    map[string]any `json:"data"`
-	Version Version        `json:"version"`
-	Clear   bool           `json:"clear,omitempty"`
+	Hash         string         `json:"hash"`
+	Data         map[string]any `json:"data"`
+	ObserverData map[string]any `json:"observer_data,omitempty"`
+	Version      Version        `json:"version"`
+	Clear        bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair
@@ -188,8 +189,8 @@ type DeviceInfo struct {
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
+	PreReleaseTag            string `json:"pre_release_tag,omitempty"`
 	VrrpPriority             int    `json:"vrrp_priority"`
-
 }
 
 // DevicePatch represents patchable device metadata.
@@ -242,12 +243,93 @@ type SnapshotOperation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// SceneSetOperation represents a scene-set operation broadcast across the cluster.
+type SceneSetOperation struct {
+	SetID     string    `json:"set_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SceneOperation represents a scene operation broadcast across the cluster.
+type SceneOperation struct {
+	SceneID   string    `json:"scene_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SnapshotDefinition represents a stored Snapshot definition.
+type SnapshotDefinition struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// Scene represents a stored Scene definition.
+type Scene struct {
+	ID   string         `json:"id"`
+	Name string         `json:"name,omitempty"`
+	Data map[string]any `json:"data"`
+}
+
+// SceneSet represents a set of scenes and current/default scene tracking.
+type SceneSet struct {
+	SetID          string  `json:"set_id"`
+	Name           string  `json:"name,omitempty"`
+	DefaultSceneID string  `json:"default_scene,omitempty"`
+	CurrentSceneID string  `json:"current_scene_id,omitempty"`
+	Scenes         []Scene `json:"scenes"`
+}
+
+// ActivateSnapshotRequest is the request body for snapshot activation.
+type ActivateSnapshotRequest struct {
+	ID string `json:"id"`
+}
+
+// ActivateSceneSetRequest is the request body for scene activation in a set.
+type ActivateSceneSetRequest struct {
+	SetID   string `json:"set_id"`
+	SceneID string `json:"scene_id"`
+}
+
+// CurrentSceneResponse is the response body for current scene lookup.
+type CurrentSceneResponse struct {
+	SetID        string               `json:"set_id"`
+	CurrentScene CurrentSceneMetadata `json:"current_scene"`
+}
+
+// CurrentSceneMetadata identifies the active scene details for a scene set.
+type CurrentSceneMetadata struct {
+	SceneID string `json:"scene_id"`
+	Name    string `json:"name,omitempty"`
+}
+
+// SnapshotListResponse is the response body for listing stored snapshots.
+type SnapshotListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+}
+
+// SceneListResponse is the response body for listing stored scenes.
+type SceneListResponse struct {
+	Scenes []Scene `json:"scenes"`
+}
+
+// SceneSetListResponse is the response body for listing stored scene sets.
+type SceneSetListResponse struct {
+	SceneSets []SceneSet `json:"scene_sets"`
+}
+
+// SceneCatalogListResponse is the response body for listing all stored scene data.
+type SceneCatalogListResponse struct {
+	Snapshots []SnapshotDefinition `json:"snapshots"`
+	SceneSets []SceneSet           `json:"scene_sets"`
+}
+
 // TaskType represents scheduled task
 type TaskType string
 
 const (
-	TaskTypeMessage  TaskType = "message"
-	TaskTypeSnapshot TaskType = "snapshot"
+	TaskTypeMessage       TaskType = "message"
+	TaskTypeSnapshot      TaskType = "snapshot"
+	TaskTypeSceneSnapshot TaskType = "scene_snapshot"
+	TaskTypeSceneActivate TaskType = "scene_activate"
 )
 
 // Task represents a task
@@ -345,6 +427,16 @@ type WebSocketResponse struct {
 	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
 }
 
+// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
+// Clients should treat "patch" mode as a partial update that must be merged
+// into their local cached state, while "snapshot" mode replaces local state.
+type WebSocketConfigUpdateEvent struct {
+	Mode    string         `json:"mode"`              // "patch" or "snapshot"
+	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
+	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
+	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
+}
+
 // WebSocketStats represents connection and usage statistics
 type WebSocketStats struct {
 	Connections    int              `json:"connections"`                // Active connections
@@ -375,10 +467,36 @@ type SoftwareUpdateUploadResponse struct {
 	Uploaded  time.Time `json:"uploaded"`
 }
 
+// SwUpdateInfo represents the contents of the /etc/swupdate file.
+type SwUpdateInfo struct {
+	SerialNumber          string `json:"serial_number"`
+	CurrentBundleVersion  string `json:"current_bundle_version"`
+	PreviousBundleVersion string `json:"previous_bundle_version"`
+	Mount                 string `json:"mount"`
+	PreviousMount         string `json:"previous_mount"`
+	Status                string `json:"status"`
+	CurrentState          string `json:"current_state"`
+	BootPartition         string `json:"boot_partition"`
+	PreviousBootPartition string `json:"previous_boot_partition"`
+	Error                 string `json:"error"`
+	UpdatedAt             string `json:"updated_at"`
+}
+
 // softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
 type SoftwareUpdateErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message,omitempty"`
+}
+
+// TaskPatchRequest is the HTTP request body for PATCH /tasks/{id}.
+type TaskPatchRequest struct {
+	Description *string          `json:"description,omitempty"`
+	CronExpr    *string          `json:"cron_expr,omitempty"`
+	StartAt     *time.Time       `json:"start_at,omitempty"`
+	EndAt       *time.Time       `json:"end_at,omitempty"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	Params      map[string]any   `json:"params,omitempty"`
+	Snapshot    *string          `json:"snapshot,omitempty"`
 }
 
 type SoftwareUpdateInfo struct {
@@ -387,5 +505,6 @@ type SoftwareUpdateInfo struct {
 		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
 		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
+		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }

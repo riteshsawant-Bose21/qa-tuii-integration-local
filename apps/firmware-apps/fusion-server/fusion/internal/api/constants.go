@@ -1,14 +1,16 @@
 package api
 
-import "os"
-
-import "time"
+import (
+	"os"
+	"time"
+)
 
 const (
 	SoftwareUpdateVersionUnknown = "Unknown"
 	BranchNameUnknown            = "Unknown"
 	CommitHashUnknown            = "Unknown"
 	JenkinsBuildNumberUnknown    = "Unknown"
+	PreReleaseTagUnknown         = "Unknown"
 	SoftwareUpdateOTAPath        = "/mnt/ota"
 	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
 	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
@@ -34,7 +36,10 @@ const (
 
 	SerialUnknown = "Unknown"
 
-	SnapshotIDKey = "snapshot_id"
+	SnapshotIDKey           = "snapshot_id"
+	SnapshotDefinitionIDKey = "snapshot_definition_id"
+	SceneSetIDKey           = "set_id"
+	SceneIDKey              = "scene_id"
 
 	VIPHighPriority        = "high"
 	VIPvrrpHighPriority    = 120
@@ -44,18 +49,20 @@ const (
 	VIPvrrpLowPriority     = 90
 
 	// WS Request types (client -> server)
-	WSMsgTypeDevices            = "devices"
-	WSMsgTypeDeviceByID         = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo   = "update_device_info"
-	WSMsgTypeConfiguration      = "config"
-	WSMsgTypePatchConfiguration = "patch_config"
-	WSMsgTypeUnsubscribeConfig  = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices = "unsubscribe_devices"
-	WSMsgTypePing               = "ping"
-	WSMsgTypePong               = "pong"
-	WSMsgTypeError              = "error"
-	WSMsgTypeStartUpdate        = "start_update"
-	WSMsgTypeUpdateProgress     = "update_progress"
+	WSMsgTypeDevices             = "devices"
+	WSMsgTypeDeviceByID          = "device_by_id"
+	WSMsgTypeUpdateDeviceInfo    = "update_device_info"
+	WSMsgTypeConfiguration       = "config"
+	WSMsgTypePatchConfiguration  = "patch_config"
+	WSMsgTypeUnsubscribeConfig   = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices  = "unsubscribe_devices"
+	WSMsgTypePing                = "ping"
+	WSMsgTypePong                = "pong"
+	WSMsgTypeError               = "error"
+	WSMsgTypeStartUpdate         = "start_update"
+	WSMsgTypeUpdateProgress      = "update_progress"
+	WSMsgTypeSwUpdateInfo        = "sw_update_info"
+	WSMsgTypeListSoftwareUpdates = "list_sw_update_files"
 
 	// WS event types (server -> client)
 	WSMsgTypeDeviceUpdate = "device_update"
@@ -116,13 +123,14 @@ const (
 )
 
 var (
-	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
-	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/persist/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/persist/pki/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"
 	DefaultKeyFileName      = "device.key"
 	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SwUpdateInfoPath        = "/etc/swupdate-status"
 	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
 

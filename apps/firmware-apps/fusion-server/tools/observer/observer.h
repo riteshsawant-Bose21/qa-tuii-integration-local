@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
@@ -381,6 +382,46 @@ shouldAcceptUpdate(long long incomingEpoch, long long incomingVersion,
   return false;
 }
 
+inline std::string summarizeTopLevelKeys(const Json::Value &value)
+{
+  if (!value.isObject())
+    return "";
+
+  std::ostringstream oss;
+  bool first = true;
+  for (const auto &key : value.getMemberNames())
+  {
+    if (!first)
+      oss << ", ";
+    oss << key;
+    first = false;
+  }
+  return oss.str();
+}
+
+inline std::string summarizeUpdateMetadata(const Json::Value &update)
+{
+  std::ostringstream oss;
+  oss << "keys=[" << summarizeTopLevelKeys(update) << "]";
+  if (update.isMember("_fusion_op"))
+  {
+    oss << " op=" << update["_fusion_op"].asString();
+  }
+  if (update.isMember("_fusion_epoch"))
+  {
+    oss << " epoch=" << update["_fusion_epoch"].asInt64();
+  }
+  if (update.isMember("_fusion_version"))
+  {
+    oss << " version=" << update["_fusion_version"].asInt64();
+  }
+  if (update.isMember("_fusion_msg_id"))
+  {
+    oss << " msg_id=" << update["_fusion_msg_id"].asString();
+  }
+  return oss.str();
+}
+
 // -----------------------------------------------------------------------------
 // Class: JsonMonitor
 // -----------------------------------------------------------------------------
@@ -593,23 +634,22 @@ public:
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state)
   {
-    // Mutate state and compute diffs under state_mutex_
-    Json::Value oldData, newData, oldValue, newValue;
+    // Extract only the affected subtree before and after mutation instead of
+    // deep-copying the entire state tree twice.
+    Json::Value oldValue, newValue;
     {
       std::lock_guard<std::mutex> slk(state_mutex_);
       SPDLOG_DEBUG("Received update for path: {}", path);
 
-      oldData = data_;
+      oldValue = extractValue(data_, path);
       updateInternalState(path, new_state);
-      newData = data_;
+      newValue = extractValue(data_, path);
 
-      if (oldData == newData)
+      if (oldValue == newValue)
       {
         SPDLOG_DEBUG("No change detected for path: {}", path);
         return;
       }
-      oldValue = extractValue(oldData, path);
-      newValue = extractValue(newData, path);
     }
 
     // Collect callbacks under watchers_mutex_
@@ -795,14 +835,35 @@ public:
   /// Type definition for device ID change notification callbacks.
   using DeviceIDChangeCallback = std::function<void(const std::string &)>;
 
-  UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true)
-      : jsonMonitor_(Json::objectValue)
+  static constexpr int kDefaultKeepaliveIntervalSeconds = 5;
+  static constexpr int kDefaultServerPruneThresholdSeconds = 15;
+
+  struct TimingConfig
   {
-    
+    TimingConfig(
+        int keepaliveIntervalSeconds = kDefaultKeepaliveIntervalSeconds,
+        int serverPruneThresholdSeconds = kDefaultServerPruneThresholdSeconds)
+        : keepaliveIntervalSeconds(keepaliveIntervalSeconds),
+          serverPruneThresholdSeconds(serverPruneThresholdSeconds) {}
+
+    int keepaliveIntervalSeconds;
+    int serverPruneThresholdSeconds;
+  };
+
+  UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true,
+                  TimingConfig timingConfig = {}, int httpPort = 8080)
+      : serverIP_(serverIP), jsonMonitor_(Json::objectValue),
+        timingConfig_(timingConfig), httpPort_(httpPort)
+  {
     // Enable trace logging for debugging (dont push this to git).
     // spdlog::set_level(spdlog::level::trace);
 
     SPDLOG_TRACE("Initializing UDPValueMonitor to {}:{}", serverIP, port);
+
+    if (timingConfig_.keepaliveIntervalSeconds <= 0)
+      throw std::runtime_error("keepaliveIntervalSeconds must be > 0");
+    if (timingConfig_.serverPruneThresholdSeconds <= 0)
+      throw std::runtime_error("serverPruneThresholdSeconds must be > 0");
 
     const int sockfd = udpSocket_.get();
 
@@ -819,7 +880,7 @@ public:
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_addr.s_addr = INADDR_ANY;
     clientAddr.sin_port = htons(0);
-    if (bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
+    if (::bind(sockfd, reinterpret_cast<sockaddr *>(&clientAddr),
              sizeof(clientAddr)) < 0)
       throw std::runtime_error("Failed to bind socket: " +
                                std::string(strerror(errno)));
@@ -851,7 +912,7 @@ public:
       return;
     }
 
-    requestInitialDeviceInfo(serverAddr_);
+    beginInitialHandshake();
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
     started_ = true;
   }
@@ -870,7 +931,10 @@ public:
    */
   void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(path);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(path);
+    }
     jsonMonitor_.watch(path, callback);
   }
 
@@ -884,7 +948,10 @@ public:
    */
   void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
   {
-    targetPaths_.push_back(pattern);
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths_.push_back(pattern);
+    }
     jsonMonitor_.watchPattern(pattern, callback);
   }
 
@@ -976,6 +1043,12 @@ private:
     // receivedInitialState_ = false; // ask nate, he put the condition here instead of above
   }
 
+  void beginInitialHandshake()
+  {
+    receivedInitialState_ = false;
+    requestInitialDeviceInfo(serverAddr_);
+  }
+
   Json::Value getValueAtPath(const Json::Value &root,
                              const std::vector<PathComponent> &pathParts)
   {
@@ -1032,51 +1105,40 @@ private:
 
   void handleUpdateMessage(const Json::Value &update, bool useVersion = true)
   {
-    SPDLOG_TRACE("Received update: {}", update.toStyledString());
-
-    static long long lastEpoch = -1;
-    static long long lastCounter = -1;
+    SPDLOG_TRACE("Received update {}", summarizeUpdateMetadata(update));
 
     if (useVersion)
     {
       if (!update.isMember("_fusion_epoch"))
       {
-        SPDLOG_WARN("Ignoring update without epoch. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without epoch {}", summarizeUpdateMetadata(update));
         return;
       }
 
       if (!update.isMember("_fusion_version"))
       {
-        SPDLOG_WARN("Ignoring update without version. Keys present: [{}]. Full JSON: {}",
-                    [&]{
-                      std::string keys;
-                      for (const auto &k : update.getMemberNames())
-                        keys += k + ", ";
-                      return keys;
-                    }(),
-                    update.toStyledString());
+        SPDLOG_WARN("Ignoring update without version {}", summarizeUpdateMetadata(update));
         return;
       }
 
       long long incomingEpoch = update["_fusion_epoch"].asInt64();
       long long incomingVersion = update["_fusion_version"].asInt64();
 
-      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch,
-                              lastCounter))
+      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch_,
+                              lastCounter_))
       {
-        SPDLOG_WARN("Rejecting out of order update {}", update.toStyledString());
+        SPDLOG_WARN("Rejecting out of order update {}", summarizeUpdateMetadata(update));
         return;
       }
     }
 
-    for (const auto &path : targetPaths_)
+    std::vector<std::string> targetPaths;
+    {
+      std::lock_guard<std::mutex> lk(targetPaths_mutex_);
+      targetPaths = targetPaths_;
+    }
+
+    for (const auto &path : targetPaths)
     {
       if (path.find('*') != std::string::npos)
       {
@@ -1101,6 +1163,208 @@ private:
     }
   }
 
+  void sendKeepalive(const sockaddr_in &serverAddr)
+  {
+    Json::Value message;
+    message["action"] = "no_op";
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    std::string jsonStr = Json::writeString(writerBuilder, message);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(), 0,
+                          reinterpret_cast<const sockaddr *>(&serverAddr),
+                          sizeof(serverAddr));
+    if (sent < 0)
+    {
+      SPDLOG_WARN("Failed to send keepalive: {}", std::string(strerror(errno)));
+    }
+    else
+    {
+      SPDLOG_TRACE("Sent keepalive to server");
+    }
+  }
+
+  bool connectTCPWithTimeout(int sockfd, sockaddr_in addr, int timeoutMs)
+  {
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    if (flags == -1)
+    {
+      return false;
+    }
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+      return false;
+    }
+
+    const int rc = connect(sockfd, reinterpret_cast<sockaddr *>(&addr),
+                           sizeof(addr));
+    if (rc == 0)
+    {
+      fcntl(sockfd, F_SETFL, flags);
+      return true;
+    }
+    if (errno != EINPROGRESS)
+    {
+      return false;
+    }
+
+    pollfd pfd;
+    pfd.fd = sockfd;
+    pfd.events = POLLOUT;
+    const int pollResult = poll(&pfd, 1, timeoutMs);
+    if (pollResult <= 0)
+    {
+      return false;
+    }
+
+    int socketError = 0;
+    socklen_t socketErrorLen = sizeof(socketError);
+    if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &socketError,
+                   &socketErrorLen) != 0 ||
+        socketError != 0)
+    {
+      errno = socketError;
+      return false;
+    }
+
+    fcntl(sockfd, F_SETFL, flags);
+    return true;
+  }
+
+  bool httpGet(const std::string &path, std::string *body)
+  {
+    if (body == nullptr)
+    {
+      return false;
+    }
+    body->clear();
+
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+      SPDLOG_WARN("HTTP GET {} failed to create socket: {}", path,
+                  std::string(strerror(errno)));
+      return false;
+    }
+
+    timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in httpAddr = serverAddr_;
+    httpAddr.sin_port = htons(static_cast<uint16_t>(httpPort_));
+    if (!connectTCPWithTimeout(sockfd, httpAddr, 2000))
+    {
+      SPDLOG_WARN("HTTP GET {} failed to connect to {}:{}: {}", path, serverIP_,
+                  httpPort_, std::string(strerror(errno)));
+      close(sockfd);
+      return false;
+    }
+
+    std::ostringstream request;
+    request << "GET " << path << " HTTP/1.0\r\n"
+            << "Host: " << serverIP_ << ":" << httpPort_ << "\r\n"
+            << "Accept: application/json\r\n"
+            << "Connection: close\r\n\r\n";
+    const std::string requestStr = request.str();
+
+    size_t sentTotal = 0;
+    while (sentTotal < requestStr.size())
+    {
+      ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
+                          requestStr.size() - sentTotal, 0);
+      if (sent < 0)
+      {
+        if (errno == EINTR)
+        {
+          continue;
+        }
+        SPDLOG_WARN("HTTP GET {} send failed: {}", path,
+                    std::string(strerror(errno)));
+        close(sockfd);
+        return false;
+      }
+      sentTotal += static_cast<size_t>(sent);
+    }
+
+    std::string response;
+    char readBuf[4096];
+    constexpr size_t kMaxHTTPResponseBytes = 16 * 1024 * 1024;
+    while (true)
+    {
+      ssize_t received = recv(sockfd, readBuf, sizeof(readBuf), 0);
+      if (received == 0)
+      {
+        break;
+      }
+      if (received < 0)
+      {
+        if (errno == EINTR)
+        {
+          continue;
+        }
+        SPDLOG_WARN("HTTP GET {} recv failed: {}", path,
+                    std::string(strerror(errno)));
+        close(sockfd);
+        return false;
+      }
+      response.append(readBuf, static_cast<size_t>(received));
+      if (response.size() > kMaxHTTPResponseBytes)
+      {
+        SPDLOG_WARN("HTTP GET {} response exceeded {} bytes", path,
+                    kMaxHTTPResponseBytes);
+        close(sockfd);
+        return false;
+      }
+    }
+    close(sockfd);
+
+    const size_t headerEnd = response.find("\r\n\r\n");
+    if (headerEnd == std::string::npos)
+    {
+      SPDLOG_WARN("HTTP GET {} returned malformed response", path);
+      return false;
+    }
+
+    const std::string statusLine = response.substr(0, response.find("\r\n"));
+    if (statusLine.find(" 200 ") == std::string::npos)
+    {
+      SPDLOG_WARN("HTTP GET {} failed: {}", path, statusLine);
+      return false;
+    }
+
+    *body = response.substr(headerEnd + 4);
+    return true;
+  }
+
+  bool pullFullConfig(long long expectedEpoch, long long expectedVersion)
+  {
+    std::string body;
+    if (!httpGet("/value", &body))
+    {
+      return false;
+    }
+
+    Json::Value state;
+    Json::CharReaderBuilder readerBuilder;
+    std::string errs;
+    std::istringstream bodyStream(body);
+    if (!Json::parseFromStream(readerBuilder, bodyStream, &state, &errs))
+    {
+      SPDLOG_WARN("Failed to parse HTTP config pull response: {}", errs);
+      return false;
+    }
+
+    handleUpdateMessage(state, false);
+    lastEpoch_ = expectedEpoch;
+    lastCounter_ = expectedVersion;
+    receivedInitialState_ = true;
+    SPDLOG_INFO("Pulled full config epoch={} version={}", expectedEpoch,
+                expectedVersion);
+    return true;
+  }
+
   void receiveLoop()
   {
     pollfd pfd;
@@ -1111,8 +1375,29 @@ private:
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
 
+    // Send a keepalive based on wall-clock time to prevent the server from
+    // pruning this client (clientStaleTTL = 10s). Using wall-clock time
+    // instead of poll-timeout counting ensures keepalives are sent even when
+    // the socket is busy receiving broadcasts (poll never times out).
+    auto lastKeepaliveSent = std::chrono::steady_clock::now();
+
     while (running_)
     {
+      // Send keepalive if enough wall-clock time has elapsed, regardless of
+      // whether poll returned data or timed out. This prevents the server
+      // from pruning us during sustained broadcast traffic.
+      if (receivedInitialState_)
+      {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - lastKeepaliveSent).count();
+        if (elapsed >= timingConfig_.keepaliveIntervalSeconds)
+        {
+          sendKeepalive(serverAddr_);
+          lastKeepaliveSent = now;
+        }
+      }
+
       const int pollResult = poll(&pfd, 1, 1000);
       if (pollResult < 0)
       {
@@ -1168,14 +1453,20 @@ private:
           {
             msgId = response["data"]["_fusion_msg_id"].asString();
           }
-          if (!msgId.empty())
+
+          std::string op;
+          if (response.isMember("_fusion_op"))
+          {
+            op = response["_fusion_op"].asString();
+          }
+
+          if (!msgId.empty() && op != "config_pull_required")
           {
             sendAck(msgId);
           }
 
-          if (response.isMember("_fusion_op"))
+          if (!op.empty())
           {
-            const std::string op = response["_fusion_op"].asString();
             // This is to get the device information
             // Called only at the start or failure to get initial state
             // Once we have the device information, we can request the initial state
@@ -1202,9 +1493,59 @@ private:
               handleUpdateMessage(response, true);
               continue;
             }
+            else if (op == "config_pull_required")
+            {
+              if (!response.isMember("_fusion_epoch") ||
+                  !response.isMember("_fusion_version"))
+              {
+                SPDLOG_WARN("Ignoring config_pull_required without version {}",
+                            summarizeUpdateMetadata(response));
+                continue;
+              }
+              const long long incomingEpoch =
+                  response["_fusion_epoch"].asInt64();
+              const long long incomingVersion =
+                  response["_fusion_version"].asInt64();
+              long long candidateEpoch = lastEpoch_;
+              long long candidateCounter = lastCounter_;
+              if (!shouldAcceptUpdate(incomingEpoch, incomingVersion,
+                                      candidateEpoch, candidateCounter))
+              {
+                continue;
+              }
+              if (pullFullConfig(incomingEpoch, incomingVersion) &&
+                  !msgId.empty())
+              {
+                sendAck(msgId);
+              }
+              continue;
+            }
             else if (op == "device_update") // request originated from server
             {
               handleDeviceUpdate(response);
+              continue;
+            }
+            else if (op == "no_op") // keepalive ACK from server
+            {
+              auto now = std::chrono::steady_clock::now();
+              // If we haven't heard a noop ACK in more than the configured
+              // prune threshold,
+              // seconds, the server was unavailable and has just come back. Re-do the
+              // full handshake so we reset stale Lamport counters.
+              if (receivedInitialState_ && lastNoopAckTime_.time_since_epoch().count() > 0)
+              {
+                auto gapS = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - lastNoopAckTime_).count();
+                if (gapS > timingConfig_.serverPruneThresholdSeconds)
+                {
+                  SPDLOG_WARN("Server was unreachable for {}s — re-requesting state", gapS);
+                  lastEpoch_ = -1;
+                  lastCounter_ = -1;
+                  beginInitialHandshake();
+                  continue;
+                }
+              }
+              lastNoopAckTime_ = now;
               continue;
             }
             else
@@ -1214,8 +1555,8 @@ private:
           }
           else
           {
-            SPDLOG_DEBUG("Processing update message (no _fusion_op). Raw JSON: {}",
-                        response.toStyledString());
+            SPDLOG_DEBUG("Processing update message without _fusion_op {}",
+                         summarizeUpdateMetadata(response));
             handleUpdateMessage(response);
           }
         }
@@ -1284,11 +1625,26 @@ private:
   std::thread receiveThread_;
   bool started_{false};
   std::mutex start_mutex_;
+  std::string serverIP_;
   std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
+  mutable std::mutex targetPaths_mutex_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
   bool receivedInitialState_{false};
+
+  long long lastEpoch_{-1};
+  long long lastCounter_{-1};
+  TimingConfig timingConfig_{};
+  int httpPort_{8080};
+
+  // Timestamp of the last noop ACK received from the server. Used to detect
+  // server prunes: a gap > SERVER_PRUNE_THRESHOLD_S means the server was
+  // unavailable. The handshake is maintained by sending noop keepalives 
+  // every KEEPALIVE_INTERVAL_S seconds, so a gap > SERVER_PRUNE_THRESHOLD_S 
+  // indicates the server was down and has just come back up.
+  
+  std::chrono::steady_clock::time_point lastNoopAckTime_{};
 
   // Device ID change callbacks
   std::vector<DeviceIDChangeCallback> deviceIDCallbacks_;

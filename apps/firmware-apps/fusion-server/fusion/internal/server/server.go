@@ -25,17 +25,27 @@ import (
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node          string
-	handler       *handler.Handler
-	wsClients     map[*websocket.Conn]bool
-	wsWriteMutex  map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
-	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
-	wsLock        sync.RWMutex
-	upgrader      websocket.Upgrader
-	wsStats       *api.WebSocketStats
-	statsLock     sync.RWMutex
+	node                      string
+	handler                   *handler.Handler
+	wsClients                 map[*websocket.Conn]*wsClientState
+	subscriptions             map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock                    sync.RWMutex
+	configUpdateMu            sync.Mutex
+	configUpdatePending       bool
+	configUpdateData          map[string]any
+	configUpdateSnapshot      bool
+	configUpdateClear         bool
+	configUpdateDebounceTimer *time.Timer
+	upgrader                  websocket.Upgrader
+	wsStats                   *api.WebSocketStats
+	statsLock                 sync.RWMutex
 
 	maxConnections int
+}
+
+type wsClientState struct {
+	writeMu sync.Mutex
+	topics  map[string]struct{}
 }
 
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
@@ -44,8 +54,7 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	server := &FusionServer{
 		node:           node,
 		handler:        handler,
-		wsClients:      make(map[*websocket.Conn]bool),
-		wsWriteMutex:   make(map[*websocket.Conn]*sync.Mutex),
+		wsClients:      make(map[*websocket.Conn]*wsClientState),
 		subscriptions:  make(map[string]map[*websocket.Conn]bool),
 		maxConnections: wsMaxConnections,
 		wsStats: &api.WebSocketStats{
@@ -197,13 +206,11 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 	state := s.handler.StateManager.GetFullState()
 
 	// Write the JSON response.
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(state); err != nil {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if err := json.NewEncoder(w).Encode(state); err != nil {
 		logging.GetLogger().Error("Export state failed: %v", err)
-		http.Error(w, "Error exporting state", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
 }
 

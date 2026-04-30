@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/persistence"
@@ -218,7 +219,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		d.persistence.MarkDirty()
 		d.hub.BroadcastToObservers(&message)
 
-	case api.NotifyOpSnapActivate:
+	case api.NotifyOpTimeMachineActivate:
 		if message.SnapshotOperation == nil {
 			logger.Error("SnapActivate message with nil payload from %s", message.Node)
 			return
@@ -234,19 +235,89 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error activating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapCreate:
+	case api.NotifyOpTimeMachineCreate:
 		if err := d.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error creating snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapDelete:
+	case api.NotifyOpTimeMachineDelete:
 		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
 		}
 
-	case api.NotifyOpSnapSave:
+	case api.NotifyOpTimeMachineSave:
 		if err := d.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error saving snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefsUpsert:
+		if len(message.SnapshotDefinitions) == 0 {
+			logger.Error("SnapshotDefsUpsert message with empty payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.UpsertSnapshotDefinitions(message.SnapshotDefinitions); err != nil {
+			logger.Error("Error upserting snapshot definitions: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefsDeleteAll:
+		if err := d.persistence.DeleteAllSnapshotDefinitions(); err != nil {
+			logger.Error("Error deleting snapshot definitions: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefDelete:
+		if message.SnapshotOperation == nil {
+			logger.Error("SnapshotDefDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteSnapshotDefinition(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error deleting snapshot definition '%s': %v", message.SnapshotOperation.Name, err)
+		}
+
+	case api.NotifyOpSceneSetsUpsert:
+		if len(message.SceneSets) == 0 {
+			logger.Error("SceneSetsUpsert message with empty payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.UpsertSceneSets(message.SceneSets); err != nil {
+			logger.Error("Error upserting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSceneSetsDeleteAll:
+		if err := d.persistence.DeleteAllSceneSets(); err != nil {
+			logger.Error("Error deleting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSceneSetDelete:
+		if message.SceneSetOperation == nil {
+			logger.Error("SceneSetDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteSceneSet(message.SceneSetOperation.SetID); err != nil {
+			logger.Error("Error deleting scene set '%s': %v", message.SceneSetOperation.SetID, err)
+		}
+
+	case api.NotifyOpSceneDelete:
+		if message.SceneOperation == nil {
+			logger.Error("SceneDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteScene(message.SceneOperation.SceneID); err != nil {
+			logger.Error("Error deleting scene '%s': %v", message.SceneOperation.SceneID, err)
+		}
+
+	case api.NotifyOpSnapshotV2Activate:
+		if message.SnapshotActivation == nil {
+			logger.Error("SnapshotV2Activate message with nil payload from %s", message.Node)
+			return
+		}
+
+	case api.NotifyOpSceneActivate:
+		if message.SceneActivation == nil {
+			logger.Error("SceneActivate message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.SetCurrentScene(message.SceneActivation.SetID, message.SceneActivation.SceneID); err != nil {
+			logger.Error("Error setting current scene for set %s: %v", message.SceneActivation.SetID, err)
 		}
 
 	case api.NotifyOpTaskCreate:
@@ -302,7 +373,7 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
 		message.Node, message.DeviceInfo.Id)
 
-	d.hub.BroadcastToObservers(message)
+	d.hub.BroadcastToClusterObservers(message)
 }
 
 // handleSoftwareUpdate processes software update trigger notifications
@@ -312,18 +383,33 @@ func (d *ClusterDelegate) handleSoftwareUpdate(message *api.NotifyMessage) {
 	logger.Info("[SoftwareUpdate] Received software update trigger from %s on node %s",
 		message.Node, d.appConfig.NodeName)
 
-	// Execute the systemctl command to start the swupdate service
-	cmd := exec.Command("systemctl", "start", "swupdate-ota-install.service")
-	err := cmd.Run()
+	if out, err := exec.Command("systemctl", "reset-failed", "swupdate-ota-install.service").CombinedOutput(); err != nil {
+		logger.Debug("[SoftwareUpdate] reset-failed (ignored): %v — %s", err, string(out))
+	}
 
+	cmd := exec.Command("systemctl", "start", "--no-block", "swupdate-ota-install.service")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v",
-			d.appConfig.NodeName, err)
+		logger.Error("[SoftwareUpdate] Failed to start swupdate-ota-install.service on node %s: %v — %s",
+			d.appConfig.NodeName, err, string(out))
+
+		if d.hub != nil {
+			d.hub.GossipSWUpdateFailure(d.appConfig.NodeName,
+				fmt.Sprintf("failed to start swupdate-ota-install.service: %v — %s", err, string(out)))
+		}
 		return
 	}
 
-	logger.Info("[SoftwareUpdate] Successfully started swupdate-ota-install.service on node %s",
+	logger.Info("[SoftwareUpdate] Successfully queued swupdate-ota-install.service on node %s",
 		d.appConfig.NodeName)
+
+	// Each node monitors its own /tmp/swupdateprog socket, stops any previous monitor, and resets progress for a clean start.
+	if d.hub != nil {
+		d.hub.StopSWUpdateProgressMonitoring()
+		d.hub.StartSWUpdateProgressMonitoring()
+		logger.Info("[SoftwareUpdate] Started local progress monitoring on node %s",
+			d.appConfig.NodeName)
+	}
 }
 
 // handleSoftwareUpdateAvailable processes bundle availability notifications from any node
@@ -337,6 +423,9 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 		logger.Error("SoftwareUpdateAvailable message with nil payload from %s", message.Node)
 		return
 	}
+
+	// Clean up any stale .swu files whose checksum differs from the incoming bundle.
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Checksum, logging.GetLogger())
 
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {

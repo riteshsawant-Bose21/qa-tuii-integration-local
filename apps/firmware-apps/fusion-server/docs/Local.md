@@ -98,6 +98,48 @@ You can directly call all REST endpoints via `curl`.
 A prebuilt Bruno API client collection is also available.  
 If you want an updated Bruno collection, ask and it can be generated.
 
+## UDP Control API
+
+The UDP control channel listens on port `7947` and supports the following actions:
+
+- `get` - retrieve the full state, or a keyed value
+- `put` - replace state using full-replacement semantics
+- `patch` - apply partial update semantics matching HTTP `PATCH /value`
+
+Examples:
+
+Get the full state:
+
+```bash
+echo '{"action":"get"}' | nc -4 -u -w1 localhost 7947
+```
+
+Get a specific key:
+
+```bash
+echo '{"action":"get","key":"settings.audio.gain"}' | nc -4 -u -w1 localhost 7947
+```
+
+Put a new state fragment:
+
+```bash
+echo '{"action":"put","payload":{"settings":{"audio":{"gain":1}}}}' | nc -4 -u -w1 localhost 7947
+```
+
+Patch a keyed value:
+
+```bash
+echo '{"action":"patch","key":"settings.audio.gain","value":5}' | nc -4 -u -w1 localhost 7947
+```
+
+Patch using an object payload:
+
+```bash
+echo '{"action":"patch","payload":{"settings":{"audio":{"gain":5}}}}' | nc -4 -u -w1 localhost 7947
+```
+
+For backward compatibility, UDP `set` is currently accepted as an alias for `put`, but new clients should use `put`.
+
 ## Uploading Audio Files
 
 Upload WAV or similar audio:
@@ -109,7 +151,7 @@ curl --request POST   --url http://localhost:8080/pava/messages   --header 'cont
 Uploaded files are stored in:
 
 ```
-/var/lib/fusion/audio
+/persist/fusion/audio
 ```
 
 Files placed manually in this folder are not automatically detected; they must be uploaded via REST or added to the internal DB with a maintenance tool.
@@ -132,7 +174,7 @@ curl --request PUT   --url http://localhost:8080/pava/messages/:id/trigger   --h
 Example console output from `fusion-server`:
 
 ```
-Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
+Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/persist/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
 ```
 
 ## Monitoring Trigger Broadcasts
@@ -148,7 +190,7 @@ Triggered messages display a JSON structure:
 ```json
 {
   "id": "01K8TYPMWW9HSK2QS5Y5W10ABS",
-  "path": "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
+  "path": "/persist/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
   "priority": 100,
   "zones": "all",
   "timestamp": 1761844571

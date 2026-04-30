@@ -32,3 +32,5 @@ export 'fusion_audio_progressbar.dart';
 export 'fusion_audio_gain_slider.dart';
 export 'fusion_row.dart';
 export 'fusion_column.dart';
+export 'fusion_kebab_popup.dart';
+export 'fusion_drawer.dart';

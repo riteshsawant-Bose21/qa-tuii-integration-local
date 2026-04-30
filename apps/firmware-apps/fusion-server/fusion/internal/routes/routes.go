@@ -54,12 +54,17 @@ const (
 	DeviceReloadVIPEndpoint       = DeviceReloadEndpoint + "/vip"
 	DeviceReloadVIPStatusEndpoint = DeviceReloadVIPEndpoint + "/status"
 	DeviceIDEndpoint              = DeviceEndpoint + "/{id}"
+	DebugProfileEndpoint          = "/debug/profile"
+	DebugProfileHeapEndpoint      = DebugProfileEndpoint + "/heap"
+	DebugProfileStartEndpoint     = DebugProfileEndpoint + "/start"
+	DebugProfileStatusEndpoint    = DebugProfileEndpoint + "/status"
+	DebugProfileStopEndpoint      = DebugProfileEndpoint + "/stop"
 
 	DevicesEndpoint                    = "/devices"
 	DevicesIDEndpoint                  = DevicesEndpoint + "/{id}"
 	DevicesVIPEndpoint                 = DevicesEndpoint + "/vip"
-	DevicesVIPStatusEndpoint       = DevicesVIPEndpoint + "/status"
-	DevicesVIPOperationEndpoint    = DevicesVIPEndpoint + "/operations" + "/{id}"
+	DevicesVIPStatusEndpoint           = DevicesVIPEndpoint + "/status"
+	DevicesVIPOperationEndpoint        = DevicesVIPEndpoint + "/operations" + "/{id}"
 	DevicesSetVIPEndpoint              = DevicesVIPEndpoint + "/{vip}"
 	DevicesIDVIPMasterPriorityEndpoint = DevicesIDEndpoint + "/vip/master-priority/{mode}"
 	DevicesGetCSREndpoint              = DevicesIDEndpoint + "/csr"
@@ -70,10 +75,11 @@ const (
 	DevicesResetEndpoint               = DevicesEndpoint + "/reset"
 	EndpointsEndpoint                  = "/endpoints"
 
-	SoftwareUpdateEndpoint         = "/softwareUpdate"
-	SoftwareUpdateUploadEndpoint   = SoftwareUpdateEndpoint + "/upload"
-	SoftwareUpdateDownloadEndpoint = SoftwareUpdateEndpoint + "/download/{filename}"
-	SoftwareUpdateListEndpoint     = SoftwareUpdateEndpoint + "/list"
+	SoftwareUpdateEndpoint          = "/softwareUpdate"
+	SoftwareUpdateUploadEndpoint    = SoftwareUpdateEndpoint + "/upload"
+	SoftwareUpdateDownloadEndpoint  = SoftwareUpdateEndpoint + "/download/{filename}"
+	SoftwareUpdateListEndpoint      = SoftwareUpdateEndpoint + "/list"
+	SoftwareUpdateInfoLocalEndpoint = SoftwareUpdateEndpoint + "/info"
 
 	HealthEndpoint = "/health"
 
@@ -97,15 +103,22 @@ const (
 
 	RootEndpoint = "/"
 
+	SceneCatalogEndpoint = "/scene-catalog"
+
+	ScenesEndpoint     = "/scenes"
+	ScenesNameEndpoint = ScenesEndpoint + "/{id}"
+
+	ScenesSetsEndpoint        = "/scene-sets"
+	ScenesSetsNameEndpoint    = ScenesSetsEndpoint + "/{id}"
+	SceneSetsActivateEndpoint = ScenesSetsEndpoint + "/activate"
+	SceneSetsCurrentEndpoint  = ScenesSetsEndpoint + "/current-scene"
+
 	SessionsEndpoint   = "/sessions"
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
 	SnapshotsEndpoint         = "/snapshots"
-	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
-	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
-	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
-	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
-	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
+	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{id}"
+	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{id}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
@@ -118,6 +131,15 @@ const (
 	SettingsAudioBlockEndpoint        = SettingsAudioEndpoint + "/{blockId}"
 	SettingsAudioParamEndpoint        = SettingsAudioBlockEndpoint + "/{param}"
 	SettingsAudioIndexedParamEndpoint = SettingsAudioParamEndpoint + "/{index}"
+
+	TimeMachineEndpoint         = "/time-machine"
+	TimeMachineMetaEndpoint     = TimeMachineEndpoint + "/meta"
+	TimeMachineActiveEndpoint   = TimeMachineMetaEndpoint + "/active"
+	TimeMachineNameEndpoint     = TimeMachineEndpoint + "/{name}"
+	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
+	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
+
+	ValueEndpoint = "/value"
 
 	VersionEndpoint = "/version"
 

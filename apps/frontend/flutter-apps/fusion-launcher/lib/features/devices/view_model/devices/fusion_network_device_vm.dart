@@ -12,6 +12,14 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
   final FusionDeviceService fusionDeviceService;
   FusionNetworkDeviceViewModel(this.fusionDeviceService) : super(FusionNetworkDeviceViewModelInitial());
 
+  bool get hasUnRegisteredDevices {
+    if (state is FusionNetworkDeviceViewModelLoaded) {
+      final List<FusionNetworkDevice> devices = (state as FusionNetworkDeviceViewModelLoaded).devices;
+      return devices.any((FusionNetworkDevice device) => !device.isDeviceCertificateValid);
+    }
+    return false;
+  }
+
   Future<void> getFusionNetworkDevice({required String vip}) async {
     emit(FusionNetworkDeviceViewModelLoading());
     try {
@@ -25,52 +33,6 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     } catch (e) {
       emit(FusionNetworkDeviceViewModelError(message: e.toString()));
     }
-  }
-
-  Future<List<FusionNetworkDevice>> getUnregisteredDevices({required String projectId}) async {
-    if (state is FusionNetworkDeviceViewModelLoaded) {
-      final List<FusionNetworkDevice> networkDevices = (state as FusionNetworkDeviceViewModelLoaded).devices;
-      return networkDevices.where((FusionNetworkDevice element) => !element.isDeviceCertificateValid).toList();
-    } else {
-      return <FusionNetworkDevice>[];
-    }
-  }
-
-  Future<void> registerAndClaimDevices({required List<FusionNetworkDevice> devices, required String projectId}) async {
-    if (devices.isEmpty) return;
-
-    emit(FusionNetworkDeviceViewModelClaiming());
-
-    final ResponseCallback<List<DeviceBulkRegisterResult>> registerResponse = await fusionDeviceService.registerDevicesBulk(
-      devices: devices,
-      projectId: projectId,
-    );
-
-    if (!registerResponse.success) {
-      emit(FusionNetworkDeviceViewModelError(message: registerResponse.message));
-      throw Exception(registerResponse.message);
-    }
-
-    final List<DeviceBulkRegisterResult> bulkResults = registerResponse.data ?? <DeviceBulkRegisterResult>[];
-    final List<String> failedDevices = <String>[];
-
-    for (int i = 0; i < devices.length; i++) {
-      final FusionNetworkDevice hw = devices[i];
-      final DeviceBulkRegisterResult? bulk = i < bulkResults.length ? bulkResults[i] : null;
-
-      if (bulk != null && !bulk.success) {
-        failedDevices.add('${hw.name} (register failed: ${bulk.error.isEmpty ? 'unknown error' : bulk.error})');
-        continue;
-      }
-    }
-
-    if (failedDevices.isNotEmpty) {
-      final String message = 'Some devices could not be completed: ${failedDevices.join(', ')}';
-      emit(FusionNetworkDeviceViewModelError(message: message));
-      throw Exception(message);
-    }
-
-    emit(FusionNetworkDeviceViewModelClaimSuccess());
   }
 
   Future<bool> updateDeviceDetails({required String currentDeviceId, required String newDeviceId, required String name, required String location}) async {

@@ -29,7 +29,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Notifications'),
+        appBar: CommonMobileAppBar(title: 'Notifications'),
         body: Column(
           children: [
             CommonTabSwitcher<NotificationTab>(

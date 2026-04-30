@@ -37,7 +37,8 @@ static inline s32 ns_delta_to_rtp_units(s64 ns, u32 rate)
 static inline s32 rtp32_delta(u32 a, u32 b) { return (s32)(a - b); }
 
 /* Fold-only TX path: per-CPU counters -> snapshot, and stamp ts */
-void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
+void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m,
+                                    u64 snapshot_ns)
 {
     u64 tx_pkts = 0, tx_bytes = 0;
     int cpu;
@@ -65,9 +66,10 @@ void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
     m->snap.tx_iat_p50_ns            = m->win.tx_iat_p50_ns;
     m->snap.tx_iat_p99_ns            = m->win.tx_iat_p99_ns;
     m->snap.tx_sched_err_abs_p50_ns  = m->win.tx_sched_err_abs_p50_ns;
+    m->snap.tx_sched_err_abs_max_ns  = m->win.tx_sched_err_abs_max_ns;
 
-    /* Always give TX streams a fresh timestamp so userspace sees progress */
-    m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();
+    /* Stamp snapshot from the current worker tick to avoid a fresh PHC read here. */
+    m->snap.ts_snapshot_ns = snapshot_ns;
 }
 
 /* Helpers for 16-bit sequence arithmetic */
@@ -75,7 +77,8 @@ static inline bool seq16_after(u16 a, u16 b)  { return (s16)(a - b) > 0; }
 static inline bool seq16_before(u16 a, u16 b) { return seq16_after(b, a); }
 
 void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
-                                    u32 jb_depth_samples)
+                                    u32 jb_depth_samples,
+                                    u64 snapshot_ns)
 {
     struct fusion_cn_metrics_window *w = &m->win;
 
@@ -86,12 +89,23 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     u32 wr = smp_load_acquire(&m->wr_idx);
 
     u64 last_arrival = w->last_arrival_ns;
+    u64 batch_arrival_ns = 0;
+    u32 batch_cur = 0;
     bool last_rtp_ts_valid = false;
     u32 last_rtp_ts = 0;
 
     while (rd != wr) {
         const struct fusion_cn_pkt_sample s = m->ring[rd & m->ring_mask];
         rd++;
+
+        if (!batch_cur || s.arrival_phc_ns != batch_arrival_ns) {
+            batch_arrival_ns = s.arrival_phc_ns;
+            batch_cur = 1;
+        } else {
+            batch_cur++;
+        }
+        if (batch_cur > w->batch_max)
+            w->batch_max = batch_cur;
 
         /* --- Inter-arrival time (ns) with EWMA(p50) and pseudo-p99 --- */
         if (last_arrival) {
@@ -164,17 +178,25 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
             last_rtp_ts_valid = true;
         }
 
-        /* ---- path/e2e latencies (clamped to u32) ---- */
+        /* ---- path latency (clamped to u32) ---- */
         {
             s64 path = (s64)s.arrival_phc_ns - (s64)s.recon_phc_ns;
             if (path < 0) path = 0;
             if (path > (s64)U32_MAX) path = (s64)U32_MAX;
             w->path_latency_est_ns = (u32)path;
-
-            s64 e2e = (s64)s.sched_ns - (s64)s.recon_phc_ns;
-            if (e2e < 0) e2e = 0;
-            if (e2e > (s64)U32_MAX) e2e = (s64)U32_MAX;
-            w->e2e_playout_latency_ns = (u32)e2e;
+            if (!w->path_latency_min_ns || (u32)path < w->path_latency_min_ns)
+                w->path_latency_min_ns = (u32)path;
+            if ((u32)path > w->path_latency_max_ns)
+                w->path_latency_max_ns = (u32)path;
+            if (!w->path_latency_p50_ns)
+                w->path_latency_p50_ns = (u32)path;
+            if (!w->path_latency_p99_ns)
+                w->path_latency_p99_ns = (u32)path;
+            w->path_latency_p50_ns += ((s32)(u32)path - (s32)w->path_latency_p50_ns) >> EWMA_P50_SHIFT;
+            if ((u32)path > w->path_latency_p99_ns)
+                w->path_latency_p99_ns += ((u32)path - w->path_latency_p99_ns) >> EWMA_P99_UP;
+            else
+                w->path_latency_p99_ns -= (w->path_latency_p99_ns - (u32)path) >> EWMA_P99_DOWN;
         }
 
         w->last_arrival_ns = s.arrival_phc_ns;
@@ -183,14 +205,15 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
 
     /* === 2) Fold per-CPU counters into snapshot === */
     {
-        u64 pkts=0, bytes=0, dup=0, marked=0, mal=0, late_d=0;
+        u64 pkts=0, bytes=0, dup=0, marked=0, mal=0, late_d=0, rxq_d=0;
+        u64 ksil=0, ksil_frames=0;
         u64 tx_pkts=0, tx_bytes=0;
         int cpu;
 
         for_each_possible_cpu(cpu) {
             const struct fusion_cn_metrics_pcpu *p = per_cpu_ptr(m->pcpu, cpu);
             unsigned int start;
-            u64 a,b,c,d,e,f, txp, txb;
+            u64 a,b,c,d,e,f,g,h,i, txp, txb;
 
             do {
                 start = u64_stats_fetch_begin(&p->syncp);
@@ -200,12 +223,17 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
                 d = p->packets_marked;
                 e = p->malformed_count;
                 f = p->late_drop_count;
+                g = p->rx_queue_drop_count;
+                h = p->kernel_silence_sub_count;
+                i = p->kernel_silence_sub_frames;
                 txp = p->tx_packets_total;
                 txb = p->tx_bytes_total;
             } while (u64_stats_fetch_retry(&p->syncp, start));
 
             pkts   += a; bytes += b; dup += c; marked += d; mal += e;
             late_d += f;
+            rxq_d  += g;
+            ksil += h; ksil_frames += i;
             tx_pkts += txp; tx_bytes += txb;
         }
 
@@ -213,8 +241,11 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.bytes_total      = bytes;
         m->snap.packets_dup      = dup;
         m->snap.packets_marked   = marked;
-        m->snap.malformed_count  = mal;
-        m->snap.late_drop_count  = late_d;
+        m->snap.malformed_count   = mal;
+        m->snap.late_drop_count   = late_d;
+        m->snap.rx_queue_drop_count = rxq_d;
+        m->snap.kernel_silence_sub_count = ksil;
+        m->snap.kernel_silence_sub_frames = ksil_frames;
 
         m->snap.packets_reordered = w->packets_reordered;
         m->snap.packets_lost      = w->packets_lost;
@@ -225,13 +256,17 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.iat_min_ns = w->iat_min_ns;
         m->snap.iat_p50_ns = w->iat_p50_ns;
         m->snap.iat_p99_ns = w->iat_p99_ns;
+        m->snap.batch_max  = w->batch_max;
 
         /* Mirror TX totals here so the snapshot is self-contained */
         m->snap.tx_packets_total = tx_pkts;
         m->snap.tx_bytes_total   = tx_bytes;
 
         m->snap.path_latency_est_ns    = w->path_latency_est_ns;
-        m->snap.e2e_playout_latency_ns = w->e2e_playout_latency_ns;
+        m->snap.path_latency_min_ns    = w->path_latency_min_ns;
+        m->snap.path_latency_max_ns    = w->path_latency_max_ns;
+        m->snap.path_latency_p50_ns    = w->path_latency_p50_ns;
+        m->snap.path_latency_p99_ns    = w->path_latency_p99_ns;
     }
 
     /* === 3) JB depth stats (samples) === */
@@ -251,8 +286,15 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     m->snap.jb_depth_avg_samples =
         w->jb_depth_count ? (u32)(w->jb_depth_sum_samples / w->jb_depth_count) : 0;
 
+    /* Reset per-snapshot path-latency stats */
+    w->path_latency_est_ns = 0;
+    w->path_latency_min_ns = 0;
+    w->path_latency_max_ns = 0;
+    w->path_latency_p50_ns = 0;
+    w->path_latency_p99_ns = 0;
+
     /* === 4) Final snapshot timestamp === */
-    m->snap.ts_snapshot_ns = fusion_cn_get_phc_ns();
+    m->snap.ts_snapshot_ns = snapshot_ns;
 }
 
 static inline u32 fc_ns_to_samples(u64 ns, u32 rate)
@@ -298,6 +340,7 @@ struct fusion_cn_stream_metrics *fusion_cn_metrics_create(u32 sample_rate, u64 p
     m->win.iat_min_ns = UINT_MAX;
     m->win.iat_p50_ns = 0;
     m->win.iat_p99_ns = 0;
+    m->win.batch_max = 0;
 
     m->win.jb_depth_cur_samples = 0;
     m->win.jb_depth_min_samples = UINT_MAX;

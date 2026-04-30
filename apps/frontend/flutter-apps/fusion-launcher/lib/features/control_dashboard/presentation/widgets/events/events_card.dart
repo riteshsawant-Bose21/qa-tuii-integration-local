@@ -100,37 +100,46 @@ class EventCard extends StatelessWidget {
                       ),
                     ),
 
+                    FusionSwitch(
+                      height: 22,
+                      width: 36,
+                      value: item.isEnabled,
+                      onChanged: (bool val) {
+                        onToggle?.call(val);
+                      },
+                    ),
+
                     // Action Button (Toggle or Close)
-                    if (type == EventTab.scheduled)
-                      FusionSwitch(
-                        height: 22,
-                        width: 36,
-                        value: item.isEnabled,
-                        onChanged: (bool val) {
-                          onToggle?.call(val);
-                        },
-                      )
-                    else
-                      FusionContainer(
-                        borderRadius: 8,
-                        color: context.colorScheme.elevation2,
-                        raised: true,
-                        child: GestureDetector(
-                          onTap: onClose,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.elevation2,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.grey,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ),
+                    // if (type == EventTab.scheduled)
+                    //   FusionSwitch(
+                    //     height: 22,
+                    //     width: 36,
+                    //     value: item.isEnabled,
+                    //     onChanged: (bool val) {
+                    //       onToggle?.call(val);
+                    //     },
+                    //   )
+                    // else
+                    //   FusionContainer(
+                    //     borderRadius: 8,
+                    //     color: context.colorScheme.elevation2,
+                    //     raised: true,
+                    //     child: GestureDetector(
+                    //       onTap: onClose,
+                    //       child: Container(
+                    //         padding: const EdgeInsets.all(8),
+                    //         decoration: BoxDecoration(
+                    //           color: context.colorScheme.elevation2,
+                    //           borderRadius: BorderRadius.circular(8),
+                    //         ),
+                    //         child: const Icon(
+                    //           Icons.close,
+                    //           color: Colors.grey,
+                    //           size: 18,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
                   ],
                 ),
               ),

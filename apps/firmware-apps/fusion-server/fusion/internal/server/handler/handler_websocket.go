@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"path/filepath"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -46,7 +47,7 @@ func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Co
 		return createErrorResponse(&request.ID, api.WSCodeMissingField, "Missing required field: type"), nil
 	}
 
-	logger.Info("Processing WebSocket message: %s (ID: %s)", request.Type, request.ID)
+	logger.Debug("Processing WebSocket message: %s (ID: %s)", request.Type, request.ID)
 
 	// Route to appropriate handler based on message type
 	response, err := h.routeWebSocketMessageWithConn(&request, conn, server)
@@ -79,6 +80,10 @@ func (h *Handler) routeWebSocketMessageWithConn(request *api.WebSocketRequest, c
 		return h.handlePing(request)
 	case api.WSMsgTypeStartUpdate:
 		return h.handleStartUpdate(request)
+	case api.WSMsgTypeSwUpdateInfo:
+		return h.handleSwUpdateInfo(request)
+	case api.WSMsgTypeListSoftwareUpdates:
+		return h.handleListSoftwareUpdates(request)
 	default:
 		return createErrorResponse(&request.ID, api.WSCodeInvalidType, fmt.Sprintf("Unknown message type: %s", request.Type)), nil
 	}
@@ -223,6 +228,30 @@ func (h *Handler) handleStartUpdate(request *api.WebSocketRequest) (*api.WebSock
 
 	logger.Info("Received software update start request - broadcasting to cluster")
 
+	// Check that at least one .swu file is present in the OTA directory before triggering an update
+	swuFiles, err := filepath.Glob(filepath.Join(api.SoftwareUpdateOTAPath, "*.swu"))
+	if err != nil {
+		logger.Error("Failed to check OTA directory for .swu files: %v", err)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to check OTA directory: %v", err)), nil
+	}
+	if len(swuFiles) == 0 {
+		logger.Warn("Software update requested but no .swu files found in %s", api.SoftwareUpdateOTAPath)
+		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("No .swu bundle found in %s — upload a bundle before triggering an update", api.SoftwareUpdateOTAPath)), nil
+	}
+	logger.Info("Found %d .swu file(s) in %s, proceeding with update", len(swuFiles), api.SoftwareUpdateOTAPath)
+
+	// Count followers and ensure every .swu file is present on all followers
+	// before triggering the update. And gossip + HTTP-pull sync as the upload API.
+	// Followers that already have the file with a matching checksum ack immediately (no re-download).
+	followerCount, syncErr := h.ensureSWUFilesOnFollowers(swuFiles)
+	if syncErr != nil {
+		logger.Error("[StartUpdate] SWU file sync to followers failed: %v", syncErr)
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError,
+			fmt.Sprintf("Failed to sync SWU files to cluster before triggering update: %v", syncErr)), nil
+	}
+	logger.Info("[StartUpdate] %d follower(s) confirmed — all SWU files present on all nodes, proceeding with trigger", followerCount)
+
+	// All nodes have the files — broadcast the update trigger
 	// Create a cluster message to broadcast the software update trigger to all nodes
 	// This will call the delegate's handleSoftwareUpdate method on each node
 	msg := api.NewNotifyMessage(

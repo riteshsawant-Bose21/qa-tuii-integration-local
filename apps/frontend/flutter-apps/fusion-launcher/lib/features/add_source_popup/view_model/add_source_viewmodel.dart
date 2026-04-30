@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/models/products_data.dart';
 import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/aes67/aes67_view_model.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 part 'add_source_viewmodel_state.dart';
@@ -21,7 +22,6 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   }) {
     isFromBuildingPage = fromBuildingPage;
     this.onSaved = onSaved;
-
     if (isFromBuildingPage) {
       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
       final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
@@ -29,6 +29,22 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
         emit(state.copyWith(selectedListeningArea: currentSelectedListeningArea));
       }
     }
+  }
+
+  void setSelectedStream(Aes67Config stream) {
+    emit(state.copyWith(selectedStream: stream));
+  }
+
+  void setSelectedMonoChannel(int channel) {
+    emit(state.copyWith(selectedMonoChannel: channel));
+  }
+
+  void setSelectedLeftChannel(int channel) {
+    emit(state.copyWith(selectedLeftChannel: channel));
+  }
+
+  void setSelectedRightChannel(int channel) {
+    emit(state.copyWith(selectedRightChannel: channel));
   }
 
   void setSourceSectionType(SourceSectionType sourceSectionType) {
@@ -130,7 +146,9 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
-    if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");
+    if (state.selectedSources.first?.type != SourceType.paging && state.selectedConnectionType == null) {
+      return FusionToast.error(context, message: "Please select a connection type");
+    }
 
     // Save: add selected sources to chosen listening areas
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
@@ -148,15 +166,18 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
     /// Sources [onTapAddDevice]
     final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
+
     final PortType portType = switch (connectType) {
-      SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+      SourceConnectionType.analogInput => PortType.analogOutput,
+      SourceConnectionType.aes67input => PortType.networkSwitchOut,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
       SourceConnectionType.hdmi => PortType.hdmiOut,
       SourceConnectionType.rca => PortType.rcaOutput,
-      SourceConnectionType.endpoint => PortType.endpointOutput,
+      SourceConnectionType.endpoint => PortType.analogOutput, // TODO: Consider it like a wired connection
+      SourceConnectionType.messagePlayer => PortType.messagePlayer,
     };
 
     final Source source = Source(
@@ -165,7 +186,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
-      assetImagePath: selectedItem.assetPath,
+      image: selectedItem.assetPath,
       locationEntity: LocationModel(listeningAreaId: selectedAreaId, floorId: floorId),
       sku: selectedItem.id,
       price: selectedItem.price,
@@ -193,6 +214,54 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     );
     projectViewModel.addHardware(hardware: source);
     projectViewModel.setCurrentSelectedHardware(source.id);
+
+    // Build AssignedStreamChannel list from the selected stream + channel dropdowns.
+    final Aes67Config? selectedStream = state.selectedStream;
+    List<AssignedStreamChannel> channelsToAssign = List<AssignedStreamChannel>.from(state.assignedStreamChannels);
+
+    if (selectedStream != null && channelsToAssign.isEmpty) {
+      String _channelName(int channelNumber) {
+        final List<Aes67ChannelConfig> configs = selectedStream.channelConfigs;
+        if (channelNumber >= 1 && channelNumber <= configs.length) {
+          return configs[channelNumber - 1].label ?? 'Channel $channelNumber';
+        }
+        return 'Channel $channelNumber';
+      }
+
+      if (state.selectedSignalType == SignalType.mono && state.selectedMonoChannel != null) {
+        channelsToAssign = <AssignedStreamChannel>[
+          AssignedStreamChannel(
+            streamId: selectedStream.id,
+            channelNumber: state.selectedMonoChannel!,
+            channelName: _channelName(state.selectedMonoChannel!),
+          ),
+        ];
+      } else if (state.selectedSignalType == SignalType.stereo) {
+        channelsToAssign = <AssignedStreamChannel>[
+          if (state.selectedLeftChannel != null)
+            AssignedStreamChannel(
+              streamId: selectedStream.id,
+              channelNumber: state.selectedLeftChannel!,
+              channelName: _channelName(state.selectedLeftChannel!),
+            ),
+          if (state.selectedRightChannel != null)
+            AssignedStreamChannel(
+              streamId: selectedStream.id,
+              channelNumber: state.selectedRightChannel!,
+              channelName: _channelName(state.selectedRightChannel!),
+            ),
+        ];
+      }
+    }
+
+    // Assign stream-channel mappings if any are set
+    if (channelsToAssign.isNotEmpty) {
+      print('[AddSource] Saving ${channelsToAssign.length} stream-channel mappings for source ${source.id}');
+      projectViewModel.assignStreamChannelsToSource(
+        sourceId: source.id,
+        channels: channelsToAssign,
+      );
+    }
 
     // if this is a building page, add the source to the circuit
     // if (isFromBuildingPage) {

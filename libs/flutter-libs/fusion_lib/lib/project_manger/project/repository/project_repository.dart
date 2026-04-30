@@ -1,4 +1,7 @@
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
+
 import '../../../fusion_lib.dart';
+import '../../../models/project_entities/controller_page_model.dart';
 
 /// -------------------
 /// Base Repository
@@ -73,6 +76,8 @@ abstract class Repository<T> {
 class FloorRepository extends Repository<FloorModel> {}
 
 class ListeningAreaRepository extends Repository<ListeningArea> {}
+
+class WallRepository extends Repository<Wall> {}
 
 class ZoneRepository extends Repository<Zone> {
   ZoneRepository copyWith(Map<String, Zone> items) {
@@ -163,6 +168,16 @@ class MediaFileRepository extends Repository<MediaFileModel> {}
 class MessageRepository extends Repository<MessageModel> {
   MessageRepository copyWith(Map<String, MessageModel> items) {
     final newRepo = MessageRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+// repository for aes67
+
+class Aes67Repository extends Repository<Aes67Config> {
+  Aes67Repository copyWith(Map<String, Aes67Config> items) {
+    final newRepo = Aes67Repository();
     newRepo._items.addAll(items);
     return newRepo;
   }
@@ -283,3 +298,9 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
 }
 
 class EquipLocationRepository extends Repository<EquipLocation> {}
+
+// ─── Controller repositories ──────────────────────────────────────────────────
+
+/// Stores all [ControllerPageModel] entries (scene-set, snapshot, and message
+/// pages) keyed by page ID.
+class ControllerPageRepository extends Repository<ControllerPageModel> {}

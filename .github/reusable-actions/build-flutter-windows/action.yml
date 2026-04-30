@@ -69,6 +69,10 @@ runs:
 
         flutter pub get
         moon run flutter-apps:build-win
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "moon run flutter-apps:build-win failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
 
         echo "SM_API_KEY=${{ inputs.SM_API_KEY }}" >> $env:GITHUB_ENV

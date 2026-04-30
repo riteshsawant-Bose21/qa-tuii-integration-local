@@ -11,6 +11,27 @@ import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
+import '../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
+
+/// Get listening areas that are completely unassigned (not in any zone or subzone)
+List<ListeningArea> getCompletelyUnassignedListeningAreas() {
+  final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
+  final Set<String> assignedIds = <String>{};
+
+  // Collect all LAs assigned to any zone
+  for (final Zone z in serviceLocator<ProjectViewModel>().getAllZones()) {
+    final List<ListeningArea> zoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: z.id);
+    assignedIds.addAll(zoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  // Collect all LAs assigned to any subzone
+  for (final SubZone sz in serviceLocator<ProjectViewModel>().getAllSubZones()) {
+    final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: sz.id);
+    assignedIds.addAll(subZoneAreas.map((ListeningArea la) => la.id));
+  }
+
+  return allListeningAreas.where((ListeningArea la) => !assignedIds.contains(la.id)).toList();
+}
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
@@ -375,7 +396,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                       _addSubZoneToZone(zone.id);
                                       break;
                                     case 'add_listening_area':
-                                      serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
+                                      // serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
                                       break;
                                     case 'delete':
                                       _showDeleteConfirmation(zone);
@@ -416,25 +437,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   if (subZones.isEmpty) {
                                     items.add(
                                       PopupMenuItem<String>(
-                                        value: 'add_listening_area',
+                                        enabled: false,
+                                        padding: const EdgeInsets.only(),
                                         child: SemanticHelper.container(
                                           testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              Icon(
-                                                Icons.add,
-                                                size: 16,
-                                                color: context.colorScheme.iconWhite,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              FusionAppText(
-                                                text: 'Select Listening Areas',
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  color: context.colorScheme.textPrimary,
-                                                ),
-                                              ),
-                                            ],
+                                          child: SelectListeningAreaPopupButton(
+                                            zoneId: zone.id,
                                           ),
                                         ),
                                       ),
@@ -706,8 +714,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: <Widget>[
-                  Image.asset(
-                    hardware.assetImagePath,
+                  FusionImageAuto(
+                    path: hardware.image,
                     width: 14,
                     height: 14,
                   ),
@@ -747,12 +755,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           sourceId: hardware.id,
                         );
                       },
-                      child: FusionImage.asset(
-                        Assets.configurationFilledIcon,
+                      child: FusionImageAuto(
+                        path: Assets.configurationFilledIcon,
                         width: 18,
                         height: 18,
-                        assetColor: context.colorScheme.primaryWhite,
-
+                        color: context.colorScheme.primaryWhite,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -887,11 +894,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         const SizedBox(width: 4),
                         // Circuit icon - show actual speaker image if circuit has speakers
                         if (circuitSpeakers.isNotEmpty)
-                          FusionImage.asset(
-                            serviceLocator<ProjectViewModel>().getHardwareImage(
-                              productId: circuitSpeakers.first.productId ?? 0,
-                              currentImagePath: circuitSpeakers.first.assetImagePath,
-                            ),
+                          FusionImageAuto(
+                            path: serviceLocator<ProductQueryViewModel>().getProductImage(circuitSpeakers.first.productId),
                             width: 16,
                             height: 16,
                           )
@@ -1048,11 +1052,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  FusionImage.asset(
-                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                      productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.assetImagePath,
-                    ),
+                  FusionImageAuto(
+                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                     width: 12,
                     height: 12,
                   ),
@@ -1091,11 +1092,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 child: Row(
                   children: <Widget>[
-                    FusionImage.asset(
-                      serviceLocator<ProjectViewModel>().getHardwareImage(
-                        productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.assetImagePath,
-                      ),
+                    FusionImageAuto(
+                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                       width: 14,
                       height: 14,
                     ),
@@ -1342,11 +1340,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  FusionImage.asset(
-                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                      productId: speaker.productId ?? 0,
-                      currentImagePath: speaker.assetImagePath,
-                    ),
+                  FusionImageAuto(
+                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                     width: 12,
                     height: 12,
                   ),
@@ -1380,11 +1375,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: <Widget>[
-                    FusionImage.asset(
-                      serviceLocator<ProjectViewModel>().getHardwareImage(
-                        productId: speaker.productId ?? 0,
-                        currentImagePath: speaker.assetImagePath,
-                      ),
+                    FusionImageAuto(
+                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
                       width: 14,
                       height: 14,
                     ),
@@ -1624,27 +1616,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   }
                                 },
                                 itemBuilder:
-                                    (
-                                      BuildContext context,
-                                    ) => <PopupMenuEntry<String>>[
+                                    (BuildContext context) => <PopupMenuEntry<String>>[
                                       PopupMenuItem<String>(
-                                        value: 'select_listening_areas_subzone',
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Icon(
-                                              Icons.add,
-                                              size: 16,
-                                              color: context.colorScheme.textPrimary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: 'Select Listening Areas',
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.textPrimary,
-                                              ),
-                                            ),
-                                          ],
+                                        enabled: false,
+                                        child: SelectListeningAreaPopupButton(
+                                          zoneId: zone.id,
+                                          subZoneId: subZone.id,
                                         ),
                                       ),
                                       const PopupMenuDivider(height: 0),
@@ -2128,6 +2105,67 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             ),
           ],
         );
+      },
+    );
+  }
+}
+
+class SelectListeningAreaPopupButton extends StatelessWidget {
+  final String zoneId;
+  final String? subZoneId;
+  const SelectListeningAreaPopupButton({
+    super.key,
+    required this.zoneId,
+    this.subZoneId,
+  });
+  @override
+  Widget build(BuildContext context) {
+    assert(subZoneId != null || zoneId.isNotEmpty, "Either subZoneId or zoneId must be provided");
+    assert(subZoneId == null || (subZoneId != null && zoneId.isNotEmpty), "If subZoneId is provided, zoneId must also be provided");
+
+    // Get only completely unassigned listening areas (not in any zone or subzone)
+    final List<ListeningArea> availableListeningAreas = getCompletelyUnassignedListeningAreas();
+
+    return PopupMenuButton<String>(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.add,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
+          const SizedBox(width: 8),
+          FusionAppText(
+            text: 'Select Listening Areas',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+      itemBuilder: (BuildContext context) {
+        return availableListeningAreas.map(
+          (ListeningArea area) {
+            return PopupMenuItem<String>(
+              onTap: () {
+                if (subZoneId != null) {
+                  serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
+                    areaId: area.id,
+                    subZoneId: subZoneId!,
+                  );
+                } else {
+                  serviceLocator<ProjectViewModel>().addListeningAreaToZone(
+                    listeningAreaId: area.id,
+                    zoneId: zoneId,
+                  );
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text(area.name),
+            );
+          },
+        ).toList();
       },
     );
   }

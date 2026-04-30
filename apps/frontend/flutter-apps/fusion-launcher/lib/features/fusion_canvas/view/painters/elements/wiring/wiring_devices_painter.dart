@@ -16,6 +16,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
   final HardwareComponent device;
   WiringDevicesPainter({required this.device, required this.connectionManager}) : super(item: FusionCanvasItem(id: device.id)) {
     double maxHeight = 0;
+    final double maxWidth = 700;
     double inputPosY = portRadius;
     for (int i = 0; i < device.inputPortsData.length; i++) {
       final WiringPortData wiringPortData = WiringPortData(
@@ -45,9 +46,27 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
       maxHeight = math.max(maxHeight, wiringPortData.position.dy + outputPortPadding.dy);
     }
     size = Size(size.width, maxHeight + portRadius * 2 + inputPortPadding.dy);
+
+    double comPortX = portRadius * 2 + 20.0 + inputPortPadding.dx * 2;
+    final double comPortY = -portRadius * 2 - 20.0;
+    for (final PortData element in device.communicationPorts) {
+      final WiringPortData wiringPortData = WiringPortData(
+        position: Offset(comPortX, comPortY),
+        port: element,
+        deviceId: device.id,
+        portAlignment: Alignment.bottomCenter,
+      );
+      _communicationPorts.add(
+        wiringPortData,
+      );
+      comPortX += portRadius * 2 + 20.0;
+      size = Size(math.max(comPortX, size.width), size.height);
+    }
   }
+
   final List<WiringPortData> _inputPorts = <WiringPortData>[];
   final List<WiringPortData> _outputPorts = <WiringPortData>[];
+  final List<WiringPortData> _communicationPorts = <WiringPortData>[];
 
   Size size = Size.zero;
   @override
@@ -57,7 +76,10 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
 
   @override
   Size getSize() {
-    return Size(700, math.max(size.height, 300) + headerHeight);
+    return Size(
+      math.max(size.height, 700),
+      math.max(size.height, 300) + headerHeight + (_inputPorts.isEmpty && _outputPorts.isEmpty && _communicationPorts.isNotEmpty ? portRadius * 4 + 20 : 0),
+    );
   }
 
   Offset get inputPortPadding => const Offset(40, 40);
@@ -73,6 +95,9 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
       ),
       ..._outputPorts.map(
         (WiringPortData port) => port.copyWith(position: port.position + rect.topRight - Offset(portRadius, 0) + outputPortPadding + Offset(0, headerHeight)),
+      ),
+      ..._communicationPorts.map(
+        (WiringPortData port) => port.copyWith(position: port.position + rect.bottomLeft + Offset(portRadius, 0)),
       ),
     ];
   }
@@ -147,6 +172,24 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
       maxWidth: outPutPort.width,
     );
 
+    ///
+    /// Com Port Container
+    ///
+    if (_communicationPorts.isNotEmpty) {
+      final RRect comPortRect = RRect.fromRectAndRadius(
+        Rect.fromLTRB(
+          inputRect.right + 20.0,
+          rect.bottom - portRadius * 4 - 20.0,
+          outPutPort.left - 20.0,
+          rect.bottom - 20,
+        ),
+        Radius.circular(radius * 0.5),
+      );
+      canvas.drawRRect(
+        comPortRect,
+        portContainer,
+      );
+    }
     final double imagePadding = 20.0;
     final Rect imageRect = Rect.fromLTWH(
       inputRect.right + imagePadding,
@@ -156,7 +199,7 @@ class WiringDevicesPainter extends FusionCanvasElementPainter with PortPainter, 
     );
     canvas.drawRRect(RRect.fromRectAndRadius(imageRect, Radius.circular(radius * 0.8)), Paint()..color = Colors.grey);
 
-    drawImage(canvas: canvas, imagePath: device.assetImagePath, rect: imageRect.deflate(imagePadding), painter: painter);
+    drawImage(canvas: canvas, imagePath: device.image, rect: imageRect.deflate(imagePadding), painter: painter);
     final Rect textRect = Rect.fromLTRB(
       imageRect.left,
       imageRect.bottom + imagePadding,

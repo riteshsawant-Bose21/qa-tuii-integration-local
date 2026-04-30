@@ -18,7 +18,7 @@ class ConfigureDevicesScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Devices'),
+        appBar: CommonMobileAppBar(title: 'Devices'),
         body: _MappingList(),
         bottomNavigationBar: Container(
           color: context.colorScheme.elevation1,

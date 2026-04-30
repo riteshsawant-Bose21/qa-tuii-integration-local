@@ -4,7 +4,6 @@ package device
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"testing"
 
@@ -270,7 +269,7 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 		req.ProjectID = uuid.New().String() // Non-existent project
 
 		suite.mockDeviceSVC.On("CreateDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound)).Once()
+			Return(nil, errorutil.ErrProjectNotFound).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices", req)
 		require.NoError(t, err)
@@ -283,7 +282,7 @@ func (suite *DeviceIntegrationTestSuite) TestCreateDevice() {
 		req := suite.createDeviceRequest()
 
 		suite.mockDeviceSVC.On("CreateDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyExists)).Once()
+			Return(nil, errorutil.ErrDeviceAlreadyExists).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices", req)
 		require.NoError(t, err)
@@ -369,7 +368,7 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 		}
 
 		suite.mockDeviceSVC.On("UpdateDevice", mock.Anything, nonExistentID, mock.Anything, mock.Anything, mock.Anything).
-			Return(errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+			Return(errorutil.ErrDeviceNotFound).Once()
 
 		w, err := suite.MakeRequest("PATCH", "/api/v1/devices/"+nonExistentID, updateReq)
 		require.NoError(t, err)
@@ -385,7 +384,7 @@ func (suite *DeviceIntegrationTestSuite) TestUpdateDevice() {
 		}
 
 		suite.mockDeviceSVC.On("UpdateDevice", mock.Anything, deviceID, mock.Anything, mock.Anything, mock.Anything).
-			Return(errors.New(errorutil.MsgUnauthorized)).Once()
+			Return(errorutil.ErrUnauthorized).Once()
 
 		w, err := suite.MakeRequest("PATCH", "/api/v1/devices/"+deviceID, updateReq)
 		require.NoError(t, err)
@@ -422,7 +421,7 @@ func (suite *DeviceIntegrationTestSuite) TestResetDevice() {
 		nonExistentID := uuid.New().String()
 
 		suite.mockDeviceSVC.On("ResetDevice", mock.Anything, nonExistentID, mock.Anything, mock.Anything).
-			Return(errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+			Return(errorutil.ErrDeviceNotFound).Once()
 
 		w, err := suite.MakeRequest("DELETE", "/api/v1/devices/"+nonExistentID+"/reset", nil)
 		require.NoError(t, err)
@@ -433,7 +432,7 @@ func (suite *DeviceIntegrationTestSuite) TestResetDevice() {
 
 	suite.T().Run("should fail when unauthorized", func(t *testing.T) {
 		suite.mockDeviceSVC.On("ResetDevice", mock.Anything, deviceID, mock.Anything, mock.Anything).
-			Return(errors.New(errorutil.MsgUnauthorized)).Once()
+			Return(errorutil.ErrUnauthorized).Once()
 
 		w, err := suite.MakeRequest("DELETE", "/api/v1/devices/"+deviceID+"/reset", nil)
 		require.NoError(t, err)
@@ -512,7 +511,7 @@ func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 		}
 
 		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+			Return(nil, errorutil.ErrDeviceNotFound).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+uuid.New().String()+"/claim", req)
 		require.NoError(t, err)
@@ -528,7 +527,7 @@ func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 		}
 
 		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed)).Once()
+			Return(nil, errorutil.ErrDeviceAlreadyClaimed).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
 		require.NoError(t, err)
@@ -544,7 +543,7 @@ func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
 		}
 
 		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound)).Once()
+			Return(nil, errorutil.ErrProjectNotFound).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
 		require.NoError(t, err)
@@ -589,7 +588,7 @@ func (suite *DeviceIntegrationTestSuite) TestRotateCertificate() {
 		}
 
 		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+			Return(nil, errorutil.ErrDeviceNotFound).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+uuid.New().String()+"/rotate-cert", req)
 		require.NoError(t, err)
@@ -604,7 +603,7 @@ func (suite *DeviceIntegrationTestSuite) TestRotateCertificate() {
 		}
 
 		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgDeviceNotClaimed)).Once()
+			Return(nil, errorutil.ErrDeviceNotClaimed).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/rotate-cert", req)
 		require.NoError(t, err)
@@ -619,7 +618,7 @@ func (suite *DeviceIntegrationTestSuite) TestRotateCertificate() {
 		}
 
 		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil, errors.New(errorutil.MsgUnauthorized)).Once()
+			Return(nil, errorutil.ErrUnauthorized).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/rotate-cert", req)
 		require.NoError(t, err)
@@ -670,7 +669,7 @@ func (suite *DeviceIntegrationTestSuite) TestCommand() {
 		}
 
 		suite.mockDeviceSVC.On("Command", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return("", errors.New(errorutil.ErrMsgProjectNotFound)).Once()
+			Return("", errorutil.ErrProjectNotFound).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", req)
 		require.NoError(t, err)
@@ -686,7 +685,7 @@ func (suite *DeviceIntegrationTestSuite) TestCommand() {
 		}
 
 		suite.mockDeviceSVC.On("Command", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return("", errors.New(errorutil.MsgUnauthorized)).Once()
+			Return("", errorutil.ErrUnauthorized).Once()
 
 		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", req)
 		require.NoError(t, err)
@@ -734,7 +733,7 @@ func (suite *DeviceIntegrationTestSuite) TestGetCommandStatus() {
 		nonExistentID := uuid.New().String()
 
 		suite.mockDeviceSVC.On("GetCommandStatus", mock.Anything, nonExistentID, mock.Anything).
-			Return(nil, errors.New(errorutil.ErrMsgCommandNotFound)).Once()
+			Return(nil, errorutil.ErrCommandNotFound).Once()
 
 		w, err := suite.MakeRequest("GET", "/api/v1/devices/commands/"+nonExistentID+"/status", nil)
 		require.NoError(t, err)

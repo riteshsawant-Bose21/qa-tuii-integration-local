@@ -382,7 +382,7 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 	time.Sleep(3500 * time.Millisecond) // 3.5 seconds = 3 ticks worst case
 
 	// Query active snapshot
-	activeResp, err := http.Get(taskServerURL + routes.SnapshotsActiveEndpoint)
+	activeResp, err := http.Get(taskServerURL + routes.TimeMachineActiveEndpoint)
 	require.NoError(t, err)
 	defer activeResp.Body.Close()
 

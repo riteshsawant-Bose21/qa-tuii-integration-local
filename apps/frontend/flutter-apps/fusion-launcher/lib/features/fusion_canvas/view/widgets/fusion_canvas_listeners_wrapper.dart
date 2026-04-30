@@ -137,6 +137,14 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
           },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDraggingState) {
+              for (final String layerId in state.layerIds) {
+                final FusionBasePainter layerPainter = painters.firstWhere(
+                  (FusionBasePainter p) => p.id == layerId,
+                  orElse: () => throw Exception('Painter with id $layerId not found'),
+                );
+                toolbarEvents?.onMoveLayerDuringDrag?.call(layerPainter, state.delta);
+              }
+
               context.read<FusionSnapViewModel>().updateCursorPositions(
                 <Offset>[
                   for (final FusionBasePainter painter in painters)
@@ -178,6 +186,10 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               toolbarEvents?.penToolEvents?.onPointsChanged?.call(
                 state.points,
               );
+            } else if (state is CancelledPenToolState) {
+              toolbarEvents?.penToolEvents?.onPathCancelled?.call(
+                state.points,
+              );
             }
           },
         ),
@@ -199,18 +211,33 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               //   (FusionBasePainter p) => p.id == state.layerId,
               //   orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
               // );
-              for (final FusionBasePainter basePainter in painters) {
-                if (!state.layerIds.contains(basePainter.id)) continue;
-                toolbarEvents?.onMovePoints?.call(
-                  basePainter,
-                  // basePainter is FusionPolygonPainter
-                  //     ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
-                  //     :
-                  state.pointIds,
-                  state.delta,
-                );
+              if (state.pointIds.isNotEmpty) {
+                for (final FusionBasePainter basePainter in painters) {
+                  if (!state.layerIds.contains(basePainter.id)) continue;
+                  toolbarEvents?.onMovePoints?.call(
+                    basePainter,
+                    // basePainter is FusionPolygonPainter
+                    //     ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
+                    //     :
+                    state.pointIds,
+                    state.delta,
+                  );
+                }
+              } else {
+                for (final String layerId in state.layerIds) {
+                  toolbarEvents?.onMoveLayer?.call(
+                    painters.firstWhere(
+                      (FusionBasePainter p) => p.id == layerId,
+                      orElse: () => throw Exception('Painter with id $layerId not found'),
+                    ),
+                    state.delta,
+                  );
+                }
               }
             } else if (state is LayerDragStartState) {
+              toolbarEvents?.onLayerDragStart?.call(
+                painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
+              );
               toolbarEvents?.onLayerSelected?.call(
                 painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
               );

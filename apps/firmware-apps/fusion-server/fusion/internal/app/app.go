@@ -13,6 +13,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/routes"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
@@ -40,9 +41,10 @@ const (
 )
 
 var (
-	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/var/lib/fusion")
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
 	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
 	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+	corsWarningOnce    sync.Once
 )
 
 func getEnvOrDefault(key string, fallback string) string {
@@ -77,6 +79,7 @@ type App struct {
 	Hub                 *pubsub.Hub
 	discoveryReconciler *DiscoveryReconciler
 	vipEventCoordinator *VIPEventCoordinator
+	profiler            *cpuProfiler
 }
 
 // NewApp is a factory function to set up the application
@@ -89,14 +92,15 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	taskManager := initTaskManager(config, persistence, hub)
+	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
+	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 
 	memberlist := cluster.CreateMemberlist(config, delegate)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
-	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager, sceneActivator)
 
 	// Set the sync handler on the delegate so it can handle software update acknowledgments
 	delegate.SetSyncHandler(connectionHandler)
@@ -142,6 +146,7 @@ func NewApp(config *api.AppConfig) *App {
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
 		Hub:               hub,
+		profiler:          newCPUProfiler(),
 	}
 	app.discoveryReconciler = NewDiscoveryReconciler(app)
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
@@ -151,6 +156,9 @@ func NewApp(config *api.AppConfig) *App {
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
+	if _, err := app.profiler.Stop(); err != nil {
+		app.Logger.Error("Failed to stop CPU profiler: %v", err)
+	}
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
@@ -292,22 +300,42 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsEndpoint, app.Server.GetSessions)
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
+	// Time Machine
+	app.registerPublicPOST(routes.TimeMachineActivateEndpoint, app.Server.ActivateTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineUpdateEndpoint, app.Server.SaveTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineNameEndpoint, app.Server.CreateTimeMachine)
+	app.registerPublicGET(routes.TimeMachineEndpoint, app.Server.ListTimeMachines)
+	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
+	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
+	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
+
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
-	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
-	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
-	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
-	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
-	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshotDefinition)
+
+	// Scenes
+	app.registerPublicGET(routes.ScenesEndpoint, app.Server.ListScenes)
+	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
+
+	// Scene Sets
+	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
+	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
+	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsEndpoint, app.Server.DeleteSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsNameEndpoint, app.Server.DeleteSceneSet)
+
+	// Scene Catalog
+	app.registerPublicGET(routes.SceneCatalogEndpoint, app.Server.ListSceneCatalog)
 
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
-	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateTask)
 	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
-	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateTaskHandler)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -353,6 +381,13 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
+
+	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
+	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
+	app.registerPrivateGET(routes.DebugProfileStatusEndpoint, app.HandleProfileStatus)
+	app.registerPrivatePOST(routes.DebugProfileHeapEndpoint, app.HandleHeapProfileCapture)
+	app.registerPrivatePOST(routes.DebugProfileStartEndpoint, app.HandleProfileStart)
+	app.registerPrivatePOST(routes.DebugProfileStopEndpoint, app.HandleProfileStop)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -600,8 +635,13 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence, hub)
+func initTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneActivator tasks.SceneCatalogActivator,
+) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub, sceneActivator)
 	taskManager.Start()
 	return taskManager
 }
@@ -748,9 +788,11 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // corsMiddleware adds CORS headers to all responses
 func corsMiddleware() mux.MiddlewareFunc {
-	logging.GetLogger().Warn(
-		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
-	)
+	corsWarningOnce.Do(func() {
+		logging.GetLogger().Warn(
+			"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+		)
+	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set CORS headers

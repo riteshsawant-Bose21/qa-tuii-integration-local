@@ -23,6 +23,7 @@ extension ProcessingBlockService on ProjectService {
     if (!processingBlocks.exists(processingBlockId)) return;
 
     relationships.unlink(RelationshipType.processingBlock, parentId, processingBlockId);
+    removeProcessingBlock(processingBlockId);
   }
 
   void removeProcessingBlock(String processingBlockId) {
@@ -58,5 +59,15 @@ extension ProcessingBlockService on ProjectService {
     processingBlockIds.insert(newIndex, item);
 
     relationships.reOrder(RelationshipType.processingBlock, parentId, processingBlockIds);
+  }
+
+  ProcessingBlockModel? getUserFacingGainBlockForParent(String parentId) {
+    try {
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: parentId, includeUserBlocks: true);
+      return processingBlocks.firstWhereOrNull((ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get user-facing gain block for parent $parentId: $e");
+      return null;
+    }
   }
 }

@@ -111,7 +111,7 @@ class FusionAppButton extends StatefulWidget {
     this.height = 48,
     this.onPressed,
     this.color,
-    this.borderRadius = 12,
+    this.borderRadius = 8,
     this.showPrefixIcon = false,
     this.prefixIcon,
     this.showSuffixIcon = false,
@@ -134,7 +134,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      isEnabled: _disabled,
+      isEnabled: widget.enabled,
       label: widget.text,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
@@ -232,7 +232,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
   Widget _icon(IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Icon(icon, size: 16, color: _textColor),
+      child: Icon(icon, size: 14, color: _textColor),
     );
   }
 
@@ -401,7 +401,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
       return context.textTheme.b2SemiBold.withColor(_textColor);
     }
 
-    return context.textTheme.b2SemiBold.withColor(
+    return context.textTheme.l1Regular.withColor(
       _disabled ? cs.textDisabled : cs.textPrimary,
     );
   }
