@@ -84,7 +84,7 @@ func (p *Persistence) ActivateSnapshot(snapshotName string) error {
 
 	// Mark last save time
 	p.mutex.Lock()
-	p.save.lastRun = time.Now().UTC()
+	p.lastSave = time.Now().UTC()
 	p.mutex.Unlock()
 
 	return nil
