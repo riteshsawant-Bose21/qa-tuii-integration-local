@@ -201,7 +201,7 @@ func TestSaveStateMetadataNotifierFiresOnceWithFinalMetadata(t *testing.T) {
 	sm := persistence.NewStateManager(&persistConfig)
 	require.NoError(t, sm.Set("notify_key", "notify_value"))
 
-	cp, err := persistence.NewPersistence(configPath, sm)
+	cp, err := newPersistenceForTest(t, configPath, sm)
 	require.NoError(t, err)
 	defer cp.Close()
 
@@ -238,7 +238,7 @@ func TestSaveStateMetadataNotifierNotCalledOnFailure(t *testing.T) {
 	sm := persistence.NewStateManager(&persistConfig)
 	require.NoError(t, sm.Set("notify_key", "notify_value"))
 
-	cp, err := persistence.NewPersistence(configPath, sm)
+	cp, err := newPersistenceForTest(t, configPath, sm)
 	require.NoError(t, err)
 
 	ch := make(chan *api.DatabaseMetadata, 1)
@@ -280,7 +280,7 @@ func TestSaveStateDoesNotChangeAntiEntropyHashWithoutDataChange(t *testing.T) {
 	sm := persistence.NewStateManager(&persistConfig)
 	require.NoError(t, sm.Set("stable_key", "stable_value"))
 
-	cp, err := persistence.NewPersistence(configPath, sm)
+	cp, err := newPersistenceForTest(t, configPath, sm)
 	require.NoError(t, err)
 	defer cp.Close()
 
@@ -302,12 +302,12 @@ func TestAntiEntropyHashCanonicalizesSceneSetData(t *testing.T) {
 	dir := t.TempDir()
 
 	smA := persistence.NewStateManager(&api.AppConfig{NodeName: "hash-node"})
-	pA, err := persistence.NewPersistence(filepath.Join(dir, "a.db"), smA)
+	pA, err := newPersistenceForTest(t, filepath.Join(dir, "a.db"), smA)
 	require.NoError(t, err)
 	defer pA.Close()
 
 	smB := persistence.NewStateManager(&api.AppConfig{NodeName: "hash-node"})
-	pB, err := persistence.NewPersistence(filepath.Join(dir, "b.db"), smB)
+	pB, err := newPersistenceForTest(t, filepath.Join(dir, "b.db"), smB)
 	require.NoError(t, err)
 	defer pB.Close()
 
@@ -357,7 +357,7 @@ func TestUpsertSceneSetsAdvancesDatabaseMetadataVersion(t *testing.T) {
 	dbPath := filepath.Join(dir, "scene_set_version.db")
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "test-node"})
-	p, err := persistence.NewPersistence(dbPath, sm)
+	p, err := newPersistenceForTest(t, dbPath, sm)
 	require.NoError(t, err)
 	defer p.Close()
 
