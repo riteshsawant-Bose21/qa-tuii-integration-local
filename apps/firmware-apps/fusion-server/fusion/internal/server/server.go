@@ -117,14 +117,14 @@ func (s *FusionServer) StartTelemetrySubscriptions() {
 	addrs := s.clusterMemberFilterAddrs()
 	s.telemetrySub.Start(ips)
 	s.meterFilterManager.ResetAndClear(addrs)
-	logging.GetLogger().Info("FusionServer: started telemetry ZMQ subscriptions for %d devices", len(ips))
+	logging.GetLogger().Debug("FusionServer: started telemetry ZMQ subscriptions for %d devices", len(ips))
 }
 
 // StopTelemetrySubscriptions cancels all active ZMQ subscriptions.
 // Called when this node loses the VIP.
 func (s *FusionServer) StopTelemetrySubscriptions() {
 	s.telemetrySub.Stop()
-	logging.GetLogger().Info("FusionServer: stopped all telemetry ZMQ subscriptions")
+	logging.GetLogger().Debug("FusionServer: stopped all telemetry ZMQ subscriptions")
 }
 
 // ReconcileTelemetrySubscriptions syncs active ZMQ subscriptions with the current
