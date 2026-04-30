@@ -1606,6 +1606,26 @@ void FusionConnectClient::update_ptp_state()
                 SPDLOG_INFO("GM detected during holdover; waiting for lock");
                 break;
             }
+            if (now - ptp_state_since >= GM_WAIT) {
+                ptp_role_flag = 0; // GM
+                ptp_sync_good = true;
+                ptp_good_streak = 0;
+                ptp_bad_streak = 0;
+                ptp_anchor_pending = false;
+                ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
+                ptp_force_reanchor = false;
+                ptp_force_reanchor_have_armed_pps_seq = false;
+                ptp_force_reanchor_armed_pps_seq = 0;
+                ptp_wait_lock_from_holdover = false;
+                ptp_state = PtpState::SYNCED;
+                ptp_state_since = now;
+                SPDLOG_INFO("No GM during holdover after {}s; assuming GM role and keeping timing session active",
+                            GM_WAIT.count());
+                break;
+            }
             {
                 fc_get_timing_status_reply st{};
                 if (nl_get_timing_status(client, &st) &&
