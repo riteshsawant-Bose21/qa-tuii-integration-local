@@ -693,10 +693,8 @@ func (p *Persistence) initializeDatabase() error {
 		return err
 	}
 
-	if initialized {
-		if err := p.updateHash(); err != nil {
-			return fmt.Errorf("failed to update DB hash after initialization: %w", err)
-		}
+	if err := p.updateHash(); err != nil {
+		return fmt.Errorf("failed to update DB hash after initialization: %w", err)
 	}
 
 	return nil
