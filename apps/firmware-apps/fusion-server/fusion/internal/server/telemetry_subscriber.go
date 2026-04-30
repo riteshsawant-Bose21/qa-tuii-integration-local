@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -83,7 +84,7 @@ func (t *TelemetrySubscriber) Stop() {
 		cancel()
 		delete(t.devices, ip)
 	}
-	logging.GetLogger().Info("TelemetrySubscriber: stopped all ZMQ subscriptions")
+	logging.GetLogger().Debug("TelemetrySubscriber: stopped all ZMQ subscriptions")
 }
 
 // subscribeDevice spins up a goroutine that maintains a ZMQ SUB connection to
@@ -94,7 +95,7 @@ func (t *TelemetrySubscriber) subscribeDevice(deviceIP string) {
 	t.devices[deviceIP] = cancel
 
 	go t.listenLoop(ctx, deviceIP)
-	logging.GetLogger().Info("TelemetrySubscriber: subscribing to %s:%s", deviceIP, t.zmqPort)
+	logging.GetLogger().Debug("TelemetrySubscriber: subscribing to %s:%s", deviceIP, t.zmqPort)
 }
 
 // listenLoop connects to a single ZMQ PUB socket and reads meter_data messages.
@@ -107,14 +108,21 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
 
 	for {
 		if ctx.Err() != nil {
-			logger.Info(zmqShutdownMsg, addr)
+			logger.Debug(zmqShutdownMsg, addr)
 			return
 		}
 
+		connStart := time.Now()
 		err := t.connectAndRecv(ctx, deviceIP, addr)
 		if ctx.Err() != nil {
-			logger.Info(zmqShutdownMsg, addr)
+			logger.Debug(zmqShutdownMsg, addr)
 			return
+		}
+
+		// If the connection was stable for longer than the max backoff window,
+		// reset delay so the next reconnect attempt is immediate.
+		if time.Since(connStart) > zmqReconnectMaxDelay {
+			delay = zmqReconnectBaseDelay
 		}
 
 		// Transient error — back off and retry
@@ -123,7 +131,7 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
 		case <-time.After(delay):
 			delay = min(delay*2, zmqReconnectMaxDelay)
 		case <-ctx.Done():
-			logger.Info(zmqShutdownMsg, addr)
+			logger.Debug(zmqShutdownMsg, addr)
 			return
 		}
 	}
@@ -145,7 +153,7 @@ func (t *TelemetrySubscriber) connectAndRecv(ctx context.Context, deviceIP, addr
 		return fmt.Errorf("failed to set subscribe option: %w", err)
 	}
 
-	logger.Info("TelemetrySubscriber: connected to %s", addr)
+	logger.Debug("TelemetrySubscriber: connected to %s", addr)
 
 	for {
 		msg, err := sub.Recv()
@@ -164,25 +172,26 @@ func (t *TelemetrySubscriber) connectAndRecv(ctx context.Context, deviceIP, addr
 	}
 }
 
+// meterDataMarker is used for a fast pre-check to avoid JSON parsing
+// messages that are clearly not meter_data.
+var meterDataMarker = []byte(`"meter_data"`)
+
 // handleMessage parses a raw ZMQ frame and routes it to WebSocket clients via the hub.
 func (t *TelemetrySubscriber) handleMessage(deviceIP string, raw []byte) {
 	logger := logging.GetLogger()
 
-	// Quick pre-check: only handle meter_data messages
-	var envelope struct {
-		MessageName string `json:"message_name"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		logger.Error("TelemetrySubscriber: failed to parse message from %s: %v", deviceIP, err)
-		return
-	}
-	if envelope.MessageName != "meter_data" {
+	// Fast-path: skip full JSON parse if the frame doesn't contain "meter_data"
+	if !bytes.Contains(raw, meterDataMarker) {
 		return
 	}
 
 	var msg api.MeterDataMessage
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		logger.Error("TelemetrySubscriber: failed to unmarshal meter_data from %s: %v", deviceIP, err)
+		return
+	}
+
+	if msg.MessageName != "meter_data" {
 		return
 	}
 

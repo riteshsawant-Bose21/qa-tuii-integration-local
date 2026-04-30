@@ -24,6 +24,65 @@ type telemetryFilterParameters struct {
 	Value []string `json:"value"`
 }
 
+// udpConnPool maintains persistent UDP connections per address to avoid
+// repeated socket creation/teardown.
+type udpConnPool struct {
+	mu    sync.Mutex
+	conns map[string]net.Conn
+}
+
+func newUDPConnPool() *udpConnPool {
+	return &udpConnPool{
+		conns: make(map[string]net.Conn),
+	}
+}
+
+const udpSendMaxRetries = 3
+
+func (p *udpConnPool) send(addr string, data []byte) error {
+	var lastErr error
+	for attempt := 0; attempt < udpSendMaxRetries; attempt++ {
+		conn, err := p.getOrDial(addr)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		_, err = conn.Write(data)
+		if err == nil {
+			return nil
+		}
+
+		// Connection is stale; close and remove so next attempt re-dials.
+		lastErr = err
+		p.mu.Lock()
+		delete(p.conns, addr)
+		p.mu.Unlock()
+		conn.Close()
+	}
+	return lastErr
+}
+
+func (p *udpConnPool) getOrDial(addr string) (net.Conn, error) {
+	p.mu.Lock()
+	conn, ok := p.conns[addr]
+	if ok && conn != nil {
+		p.mu.Unlock()
+		return conn, nil
+	}
+	// Hold the lock while dialing to prevent multiple goroutines from
+	// creating duplicate connections to the same address.
+	newConn, err := net.Dial("udp", addr)
+	if err != nil {
+		p.mu.Unlock()
+		return nil, err
+	}
+	p.conns[addr] = newConn
+	p.mu.Unlock()
+	return newConn, nil
+}
+
 // MeterFilterManager tracks a per-connection list of meter IDs and maintains a
 // union master list. Whenever the master list changes it sends update_filter_req
 // to the telemetry core via UDP so only the relevant meter IDs are forwarded.
@@ -34,7 +93,19 @@ type MeterFilterManager struct {
 	connFilters map[*websocket.Conn]map[string]bool // conn → set of requested IDs
 	masterList  map[string]bool                     // union across all connections
 	packetID    atomic.Uint64
+
+	// Persistent UDP connection pool (avoids per-send socket churn).
+	pool *udpConnPool
+
+	// Debounce: coalesce rapid filter changes into a single UDP send.
+	debounceMu      sync.Mutex
+	debouncePending bool
+	debounceTimer   *time.Timer
+	pendingIDs      []string
+	pendingAddrs    []string
 }
+
+const filterDebounceInterval = 50 * time.Millisecond
 
 // NewMeterFilterManager creates a manager that will send filter updates to
 // the telemetry core on each cluster device via UDP.
@@ -42,6 +113,7 @@ func NewMeterFilterManager() *MeterFilterManager {
 	return &MeterFilterManager{
 		connFilters: make(map[*websocket.Conn]map[string]bool),
 		masterList:  make(map[string]bool),
+		pool:        newUDPConnPool(),
 	}
 }
 
@@ -122,8 +194,20 @@ func (m *MeterFilterManager) ResetAndClear(deviceAddressArray []string) {
 	packetID := m.packetID.Add(1)
 	m.mu.Unlock()
 
-	go m.sendFilterRequest(nil, packetID, deviceAddressArray)
-	logging.GetLogger().Info("MeterFilterManager: reset all filters and sent empty filter to telemetry cores")
+	// Cancel any pending debounced send — we're sending immediately.
+	m.debounceMu.Lock()
+	m.debouncePending = false
+	if m.debounceTimer != nil {
+		m.debounceTimer.Stop()
+		m.debounceTimer = nil
+	}
+	m.pendingIDs = nil
+	m.pendingAddrs = nil
+	m.debounceMu.Unlock()
+
+	// Send synchronously — reset must be immediate.
+	m.sendFilterRequest(nil, packetID, deviceAddressArray)
+	logging.GetLogger().Debug("MeterFilterManager: reset all filters and sent empty filter to telemetry cores")
 }
 
 // recomputeAndSend rebuilds the master list and dispatches update_filter_req
@@ -151,8 +235,52 @@ func (m *MeterFilterManager) recomputeAndSend(deviceAddressArray []string) {
 	for id := range newMaster {
 		ids = append(ids, id)
 	}
+	m.enqueueFilterUpdate(ids, deviceAddressArray)
+}
+
+// enqueueFilterUpdate stages a filter update for debounced sending.
+// Mirrors the enqueueConfigUpdate pattern: set pending state, merge data,
+// and start the timer only if one is not already running.
+func (m *MeterFilterManager) enqueueFilterUpdate(ids []string, addrs []string) {
+	m.debounceMu.Lock()
+	m.debouncePending = true
+	m.pendingIDs = ids
+	m.pendingAddrs = addrs
+	if m.debounceTimer == nil {
+		m.debounceTimer = time.AfterFunc(filterDebounceInterval, m.flushFilterUpdate)
+	}
+	m.debounceMu.Unlock()
+}
+
+// flushFilterUpdate sends the pending filter to the telemetry core(s).
+// If new updates arrived while sending, it re-arms the timer for another round.
+func (m *MeterFilterManager) flushFilterUpdate() {
+	m.debounceMu.Lock()
+	pending := m.debouncePending
+	m.debouncePending = false
+	ids := m.pendingIDs
+	addrs := m.pendingAddrs
+	m.pendingIDs = nil
+	m.pendingAddrs = nil
+	m.debounceMu.Unlock()
+
+	if !pending {
+		m.debounceMu.Lock()
+		m.debounceTimer = nil
+		m.debounceMu.Unlock()
+		return
+	}
+
 	packetID := m.packetID.Add(1)
-	go m.sendFilterRequest(ids, packetID, deviceAddressArray)
+	m.sendFilterRequest(ids, packetID, addrs)
+
+	m.debounceMu.Lock()
+	defer m.debounceMu.Unlock()
+	if m.debouncePending {
+		m.debounceTimer = time.AfterFunc(filterDebounceInterval, m.flushFilterUpdate)
+		return
+	}
+	m.debounceTimer = nil
 }
 
 func mapsEqual(a, b map[string]bool) bool {
@@ -188,16 +316,8 @@ func (m *MeterFilterManager) sendFilterRequest(ids []string, packetID uint64, de
 	}
 
 	for _, addr := range deviceAddressArray {
-		conn, err := net.Dial("udp", addr)
-		if err != nil {
-			logger.Error("MeterFilterManager: failed to connect to telemetry core at %s: %v", addr, err)
-			continue
-		}
-		conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
-		if _, err := conn.Write(data); err != nil {
+		if err := m.pool.send(addr, data); err != nil {
 			logger.Error("MeterFilterManager: failed to send filter request to %s: %v", addr, err)
 		}
-		conn.Close()
 	}
-
 }
