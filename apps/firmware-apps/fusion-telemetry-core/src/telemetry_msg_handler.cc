@@ -734,7 +734,6 @@ int process_update_filter_req(bosepro::telemetryManager& telm_mgr,
                              uint64_t& pkt_id, std::string& req_name,
                              bosepro::HandlerContext& ctx)
 {
-
     std::vector<std::string> filter_blocks;
     
     // Get filter block id's
