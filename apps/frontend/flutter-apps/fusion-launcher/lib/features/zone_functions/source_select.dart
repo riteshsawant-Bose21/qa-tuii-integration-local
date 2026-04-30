@@ -372,37 +372,40 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                           color: Colors.transparent,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: InkWell(
-                              onTap: () {
-                                SourceSelectAdditionalSettingsDialog.showDialog(
-                                  context,
-                                  zoneID: widget.zoneID,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              splashColor: Colors.transparent,
-                              child: Ink(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.elevation2,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Flexible(
-                                      child: FusionAppText(
-                                        text: "Additional Settings",
-                                        style: Theme.of(context).textTheme.labelSmall,
+                            child: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_additional_settings_button"),
+                              child: InkWell(
+                                onTap: () {
+                                  SourceSelectAdditionalSettingsDialog.showDialog(
+                                    context,
+                                    zoneID: widget.zoneID,
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                splashColor: Colors.transparent,
+                                child: Ink(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: context.colorScheme.elevation2,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Flexible(
+                                        child: FusionAppText(
+                                          text: "Additional Settings",
+                                          style: Theme.of(context).textTheme.labelSmall,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      LucideIcons.arrowUpRight200,
-                                      size: 16,
-                                      color: context.colorScheme.iconDefault,
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        LucideIcons.arrowUpRight200,
+                                        size: 16,
+                                        color: context.colorScheme.iconDefault,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
