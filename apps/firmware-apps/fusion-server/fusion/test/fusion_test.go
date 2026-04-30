@@ -679,6 +679,202 @@ func TestPatchDiffOutput(t *testing.T) {
 	defer resp.Body.Close()
 }
 
+// TestPatchNewArrayPreservedAsArrayInUpdates is a regression test for the bug where
+// PATCHing a key that previously did not exist with an array value causes the
+// "updates" field in the response to contain a string-keyed map
+// (e.g. {"band_enable":{"0":true,"1":false,"2":false}}) instead of a JSON array
+// ({"band_enable":[true,false,false]}). This is the exact scenario reported with PEQ band_enable.
+func TestPatchNewArrayPreservedAsArrayInUpdates(t *testing.T) {
+	// First clear the key we're about to write so it is genuinely new.
+	clearBody, _ := json.Marshal(map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"PEQ472590022": nil,
+			},
+		},
+	})
+	clearReq, _ := http.NewRequest("PATCH", fmt.Sprintf("%s/value", serverAddr), bytes.NewBuffer(clearBody))
+	clearReq.Header.Set(api.ContentType, api.JsonMIMEType)
+	clearResp, err := (&http.Client{}).Do(clearReq)
+	if err != nil {
+		t.Fatalf("Failed to clear pre-existing key: %v", err)
+	}
+	clearResp.Body.Close()
+
+	// PATCH with a new array-valued field (band_enable did not exist before).
+	patch := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"PEQ472590022": map[string]any{
+					"band_enable": []any{true, false, false},
+				},
+			},
+		},
+	}
+	jsonPatch, err := json.Marshal(patch)
+	if err != nil {
+		t.Fatalf("Failed to marshal patch: %v", err)
+	}
+
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value", serverAddr), bytes.NewBuffer(jsonPatch))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request: %v", err)
+	}
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var patchResp struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&patchResp); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+	if patchResp.Status != "success" {
+		t.Fatalf("Expected status=success, got %q", patchResp.Status)
+	}
+
+	// Drill down to band_enable in the updates map.
+	settings, ok := patchResp.Updates["settings"].(map[string]any)
+	if !ok {
+		t.Fatalf("updates.settings is not a map: %T", patchResp.Updates["settings"])
+	}
+	audio, ok := settings["audio"].(map[string]any)
+	if !ok {
+		t.Fatalf("updates.settings.audio is not a map: %T", settings["audio"])
+	}
+	peq, ok := audio["PEQ472590022"].(map[string]any)
+	if !ok {
+		t.Fatalf("updates.settings.audio.PEQ472590022 is not a map: %T", audio["PEQ472590022"])
+	}
+
+	bandEnable := peq["band_enable"]
+	if asMap, isMap := bandEnable.(map[string]any); isMap {
+		t.Errorf("band_enable in PATCH updates is a string-keyed map %v — expected []any{true,false,false}", asMap)
+		return
+	}
+	arr, ok := bandEnable.([]any)
+	if !ok {
+		t.Fatalf("band_enable in PATCH updates is %T (%v), expected []any", bandEnable, bandEnable)
+	}
+	expected := []any{true, false, false}
+	if !reflect.DeepEqual(arr, expected) {
+		t.Errorf("band_enable mismatch: got %v, want %v", arr, expected)
+	}
+
+	// Also verify the stored value is a proper array via GET.
+	getResp, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.PEQ472590022.band_enable", serverAddr))
+	if err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	defer getResp.Body.Close()
+
+	var getBody struct {
+		Exists bool  `json:"exists"`
+		Value  []any `json:"value"`
+	}
+	if err := json.NewDecoder(getResp.Body).Decode(&getBody); err != nil {
+		t.Fatalf("Failed to decode GET response: %v", err)
+	}
+	if !getBody.Exists {
+		t.Fatal("band_enable does not exist after PATCH")
+	}
+	if !reflect.DeepEqual(getBody.Value, expected) {
+		t.Errorf("Stored band_enable mismatch: got %v, want %v", getBody.Value, expected)
+	}
+}
+
+// TestPatchReplaceArrayPreservedAsArrayInUpdates verifies that when an existing
+// array field is replaced wholesale via PATCH, the "updates" response contains
+// a JSON array and not a string-keyed map of only the changed indices.
+func TestPatchReplaceArrayPreservedAsArrayInUpdates(t *testing.T) {
+	// Establish initial state with a list value.
+	initial := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"eq_preset": map[string]any{
+					"gains": []any{0.0, 0.0, 0.0},
+				},
+			},
+		},
+	}
+	initBody, _ := json.Marshal(initial)
+	initResp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(initBody))
+	if err != nil {
+		t.Fatalf("Failed to set initial state: %v", err)
+	}
+	initResp.Body.Close()
+
+	// PATCH with a completely different array (all elements changed).
+	patch := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"eq_preset": map[string]any{
+					"gains": []any{1.0, 2.0, 3.0},
+				},
+			},
+		},
+	}
+	jsonPatch, _ := json.Marshal(patch)
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/value", serverAddr), bytes.NewBuffer(jsonPatch))
+	if err != nil {
+		t.Fatalf("Failed to create PATCH request: %v", err)
+	}
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var patchResp struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&patchResp); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+	if patchResp.Status != "success" {
+		t.Fatalf("Expected status=success, got %q", patchResp.Status)
+	}
+
+	settings := patchResp.Updates["settings"].(map[string]any)
+	audio := settings["audio"].(map[string]any)
+	eqPreset := audio["eq_preset"].(map[string]any)
+	gains := eqPreset["gains"]
+
+	// When all elements differ the diff should still be a full array replacement,
+	// not {"0":1,"1":2,"2":3}.
+	if asMap, isMap := gains.(map[string]any); isMap {
+		t.Errorf("gains in PATCH updates is a string-keyed map %v — expected []any{1,2,3}", asMap)
+		return
+	}
+	arr, ok := gains.([]any)
+	if !ok {
+		t.Fatalf("gains in PATCH updates is %T (%v), expected []any", gains, gains)
+	}
+	expected := []any{1.0, 2.0, 3.0}
+	if !reflect.DeepEqual(arr, expected) {
+		t.Errorf("gains mismatch: got %v, want %v", arr, expected)
+	}
+}
+
 // TestPatchOutOfBounds verifies that an update using an out‐of‑bound array index
 // expands the array. For an initial array [100, 200, 300], updating index 5 with 500
 // should yield [100, 200, 300, nil, nil, 500].

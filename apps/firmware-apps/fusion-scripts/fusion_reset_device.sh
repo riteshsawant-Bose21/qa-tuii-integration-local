@@ -14,8 +14,8 @@ SSH_OPTS=(
   -o StrictHostKeyChecking=accept-new
 )
 
-AUDIO_DIR="/var/lib/fusion/audio"
-DATABASE_FILE="/var/lib/fusion/fusion.db"
+AUDIO_DIR="/persist/fusion/audio"
+DATABASE_FILE="/persist/fusion/fusion.db"
 OUTPUT_ROOT="./debug_logs"
 RUN_TIMESTAMP=""
 SELECTED_SCOPE=""

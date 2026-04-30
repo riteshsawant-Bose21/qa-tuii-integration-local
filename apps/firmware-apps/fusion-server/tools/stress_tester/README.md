@@ -75,6 +75,13 @@ Pre-built config files are in the `configs/` directory:
 
 # Mixed topology with quiet output — same test, summary only
 ./stress_tester -config configs/mixed_topology.json -verbosity quiet
+
+# Enable CPU profiling on inferred node targets (same hosts, port 9090)
+./stress_tester -config configs/mixed_topology.json -profile
+
+# Enable CPU profiling on explicit debug endpoints
+./stress_tester -config configs/mixed_topology.json -profile \
+  -profile-hosts 192.168.2.131:9090,192.168.2.132:9090,192.168.2.133:9090
 ```
 
 For detailed usage, configuration reference, output format, and parameter documentation, see [REFERENCE.md](REFERENCE.md).

@@ -40,6 +40,18 @@ func init() {
 	})
 }
 
+func newPersistenceForTest(t *testing.T, dbPath string, sm *persistence.StateManager) (*persistence.Persistence, error) {
+	t.Helper()
+
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(t.TempDir(), "audio")
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
+
+	return persistence.NewPersistence(dbPath, sm)
+}
+
 // TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.
 // (Run this test with `go test -race`.)
 func TestMarkDirtyConcurrent(t *testing.T) {
@@ -54,7 +66,7 @@ func TestMarkDirtyConcurrent(t *testing.T) {
 	}
 
 	// Create the persistence object.
-	cp, err := persistence.NewPersistence(configPath, sm)
+	cp, err := newPersistenceForTest(t, configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -97,7 +109,7 @@ func TestValidateStateFile(t *testing.T) {
 	if err := sm.Set("key", "value"); err != nil {
 		t.Fatalf("Failed to set state: %v", err)
 	}
-	cp, err := persistence.NewPersistence(configPath, sm)
+	cp, err := newPersistenceForTest(t, configPath, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -128,7 +140,7 @@ func TestChecksumCalculation(t *testing.T) {
 
 	filename := "dummy"
 
-	_, err := persistence.NewPersistence(filename, sm)
+	_, err := newPersistenceForTest(t, filename, sm)
 	if err != nil {
 		t.Fatalf("Failed to initialize persistence: %v", err)
 	}
@@ -153,7 +165,7 @@ func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
 	dbPath := filepath.Join(dir, "tasks_test.db")
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "test"})
-	p, err := persistence.NewPersistence(dbPath, sm)
+	p, err := newPersistenceForTest(t, dbPath, sm)
 	require.NoError(t, err)
 
 	// 1. Save two tasks

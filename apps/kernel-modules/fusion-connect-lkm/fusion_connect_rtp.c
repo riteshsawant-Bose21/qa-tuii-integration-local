@@ -16,6 +16,31 @@
 #include "fusion_connect_metrics.h"
 
 #define TIMER_BASE_INTERVAL_NS 333333
+static inline u64 fusion_cn_fc_snap_time(u64 time_ns)
+{
+    u64 ns_from_ms_boundary = time_ns % NSEC_PER_MSEC;
+
+    time_ns -= ns_from_ms_boundary;
+    if (ns_from_ms_boundary == 0)
+        return time_ns;
+    if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS)
+        return time_ns + TIMER_BASE_INTERVAL_NS;
+    if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS)
+        return time_ns + 2 * TIMER_BASE_INTERVAL_NS;
+
+    return time_ns + NSEC_PER_MSEC;
+}
+
+static inline u64 fusion_cn_fc_advance_time(u64 action_time)
+{
+    u64 ns_from_ms_boundary = action_time % NSEC_PER_MSEC;
+
+    if (ns_from_ms_boundary == (2 * TIMER_BASE_INTERVAL_NS))
+        return action_time + TIMER_BASE_INTERVAL_NS + 1;
+
+    return action_time + TIMER_BASE_INTERVAL_NS;
+}
+
 #define HASH_KEY(handle) hash_64(handle, FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_UC(ip, port) hash_64(((u64)(ip) << 16) | (port), FUSION_CN_RTP_HASH_BITS)
 #define PACKET_MAP_KEY_MC(ip) hash_64((u64)(ip), FUSION_CN_RTP_HASH_BITS)
@@ -138,6 +163,8 @@ int fusion_cn_rtp_enqueue_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 stre
 void fusion_cn_rtp_stream_release(struct kref *ref)
 {
     struct fusion_cn_rtp_stream *stream = container_of(ref, struct fusion_cn_rtp_stream, ref);
+    printk(KERN_DEBUG "fusion_cn_rtp: stream_release: stream=%s handle=%llu\n",
+           stream->info.stream_name, stream->info.stream_handle);
     if (stream->metrics) {
         fusion_cn_metrics_destroy(stream->metrics);
         stream->metrics = NULL;
@@ -554,7 +581,8 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
     unsigned long flags;
     u32 write_slot, buf_offset;
     u64 current_sac, global_sac;
-    u64 current_phc_ns, ns_from_ms_boundary, reconstructed_phc_ns, sched_playout_ns;
+    u32 packet_sac;
+    u64 current_phc_ns, reconstructed_phc_ns, sched_playout_ns;
     int sample_physical_width_bits;
 
     bool marker, malformed, duplicate, reorder = false, late;
@@ -638,28 +666,25 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             // get the current SAC for TOP 32 of the RTP timestamp reconstruction
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
 
+            /*
+             * RTP timestamps are 32-bit SAC values plus timestamp_offset.
+             * Remove the offset in 32-bit timestamp space before selecting
+             * the 64-bit epoch from the local PHC-derived SAC.
+             */
+            packet_sac = rtp_timestamp - stream->info.timestamp_offset;
+
             // reconstruct the global SAC by combining the current SAC with the incoming RTP timestamp
-            global_sac = ((current_sac & 0xFFFFFFFF00000000ULL) | rtp_timestamp) - stream->info.timestamp_offset;
+            global_sac = (current_sac & 0xFFFFFFFF00000000ULL) | packet_sac;
             // handle 32-bit RTP timestamp wrap
-            if (rtp_timestamp < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
+            if (packet_sac < 0x3FFFFFFFU && (u32)current_sac >= 0xC0000000U)
                 global_sac += (1ULL << 32);
-            else if ((u32)current_sac < 0x3FFFFFFFU && rtp_timestamp >= 0xC0000000U)
+            else if ((u32)current_sac < 0x3FFFFFFFU && packet_sac >= 0xC0000000U)
                 global_sac -= (1ULL << 32);
 
             reconstructed_phc_ns = (global_sac * 62500) / (stream->info.sample_rate == 48000 ? 3 : 6);
 
-            if (stream->info.is_fusion_connect) {
-                ns_from_ms_boundary = reconstructed_phc_ns % NSEC_PER_MSEC;
-                reconstructed_phc_ns -= ns_from_ms_boundary;
-                if (ns_from_ms_boundary == 0) {
-                } else if (ns_from_ms_boundary <= TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += TIMER_BASE_INTERVAL_NS;
-                } else if (ns_from_ms_boundary <= 2 * TIMER_BASE_INTERVAL_NS) {
-                    reconstructed_phc_ns += 2 * TIMER_BASE_INTERVAL_NS;
-                } else {
-                    reconstructed_phc_ns += NSEC_PER_MSEC;
-                }
-            }
+            if (stream->info.is_fusion_connect)
+                reconstructed_phc_ns = fusion_cn_fc_snap_time(reconstructed_phc_ns);
 
             sched_playout_ns = reconstructed_phc_ns + stream->info.playout_delay;
             late = (sched_playout_ns <= current_phc_ns);
@@ -689,21 +714,30 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
             if (malformed) {
                 memset(buf + (size_t)buf_offset * bytes_per_frame, 0,
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);
+                fusion_cn_metrics_kernel_silence_sub(stream->metrics,
+                                                     stream->info.frames_per_packet);
             } else {
                 memcpy(buf + (size_t)buf_offset * bytes_per_frame, payload,
                        (size_t)stream->info.frames_per_packet * bytes_per_frame);
             }
 
-            if (seq_num != 0 && seq_num < stream->current_seq_num &&
-                       stream->current_seq_num != 65535) {
+            if (stream->current_seq_num &&
+                (s16)(seq_num - stream->current_seq_num) < 0) {
                 printk(KERN_WARNING "fusion_cn_rtp: process_packet: Reorder stream %s, seq=%u\n",
                        stream->info.stream_name, seq_num);
                 reorder = true;
             }
 
             stream->next_action_times[write_slot] = sched_playout_ns;
-            if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time))
+            if (stream->info.is_fusion_connect &&
+                stream->packet_time == TIMER_BASE_INTERVAL_NS) {
+                u64 next_action_time = fusion_cn_fc_advance_time(stream->next_action_times[write_slot]);
+
+                if (stream->next_action_time < next_action_time)
+                    stream->next_action_time = next_action_time;
+            } else if (stream->next_action_time < (stream->next_action_times[write_slot] + stream->packet_time)) {
                 stream->next_action_time = stream->next_action_times[write_slot] + stream->packet_time;
+            }
             
             stream->current_seq_num = seq_num;
 

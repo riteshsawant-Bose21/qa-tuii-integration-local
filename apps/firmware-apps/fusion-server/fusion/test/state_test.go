@@ -848,3 +848,85 @@ func TestRejoinDoesNotOverwriteNewerEpoch(t *testing.T) {
 		t.Fatalf("Expected epoch=3, got %d", smA.GetVersion().Epoch)
 	}
 }
+
+// TestCalculateDiffPreservesNewArray is a regression test for the bug where
+// CalculateDiff converts a newly-set array into a string-keyed map
+// (e.g. {"0":true,"1":false,"2":false}) instead of keeping it as []any.
+// This manifests in PATCH /value responses where "band_enable":[true,false,false]
+// is returned in "updates" as {"band_enable":{"0":true,"1":false,"2":false}}.
+func TestCalculateDiffPreservesNewArray(t *testing.T) {
+	before := map[string]any{}
+	after := map[string]any{
+		"band_enable": []any{true, false, false},
+	}
+
+	diff := utils.CalculateDiff(before, after)
+
+	bandEnable := diff["band_enable"]
+	if _, isMap := bandEnable.(map[string]any); isMap {
+		t.Errorf("CalculateDiff converted a new array into a string-keyed map: got %v — expected []any{true, false, false}", bandEnable)
+		return
+	}
+	arr, ok := bandEnable.([]any)
+	if !ok {
+		t.Fatalf("Expected band_enable to be []any, got %T: %v", bandEnable, bandEnable)
+	}
+	if !reflect.DeepEqual(arr, []any{true, false, false}) {
+		t.Errorf("Expected band_enable=[true false false], got %v", arr)
+	}
+}
+
+// TestPatchDiffPreservesArrayInUpdates is a regression test for the bug where
+// PATCH /value with a nested array value (e.g. band_enable) returns
+// {"0":true,"1":false,"2":false} in the "updates" response instead of [true,false,false].
+// The diff computed after sm.Patch() must represent the array field as []any, not map[string]any.
+func TestPatchDiffPreservesArrayInUpdates(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+
+	patch := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"PEQ472590022": map[string]any{
+					"band_enable": []any{true, false, false},
+				},
+			},
+		},
+	}
+
+	result, err := sm.Patch(patch)
+	if err != nil {
+		t.Fatalf("Patch failed: %v", err)
+	}
+	if result == nil {
+		t.Fatal("Expected non-nil result from Patch")
+	}
+
+	diff := result.Diff
+
+	settings, ok := diff["settings"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected diff[settings] to be map[string]any, got %T", diff["settings"])
+	}
+	audio, ok := settings["audio"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected diff[settings][audio] to be map[string]any, got %T", settings["audio"])
+	}
+	peq, ok := audio["PEQ472590022"].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected diff[settings][audio][PEQ472590022] to be map[string]any, got %T", audio["PEQ472590022"])
+	}
+
+	bandEnable := peq["band_enable"]
+	if _, isMap := bandEnable.(map[string]any); isMap {
+		t.Errorf("band_enable in PATCH diff is a string-keyed map %v — this is the bug: PATCH /value response shows {\"0\":true,\"1\":false,\"2\":false} instead of [true,false,false]", bandEnable)
+		return
+	}
+	arr, ok := bandEnable.([]any)
+	if !ok {
+		t.Fatalf("Expected band_enable in diff to be []any, got %T: %v", bandEnable, bandEnable)
+	}
+	expected := []any{true, false, false}
+	if !reflect.DeepEqual(arr, expected) {
+		t.Errorf("Expected band_enable=%v, got %v", expected, arr)
+	}
+}
