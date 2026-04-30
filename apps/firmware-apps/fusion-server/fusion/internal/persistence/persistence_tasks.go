@@ -3,6 +3,7 @@ package persistence
 import (
 	"fmt"
 	"fusion/internal/api"
+	"strings"
 
 	json "github.com/goccy/go-json"
 
@@ -25,12 +26,22 @@ func validateSnapshotTaskRefs(tasks map[string]any, snapshotExists func(string) 
 			continue
 		}
 
-		snapshotID, ok := task.Params[api.SnapshotIDKey]
-		if !ok || snapshotID == "" {
+		snapshotIDValue, ok := task.Params[api.SnapshotIDKey]
+		if !ok {
 			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
 		}
 
-		exists, err := snapshotExists(fmt.Sprintf("%v", snapshotID))
+		snapshotID, ok := snapshotIDValue.(string)
+		if !ok {
+			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
+		}
+
+		snapshotID = strings.TrimSpace(snapshotID)
+		if snapshotID == "" {
+			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
+		}
+
+		exists, err := snapshotExists(snapshotID)
 		if err != nil {
 			return fmt.Errorf("failed to validate snapshot for imported task %q: %w", key, err)
 		}
