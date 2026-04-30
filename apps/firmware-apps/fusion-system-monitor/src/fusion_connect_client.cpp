@@ -636,6 +636,8 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
                 *gm_identity = normalized;
                 *gm_identity_valid = true;
                 found_any = true;
+                SPDLOG_WARN("Found gmIdentity in TIME_STATUS_NP: {}", v);
+
             } else if (!v.empty()) {
                 SPDLOG_WARN("Invalid gmIdentity in TIME_STATUS_NP: {}", v);
             }
