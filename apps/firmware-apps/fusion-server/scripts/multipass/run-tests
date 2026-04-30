@@ -161,7 +161,7 @@ function list_tests_from_file() {
 function list_tests_from_dir() {
     local dir="$1"
     echo "Tests in $dir:"
-    rg -n '^func (Test[^(: ]+)' "$dir"/*.go -r '$1' | cut -d: -f2 | sort
+    rg -o --no-filename '^func (Test[^(: ]+)' "$dir"/*.go -r '$1' | sort
     echo ""
 }
 
