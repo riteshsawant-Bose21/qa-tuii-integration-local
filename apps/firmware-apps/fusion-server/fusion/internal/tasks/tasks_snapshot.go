@@ -38,18 +38,28 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	snapID, ok := task.Params[api.SnapshotIDKey]
-	if !ok || snapID == "" {
+	rawSnapID, ok := task.Params[api.SnapshotIDKey]
+	if !ok {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
 	}
-	exists, err := tm.persistence.SnapshotExists(fmt.Sprintf("%v", snapID))
+	snapID, ok := rawSnapID.(string)
+	if !ok {
+		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
+		return
+	}
+	snapID = strings.TrimSpace(snapID)
+	if snapID == "" {
+		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
+		return
+	}
+	exists, err := tm.persistence.SnapshotExists(snapID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Snapshot %v not found", snapID), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Snapshot %s not found", snapID), http.StatusNotFound)
 		return
 	}
 
