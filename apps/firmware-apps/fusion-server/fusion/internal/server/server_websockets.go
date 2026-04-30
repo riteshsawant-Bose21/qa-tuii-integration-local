@@ -300,7 +300,10 @@ func (s *FusionServer) flushConfigUpdateQueue() {
 		Timestamp: time.Now(),
 	}
 
-	if err := s.BroadcastToTopic(api.WSTopicConfigUpdates, message); err != nil {
+	payloadBytes, err := json.Marshal(message)
+	if err != nil {
+		logging.GetLogger().Error("Error marshaling coalesced config update: %v", err)
+	} else if err := s.BroadcastRawToTopic(api.WSTopicConfigUpdates, payloadBytes); err != nil {
 		logging.GetLogger().Error("Error broadcasting coalesced config update: %v", err)
 	}
 
@@ -445,6 +448,16 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
 func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
+	}
+	return s.BroadcastRawToTopic(topic, data)
+}
+
+// BroadcastRawToTopic sends a pre-serialized WebSocket text payload to all
+// clients subscribed to a specific topic.
+func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 	s.wsLock.RLock()
 	subscribers := s.subscriptions[topic]
 	if len(subscribers) == 0 {
@@ -459,11 +472,6 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 	}
 	s.wsLock.RUnlock()
 
-	// Pre-serialize once for all subscribers.
-	data, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
-	}
 	prepared, err := websocket.NewPreparedMessage(websocket.TextMessage, data)
 	if err != nil {
 		return fmt.Errorf("failed to prepare WebSocket message: %w", err)
