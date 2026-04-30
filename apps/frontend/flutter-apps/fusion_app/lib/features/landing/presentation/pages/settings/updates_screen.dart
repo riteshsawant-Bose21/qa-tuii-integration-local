@@ -37,7 +37,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: const CommonAppBar(title: 'Updates'),
+        appBar: const CommonMobileAppBar(title: 'Updates'),
         body: updateAvailable
             ? Column(
                 children: [

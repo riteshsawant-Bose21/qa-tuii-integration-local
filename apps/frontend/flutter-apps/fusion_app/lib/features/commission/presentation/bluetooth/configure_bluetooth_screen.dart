@@ -38,7 +38,7 @@ class _ConfigureBluetoothSearchingScreenState extends State<ConfigureBluetoothSe
 
     return Scaffold(
       backgroundColor: context.colorScheme.primaryBlack,
-      appBar: CommonAppBar(title: 'Configure Bluetooth'),
+      appBar: CommonMobileAppBar(title: 'Configure Bluetooth'),
       body: devicesFound ? BluetoothAvailableScreen(devices: devices) : getSearchScreen()
     );
   }

@@ -428,4 +428,22 @@ extension ScenesViewModel on ProjectViewModel {
       throwError("Duplicate Scene Action Error  ${e.toString()}");
     }
   }
+
+  SceneSetRequestDto? getSceneSetRequestDtoData() {
+    try {
+      return projectManager.getSceneSetRequestDtoData();
+    } catch (e) {
+      throwError("Get Scene Set Request DTO Data Error  ${e.toString()}");
+      return null;
+    }
+  }
+
+  SnapshotsRequestDto? getSnapshotsRequestDtoData() {
+    try {
+      return projectManager.getSnapshotsRequestDtoData();
+    } catch (e) {
+      throwError("Get Snapshots Request DTO Data Error  ${e.toString()}");
+      return null;
+    }
+  }
 }

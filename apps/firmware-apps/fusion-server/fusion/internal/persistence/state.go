@@ -20,12 +20,32 @@ import (
 )
 
 const (
-	checkInterval = 30 * time.Second
+	checkInterval         = 30 * time.Second
+	dataRepairMinInterval = 1 * time.Second
+	dataRepairSkipWindow  = checkInterval
 )
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
 	GetFullState() VersionedState
+	GetStateSummary() StateSummary
+}
+
+type StateSummary struct {
+	ConfigKeys  int
+	ConfigState map[string]string
+	ValueTypes  map[string]int
+}
+
+type databaseMetadataEnvelope struct {
+	Metadata *api.DatabaseMetadata `json:"metadata"`
+}
+
+type dataRepairState struct {
+	mu             sync.Mutex
+	inFlight       bool
+	lastRun        time.Time
+	lastSuccessful time.Time
 }
 
 // VersionedState represents a version of instance state
@@ -52,6 +72,16 @@ func NewVersionedState() *VersionedState {
 	}
 }
 
+// PatchResult holds the outputs of a Patch operation so callers can avoid
+// redundant state copies, diffs, and checksum computations.
+type PatchResult struct {
+	// ConfigUpdate is the fully-formed update (with hash and version) ready
+	// to be broadcast. Callers may set ObserverData before broadcasting.
+	ConfigUpdate *api.ConfigUpdate
+	// Diff is the calculated difference between the pre-patch and post-patch state.
+	Diff map[string]any
+}
+
 // StateManager manages a synchronized in-memory application state across distributed nodes.
 // It supports versioning, and nested key access.
 type StateManager struct {
@@ -61,15 +91,20 @@ type StateManager struct {
 	httpClient *http.Client
 	memberlist *memberlist.Memberlist
 	verbose    bool
+	dataRepair dataRepairState
+	// checksumDirty tracks whether state.Checksum must be recomputed from the
+	// current full state before it can be treated as authoritative.
+	checksumDirty bool
 }
 
 // NewStateManager creates and initializes a new StateManager for the given node.
 func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
-		state:      *NewVersionedState(),
-		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient: &http.Client{Timeout: api.HTTPTimeout},
-		verbose:    config.Verbose,
+		state:         *NewVersionedState(),
+		version:       api.Version{Counter: 0, NodeID: config.NodeName},
+		httpClient:    &http.Client{Timeout: api.HTTPTimeout},
+		verbose:       config.Verbose,
+		checksumDirty: true,
 	}
 }
 
@@ -101,10 +136,76 @@ func (sm *StateManager) Start(memberlist *memberlist.Memberlist) {
 	go func() {
 		for {
 			sm.validateState()
-			sm.validateData()
+			sm.validateDataPeriodically()
 			time.Sleep(checkInterval)
 		}
 	}()
+}
+
+func (sm *StateManager) validateDataPeriodically() {
+	logger := logging.GetLogger()
+
+	sm.dataRepair.mu.Lock()
+	lastSuccessful := sm.dataRepair.lastSuccessful
+	sm.dataRepair.mu.Unlock()
+
+	if !lastSuccessful.IsZero() && time.Since(lastSuccessful) < dataRepairSkipWindow {
+		logger.Debug("[DATA] Skipping periodic anti-entropy; last successful repair was %v ago", time.Since(lastSuccessful))
+		return
+	}
+
+	sm.ValidateDataNow("periodic anti-entropy")
+}
+
+func (sm *StateManager) ValidateDataNow(reason string) bool {
+	if !sm.beginDataRepair(reason) {
+		return false
+	}
+	sm.finishDataRepair(sm.validateData())
+	return true
+}
+
+func (sm *StateManager) TriggerDataRepair(reason string) bool {
+	if !sm.beginDataRepair(reason) {
+		return false
+	}
+
+	go func() {
+		sm.finishDataRepair(sm.validateData())
+	}()
+
+	return true
+}
+
+func (sm *StateManager) beginDataRepair(reason string) bool {
+	logger := logging.GetLogger()
+
+	sm.dataRepair.mu.Lock()
+	defer sm.dataRepair.mu.Unlock()
+
+	if sm.dataRepair.inFlight {
+		logger.Debug("[DATA] Skipping repair trigger while another repair is in flight (%s)", reason)
+		return false
+	}
+
+	if !sm.dataRepair.lastRun.IsZero() && time.Since(sm.dataRepair.lastRun) < dataRepairMinInterval {
+		logger.Debug("[DATA] Skipping repair trigger due to cooldown (%s)", reason)
+		return false
+	}
+
+	sm.dataRepair.inFlight = true
+	sm.dataRepair.lastRun = time.Now()
+	logger.Debug("[DATA] Starting repair run (%s)", reason)
+	return true
+}
+
+func (sm *StateManager) finishDataRepair(success bool) {
+	sm.dataRepair.mu.Lock()
+	sm.dataRepair.inFlight = false
+	if success {
+		sm.dataRepair.lastSuccessful = time.Now()
+	}
+	sm.dataRepair.mu.Unlock()
 }
 
 func (sm *StateManager) SetMemberlist(memberlist *memberlist.Memberlist) {
@@ -237,7 +338,7 @@ func (sm *StateManager) Set(key string, value any) error {
 }
 
 // Patch applies an updated patch to the internal state.
-func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
+func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	// Apply patch to full current state snapshot
@@ -250,34 +351,46 @@ func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	}
 
 	// Calculate the difference between the original and updated configuration.
-	changed := utils.CalculateDiff(before, existing)
-	if changed == nil {
+	diff := utils.CalculateDiff(before, existing)
+	if diff == nil {
 		sm.Unlock()
 		return nil, nil
+	}
+
+	// Compute the checksum once — this is the only JSONChecksum needed.
+	hash, err := utils.JSONChecksum(existing)
+	if err != nil {
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
 
 	sm.version.Counter++
 	localVersion := sm.version
 
-	sm.Unlock()
-
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
+		Hash:    hash,
 		Clear:   false,
 	}
 
-	hash, err := utils.JSONChecksum(existing)
+	// Apply the update to internal state entries while still holding the lock.
+	// This avoids a second lock acquisition plus a redundant checksum pass.
+	dirty, err := sm.applyWhileLocked(configUpdate, localVersion, localVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to apply patched config: %w", err)
 	}
-	configUpdate.Hash = hash
-
-	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
-		return nil, err
+	if dirty {
+		sm.markChecksumDirtyUnsafe()
 	}
 
-	return &existing, nil
+	sm.Unlock()
+
+	return &PatchResult{
+		ConfigUpdate: &configUpdate,
+		Diff:         diff,
+	}, nil
 }
 
 // ApplyUpdate applies a ConfigUpdate received via memberlist replication.
@@ -342,20 +455,31 @@ apply:
 	}
 
 	if dirty {
-		sm.updateChecksumUnsafe()
+		sm.markChecksumDirtyUnsafe()
 	}
 
 	return dirty, nil
 }
 
-// updateChecksumUnsafe updates the checksum. Do not lock here.
-func (sm *StateManager) updateChecksumUnsafe() {
+// ensureChecksumUnsafe recomputes the checksum if it is marked dirty.
+// Do not lock here.
+func (sm *StateManager) ensureChecksumUnsafe() {
+	if !sm.checksumDirty {
+		return
+	}
 	payload := sm.getFullStateUnsafe()
 	if sum, err := utils.JSONChecksum(payload); err != nil {
 		logging.GetLogger().Error("failed to calculate checksum: %v", err)
 	} else {
 		sm.state.Checksum = sum
+		sm.checksumDirty = false
 	}
+}
+
+// markChecksumDirtyUnsafe invalidates the cached checksum. Do not lock here.
+func (sm *StateManager) markChecksumDirtyUnsafe() {
+	sm.state.Checksum = ""
+	sm.checksumDirty = true
 }
 
 // applyWhileLocked applies a configuration update to the internal state,
@@ -391,9 +515,14 @@ func (sm *StateManager) applyWhileLocked(
 		// Important: we compare against incomingVersion (the timestamp of the
 		// originating event), not effectiveVersion (the local receive event).
 		if exists && !localEntry.Version.Less(incomingVersion) {
-			logger.Info("------>>> Skipping key %q: local version is newer or equal", key)
-			logger.Info("incoming.Version: %d local.Version %d", incomingVersion.Counter, localEntry.Version.Counter)
-			logger.Info("incoming.Epoch: %d local.Epoch %d", incomingVersion.Epoch, localEntry.Version.Epoch)
+			logger.Debug(
+				"skipping stale/duplicate key=%q incoming=(epoch=%d version=%d) local=(epoch=%d version=%d)",
+				key,
+				incomingVersion.Epoch,
+				incomingVersion.Counter,
+				localEntry.Version.Epoch,
+				localEntry.Version.Counter,
+			)
 			continue
 		}
 
@@ -424,11 +553,50 @@ func (sm *StateManager) applyWhileLocked(
 // GetFullState returns the internal state after deep copy.
 func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
-	defer sm.RUnlock()
+	if !sm.checksumDirty {
+		state := deepCopyState(sm.state.State)
+		checksum := sm.state.Checksum
+		sm.RUnlock()
+		return VersionedState{
+			Checksum: checksum,
+			State:    state,
+		}
+	}
+	sm.RUnlock()
+
+	sm.Lock()
+	sm.ensureChecksumUnsafe()
+	state := deepCopyState(sm.state.State)
+	checksum := sm.state.Checksum
+	sm.Unlock()
 
 	return VersionedState{
-		Checksum: sm.state.Checksum,
-		State:    deepCopyState(sm.state.State),
+		Checksum: checksum,
+		State:    state,
+	}
+}
+
+func (sm *StateManager) GetStateSummary() StateSummary {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	configState := make(map[string]string, len(sm.state.State))
+	valueTypes := make(map[string]int)
+	for k, v := range sm.state.State {
+		if v == nil {
+			configState[k] = "nil"
+			valueTypes["nil"]++
+			continue
+		}
+		t := fmt.Sprintf("%T", v.Data)
+		configState[k] = t
+		valueTypes[t]++
+	}
+
+	return StateSummary{
+		ConfigKeys:  len(sm.state.State),
+		ConfigState: configState,
+		ValueTypes:  valueTypes,
 	}
 }
 
@@ -463,7 +631,7 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 		}
 	}
 
-	sm.updateChecksumUnsafe()
+	sm.markChecksumDirtyUnsafe()
 }
 
 // ReplaceFullState does a global replacement of all state data
@@ -473,17 +641,17 @@ func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, ne
 
 	sm.state.State = deepCopyState(newState)
 	sm.version = newVersion
-	sm.updateChecksumUnsafe()
+	sm.markChecksumDirtyUnsafe()
 }
 
 // SetState replaces the entire state map and advances the version.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Lock()
-	sm.state.State = state
-	sm.version.Counter++
-	sm.Unlock()
+	defer sm.Unlock()
 
-	sm.updateChecksumUnsafe()
+	sm.state.State = deepCopyState(state)
+	sm.version.Counter++
+	sm.markChecksumDirtyUnsafe()
 }
 
 // BumpEpochLocked caller must hold sm.Lock()
@@ -506,8 +674,32 @@ func (sm *StateManager) SetVersion(newVersion api.Version) {
 	sm.version = newVersion
 }
 
+// NextVersionAfter advances the local Lamport clock so the returned version is a
+// local event that happens after both the current local version and the supplied base.
+func (sm *StateManager) NextVersionAfter(base api.Version) api.Version {
+	sm.Lock()
+	defer sm.Unlock()
+
+	if sm.version.Epoch < base.Epoch {
+		sm.version.Epoch = base.Epoch
+	}
+	if sm.version.Counter < base.Counter {
+		sm.version.Counter = base.Counter
+	}
+	sm.version.Counter++
+	return sm.version
+}
+
 func (sm *StateManager) GetMemberList() *memberlist.Memberlist {
+	sm.RLock()
+	defer sm.RUnlock()
 	return sm.memberlist
+}
+
+func (sm *StateManager) HTTPClient() *http.Client {
+	sm.RLock()
+	defer sm.RUnlock()
+	return sm.httpClient
 }
 
 // validateState fetches and compares state from other cluster members
@@ -517,8 +709,9 @@ func (sm *StateManager) validateState() {
 
 	sm.RLock()
 	ml := sm.memberlist
-	checksum := sm.state.Checksum
 	sm.RUnlock()
+
+	checksum := sm.GetFullState().Checksum
 
 	if ml == nil {
 		logger.Warn("memberlist is not yet set")
@@ -541,7 +734,9 @@ func (sm *StateManager) validateState() {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -608,7 +803,9 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -620,9 +817,20 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 		}
 
 		var metadata api.DatabaseMetadata
-		if err := json.Unmarshal(body, &metadata); err != nil {
-			logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
-			continue
+		if err := json.Unmarshal(body, &metadata); err != nil || (metadata == api.DatabaseMetadata{}) {
+			var envelope databaseMetadataEnvelope
+			if envErr := json.Unmarshal(body, &envelope); envErr != nil || envelope.Metadata == nil {
+				if err != nil {
+					logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+				} else {
+					logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
+				}
+				continue
+			}
+			metadata = *envelope.Metadata
+		}
+		if metadata.Version.NodeID == "" {
+			metadata.Version.NodeID = member.Name
 		}
 
 		memberMetadata = append(memberMetadata, api.MemberMetadata{Member: member, Metadata: metadata})
@@ -633,7 +841,7 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 
 // validateData resolves any mismatches in node data across cluster
 // by picking the member with the highest Lamport version.
-func (sm *StateManager) validateData() {
+func (sm *StateManager) validateData() bool {
 	logger := logging.GetLogger()
 
 	memberMetadata := sm.getMemberData()
@@ -641,23 +849,24 @@ func (sm *StateManager) validateData() {
 		if sm.verbose {
 			logger.Debug("[DATA] Empty member data")
 		}
-		return
+		return false
 	}
 
 	if hashIsConsistent(memberMetadata) {
 		if sm.verbose {
 			logger.Debug("[DATA] Consistent across cluster")
 		}
-		return
+		return false
 	}
 
 	logger.Warn("[DATA] Detected divergent state across %d alive members; entering anti-entropy repair", len(memberMetadata))
 
 	// Pick the member whose metadata.Version is greatest.
-	// (Version is your Lamport counter + node‐ID tie breaker.)
+	// If versions are identical but hashes differ, use the hash as a final
+	// deterministic tie-breaker so every node picks the same repair source.
 	mostCurrent := memberMetadata[0]
 	for _, ms := range memberMetadata[1:] {
-		if mostCurrent.Metadata.Version.Less(ms.Metadata.Version) {
+		if memberMetadataLess(mostCurrent, ms) {
 			mostCurrent = ms
 		}
 	}
@@ -671,58 +880,86 @@ func (sm *StateManager) validateData() {
 	exportURL := utils.BuildInternalURL(
 		mostCurrent.Member.Addr.String(),
 		api.AdminPort,
-		routes.StateEndpoint,
+		routes.DataEndpoint,
 	)
 
 	resp, err := sm.httpClient.Get(exportURL)
 	if err != nil {
 		logger.Error("Failed to export data from %s: %v", mostCurrent.Member.Name, err)
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
-		logger.Error("Export returned %v with body %s", err, string(body))
-		return
+		if err != nil {
+			logger.Error("Failed to read export error body from %s: %v", mostCurrent.Member.Name, err)
+			return false
+		}
+		logger.Error("Export from %s returned status %d with body %s", mostCurrent.Member.Name, resp.StatusCode, string(body))
+		return false
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("Failed to read body: %v", err)
-		return
+		return false
 	}
 
-	sm.syncData(memberMetadata, mostCurrent.Metadata.Hash, data)
+	if !sm.syncData(memberMetadata, mostCurrent.Metadata.Hash, data) {
+		return false
+	}
 	logger.Info("[DATA] Successfully completed anti-entropy sync from %s", mostCurrent.Member.Name)
+	return true
+}
+
+func memberMetadataLess(a, b api.MemberMetadata) bool {
+	if a.Metadata.Version.Less(b.Metadata.Version) {
+		return true
+	}
+	if b.Metadata.Version.Less(a.Metadata.Version) {
+		return false
+	}
+	if a.Metadata.Hash != b.Metadata.Hash {
+		return a.Metadata.Hash < b.Metadata.Hash
+	}
+	return a.Member.Name < b.Member.Name
 }
 
 // syncData propagate the data to all nodes with outdated data
-func (sm *StateManager) syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) {
+func (sm *StateManager) syncData(memberMetadata []api.MemberMetadata, currentHash string, data []byte) bool {
+	success := true
 
 	for _, ms := range memberMetadata {
 		if ms.Metadata.Hash != currentHash {
 			importURL := utils.BuildInternalURL(ms.Member.Addr.String(), api.AdminPort, routes.DataEndpoint)
-			sm.importData(importURL, data)
+			if !sm.importData(importURL, data) {
+				success = false
+			}
 		}
 	}
+
+	return success
 }
 
 // importData imports data into the state at the endpoint
-func (sm *StateManager) importData(endpoint string, data []byte) {
+func (sm *StateManager) importData(endpoint string, data []byte) bool {
 
 	logger := logging.GetLogger()
 
 	resp, err := sm.httpClient.Post(endpoint, api.JsonMIMEType, bytes.NewBuffer(data))
 	if err != nil {
 		logger.Error("Failed to import data on %s: %v", endpoint, err)
-		return
+		return false
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		logger.Error("Unexpected status code on: %s %d", endpoint, resp.StatusCode)
+		return false
 	}
+
+	return true
 }
 
 // getFullStateUnsafe caller must hold sm.Lock or sm.RLock

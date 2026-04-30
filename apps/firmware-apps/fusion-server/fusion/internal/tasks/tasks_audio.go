@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -23,16 +23,7 @@ import (
 const (
 	defaultMinPriority = 1
 	defaultMaxPriority = 100
-	defaultZones       = "all"
 )
-
-type MessageTrigger struct {
-	ID        string `json:"id"`
-	Path      string `json:"path"`
-	Priority  int    `json:"priority,omitempty"`
-	Zones     string `json:"zones,omitempty"`
-	Timestamp int64  `json:"timestamp"`
-}
 
 // HandleTriggerMessage handles triggering the playback of an audio message
 func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
@@ -49,67 +40,44 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 
 	logger := logging.GetLogger()
 
-	meta, err := tm.persistence.GetAudioMetadata(id)
-	if err != nil {
-		if errors.Is(err, persistence.ErrNotFound) {
-			logger.Error("Error getting audio metadata for id %q: %v", id, err)
-			http.Error(w, "Not found", http.StatusNotFound)
+	var req api.TriggerMessageRequest
+	if r.Body != nil {
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil && !errors.Is(err, io.EOF) {
+			http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 			return
 		}
-		logger.Error("Error reading audio metadata for id %q: %v", id, err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
+		defer r.Body.Close()
 	}
 
-	filePath := filepath.Join(api.AudioFilesLocation, meta.Filename)
-	f, err := os.Open(filePath)
+	params, err := tm.buildMessageTaskParams(id, req.Priority, req.Zones)
 	if err != nil {
-		logger.Error("error opening audio file: %v", err)
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	defer f.Close()
-
-	exists, err := utils.FileExists(filePath)
-	if err != nil {
-		logger.Error("audio file does not exist for id %q: %v", id, err)
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-
-	if !exists {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-
-	trigger := MessageTrigger{
-		ID:        meta.Id,
-		Path:      filePath,
-		Priority:  defaultMaxPriority,
-		Zones:     defaultZones,
-		Timestamp: time.Now().Unix(),
-	}
-
-	params, err := paramsFromTrigger(trigger)
-	if err != nil {
-		logger.Error("paramsFromTrigger error: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, persistence.ErrNotFound):
+			logger.Error("Error getting audio metadata for id %q: %v", id, err)
+			http.Error(w, "Not found", http.StatusNotFound)
+		default:
+			logger.Error("Error building immediate message task params for id %q: %v", id, err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
 		return
 	}
 
 	// Trigger a task immediately
 	task := api.Task{
-		ID:          "message_trigger",
-		Description: "Trigger audio message",
+		ID:          "message_trigger_immediate",
+		Description: "Immediate/manual audio message trigger",
 		Type:        api.TaskTypeMessage,
 		Enabled:     true,
 		Params:      params,
 	}
 
-	if err = tm.notifyMessageTrigger(&task); err != nil {
+	if err = tm.taskTriggerMessageFunc(&task)(r.Context()); err != nil {
+		tm.RecordExecution(&task, "failed")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	tm.RecordExecution(&task, "success")
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -137,36 +105,44 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 
 		// Safe extraction helpers
 		getString := func(key string) (string, bool) {
-			v, ok := t.Params[key]
-			if !ok {
+			v, hasKey := t.Params[key]
+			if !hasKey {
 				return "", false
 			}
-			s, ok := v.(string)
-			return s, ok
+			s, isString := v.(string)
+			return s, isString
 		}
 
 		getInt64 := func(key string) (int64, bool) {
-			v, ok := t.Params[key]
-			if !ok {
+			v, hasKey := t.Params[key]
+			if !hasKey {
 				return 0, false
 			}
-			i, ok := v.(int64)
-			if ok {
+			i, isInt64 := v.(int64)
+			if isInt64 {
 				return i, true
 			}
 			// handle JSON numbers unmarshaled as float64
-			if f, ok := v.(float64); ok {
+			if f, isFloat64 := v.(float64); isFloat64 {
 				return int64(f), true
 			}
 			return 0, false
 		}
 
-		msgID, ok1 := getString(api.MessageIDKey)
-		zones, ok2 := getString(api.MessageZonesKey)
-		priority, ok3 := getInt64(api.MessagePriorityKey)
+		getStringSliceLocal := func(key string) []string {
+			v, hasKey := t.Params[key]
+			if !hasKey {
+				return []string{}
+			}
+			return utils.CoerceStringSlice(v)
+		}
+
+		msgID, hasMessageID := getString(api.MessageIDKey)
+		zones := getStringSliceLocal(api.MessageZonesKey)
+		priority, hasPriority := getInt64(api.MessagePriorityKey)
 
 		// Skip or log incomplete tasks
-		if !ok1 || !ok2 || !ok3 {
+		if !hasMessageID || !hasPriority {
 			logger.Warn("Skipping message task due to invalid params")
 			continue
 		}
@@ -205,10 +181,6 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if taskMessage.Zones == "" {
-		taskMessage.Zones = "all"
-	}
-
 	// Default (if unset)
 	if taskMessage.Priority == 0 {
 		taskMessage.Priority = defaultMaxPriority
@@ -223,9 +195,13 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 
 	// Verify message exists
-	_, err := tm.persistence.GetAudioMetadata(taskMessage.MessageID)
+	params, err := tm.buildMessageTaskParams(taskMessage.MessageID, int(taskMessage.Priority), taskMessage.Zones)
 	if err != nil {
-		http.Error(w, "not found", http.StatusNotFound)
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Failed to build task params: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -239,11 +215,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		EndAt:       taskMessage.EndAt,
 		Recurrence:  taskMessage.Recurrence,
 		Enabled:     true,
-		Params: map[string]any{
-			api.MessageIDKey:       taskMessage.MessageID,
-			api.MessagePriorityKey: taskMessage.Priority,
-			api.MessageZonesKey:    taskMessage.Zones,
-		},
+		Params:      params,
 	}
 
 	if err := tm.AddTask(&task); err != nil {
@@ -293,7 +265,7 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	hasMessageId := patch.MessageID != nil && strings.TrimSpace(*patch.MessageID) != ""
 	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
-	hasZones := patch.Zones != nil && strings.TrimSpace(*patch.Zones) != ""
+	hasZones := patch.Zones != nil
 	hasPriority := patch.Priority != nil
 	hasStart := patch.StartAt != nil
 	hasEnd := patch.EndAt != nil
@@ -402,7 +374,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	// Helper to coerce any value to string
 	getString := func(key string) string {
-		if v, ok := task.Params[key]; ok && v != nil {
+		if v, hasKey := task.Params[key]; hasKey && v != nil {
 			switch val := v.(type) {
 			case string:
 				return val
@@ -413,9 +385,18 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 		return ""
 	}
 
+	// Helper to coerce any value to []string
+	getStringSlice := func(key string) []string {
+		v, hasKey := task.Params[key]
+		if !hasKey {
+			return []string{}
+		}
+		return utils.CoerceStringSlice(v)
+	}
+
 	// Helper to coerce any value to int
 	getInt := func(key string) int {
-		if v, ok := task.Params[key]; ok && v != nil {
+		if v, hasKey := task.Params[key]; hasKey && v != nil {
 			switch val := v.(type) {
 			case int:
 				return val
@@ -438,7 +419,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	messageID := getString(api.MessageIDKey)
 	priority := getInt(api.MessagePriorityKey)
-	zones := getString(api.MessageZonesKey)
+	zones := getStringSlice(api.MessageZonesKey)
 
 	switch messageID {
 	case "":
@@ -470,7 +451,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 	}
 
 	// Construct message payload
-	msg := MessageTrigger{
+	msg := api.MessageTrigger{
 		ID:        messageID,
 		Path:      filePath,
 		Priority:  priority,
@@ -486,15 +467,53 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 	return nil
 }
 
-// paramsFromTrigger converts a MessageTrigger struct to a map
-func paramsFromTrigger(mt MessageTrigger) (map[string]any, error) {
-	data, err := json.Marshal(mt)
+func (tm *TaskManager) buildMessageTaskParams(messageID string, priority int, zones []string) (map[string]any, error) {
+	meta, err := tm.persistence.GetAudioMetadata(messageID)
 	if err != nil {
 		return nil, err
 	}
-	params := make(map[string]any)
-	if err := json.Unmarshal(data, &params); err != nil {
+
+	filePath := filepath.Join(api.AudioFilesLocation, meta.Filename)
+	f, err := os.Open(filePath)
+	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
+	exists, err := utils.FileExists(filePath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, os.ErrNotExist
+	}
+
+	if priority == 0 {
+		priority = defaultMaxPriority
+	}
+	if priority < defaultMinPriority {
+		priority = defaultMinPriority
+	}
+	if priority > defaultMaxPriority {
+		priority = defaultMaxPriority
+	}
+
+	trigger := api.MessageTrigger{
+		ID:        meta.Id,
+		Path:      filePath,
+		Priority:  priority,
+		Zones:     utils.CoerceStringSlice(zones),
+		Timestamp: time.Now().Unix(),
+	}
+
+	params, err := utils.ToMap(trigger)
+	if err != nil {
+		return nil, err
+	}
+
+	// Empty zones means "all zones", but keep it explicit in task params so the
+	// scheduler API can round-trip the user's intent.
+	params[api.MessageZonesKey] = utils.CoerceStringSlice(zones)
+
 	return params, nil
 }

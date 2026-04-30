@@ -106,6 +106,8 @@ struct fusion_cn_metrics_snapshot
     uint64_t packets_marked, malformed_count;
     uint64_t late_drop_count;
     uint64_t rx_queue_drop_count;
+    uint64_t kernel_silence_sub_count;
+    uint64_t kernel_silence_sub_frames;
     uint64_t burst_loss_max;
 
     uint32_t rfc3550_jitter_ns;
@@ -477,17 +479,6 @@ static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
 //     return reply.err == 0;
 // }
 
-static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
-    fusion_cn_ctrl_msg reply{};
-    if (iface.empty()) return false;
-    std::array<char, IFNAMSIZ> buf{};
-    std::strncpy(buf.data(), iface.c_str(), buf.size() - 1);
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_ETH_IFACE, buf.data(), buf.size(), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_ETH_IFACE({}) err={}", iface, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
-
 static bool nl_get_timing_status(NetlinkClient& c, fc_get_timing_status_reply *out)
 {
     if (!out) return false;
@@ -708,7 +699,6 @@ private:
     int_fast32_t period_ms;
     bool debug_enabled;
     bool debug_sent;
-    bool iface_sent;
     bool gpt_discipline_ready_logged;
     SAPAnnouncer sap_announcer;
 
@@ -738,6 +728,7 @@ private:
     void join_multicast_group(uint32_t multicast_ip);
     bool process_audio_streams_update();
     void audio_streams_update_func();
+    void device_id_update_func();
     void maybe_retry_audio_streams_update();
     void maybe_start_manager();
     void update_ptp_state();
@@ -753,7 +744,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
-      debug_sent(false), iface_sent(false),
+      debug_sent(false),
       gpt_discipline_ready_logged(false), sap_announcer(""),
       audio_streams_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_good_streak(0),
@@ -776,9 +767,10 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
         enet_iface = "lan1";
     }
 
-    assign_parameter("audio_streams_update", &audio_streams_update, 
+    assign_parameter("audio_streams_update", &audio_streams_update,
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
-    assign_parameter("device_id", &device_id);
+    assign_parameter("device_id", &device_id,
+                     POST_FUNCTION_SCALAR(device_id_update_func));
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
@@ -846,17 +838,22 @@ int FusionConnectClient::remove_stream(uint64_t stream_handle) {
         return -1;
     }
 
-    if (reply.err != 0) {
-        SPDLOG_ERROR("Remove RTP Stream: Failed for stream_handle={}, err={}", stream_handle, reply.err);
-        return reply.err;
-    }
-
-    SPDLOG_DEBUG("Remove RTP Stream: Success for stream_handle={}", stream_handle);
-
+    const int err = reply.err;
     if (reply.data) {
         free(reply.data);
     }
 
+    if (err == -ENOENT) {
+        SPDLOG_DEBUG("Remove RTP Stream: stream_handle={} already gone", stream_handle);
+        return 0;
+    }
+
+    if (err != 0) {
+        SPDLOG_ERROR("Remove RTP Stream: Failed for stream_handle={}, err={}", stream_handle, err);
+        return err;
+    }
+
+    SPDLOG_DEBUG("Remove RTP Stream: Success for stream_handle={}", stream_handle);
     return 0;
 }
 
@@ -1067,6 +1064,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             if (create_source) {
                 config.is_source = true;
                 std::snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
+                json_stream_names.insert(config.stream_name);
 
                 // Role invariants: TX must set source_ip=local, dest_ip=peer
                 config.source_ip = local_ip_be;
@@ -1082,7 +1080,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[config.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[config.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect source stream {} to pending", config.stream_name);
-                    json_stream_names.insert(config.stream_name);
                 }
             }
 
@@ -1090,6 +1087,7 @@ bool FusionConnectClient::process_audio_streams_update() {
                 fusion_cn_stream_config sink_cfg = config; // copy common defaults/overrides
                 sink_cfg.is_source = false;
                 std::snprintf(sink_cfg.stream_name, sizeof(sink_cfg.stream_name), "FC_RX_%u", sink_cfg.source_port);
+                json_stream_names.insert(sink_cfg.stream_name);
 
                 // Role invariants: RX must set dest_ip=local, source_ip=peer
                 sink_cfg.dest_ip = local_ip_be;
@@ -1105,7 +1103,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[sink_cfg.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", sink_cfg.stream_name);
-                    json_stream_names.insert(sink_cfg.stream_name);
                 }
             }
         } else {
@@ -1120,7 +1117,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
 
             if (!has_explicit_playout_delay && config.sample_rate != 0)
-                config.playout_delay = static_cast<uint32_t>((5ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
+                config.playout_delay = static_cast<uint32_t>((10ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             // role
             const bool is_source = (properties.isMember("is_source") && properties["is_source"].isBool())
@@ -1171,6 +1168,11 @@ bool FusionConnectClient::process_audio_streams_update() {
         }
     }
 
+    if (needs_retry) {
+        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
+        return false;
+    }
+
     // --- Remove missing Fusion Connect streams --------------------------------
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end(); ) {
         if (!json_stream_names.count(it->first)) {
@@ -1208,18 +1210,17 @@ bool FusionConnectClient::process_audio_streams_update() {
         }
     }
 
-    if (needs_retry) {
-        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
-        return false;
-    }
-
     return true;
 }
 
 void FusionConnectClient::audio_streams_update_func() {
     audio_streams_update_pending = true;
-    if (process_audio_streams_update())
-        audio_streams_update_pending = false;
+    audio_update_last_retry = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+}
+
+void FusionConnectClient::device_id_update_func() {
+    audio_streams_update_pending = true;
+    audio_update_last_retry = std::chrono::steady_clock::now() - std::chrono::seconds(1);
 }
 
 void FusionConnectClient::maybe_retry_audio_streams_update() {
@@ -1240,14 +1241,6 @@ void FusionConnectClient::maybe_start_manager()
     const auto now = std::chrono::steady_clock::now();
     if (now - mgr_last_start_attempt < std::chrono::seconds(1)) return;
     mgr_last_start_attempt = now;
-
-    if (!iface_sent) {
-        if (!nl_set_eth_iface(client, enet_iface)) {
-            SPDLOG_ERROR("Failed to set ETH iface '{}' before manager start", enet_iface);
-            return;
-        }
-        iface_sent = true;
-    }
 
     fusion_cn_ctrl_msg reply{};
     if (!client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
@@ -1636,7 +1629,7 @@ void FusionConnectClient::process() {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} rxq_drop={} burst_max={} batch_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late={} rxq_drop={} ksil={} ksil_frames={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
                         "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
@@ -1644,7 +1637,9 @@ void FusionConnectClient::process() {
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.rx_queue_drop_count, s.burst_loss_max, s.batch_max,
+                        s.late_drop_count, s.rx_queue_drop_count,
+                        s.kernel_silence_sub_count, s.kernel_silence_sub_frames,
+                        s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,

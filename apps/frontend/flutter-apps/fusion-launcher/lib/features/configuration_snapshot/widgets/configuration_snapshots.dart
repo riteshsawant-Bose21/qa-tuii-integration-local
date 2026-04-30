@@ -6,6 +6,8 @@ import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapsh
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshots_and_scenes_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
+import 'package:fusion_lib/service/scene_set/scene_set_activate_service.dart';
+import 'package:fusion_lib/service/snapshot/snapshot_activate_service.dart';
 import '../viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import '../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import '../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
@@ -24,12 +26,18 @@ class ConfigurationSnapshots extends StatelessWidget {
           create:
               (BuildContext context) => ConfigSnapshotsViewmodel(
                 projectViewModel: projectViewModel,
+                snapshotActivateService: SnapshotActivateService(
+                  networkClient: serviceLocator<FusionNetworkClient>(),
+                ),
               ),
         ),
         BlocProvider<ConfigSceneSetsViewmodel>(
           create:
               (BuildContext context) => ConfigSceneSetsViewmodel(
                 projectViewModel: projectViewModel,
+                sceneSetActivateService: SceneSetActivateService(
+                  networkClient: serviceLocator<FusionNetworkClient>(),
+                ),
               ),
         ),
         BlocProvider<ConfigSnapshotActionsViewModel>(

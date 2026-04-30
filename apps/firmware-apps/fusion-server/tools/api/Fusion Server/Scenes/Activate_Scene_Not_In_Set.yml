@@ -1,0 +1,26 @@
+info:
+  name: Activate Scene Not In Set
+  type: http
+  seq: 12
+
+http:
+  method: POST
+  url: "{{api_url}}/scene-sets/activate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "set_id": "scene-set-test-01",
+        "scene_id": "not-in-set"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Negative-path test. Scene id is not a member of the specified set.

@@ -328,6 +328,7 @@ class _WorkAreaAppbarAction extends StatelessWidget {
     final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getDroInputData().toJson();
     // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getAllProcessingBlocksData();
     // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
+    // final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getSnapshotsRequestDtoData()!.toJson();
 
     showDialog(
       context: context,

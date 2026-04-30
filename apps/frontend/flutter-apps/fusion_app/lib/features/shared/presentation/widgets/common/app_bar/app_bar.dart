@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CommonMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool bottomWidget;
   final double dividerPadding;
   final Widget? leadingIcon;
   final List<Widget> actions;
 
-  const CommonAppBar({
+  const CommonMobileAppBar({
     required this.title,
     this.leadingIcon,
     this.bottomWidget=true,
@@ -39,15 +39,6 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-        // flexibleSpace: Align(
-        //     alignment: Alignment.bottomCenter,
-        //     child: Container(
-        //       margin: EdgeInsetsGeometry.only(bottom: 0),
-        //         child: CommonDivider(paddingValue: dividerPadding))),
-      // bottom: bottomWidget ? const PreferredSize(
-      //   preferredSize: Size.fromHeight(0.75),
-      //   child: CommonDivider(paddingValue: 16)
-      // ) :null,
       actions: [
         ...actions,
         SizedBox(width: 16),

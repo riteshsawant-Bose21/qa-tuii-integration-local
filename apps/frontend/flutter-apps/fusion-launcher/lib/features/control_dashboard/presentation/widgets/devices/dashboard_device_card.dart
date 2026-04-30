@@ -37,13 +37,13 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver();
+    serviceLocator<MeterDataViewModel>().registerObserver(this);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    serviceLocator<MeterDataViewModel>().unregisterObserver(this);
     super.dispose();
   }
 
