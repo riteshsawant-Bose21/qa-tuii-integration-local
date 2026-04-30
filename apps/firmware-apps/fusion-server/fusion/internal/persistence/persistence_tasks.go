@@ -4,12 +4,60 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
+	"strings"
 	"fusion-services-core/logging"
 
 	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
+
+func validateSnapshotTaskRefs(tasks map[string]any, snapshotExists func(string) (bool, error)) error {
+	for key, value := range tasks {
+		data, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("failed to marshal imported task %q: %w", key, err)
+		}
+
+		var task api.Task
+		if err := json.Unmarshal(data, &task); err != nil {
+			return fmt.Errorf("failed to unmarshal imported task %q: %w", key, err)
+		}
+
+		if task.Type != api.TaskTypeSnapshot {
+			continue
+		}
+
+		snapshotIDValue, ok := task.Params[api.SnapshotIDKey]
+		if !ok {
+			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
+		}
+
+		snapshotID, ok := snapshotIDValue.(string)
+		if !ok {
+			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
+		}
+
+		snapshotID = strings.TrimSpace(snapshotID)
+		if snapshotID == "" {
+			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
+		}
+
+		exists, err := snapshotExists(snapshotID)
+		if err != nil {
+			return fmt.Errorf("failed to validate snapshot for imported task %q: %w", key, err)
+		}
+		if !exists {
+			return fmt.Errorf("imported snapshot task %q references missing snapshot %q", key, snapshotID)
+		}
+	}
+
+	return nil
+}
+
+func (p *Persistence) validateImportedTasks(tasks map[string]any) error {
+	return validateSnapshotTaskRefs(tasks, p.SnapshotExists)
+}
 
 // LoadMetadata retrieves and unmarshals the api.SnapshotMetadata from the database.
 func (p *Persistence) LoadTasks() (map[string]*api.Task, error) {
@@ -19,7 +67,7 @@ func (p *Persistence) LoadTasks() (map[string]*api.Task, error) {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketTasks))
 		if b == nil {
-			return fmt.Errorf("tasks bucket not found")
+			return nil
 		}
 		return b.ForEach(func(key, value []byte) error {
 			var task api.Task
@@ -44,7 +92,7 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketTasks))
 		if bucket == nil {
-			return fmt.Errorf("tasks bucket not found")
+			return fmt.Errorf("%w: tasks bucket not found", ErrNotFound)
 		}
 		return bucket.ForEach(func(k, v []byte) error {
 			existing[string(k)] = append([]byte(nil), v...)
@@ -77,7 +125,7 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 	err = p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketTasks))
 		if bucket == nil {
-			return fmt.Errorf("tasks bucket not found")
+			return fmt.Errorf("%w: tasks bucket not found", ErrNotFound)
 		}
 		return bucket.ForEach(func(k, v []byte) error {
 			existing[string(k)] = append([]byte(nil), v...)
@@ -92,7 +140,7 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 
 		bucket := tx.Bucket([]byte(bucketTasks))
 		if bucket == nil {
-			return fmt.Errorf("tasks bucket not found")
+			return fmt.Errorf("%w: tasks bucket not found", ErrNotFound)
 		}
 
 		for key, data := range desired {
@@ -132,14 +180,16 @@ func (p *Persistence) DeleteTask(taskID string) error {
 		return fmt.Errorf("failed to delete task '%s': %w", taskID, err)
 	}
 	if !exists {
-		logging.GetLogger().Debug("Task delete skipped: task=%s missing", taskID)
-		return nil
+		return fmt.Errorf("%w: task %q not found", ErrNotFound, taskID)
 	}
 
 	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketTasks))
 		if bucket == nil {
-			return fmt.Errorf("bucket '%s' not found", bucketTasks)
+			return fmt.Errorf("%w: bucket %q not found", ErrNotFound, bucketTasks)
+		}
+		if bucket.Get([]byte(taskID)) == nil {
+			return fmt.Errorf("%w: task %q not found", ErrNotFound, taskID)
 		}
 		if err := bucket.Delete([]byte(taskID)); err != nil {
 			return fmt.Errorf("failed to delete task '%s': %w", taskID, err)
@@ -165,7 +215,7 @@ func (p *Persistence) TaskExists(task *api.Task) (bool, error) {
 		b := tx.Bucket([]byte(bucketTasks))
 		if b == nil {
 			exists = false
-			return fmt.Errorf("tasks bucket not found")
+			return nil
 		}
 		exists = b.Get([]byte(task.ID)) != nil
 		return nil
@@ -179,11 +229,11 @@ func (p *Persistence) GetTask(id string) (*api.Task, error) {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketTasks))
 		if b == nil {
-			return fmt.Errorf("tasks bucket not found")
+			return fmt.Errorf("%w: tasks bucket not found", ErrNotFound)
 		}
 		data := b.Get([]byte(id))
 		if data == nil {
-			return fmt.Errorf("task '%s' not found", id)
+			return fmt.Errorf("%w: task %q not found", ErrNotFound, id)
 		}
 		return json.Unmarshal(data, &task)
 	})
@@ -210,6 +260,10 @@ func (p *Persistence) ImportTasks(importData map[string]any) error {
 		return fmt.Errorf("tasks data is not in the expected format")
 	}
 
+	if err := p.validateImportedTasks(tasks); err != nil {
+		return err
+	}
+
 	if err := p.replaceBucketData(bucketTasks, tasks); err != nil {
 		return err
 	}
@@ -228,7 +282,7 @@ func (p *Persistence) GetTaskIDsBySnapshot(snapshotID string) ([]string, error) 
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketTasks))
 		if b == nil {
-			return fmt.Errorf("bucket %q not found", bucketTasks)
+			return nil
 		}
 
 		return b.ForEach(func(k, v []byte) error {

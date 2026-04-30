@@ -484,15 +484,33 @@ func (tm *TaskManager) saveTasks() error {
 
 // LoadTasks loads tasks from the persistence file and schedules them.
 func (tm *TaskManager) LoadTasks() error {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-
 	tasks, err := tm.persistence.LoadTasks()
 	if err != nil {
 		return err
 	}
 
+	var dirty bool
+	for _, task := range tasks {
+		if !task.Enabled {
+			continue
+		}
+		if _, err := tm.makeTaskFunc(task); err != nil {
+			logging.GetLogger().Warn("[TASKS] Disabling invalid persisted task %q: %v", task.ID, err)
+			task.Enabled = false
+			task.CronEntryID = 0
+			dirty = true
+		}
+	}
+
+	if dirty {
+		if err := tm.persistence.SaveTasks(tasks); err != nil {
+			return fmt.Errorf("failed to persist sanitized tasks: %w", err)
+		}
+	}
+
+	tm.mu.Lock()
 	tm.tasks = tasks
+	tm.mu.Unlock()
 
 	return nil
 }
@@ -648,6 +666,14 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	case api.TaskTypeSnapshot:
 		if err := requiredStringParam(api.SnapshotIDKey); err != nil {
 			return nil, err
+		}
+		snapshotId := task.Params[api.SnapshotIDKey].(string)
+		exists, err := tm.persistence.SnapshotExists(snapshotId)
+		if err != nil {
+			return nil, fmt.Errorf("check snapshot %q: %w", snapshotId, err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("snapshot %q not found", snapshotId)
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
 
