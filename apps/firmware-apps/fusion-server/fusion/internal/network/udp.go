@@ -316,7 +316,12 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		msg.ID = ulid.Make().String()
 	}
 
-	payload, err := s.buildJSONPayload(configObserverPayload(msg.ConfigUpdate), msg.ConfigUpdate.Version, msg.ID, msg.Operation)
+	payload, err := s.buildJSONPayload(
+		configObserverPayload(msg.ConfigUpdate),
+		msg.ConfigUpdate.Version,
+		msg.ID,
+		msg.Operation,
+	)
 	if err != nil {
 		return err
 	}
