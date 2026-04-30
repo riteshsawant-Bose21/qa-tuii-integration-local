@@ -52,13 +52,14 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
           Navigator.pop(context);
 
           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(
+            SnackBar(
               backgroundColor: context.colorScheme.elevation2,
-               behavior: SnackBarBehavior.floating,
-              content: FusionAppText(text: "Users invited successfully",
-              style: TextStyle(
-        color: context.colorScheme.onSurface,
-      ),)),
+              behavior: SnackBarBehavior.floating,
+              content: FusionAppText(
+                text: "Users invited successfully",
+                style: TextStyle(color: context.colorScheme.onSurface),
+              ),
+            ),
           );
         }
 
@@ -84,9 +85,11 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
           child: BlocBuilder<InviteUserCubit, BaseState<List<UserModel>>>(
             builder: (context, state) {
               if (state is LoadingState<List<UserModel>>) {
-                return Center(child: CircularProgressIndicator(
+                return Center(
+                  child: CircularProgressIndicator(
                     color: context.colorScheme.white,
-                ));
+                  ),
+                );
               }
 
               if (state is LoadedState<List<UserModel>>) {
@@ -211,24 +214,24 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
   }
 
   void _selectUser(UserModel user) {
-  setState(() {
-    _localSelectedUsers.add(user);
+    setState(() {
+      _localSelectedUsers.add(user);
 
-    _controller.clear();
-    _refreshList();
-  });
+      _controller.clear();
+      _refreshList();
+    });
 
-  widget.onChanged(_localSelectedUsers);
-}
+    widget.onChanged(_localSelectedUsers);
+  }
 
   void _removeUser(UserModel user) {
-  setState(() {
-    _localSelectedUsers.remove(user);
-    _refreshList();
-  });
+    setState(() {
+      _localSelectedUsers.remove(user);
+      _refreshList();
+    });
 
-  widget.onChanged(_localSelectedUsers);
-}
+    widget.onChanged(_localSelectedUsers);
+  }
 
   void _refreshList() {
     final query = _controller.text;
@@ -287,7 +290,11 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            FusionAppText(text: user.name),
+                            FusionAppText(
+                              text: user.name.isEmpty
+                                  ? user.email.split('@').first
+                                  : user.name,
+                            ),
                             const SizedBox(width: 6),
                             GestureDetector(
                               onTap: () => _removeUser(user),
@@ -377,7 +384,11 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                     radius: 18,
                                     // backgroundColor: const Color(0xFFE5E7EB),
                                     child: Text(
-                                      user.name.substring(0, 2).toUpperCase(),
+                                      (user.name.isEmpty
+                                              ? user.email.split('@').first
+                                              : user.name)
+                                          .substring(0, 2)
+                                          .toUpperCase(),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -389,7 +400,9 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                       children: [
                                         /// name
                                         Text(
-                                          user.name,
+                                          user.name.isEmpty
+                                              ? user.email.split('@').first
+                                              : user.name,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14,
@@ -442,7 +455,8 @@ class _MultiSelectUserFieldState extends State<_MultiSelectUserField> {
                                                 ),
                                               ),
                                               child: Text(
-user.roles.join(', '),                                                style: const TextStyle(
+                                                user.roles.join(', '),
+                                                style: const TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w500,
                                                 ),

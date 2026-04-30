@@ -150,7 +150,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
           radius: 40,
           backgroundColor: Colors.blue,
           child: FusionAppText(
-            text: user.name.substring(0, 2).toUpperCase(),
+            text: user.name.isNotEmpty
+                ? user.name
+                      .substring(
+                        0,
+                        user.name.length >= 2 ? 2 : user.name.length,
+                      )
+                      .toUpperCase()
+                : user.email.substring(0, 1).toUpperCase(),
             style: const TextStyle(fontSize: 20, color: Colors.white),
           ),
         ),
@@ -162,7 +169,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               FusionAppText(
-                text: user.name,
+                text: user.name.isNotEmpty
+                    ? user.name
+                    : user.email.split('@').first,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -238,7 +247,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildActivityCard() {
-
     return _card(
       title: "Activity Overview",
       child: Column(
@@ -466,7 +474,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  
   Widget _activitySection() {
     return _card(
       title: "Recent Activity",
@@ -536,8 +543,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ],
     );
   }
-
-  
 
   Widget _permissionsSection() {
     return _card(

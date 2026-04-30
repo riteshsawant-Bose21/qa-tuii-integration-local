@@ -103,6 +103,19 @@ mixin PortPainter on FusionCanvasElementPainter {
           );
         }
       }
+
+      // if (kDebugMode) {
+      //   drawText(
+      //     canvas: canvas,
+      //     text: portData.port.id,
+      //     position: transformedPosition + Offset(0, portRadius + 5),
+      //     positionAlignment: Alignment.topCenter,
+      //     style: painter.context.textTheme.b3Regular.copyWith(
+      //       color: Colors.red,
+      //       fontSize: 10,
+      //     ),
+      //   );
+      // }
     }
   }
 

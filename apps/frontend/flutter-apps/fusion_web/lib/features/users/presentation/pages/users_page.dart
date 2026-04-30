@@ -520,7 +520,7 @@ class _UsersPageState extends State<UsersPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                user.name.isNotEmpty ? user.name : 'No Name',
+                user.name.isNotEmpty ? user.name : user.email.split('@').first,
                 style: GoogleFonts.montserrat(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -655,7 +655,7 @@ class _UsersPageState extends State<UsersPage> {
       ],
     );
   }
-  
+
   // Dialog and action methods
   void _showInviteUserDialog() {
     showDialog(

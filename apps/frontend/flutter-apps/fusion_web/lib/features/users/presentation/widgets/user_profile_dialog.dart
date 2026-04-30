@@ -70,7 +70,9 @@ class UserProfileDialog extends StatelessWidget {
                         : null,
                     child: user.avatar == null
                         ? Text(
-                            user.name.substring(0, 1).toUpperCase(),
+                            user.name.isNotEmpty
+                                ? user.name.substring(0, 1).toUpperCase()
+                                : user.email.substring(0, 1).toUpperCase(),
                             style: GoogleFonts.montserrat(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
@@ -92,7 +94,9 @@ class UserProfileDialog extends StatelessWidget {
                               user.name,
                               style: GoogleFonts.montserrat(
                                 fontSize: 24,
-                                fontWeight: FontWeight.w700,                              color: context.colorScheme.textPrimary,                              ),
+                                fontWeight: FontWeight.w700,
+                                color: context.colorScheme.textPrimary,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Container(
@@ -425,52 +429,56 @@ class UserProfileDialog extends StatelessWidget {
   }
 
   Widget _buildSection(String title, Widget content) {
-    return Builder(builder: (context) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.montserrat(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: context.colorScheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          content,
-        ],
-      );
-    });
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Builder(builder: (context) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
+    return Builder(
+      builder: (context) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
               style: GoogleFonts.montserrat(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.colorScheme.elevation6,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.montserrat(
-                fontSize: 14,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
                 color: context.colorScheme.textPrimary,
               ),
             ),
-          ),
-        ],
-      );
-    });
+            const SizedBox(height: 12),
+            content,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Builder(
+      builder: (context) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.elevation6,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  color: context.colorScheme.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

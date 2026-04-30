@@ -26,27 +26,31 @@ class DevicesRepositoryImpl implements DevicesRepository {
 
     List<Device> devices = List.from(data.devices);
 
-    /// filter - project ID
-    if (projectId != null) {
-      devices =
-          devices.where((d) => d.projectId == projectId).toList();
-    }
+    // TODO: Re-enable projectId filter once real API data is used
+    // /// filter - project ID
+    // if (projectId != null) {
+    //   devices =
+    //       devices.where((d) => d.projectId == projectId).toList();
+    // }
 
     /// search
     if (searchQuery != null && searchQuery.isNotEmpty) {
       final query = searchQuery.toLowerCase();
 
-      devices = devices.where((d) =>
-          d.name.toLowerCase().contains(query) ||
-          d.model.toLowerCase().contains(query)
-      ).toList();
+      devices = devices
+          .where(
+            (d) =>
+                d.name.toLowerCase().contains(query) ||
+                d.model.toLowerCase().contains(query),
+          )
+          .toList();
     }
 
     /// status
     if (status != null && status != 'All Status') {
-      devices = devices.where((d) =>
-          d.status.toLowerCase() == status.toLowerCase()
-      ).toList();
+      devices = devices
+          .where((d) => d.status.toLowerCase() == status.toLowerCase())
+          .toList();
     }
 
     /// Project

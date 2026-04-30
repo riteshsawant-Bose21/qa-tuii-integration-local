@@ -89,17 +89,27 @@ func (a *API) registerRoutes() {
 		auth.GET(constants.EndpointAuthTokens, authHandler.GetAuthTokensByResourceOwnerPassword)
 	}
 
-	// Role Management routes for organization admins
+	// Organizations Management routes
+	organizationHandler := handler.NewOrganizationHandler(a.organization, a.user)
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user)
-	organization := v1.Group(constants.EndpointOrganization)
+	organizations := v1.Group(constants.EndpointOrganizations)
 
-	organization.Use(middleware.ExtractUserFromHeaders())
+	organizations.Use(middleware.ExtractUserFromHeaders())
 	{
-		organization.GET(constants.EndpointRoleManagement, roleManagementHandler.GetOrganizationRoleManagement)
-		organization.POST(constants.EndpointRoles, roleManagementHandler.CreateRole)
-		organization.PUT(constants.EndpointUserRole, roleManagementHandler.UpdateUserRole)
-		organization.PUT(constants.EndpointRolePermissions, roleManagementHandler.UpdateRolePermissions)
-		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
+		// Organization CRUD
+		organizations.GET("", organizationHandler.GetAllOrganizations)
+		organizations.GET(constants.EndpointOrganizationByID, organizationHandler.GetOrganizationByID)
+		organizations.POST("", organizationHandler.CreateOrganization)
+		organizations.PUT(constants.EndpointOrganizationByID, organizationHandler.UpdateOrganization)
+		organizations.DELETE(constants.EndpointOrganizationByID, organizationHandler.DeleteOrganization)
+		organizations.POST(constants.EndpointOrganizationInviteUsers, organizationHandler.InviteUsersToOrganization)
+
+		// Role Management
+		organizations.GET(constants.EndpointRoleManagement, roleManagementHandler.GetOrganizationRoleManagement)
+		organizations.POST(constants.EndpointRoles, roleManagementHandler.CreateRole)
+		organizations.PUT(constants.EndpointUserRole, roleManagementHandler.UpdateUserRole)
+		organizations.PUT(constants.EndpointRolePermissions, roleManagementHandler.UpdateRolePermissions)
+		organizations.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
 	}
 
 	// Device routes with authentication and access control
@@ -130,22 +140,6 @@ func (a *API) registerRoutes() {
 		firmwareUpdate.GET(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckForUpdate)
 		firmwareUpdate.GET(constants.EndpointBundleDownload, firmwareHandler.GetBundleDownloadURL)
 		firmwareUpdate.POST(constants.EndpointLogBundleUpdateStatus, firmwareHandler.LogBundleUpdateStatus)
-	}
-
-	// Organizations Management routes (no auth for testing)
-	organizationHandler := handler.NewOrganizationHandler(a.organization, a.user)
-	organizations := v1.Group(constants.EndpointOrganizations)
-
-	// No middleware for testing - remove for production
-	// organizations.Use(a.authMiddleware.Middleware())
-	// organizations.Use(accessControl.GlobalAccessControlMiddleware())
-	{
-		organizations.GET("", organizationHandler.GetAllOrganizations)
-		organizations.GET(constants.EndpointOrganizationByID, organizationHandler.GetOrganizationByID)
-		organizations.POST("", organizationHandler.CreateOrganization)
-		organizations.PUT(constants.EndpointOrganizationByID, organizationHandler.UpdateOrganization)
-		organizations.DELETE(constants.EndpointOrganizationByID, organizationHandler.DeleteOrganization)
-		organizations.POST(constants.EndpointOrganizationInviteUsers, organizationHandler.InviteUsersToOrganization)
 	}
 
 }

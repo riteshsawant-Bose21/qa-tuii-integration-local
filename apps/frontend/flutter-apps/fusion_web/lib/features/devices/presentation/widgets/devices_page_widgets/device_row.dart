@@ -42,11 +42,13 @@ class DeviceRow extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
+                      child: Image.network(
                         device.image,
                         width: 42,
                         height: 42,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.devices, size: 42),
                       ),
                     ),
 
@@ -103,6 +105,20 @@ class DeviceRow extends StatelessWidget {
               ),
 
               const SizedBox(width: 12),
+
+              /// Registered At
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FusionAppText(
+                      text: device.registeredAt,
+                      style: context.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
 
               /// STATUS
               Expanded(

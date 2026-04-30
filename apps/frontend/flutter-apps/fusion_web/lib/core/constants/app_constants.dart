@@ -9,6 +9,7 @@ class AppConstants {
   static const String organizationsRoute = '/organizations';
   static const String rolesRoute = '/roles';
   static const String settingsRoute = '/settings';
+  static const String softwareUpdateRoute = '/software-update';
   static const String projectDetailBaseRoute = '/projects/';
   static const String projectDetailRoute = '/projects/detail';
   static const String deviceDetailBaseRoute = '/devices';

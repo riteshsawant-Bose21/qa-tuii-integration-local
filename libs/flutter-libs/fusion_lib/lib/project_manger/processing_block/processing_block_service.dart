@@ -23,6 +23,7 @@ extension ProcessingBlockService on ProjectService {
     if (!processingBlocks.exists(processingBlockId)) return;
 
     relationships.unlink(RelationshipType.processingBlock, parentId, processingBlockId);
+    removeProcessingBlock(processingBlockId);
   }
 
   void removeProcessingBlock(String processingBlockId) {

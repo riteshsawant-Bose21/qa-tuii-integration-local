@@ -97,20 +97,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
             );
           }
           final p = (state as LoadedState<ProjectModel>).data;
-          final totalDevices =
-              p.healthyDevices + p.warningDevices + p.criticalDevices;
 
-          final healthyPct = totalDevices == 0
-              ? 0
-              : ((p.healthyDevices / totalDevices) * 100).round();
-
-          final warningPct = totalDevices == 0
-              ? 0
-              : ((p.warningDevices / totalDevices) * 100).round();
-
-          final criticalPct = totalDevices == 0
-              ? 0
-              : ((p.criticalDevices / totalDevices) * 100).round();
           final viewModel = ServiceLocator().projectsViewModel;
           return BlocProvider(
             create: (_) =>
@@ -272,57 +259,93 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                         /// RIGHT CARD
                         Expanded(
                           flex: 7,
-                          child: _card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _cardTitle("Project Summary"),
-                                const SizedBox(height: 24),
+                          child:
+                              BlocBuilder<
+                                DevicesViewModel,
+                                BaseState<DevicesModel>
+                              >(
+                                builder: (context, deviceState) {
+                                  int total = 0;
+                                  int healthy = 0;
+                                  int warning = 0;
+                                  int critical = 0;
 
-                                Row(
-                                  children: [
-                                    _statBox("Total Devices", "$totalDevices"),
-                                    const SizedBox(width: 16),
-                                    _statBox(
-                                      "Open Incidents",
-                                      "${p.incidents}",
+                                  if (deviceState
+                                      is LoadedState<DevicesModel>) {
+                                    final dm = deviceState.data;
+                                    total = dm.total > 0
+                                        ? dm.total
+                                        : dm.devices.length;
+                                    healthy = dm.healthy;
+                                    critical = dm.critical;
+                                    warning = total - healthy - critical;
+                                    if (warning < 0) warning = 0;
+                                  }
+
+                                  final hPct = total == 0
+                                      ? 0
+                                      : ((healthy / total) * 100).round();
+                                  final wPct = total == 0
+                                      ? 0
+                                      : ((warning / total) * 100).round();
+                                  final cPct = total == 0
+                                      ? 0
+                                      : ((critical / total) * 100).round();
+
+                                  return _card(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _cardTitle("Project Summary"),
+                                        const SizedBox(height: 24),
+
+                                        Row(
+                                          children: [
+                                            _statBox("Total Devices", "$total"),
+                                            const SizedBox(width: 16),
+                                            _statBox(
+                                              "Open Incidents",
+                                              "${p.incidents}",
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 24),
+
+                                        _cardTitle("Device Health Status"),
+
+                                        const SizedBox(height: 16),
+
+                                        Row(
+                                          children: [
+                                            _healthTile(
+                                              "Healthy",
+                                              healthy,
+                                              hPct,
+                                              context.colorScheme.successText,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            _healthTile(
+                                              "Warning",
+                                              warning,
+                                              wPct,
+                                              context.colorScheme.warningText,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            _healthTile(
+                                              "Critical",
+                                              critical,
+                                              cPct,
+                                              context.colorScheme.volumeRed,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                _cardTitle("Device Health Status"),
-
-                                const SizedBox(height: 16),
-
-                                Row(
-                                  children: [
-                                    _healthTile(
-                                      "Healthy",
-                                      p.healthyDevices,
-                                      healthyPct,
-                                      context.colorScheme.successText,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _healthTile(
-                                      "Warning",
-                                      p.warningDevices,
-                                      warningPct,
-                                      context.colorScheme.warningText,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _healthTile(
-                                      "Critical",
-                                      p.criticalDevices,
-                                      criticalPct,
-                                      context.colorScheme.volumeRed,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                                  );
+                                },
+                              ),
                         ),
                       ],
                     ),

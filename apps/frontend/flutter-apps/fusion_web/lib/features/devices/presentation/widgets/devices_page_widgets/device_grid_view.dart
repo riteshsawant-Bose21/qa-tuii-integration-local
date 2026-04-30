@@ -56,11 +56,15 @@ class DevicesGridView extends StatelessWidget {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(16),
                     ),
-                    child: Image.asset(
+                    child: Image.network(
                       device.image,
                       height: 150,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        height: 150,
+                        child: Center(child: Icon(Icons.devices, size: 48)),
+                      ),
                     ),
                   ),
 

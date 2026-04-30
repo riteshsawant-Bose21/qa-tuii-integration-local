@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart' show protected;
@@ -11,12 +13,14 @@ class FileTransferState extends Equatable {
   final TransferStatus status;
   final int sent; // upload: bytes sent,    download: bytes received
   final int total; // upload: total bytes,   download: total bytes
+  final String? error;
   final String? errorMessage;
 
   const FileTransferState({
     this.status = TransferStatus.idle,
     this.sent = 0,
     this.total = 0,
+    this.error,
     this.errorMessage,
   });
 
@@ -26,16 +30,18 @@ class FileTransferState extends Equatable {
     TransferStatus? status,
     int? sent,
     int? total,
+    String? error,
     String? errorMessage,
   }) => FileTransferState(
     status: status ?? this.status,
     sent: sent ?? this.sent,
     total: total ?? this.total,
+    error: error ?? this.error,
     errorMessage: errorMessage ?? this.errorMessage,
   );
 
   @override
-  List<Object?> get props => [status, sent, total, errorMessage];
+  List<Object?> get props => [status, sent, total, error, errorMessage];
 }
 
 class FileDownloadCubit extends FileTransferCubit {
@@ -50,15 +56,32 @@ class FileDownloadCubit extends FileTransferCubit {
 
   @override
   Future<void> start() => runTransfer(() async {
-    await dio.download(
-      url,
-      savePath,
-      cancelToken: cancelToken,
-      onReceiveProgress: (rec, tot) {
-        emit(state.copyWith(sent: rec, total: tot));
-      },
-      options: Options(headers: {'Accept': '*/*'}),
-    );
+    try {
+      final response = await dio.download(
+        url,
+        savePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (rec, tot) {
+          emit(state.copyWith(sent: rec, total: tot));
+        },
+        options: Options(
+          headers: {'Accept': '*/*'},
+          validateStatus: (status) => true, // Don't throw on any status code
+        ),
+      );
+
+      if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) {
+        final errorMsg = response.data["message"] ?? "Failed to download file";
+        log("FileDownloadCubit (HTTP ${response.statusCode}) => $errorMsg");
+        throw DioException(requestOptions: response.requestOptions, response: response, message: errorMsg);
+      }
+    } on DioException catch (e) {
+      log("FileDownloadCubit (DioException) => ${e.message}");
+      rethrow; // Let the error be handled by runTransfer's catch block
+    } catch (e) {
+      log("FileDownloadCubit => $e");
+      rethrow; // Let the error be handled by runTransfer's catch block
+    }
   });
 }
 
@@ -76,18 +99,35 @@ class FileUploadCubit extends FileTransferCubit {
 
   @override
   Future<void> start() => runTransfer(() async {
-    // final file = File(filePath);
-    // final fileSize = await file.length();
+    try {
+      final response = await dio.post(
+        apiUrl,
+        data: data,
+        cancelToken: cancelToken,
+        onSendProgress: (sent, total) {
+          emit(state.copyWith(sent: sent, total: total));
+        },
+        options: Options(
+          headers: headers,
+          validateStatus: (status) => true, // Don't throw on any status code
+        ),
+      );
 
-    await dio.post(
-      apiUrl,
-      data: data,
-      cancelToken: cancelToken,
-      onSendProgress: (sent, tot) => emit(state.copyWith(sent: sent, total: tot)),
-      options: Options(
-        headers: headers,
-      ),
-    );
+      if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) {
+        final errorMsg = response.data["message"] ?? "Failed to upload file";
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: errorMsg,
+        );
+      }
+    } on DioException catch (e) {
+      log("FileUploadCubit (DioException) => ${e.message}");
+      rethrow; // Let the error be handled by runTransfer's catch block.
+    } catch (e) {
+      log("FileUploadCubit (UnknownException) => $e");
+      rethrow; // Let the error be handled by runTransfer's catch block.
+    }
   });
 }
 
@@ -118,10 +158,17 @@ abstract class FileTransferCubit extends Cubit<FileTransferState> {
       if (CancelToken.isCancel(e)) {
         emit(state.copyWith(status: TransferStatus.cancelled));
       } else {
-        emit(state.copyWith(status: TransferStatus.failed, errorMessage: e.message));
+        emit(
+          state.copyWith(
+            status: TransferStatus.failed,
+            error: e.response?.data["error"] ?? "Error occurred",
+            errorMessage: e.response?.data["message"] ?? e.message,
+          ),
+        );
       }
     } catch (e) {
-      emit(state.copyWith(status: TransferStatus.failed, errorMessage: e.toString()));
+      log("FileTransferCubit (UnknownException) => ${e.toString()}");
+      emit(state.copyWith(status: TransferStatus.failed, error: "Process error", errorMessage: e.toString()));
     } finally {
       dio.close();
     }

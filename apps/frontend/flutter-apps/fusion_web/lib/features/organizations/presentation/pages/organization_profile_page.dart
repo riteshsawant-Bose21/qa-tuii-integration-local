@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
@@ -62,27 +64,66 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
     return BlocProvider.value(
       value: _viewModel,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back Button and Header
-                _buildHeader(),
+                // Back Button
+                TextButton.icon(
+                  onPressed: () => context.go(AppConstants.organizationsRoute),
+                  icon: Icon(
+                    Icons.arrow_back,
+                    size: 18,
+                    color: context.colorScheme.elevation6,
+                  ),
+                  label: const FusionAppText(text: "Back to Organizations"),
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.hovered)) {
+                        return context.colorScheme.elevation2;
+                      }
+                      return Colors.transparent;
+                    }),
+                    padding: WidgetStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    shape: WidgetStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 24),
 
-                // Organization Info and Metrics
-                _buildOrganizationInfo(),
-                const SizedBox(height: 32),
-
-                // Users Section
-                _buildUsersSection(),
-                const SizedBox(height: 32),
-
-                // Projects Section
-                _buildProjectsSection(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 24),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: _buildOrgDetailsCard()),
+                              const SizedBox(width: 24),
+                              Expanded(child: _buildActivityCard()),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildUsersSection(),
+                        const SizedBox(height: 24),
+                        _buildProjectsSection(),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -92,28 +133,6 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => context.go(AppConstants.organizationsRoute),
-          icon: const Icon(Icons.arrow_back),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          'Back to Organizations',
-          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOrganizationInfo() {
     return BlocBuilder<
       OrganizationsViewModel,
       BaseState<List<OrganizationEntity>>
@@ -122,161 +141,200 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
         final organization = _viewModel.selectedOrganization;
 
         if (organization == null) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(
+              color: context.colorScheme.primaryColor,
+            ),
+          );
         }
 
-        return Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade200,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+        final typeColor = _getTypeColor(organization.type);
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: typeColor.withOpacity(0.15),
+              child: Text(
+                organization.name.substring(0, 2).toUpperCase(),
+                style: GoogleFonts.montserrat(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: typeColor,
+                ),
               ),
-            ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FusionAppText(
+                    text: organization.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: typeColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          organization.type.displayName,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: typeColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.elevation3,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          organization.region.displayName,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: context.colorScheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (organization.email != null)
+                    FusionAppText(text: organization.email!),
+                  if (organization.phone != null)
+                    FusionAppText(text: organization.phone!),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _card({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FusionAppText(
+            text: title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 160,
+            child: FusionAppText(
+              text: label,
+              style: TextStyle(color: context.colorScheme.elevation6),
+            ),
+          ),
+          Expanded(child: FusionAppText(text: value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBox(String title, int value, Color bg, Color textColor) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FusionAppText(
+              text: title,
+              style: TextStyle(color: textColor),
+            ),
+            const SizedBox(height: 6),
+            FusionAppText(
+              text: "$value",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrgDetailsCard() {
+    return BlocBuilder<
+      OrganizationsViewModel,
+      BaseState<List<OrganizationEntity>>
+    >(
+      builder: (context, state) {
+        final organization = _viewModel.selectedOrganization;
+
+        if (organization == null) {
+          return _card(
+            title: "Organization Details",
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return _card(
+          title: "Organization Details",
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Organization Header
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: _getTypeColor(
-                      organization.type,
-                    ).withOpacity(0.1),
-                    child: Text(
-                      organization.name.substring(0, 1).toUpperCase(),
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: _getTypeColor(organization.type),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          organization.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey[900],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getTypeColor(
-                                  organization.type,
-                                ).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                organization.type.displayName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: _getTypeColor(organization.type),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '• ${organization.region.displayName}',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              _row("Type", organization.type.displayName),
+              _row("Region", organization.region.displayName),
+              if (organization.description != null)
+                _row("Description", organization.description!),
+              if (organization.address != null)
+                _row("Address", organization.address!),
+              if (organization.website != null)
+                _row("Website", organization.website!),
+              _row(
+                "Created",
+                DateFormat("MMM dd, yyyy").format(organization.createdAt),
               ),
-
-              if (organization.description != null) ...[
-                const SizedBox(height: 20),
-                Text(
-                  organization.description!,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: Colors.grey[700],
-                    height: 1.5,
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 32),
-
-              // Metrics Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Total Users',
-                      organization.userCount.toString(),
-                      Icons.people_outline,
-                      Colors.blue.shade100,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Ongoing Projects',
-                      organization.ongoingProjectsCount.toString(),
-                      Icons.work_outline,
-                      Colors.orange.shade100,
-                      Colors.orange.shade700,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Completed Projects',
-                      organization.completedProjectsCount.toString(),
-                      Icons.check_circle_outline,
-                      Colors.green.shade100,
-                      Colors.green.shade700,
-                    ),
-                  ),
-                ],
-              ),
-
-              // Contact Information
-              if (organization.email != null ||
-                  organization.phone != null ||
-                  organization.address != null) ...[
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 20),
-                Text(
-                  'Contact Information',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[900],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildContactInfo(organization),
-              ],
             ],
           ),
         );
@@ -284,96 +342,75 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
     );
   }
 
-  Widget _buildMetricCard(
-    String title,
-    String value,
-    IconData icon,
-    Color backgroundColor,
-    Color iconColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: iconColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor, size: 24),
+  Widget _buildActivityCard() {
+    return BlocBuilder<
+      OrganizationsViewModel,
+      BaseState<List<OrganizationEntity>>
+    >(
+      builder: (context, state) {
+        final organization = _viewModel.selectedOrganization;
+
+        return _card(
+          title: "Activity Overview",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  children: [
+                    _statBox(
+                      "Total Users",
+                      organization?.userCount ?? 0,
+                      context.colorScheme.elevation3,
+                      context.colorScheme.white,
+                    ),
+                    _statBox(
+                      "Ongoing Projects",
+                      organization?.ongoingProjectsCount ?? 0,
+                      context.colorScheme.elevation3,
+                      context.colorScheme.white,
+                    ),
+                    _statBox(
+                      "Completed",
+                      organization?.completedProjectsCount ?? 0,
+                      context.colorScheme.elevation3,
+                      context.colorScheme.white,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const FusionAppText(
+                text: "Contact Information",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              if (organization?.email != null)
+                _contactRow(Icons.email_outlined, organization!.email!),
+              if (organization?.phone != null)
+                _contactRow(Icons.phone_outlined, organization!.phone!),
+              if (organization?.address != null)
+                _contactRow(Icons.location_on_outlined, organization!.address!),
+              if (organization?.website != null)
+                _contactRow(Icons.web_outlined, organization!.website!),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: iconColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildContactInfo(OrganizationEntity organization) {
-    return Column(
-      children: [
-        if (organization.email != null)
-          _buildContactItem(Icons.email_outlined, 'Email', organization.email!),
-        if (organization.phone != null)
-          _buildContactItem(Icons.phone_outlined, 'Phone', organization.phone!),
-        if (organization.address != null)
-          _buildContactItem(
-            Icons.location_on_outlined,
-            'Address',
-            organization.address!,
-          ),
-        if (organization.website != null)
-          _buildContactItem(
-            Icons.web_outlined,
-            'Website',
-            organization.website!,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildContactItem(IconData icon, String label, String value) {
+  Widget _contactRow(IconData icon, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            '$label: ',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
+          Icon(icon, size: 18, color: context.colorScheme.elevation6),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[700]),
+            child: FusionAppText(
+              text: value,
+              style: TextStyle(color: context.colorScheme.elevation6),
             ),
           ),
         ],
@@ -387,40 +424,9 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
       BaseState<List<OrganizationEntity>>
     >(
       builder: (context, state) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade200,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                    Text(
-                      'Users (${_viewModel.organizationUsers.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[900],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 0),
-              _buildUsersTable(),
-            ],
-          ),
+        return _card(
+          title: "Users (${_viewModel.organizationUsers.length})",
+          child: _buildUsersTable(),
         );
       },
     );
@@ -435,11 +441,18 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.people_outline, size: 48, color: Colors.grey.shade400),
+              Icon(
+                Icons.people_outline,
+                size: 48,
+                color: context.colorScheme.elevation6,
+              ),
               const SizedBox(height: 16),
-              Text(
-                'No users found',
-                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
+              FusionAppText(
+                text: "No users found",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: context.colorScheme.elevation6,
+                ),
               ),
             ],
           ),
@@ -451,39 +464,69 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
       height: 300,
       child: DataTable2(
         columnSpacing: 12,
-        horizontalMargin: 20,
+        horizontalMargin: 24,
         minWidth: 600,
+        dataRowHeight: 60,
+        headingRowHeight: 56,
+        headingRowColor: WidgetStateProperty.all(
+          context.colorScheme.elevation3,
+        ),
+        border: TableBorder(
+          horizontalInside: BorderSide(
+            color: context.colorScheme.strokeLight,
+            width: 1,
+          ),
+        ),
         columns: [
           DataColumn2(
             label: Text(
-              'Name',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Name",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.L,
           ),
           DataColumn2(
             label: Text(
-              'Email',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Email",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.L,
           ),
           DataColumn2(
             label: Text(
-              'Role',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Role",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.M,
           ),
           DataColumn2(
             label: Text(
-              'Joined',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Joined",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.M,
           ),
         ],
         rows: users.map((user) {
+          final displayName = user.name.isEmpty
+              ? user.email.split('@').first
+              : user.name;
           return DataRow2(
             cells: [
               DataCell(
@@ -491,31 +534,26 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: Colors.blue.shade100,
+                      backgroundColor: context.colorScheme.elevation3,
                       child: Text(
-                        user.name.substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.inter(
+                        displayName.substring(0, 1).toUpperCase(),
+                        style: GoogleFonts.montserrat(
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700,
+                          color: context.colorScheme.textPrimary,
                           fontSize: 12,
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          // Navigate to user profile or handle click
-                          context.go('${AppConstants.usersRoute}/${user.id}');
-                        },
-                        child: Text(
-                          user.name,
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue.shade700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      child: Text(
+                        displayName,
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: context.colorScheme.textPrimary,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -524,36 +562,39 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
               DataCell(
                 Text(
                   user.email,
-                  style: GoogleFonts.inter(),
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: context.colorScheme.elevation6,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               DataCell(
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 10,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: context.colorScheme.elevation3,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     user.primaryRole,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.montserrat(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Colors.grey.shade700,
+                      color: context.colorScheme.textPrimary,
                     ),
                   ),
                 ),
               ),
               DataCell(
                 Text(
-                  DateFormat('MMM dd, yyyy').format(user.createdAt),
-                  style: GoogleFonts.inter(
+                  DateFormat("MMM dd, yyyy").format(user.createdAt),
+                  style: GoogleFonts.montserrat(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
@@ -570,36 +611,9 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
       BaseState<List<OrganizationEntity>>
     >(
       builder: (context, state) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade200,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Projects (${_viewModel.organizationProjects.length})',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[900],
-                  ),
-                ),
-              ),
-              const Divider(height: 0),
-              _buildProjectsTable(),
-            ],
-          ),
+        return _card(
+          title: "Projects (${_viewModel.organizationProjects.length})",
+          child: _buildProjectsTable(),
         );
       },
     );
@@ -614,11 +628,18 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.work_outline, size: 48, color: Colors.grey.shade400),
+              Icon(
+                Icons.work_outline,
+                size: 48,
+                color: context.colorScheme.elevation6,
+              ),
               const SizedBox(height: 16),
-              Text(
-                'No projects found',
-                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
+              FusionAppText(
+                text: "No projects found",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: context.colorScheme.elevation6,
+                ),
               ),
             ],
           ),
@@ -630,46 +651,79 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
       height: 300,
       child: DataTable2(
         columnSpacing: 12,
-        horizontalMargin: 20,
+        horizontalMargin: 24,
         minWidth: 800,
+        dataRowHeight: 60,
+        headingRowHeight: 56,
+        headingRowColor: WidgetStateProperty.all(
+          context.colorScheme.elevation3,
+        ),
+        border: TableBorder(
+          horizontalInside: BorderSide(
+            color: context.colorScheme.strokeLight,
+            width: 1,
+          ),
+        ),
         columns: [
           DataColumn2(
             label: Text(
-              'Project Name',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Project Name",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.L,
           ),
           DataColumn2(
             label: Text(
-              'Region',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Region",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.M,
           ),
           DataColumn2(
             label: Text(
-              'Status',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Status",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.S,
           ),
           DataColumn2(
             label: Text(
-              'Type',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Type",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.S,
           ),
           DataColumn2(
             label: Text(
-              'Last Updated',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              "Last Updated",
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
             size: ColumnSize.M,
           ),
         ],
         rows: projects.map((project) {
+          final statusColor = _getProjectStatusColor(project.status);
+
           return DataRow2(
             cells: [
               DataCell(
@@ -677,53 +731,54 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to project detail or handle click
-                        context.go(
-                          '${AppConstants.projectsRoute}/${project.id}',
-                        );
-                      },
-                      child: Text(
-                        project.name,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.blue.shade700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      project.name,
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: context.colorScheme.textPrimary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (project.description != null)
+                    if (project.description != null) ...[
+                      const SizedBox(height: 2),
                       Text(
                         project.description!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.montserrat(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: context.colorScheme.elevation6,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ],
                   ],
                 ),
               ),
-              DataCell(Text(project.region, style: GoogleFonts.inter())),
+              DataCell(
+                Text(
+                  project.region,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: context.colorScheme.textPrimary,
+                  ),
+                ),
+              ),
               DataCell(
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 10,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getProjectStatusColor(
-                      project.status,
-                    ).withOpacity(0.1),
+                    color: statusColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     project.status.displayName,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.montserrat(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: _getProjectStatusColor(project.status),
+                      color: statusColor,
                     ),
                   ),
                 ),
@@ -731,18 +786,18 @@ class _OrganizationProfilePageState extends State<OrganizationProfilePage> {
               DataCell(
                 Text(
                   project.type.displayName,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.montserrat(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),
               DataCell(
                 Text(
-                  DateFormat('MMM dd, yyyy').format(project.lastUpdated),
-                  style: GoogleFonts.inter(
+                  DateFormat("MMM dd, yyyy").format(project.lastUpdated),
+                  style: GoogleFonts.montserrat(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: context.colorScheme.elevation6,
                   ),
                 ),
               ),

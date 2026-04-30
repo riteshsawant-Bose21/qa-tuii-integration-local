@@ -62,18 +62,20 @@ class AuthorizationResponse {
 class ApiUserInfo {
   final String id;
   final String email;
+  final String? name;
 
-  ApiUserInfo({required this.id, required this.email});
+  ApiUserInfo({required this.id, required this.email, this.name});
 
   factory ApiUserInfo.fromJson(Map<String, dynamic> json) {
     return ApiUserInfo(
       id: json['id'] as String,
       email: json['email'] as String,
+      name: json['name'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'email': email};
+    return {'id': id, 'email': email, 'name': name};
   }
 }
 
@@ -129,9 +131,11 @@ extension AuthorizationResponseExtension on AuthorizationResponse {
   auth.UserEntity toUserEntity() {
     return auth.UserEntity(
       id: user.id,
-      name: user.email.split('@').first, // Extract name from email
+      name: (user.name != null && user.name!.isNotEmpty)
+          ? user.name!
+          : user.email.split('@').first,
       email: user.email,
-      picture: null, // No avatar in API response
+      picture: null,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:fusion_web/features/devices/presentation/pages/device_detail_pag
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
 import 'package:fusion_web/features/organizations/presentation/pages/organizations_page.dart';
 import 'package:fusion_web/features/organizations/presentation/pages/organization_profile_page.dart';
+import 'package:fusion_web/features/software_update/presentation/pages/software_update_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
@@ -24,7 +25,8 @@ enum DashboardTabs {
   users("Users"),
   organizations("Organizations"),
   roles("Roles"),
-  settings("Settings");
+  settings("Settings"),
+  softwareUpdate("Software Update");
 
   final String title;
   const DashboardTabs(this.title);
@@ -45,6 +47,8 @@ enum DashboardTabs {
         return AppConstants.rolesRoute;
       case DashboardTabs.settings:
         return AppConstants.settingsRoute;
+      case DashboardTabs.softwareUpdate:
+        return AppConstants.softwareUpdateRoute;
     }
   }
 }
@@ -138,13 +142,17 @@ final GoRouter appRouter = GoRouter(
 
         GoRoute(
           path: AppConstants.organizationsRoute,
-          builder: (_, __) => const OrganizationsPage(),
-        ),
-
-        GoRoute(
-          path: AppConstants.organizationsRoute,
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: OrganizationsPage()),
+        ),
+        GoRoute(
+          path: '${AppConstants.organizationsRoute}/:id',
+          pageBuilder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return NoTransitionPage(
+              child: OrganizationProfilePage(organizationId: id),
+            );
+          },
         ),
 
         GoRoute(
@@ -156,6 +164,11 @@ final GoRouter appRouter = GoRouter(
           path: AppConstants.settingsRoute,
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: SettingsPage()),
+        ),
+        GoRoute(
+          path: AppConstants.softwareUpdateRoute,
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: SoftwareUpdatePage()),
         ),
 
         GoRoute(
@@ -189,6 +202,9 @@ DashboardTabs _getInitialTab(String path) {
   }
   if (path.startsWith(AppConstants.settingsRoute)) {
     return DashboardTabs.settings;
+  }
+  if (path.startsWith(AppConstants.softwareUpdateRoute)) {
+    return DashboardTabs.softwareUpdate;
   }
   return DashboardTabs.dashboard;
 }

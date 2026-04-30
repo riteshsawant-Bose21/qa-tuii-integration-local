@@ -12,6 +12,7 @@ class Device {
   final String lastSeen;
   final String zone;
   final String equipmentLocation;
+  final String registeredAt;
   final String firmware;
   final String macAddress;
   final bool online;
@@ -35,6 +36,7 @@ class Device {
     required this.lastSeen,
     required this.zone,
     required this.equipmentLocation,
+    required this.registeredAt,
     required this.firmware,
     required this.macAddress,
     required this.online,
@@ -56,6 +58,7 @@ class Device {
       location: json['location']?.toString() ?? '',
       zone: json['zone']?.toString() ?? '',
       equipmentLocation: json['equipmentLocation']?.toString() ?? '',
+      registeredAt: json['registeredAt']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
       image: json['image']?.toString() ?? '',
       lastSeen: json['lastSeen']?.toString() ?? '',

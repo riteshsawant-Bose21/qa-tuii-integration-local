@@ -63,12 +63,12 @@
 //   }
 // }
 
-
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
+import 'package:fusion_web/core/services/service_locator.dart';
 
 class SidebarViewModel extends BaseViewModel<DashboardTabs?> {
-  String _userName = 'Sujith Devadas';
+  String _userName = '';
   String _appName = 'Fusion Web';
   bool _hasNotifications = true;
 
@@ -84,6 +84,10 @@ class SidebarViewModel extends BaseViewModel<DashboardTabs?> {
   }
 
   void initialize(DashboardTabs? initialTab) {
+    final authUser = ServiceLocator().authViewModel.currentUser;
+    if (authUser != null) {
+      _userName = authUser.name;
+    }
     setLoaded(initialTab);
   }
 
