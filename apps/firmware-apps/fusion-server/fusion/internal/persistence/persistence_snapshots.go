@@ -5,7 +5,6 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/utils"
-	"time"
 
 	json "github.com/goccy/go-json"
 
@@ -77,23 +76,34 @@ func (p *Persistence) ActivateSnapshot(snapshotName string) error {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
+	// Persist the newly activated state immediately so restart recovery
+	// prefers the same state that is now active in memory.
+	if err := p.SaveState(); err != nil {
+		return fmt.Errorf("failed to persist activated snapshot state: %w", err)
+	}
+
 	logging.GetLogger().Debug(
 		"Activated snapshot '%s': Epoch=%d Version=%d",
 		snapshotName, newVersion.Epoch, newVersion.Counter,
 	)
-
-	// Mark last save time
-	p.mutex.Lock()
-	p.lastSave = time.Now().UTC()
-	p.mutex.Unlock()
 
 	return nil
 }
 
 // DeleteSnapshot removes the snapshot and restores the default if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotName string) error {
+	if snapshotName == keyDefaultSnapshot {
+		return fmt.Errorf("cannot delete default snapshot %q", keyDefaultSnapshot)
+	}
+	exists, err := p.SnapshotExists(snapshotName)
+	if err != nil {
+		return fmt.Errorf("failed to check snapshot %q existence: %w", snapshotName, err)
+	}
+	if !exists {
+		return fmt.Errorf("%w: snapshot %q does not exist", ErrNotFound, snapshotName)
+	}
 
-	exists, err := p.keyExists(bucketSnapshots, snapshotName)
+	exists, err = p.keyExists(bucketSnapshots, snapshotName)
 	if err != nil {
 		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotName, err)
 	}
@@ -141,7 +151,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 			return fmt.Errorf("failed to check default snapshot existence: %w", err)
 		}
 		if !exists {
-			return fmt.Errorf("default snapshot %q does not exist", keyDefaultSnapshot)
+			return fmt.Errorf("%w: default snapshot %q does not exist", ErrNotFound, keyDefaultSnapshot)
 		}
 
 		if err := p.ActivateSnapshot(keyDefaultSnapshot); err != nil {
@@ -240,7 +250,7 @@ func (p *Persistence) GetSnapshot(snapshotName string) (any, error) {
 	}
 
 	if ps == nil {
-		return nil, fmt.Errorf("snapshot %s does not exist", snapshotName)
+		return nil, fmt.Errorf("%w: snapshot %q does not exist", ErrNotFound, snapshotName)
 	}
 
 	return utils.FlattenState(ps.State), nil
@@ -290,16 +300,9 @@ func (p *Persistence) LoadActiveSnapshot() error {
 		return fmt.Errorf("failed to restore active snapshot %q: %w", snapshotName, err)
 	}
 
-	// Save version from metadata as authoritative (existing semantics)
-	p.stateManager.SetVersion(metadata.Version)
-
+	version := p.stateManager.GetVersion()
 	logger.Debug("Restored snapshot on startup: %s %d %d",
-		snapshotName, metadata.Version.Epoch, metadata.Version.Counter)
-
-	// Seed the active bucket so future restarts bypass snapshots
-	if err := p.SaveState(); err != nil {
-		logger.Warn("Failed to persist initial active state after restoring snapshot %q: %v", snapshotName, err)
-	}
+		snapshotName, version.Epoch, version.Counter)
 
 	return nil
 }
