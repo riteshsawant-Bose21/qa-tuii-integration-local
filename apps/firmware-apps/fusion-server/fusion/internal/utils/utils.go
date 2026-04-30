@@ -22,6 +22,47 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// CoerceStringSlice coerces a map value (from JSON deserialization or direct assignment)
+// into a []string. Handles []string and []interface{}.
+func CoerceStringSlice(v any) []string {
+	if v == nil {
+		return []string{}
+	}
+	switch val := v.(type) {
+	case []string:
+		return normalizeStringSlice(val)
+	case []interface{}:
+		result := make([]string, 0, len(val))
+		for _, item := range val {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return normalizeStringSlice(result)
+	}
+	return []string{}
+}
+
+func normalizeStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		result = append(result, value)
+	}
+	if len(result) == 0 {
+		return []string{}
+	}
+
+	return result
+}
+
 // FileExists returns true if the given path exists and is not a directory.
 func FileExists(path string) (bool, error) {
 	info, err := os.Stat(path)
