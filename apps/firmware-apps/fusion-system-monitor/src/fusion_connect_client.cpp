@@ -553,13 +553,37 @@ static bool read_phc_ns(uint64_t *out_ns)
     return true;
 }
 
+static bool normalize_gm_identity(const std::string& raw, std::string *out)
+{
+    if (!out) return false;
+
+    std::string cleaned;
+    for (char c : raw) {
+        if (c == '.' || c == ':' || c == '-') continue;
+        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+            return false;
+        }
+        cleaned += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+
+    if (cleaned.length() != 16) {
+        return false;
+    }
+
+    *out = cleaned;
+    return true;
+}
+
 static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
-                                long long *master_offset, bool *master_offset_valid)
+                                long long *master_offset, bool *master_offset_valid,
+                                std::string *gm_identity, bool *gm_identity_valid)
 {
     if (gm_present) *gm_present = false;
     if (gm_present_valid) *gm_present_valid = false;
     if (master_offset) *master_offset = 0;
     if (master_offset_valid) *master_offset_valid = false;
+    if (gm_identity) gm_identity->clear();
+    if (gm_identity_valid) *gm_identity_valid = false;
 
     FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
     if (!fp) return false;
@@ -601,6 +625,19 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
                 *master_offset = val;
                 *master_offset_valid = true;
                 found_any = true;
+            }
+        }
+
+        auto gi_pos = line.find("gmIdentity");
+        if (gi_pos != std::string::npos && gm_identity && gm_identity_valid) {
+            std::string v = trim(line.substr(gi_pos + std::strlen("gmIdentity")));
+            std::string normalized;
+            if (normalize_gm_identity(v, &normalized)) {
+                *gm_identity = normalized;
+                *gm_identity_valid = true;
+                found_any = true;
+            } else if (!v.empty()) {
+                SPDLOG_WARN("Invalid gmIdentity in TIME_STATUS_NP: {}", v);
             }
         }
     }
@@ -727,6 +764,11 @@ private:
     bool ptp_force_reanchor;
     bool ptp_force_reanchor_have_armed_pps_seq;
     bool ptp_have_timing_pps_seq;
+    bool ptp_have_gm_identity;
+    bool ptp_have_pending_gm_identity;
+    int ptp_pending_gm_lock_streak;
+    std::string ptp_gm_identity;
+    std::string ptp_pending_gm_identity;
     uint32_t ptp_anchor_armed_pps_seq;
     uint32_t ptp_force_reanchor_armed_pps_seq;
     uint32_t ptp_last_timing_pps_seq;
@@ -762,6 +804,8 @@ private:
     void reset_timing_session(const char *reason);
     void reset_timing_holdover(const char *reason);
     void maybe_set_phc_anchor();
+    void clear_ptp_gm_identity_tracking();
+    void clear_pending_ptp_gm_identity();
 
     MODULE_DECLARE(FusionConnectClient);
 };
@@ -777,7 +821,9 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_anchor_armed(false),
       ptp_anchor_allow_pre_gm_lock(false), ptp_anchor_have_armed_pps_seq(false),
       ptp_force_reanchor(false), ptp_force_reanchor_have_armed_pps_seq(false),
-      ptp_have_timing_pps_seq(false), ptp_anchor_armed_pps_seq(0),
+      ptp_have_timing_pps_seq(false), ptp_have_gm_identity(false),
+      ptp_have_pending_gm_identity(false), ptp_pending_gm_lock_streak(0),
+      ptp_gm_identity(""), ptp_pending_gm_identity(""), ptp_anchor_armed_pps_seq(0),
       ptp_force_reanchor_armed_pps_seq(0),
       ptp_last_timing_pps_seq(0), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
@@ -1293,6 +1339,20 @@ void FusionConnectClient::maybe_start_manager()
     if (reply.data) free(reply.data);
 }
 
+void FusionConnectClient::clear_pending_ptp_gm_identity()
+{
+    ptp_have_pending_gm_identity = false;
+    ptp_pending_gm_identity.clear();
+    ptp_pending_gm_lock_streak = 0;
+}
+
+void FusionConnectClient::clear_ptp_gm_identity_tracking()
+{
+    ptp_have_gm_identity = false;
+    ptp_gm_identity.clear();
+    clear_pending_ptp_gm_identity();
+}
+
 void FusionConnectClient::reset_timing_session(const char *reason)
 {
     if (!nl_reset_timing_session(client)) {
@@ -1389,7 +1449,10 @@ void FusionConnectClient::update_ptp_state()
     bool gm_present_valid = false;
     long long master_offset = 0;
     bool master_offset_valid = false;
-    if (!poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid)) {
+    std::string gm_identity;
+    bool gm_identity_valid = false;
+    if (!poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid,
+                             &gm_identity, &gm_identity_valid)) {
         SPDLOG_WARN("PTP status poll failed; keeping previous sync state");
         return;
     }
@@ -1415,6 +1478,7 @@ void FusionConnectClient::update_ptp_state()
         ptp_force_reanchor_have_armed_pps_seq = false;
         ptp_force_reanchor_armed_pps_seq = 0;
         ptp_wait_lock_from_holdover = false;
+        clear_ptp_gm_identity_tracking();
         reset_timing_session("reset state");
         ptp_state = PtpState::WAIT_GM;
         ptp_state_since = now;
@@ -1441,6 +1505,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = false;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_LOCK;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM detected; waiting for lock");
@@ -1459,6 +1524,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
                 SPDLOG_INFO("No GM after {}s; assuming GM role", GM_WAIT.count());
@@ -1482,6 +1548,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_GM;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM lost before lock; restarting GM detection");
@@ -1512,6 +1579,14 @@ void FusionConnectClient::update_ptp_state()
                     start_timing_session(use_holdover_reset ?
                                          TimingResetType::Holdover :
                                          TimingResetType::Session);
+                    clear_pending_ptp_gm_identity();
+                    if (gm_identity_valid) {
+                        ptp_gm_identity = gm_identity;
+                        ptp_have_gm_identity = true;
+                    } else {
+                        ptp_have_gm_identity = false;
+                        ptp_gm_identity.clear();
+                    }
                 }
             } else {
                 ptp_good_streak = 0;
@@ -1536,6 +1611,7 @@ void FusionConnectClient::update_ptp_state()
                     ptp_force_reanchor_have_armed_pps_seq = false;
                     ptp_force_reanchor_armed_pps_seq = 0;
                     ptp_wait_lock_from_holdover = false;
+                    clear_ptp_gm_identity_tracking();
                     ptp_state = PtpState::WAIT_LOCK;
                     ptp_state_since = now;
                     SPDLOG_INFO("GM appeared; switching to follower and waiting for lock");
@@ -1556,10 +1632,64 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::HOLDOVER;
                 ptp_state_since = now;
                 SPDLOG_WARN("GM lost; keeping timing session active during GPT holdover");
                 break;
+            }
+
+            if (gm_identity_valid) {
+                if (!ptp_have_gm_identity) {
+                    ptp_gm_identity = gm_identity;
+                    ptp_have_gm_identity = true;
+                    clear_pending_ptp_gm_identity();
+                    SPDLOG_INFO("Tracking PTP GM identity {}", ptp_gm_identity);
+                } else if (gm_identity != ptp_gm_identity) {
+                    if (!ptp_have_pending_gm_identity ||
+                        ptp_pending_gm_identity != gm_identity) {
+                        ptp_pending_gm_identity = gm_identity;
+                        ptp_have_pending_gm_identity = true;
+                        ptp_pending_gm_lock_streak = 0;
+                        SPDLOG_WARN("PTP GM identity changed from {} to {}; waiting for PHC alignment before re-anchor",
+                                    ptp_gm_identity, ptp_pending_gm_identity);
+                    }
+
+                    if (master_offset_valid) {
+                        const long long best_abs = master_offset ? std::llabs(master_offset) : 0;
+                        if (best_abs <= OFFSET_LOCK_NS) {
+                            ptp_pending_gm_lock_streak++;
+                        } else {
+                            ptp_pending_gm_lock_streak = 0;
+                        }
+
+                        if (ptp_pending_gm_lock_streak >= LOCK_CONSEC) {
+                            const std::string previous_gm_identity = ptp_gm_identity;
+                            ptp_gm_identity = ptp_pending_gm_identity;
+                            clear_pending_ptp_gm_identity();
+                            ptp_anchor_pending = false;
+                            ptp_anchor_armed = false;
+                            ptp_anchor_allow_pre_gm_lock = false;
+                            ptp_anchor_have_armed_pps_seq = false;
+                            ptp_have_timing_pps_seq = false;
+                            ptp_anchor_armed_pps_seq = 0;
+                            ptp_last_timing_pps_seq = 0;
+                            ptp_force_reanchor = true;
+                            ptp_force_reanchor_have_armed_pps_seq = false;
+                            ptp_force_reanchor_armed_pps_seq = 0;
+                            SPDLOG_WARN("PTP GM identity changed from {} to {}; PHC aligned after {} polls, forcing re-anchor",
+                                        previous_gm_identity, ptp_gm_identity, LOCK_CONSEC);
+                        }
+                    } else {
+                        ptp_pending_gm_lock_streak = 0;
+                    }
+                } else if (ptp_have_pending_gm_identity) {
+                    SPDLOG_INFO("PTP GM identity returned to {}; canceling pending re-anchor",
+                                ptp_gm_identity);
+                    clear_pending_ptp_gm_identity();
+                }
+            } else if (ptp_have_pending_gm_identity) {
+                ptp_pending_gm_lock_streak = 0;
             }
 
             if (master_offset_valid) {
@@ -1601,6 +1731,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = true;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_LOCK;
                 ptp_state_since = now;
                 SPDLOG_INFO("GM detected during holdover; waiting for lock");
@@ -1620,6 +1751,7 @@ void FusionConnectClient::update_ptp_state()
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = false;
+                clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
                 SPDLOG_INFO("No GM during holdover after {}s; assuming GM role and keeping timing session active",
@@ -1633,6 +1765,7 @@ void FusionConnectClient::update_ptp_state()
                     ptp_role_flag = -1;
                     ptp_state = PtpState::WAIT_GM;
                     ptp_state_since = now;
+                    clear_ptp_gm_identity_tracking();
                     SPDLOG_WARN("GPT holdover expired after GM loss; restarting GM detection");
                     reset_timing_session("GPT holdover expired after GM loss");
                 }
@@ -1699,7 +1832,7 @@ void FusionConnectClient::maybe_set_phc_anchor()
         pps_seq_advanced(ptp_anchor_armed_pps_seq, pps_seq) &&
         epoch_valid && aligned) {
         if (ptp_force_reanchor) {
-            SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after GM-to-follower transition",
+            SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after PTP GM change",
                         pps_seq);
             ptp_force_reanchor = false;
             ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1738,7 +1871,7 @@ void FusionConnectClient::maybe_set_phc_anchor()
 
     if (!ptp_anchor_pending && !ptp_anchor_armed) {
         if (ptp_force_reanchor) {
-            SPDLOG_WARN("Forcing PHC re-anchor after GM-to-follower transition");
+            SPDLOG_WARN("Forcing PHC re-anchor after PTP GM change");
         } else {
             SPDLOG_WARN("GPT timing needs PHC re-anchor while PTP is synced");
         }
@@ -1776,7 +1909,7 @@ void FusionConnectClient::maybe_set_phc_anchor()
         if (ptp_force_reanchor) {
             ptp_force_reanchor_have_armed_pps_seq = true;
             ptp_force_reanchor_armed_pps_seq = pps_seq;
-            SPDLOG_INFO("Armed forced PHC anchor for next PPS at {} ns after GM-to-follower transition (lead {} ns, pps_seq={})",
+            SPDLOG_INFO("Armed forced PHC anchor for next PPS at {} ns after PTP GM change (lead {} ns, pps_seq={})",
                         next_pps_ns, delta, pps_seq);
         } else {
             SPDLOG_INFO("Armed PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
