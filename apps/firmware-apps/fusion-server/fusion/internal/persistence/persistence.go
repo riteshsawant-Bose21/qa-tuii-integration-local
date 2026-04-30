@@ -151,7 +151,11 @@ func defaultBoltOptions() *bbolt.Options {
 func (p *Persistence) Close() {
 	p.closeOnce.Do(func() {
 		if err := p.SaveState(); err != nil {
-			logging.GetLogger().Error("Error saving state during close: %v", err)
+			if errors.Is(err, ErrNotFound) {
+				logging.GetLogger().Debug("Skipping close-time state save: %v", err)
+			} else {
+				logging.GetLogger().Error("Error saving state during close: %v", err)
+			}
 		}
 		close(p.shutdownCh)
 		<-p.workerDone

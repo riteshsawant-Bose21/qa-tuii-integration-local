@@ -71,7 +71,8 @@ type UDPServer struct {
 	maintenanceEnabled   atomic.Bool
 	diagnosticsEnabled   bool
 
-	stopCh chan struct{}
+	stopCh    chan struct{}
+	closeOnce sync.Once
 }
 
 type clientState struct {
@@ -189,38 +190,53 @@ func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
 	now := time.Now().UnixNano()
 	key := addr.String()
 
-	s.clientsMu.RLock()
-	state, ok := s.clients[key]
-	s.clientsMu.RUnlock()
-
-	if ok && state != nil {
-		state.lastSeen.Store(now)
-	} else {
-		state = &clientState{addr: addr}
-		state.lastSeen.Store(now)
-		s.clientsMu.Lock()
-		s.clients[key] = state
-		s.clientsMu.Unlock()
-	}
-
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
 		if s.diagnosticsEnabled {
 			s.ackPackets.Add(1)
 		}
+		s.touchClientIfKnown(key, now)
 		s.handleAck(msg.ID, addr)
 		return
 	}
 
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
+		s.touchClientIfKnown(key, now)
 		s.sendResponse(addr, server.UDPResponse{
 			Status:  "error",
 			Message: err.Error(),
 		})
 		return
 	}
+	s.upsertClient(key, addr, now)
 	s.sendResponse(addr, resp)
+}
+
+func (s *UDPServer) touchClientIfKnown(key string, now int64) {
+	s.clientsMu.RLock()
+	state := s.clients[key]
+	s.clientsMu.RUnlock()
+	if state != nil {
+		state.lastSeen.Store(now)
+	}
+}
+
+func (s *UDPServer) upsertClient(key string, addr *net.UDPAddr, now int64) {
+	s.clientsMu.RLock()
+	state := s.clients[key]
+	s.clientsMu.RUnlock()
+
+	if state != nil {
+		state.lastSeen.Store(now)
+		return
+	}
+
+	state = &clientState{addr: addr}
+	state.lastSeen.Store(now)
+	s.clientsMu.Lock()
+	s.clients[key] = state
+	s.clientsMu.Unlock()
 }
 
 func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
@@ -305,7 +321,6 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		msg.ConfigUpdate.Version,
 		msg.ID,
 		msg.Operation,
-		msg.ConfigUpdate.Clear,
 	)
 	if err != nil {
 		return err
@@ -327,32 +342,37 @@ func configObserverPayload(update *api.ConfigUpdate) map[string]any {
 }
 
 func (s *UDPServer) Close() error {
-	close(s.stopCh)
-	close(s.queue)
-	s.wg.Wait()
-	return s.conn.Close()
+	s.closeOnce.Do(func() {
+		close(s.stopCh)
+		s.Listener.Stop()
+		close(s.queue)
+		s.wg.Wait()
+	})
+	return nil
 }
 
 // buildJSONPayload creates a JSON byte stream including authoritative Lamport version.
-// It injects metadata keys directly into data to avoid an intermediate map copy.
-// Callers must not reuse data after this call.
-func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp, clear ...bool) ([]byte, error) {
-	data[api.FusionVersion] = version.Counter
-	data[api.FusionEpoch] = version.Epoch
-	if s.diagnosticsEnabled {
-		data[api.FusionSentAtNS] = time.Now().UnixNano()
-	}
-	if msgID != "" {
-		data[api.FusionMessageID] = msgID
-	}
-	if op != "" {
-		data[api.FusionOperation] = op
-	}
-	if len(clear) > 0 && clear[0] {
-		data[api.FusionClear] = true
+// It copies the top-level map before injecting transport metadata so callers'
+// payloads are not mutated as a side effect of broadcasting.
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp) ([]byte, error) {
+	payload := maps.Clone(data)
+	if payload == nil {
+		payload = make(map[string]any)
 	}
 
-	b, err := json.Marshal(data)
+	payload[api.FusionVersion] = version.Counter
+	payload[api.FusionEpoch] = version.Epoch
+	if s.diagnosticsEnabled {
+		payload[api.FusionSentAtNS] = time.Now().UnixNano()
+	}
+	if msgID != "" {
+		payload[api.FusionMessageID] = msgID
+	}
+	if op != "" {
+		payload[api.FusionOperation] = op
+	}
+
+	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal error: %w", err)
 	}
