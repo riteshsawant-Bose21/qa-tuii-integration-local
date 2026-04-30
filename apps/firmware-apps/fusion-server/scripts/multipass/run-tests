@@ -279,6 +279,16 @@ function run_logger_tests() {
     return "$status"
 }
 
+# Helper to run a non-fusion/test package with or without -run.
+function run_test_package() {
+    local pkg="$1"
+    if [[ -n "$test_name" ]]; then
+        go test -v --race "$pkg" -run "$test_name"
+    else
+        go test -v --race "$pkg"
+    fi
+}
+
 # # Helper for tests without extra args
 # function run_simple_test() {
 #     local file="$1"
@@ -307,12 +317,24 @@ case "$test_type" in
     controllers)        run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
     fusion)             run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
     logger)             run_logger_tests ;;
-    persistence)        run_package_tests "$(regex_for_test_file ./persistence_test.go)" ;;
+    persistence)
+        run_package_tests "$(regex_for_test_file ./persistence_test.go)"
+        (
+            cd ../internal/persistence || exit 1
+            run_test_package ./...
+        )
+        ;;
     sap)                run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
     scheduler)          run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;
     software-update)    run_package_tests "$(regex_for_test_file ./software_update_test.go)" ;;
     state)              run_package_tests "$(regex_for_test_file ./state_test.go)" ;;
-    tasks)              run_package_tests "$(regex_for_test_file ./tasks_test.go)" ;;
+    tasks)
+        run_package_tests "$(regex_for_test_file ./tasks_test.go)"
+        (
+            cd ../internal/tasks || exit 1
+            run_test_package ./...
+        )
+        ;;
     time-machine)       run_package_tests "$(regex_for_test_file ./time_machine_test.go)" ;;
     udp)
         unset FUSION_UDP_LOCAL
@@ -343,8 +365,6 @@ case "$test_type" in
         export FUSION_UDP_OBSERVER_LATENCY_TEST=1
         run_package_tests "$(regex_for_test_file ./udp_observer_latency_test.go)"
         ;;
-    vip-api)      run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" ;;
-    vip-convergence) run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" ;;   
     websocket)    run_package_tests "$(regex_for_test_file ./websocket_test.go)" ;;
     integration)
         # Export env for integration helpers
