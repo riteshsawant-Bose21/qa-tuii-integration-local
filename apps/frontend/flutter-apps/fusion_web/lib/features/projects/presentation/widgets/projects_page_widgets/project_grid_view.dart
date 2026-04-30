@@ -19,10 +19,10 @@ class ProjectsGridView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: projects.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 20,
-        mainAxisSpacing: 20,
-        childAspectRatio: 1.5,
+        crossAxisCount: 4,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.1,
       ),
       itemBuilder: (con, index) {
         return ProjectGridCard(project: projects[index], onTap: onTap);

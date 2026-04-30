@@ -61,9 +61,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       decoration: BoxDecoration(
                         color: context.colorScheme.elevation2,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(blurRadius: 10, offset: const Offset(0, 4)),
-                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
