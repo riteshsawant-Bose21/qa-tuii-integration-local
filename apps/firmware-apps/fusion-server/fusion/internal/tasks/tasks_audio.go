@@ -219,8 +219,8 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		Zones:       request.Zones,
 	}
 
-	if taskMessage.MessageID == "" || taskMessage.CronExpr == "" || taskMessage.Description == "" {
-		http.Error(w, "Message, cron expression and description are required", http.StatusBadRequest)
+	if taskMessage.ID == "" || taskMessage.MessageID == "" || taskMessage.CronExpr == "" || taskMessage.Description == "" {
+		http.Error(w, "Task ID, message, cron expression and description are required", http.StatusBadRequest)
 		return
 	}
 
@@ -248,8 +248,21 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Create the scheduled message task
-	task := messageCreateRequestToTask(&request)
+	task := &api.Task{
+		ID:          taskMessage.ID,
+		Description: taskMessage.Description,
+		Type:        api.TaskTypeMessage,
+		CronExpr:    taskMessage.CronExpr,
+		StartAt:     taskMessage.StartAt,
+		EndAt:       taskMessage.EndAt,
+		Recurrence:  taskMessage.Recurrence,
+		Enabled:     true,
+		Params: map[string]any{
+			api.MessageIDKey:       taskMessage.MessageID,
+			api.MessagePriorityKey: taskMessage.Priority,
+			api.MessageZonesKey:    taskMessage.Zones,
+		},
+	}
 
 	if err := tm.AddTask(task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
