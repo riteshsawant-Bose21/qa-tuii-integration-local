@@ -38,6 +38,8 @@ func init() {
 		MaxFiles:    5,
 		LogLevel:    logging.ERROR,
 	})
+
+	api.AudioFilesLocation = filepath.Join(os.TempDir(), "fusion_persistence_test_audio")
 }
 
 // TestMarkDirtyConcurrent checks for potential race conditions by calling MarkDirty concurrently.

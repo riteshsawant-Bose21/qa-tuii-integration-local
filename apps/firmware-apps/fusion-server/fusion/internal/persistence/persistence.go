@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -39,7 +41,28 @@ const (
 
 	debounceTime = 100 * time.Millisecond
 	permPrivate  = 0600
+
+	miB = 1024 * 1024
+
+	boltOpenTimeout     = 1 * time.Second
+	compactMinFreeBytes = 1 * miB
+	compactMinFreeRatio = 0.25
+	compactTxMaxSize    = 4 * miB
+	minSaveInterval     = 2 * time.Second
 )
+
+var antiEntropyBuckets = []string{
+	bucketSnapshots,
+	bucketTasks,
+	bucketSnapshotDefs,
+	bucketSceneSets,
+}
+
+type saveState struct {
+	lastRun   time.Time
+	debounce  time.Duration
+	triggerCh chan struct{}
+}
 
 // ErrNotFound is returned when a record or bucket doesn't exist.
 var ErrNotFound = errors.New("not found")
@@ -52,9 +75,13 @@ type Persistence struct {
 	dbPath       string
 	stateManager *StateManager
 	db           *bbolt.DB
+	dbOptions    *bbolt.Options
 	mutex        sync.RWMutex
+	notifierMu   sync.RWMutex
+	metadataNotifier func(*api.DatabaseMetadata)
 	lastSave     time.Time
 	saveDebounce time.Duration
+	minSaveGap   time.Duration
 	saveCh       chan struct{}
 	shutdownCh   chan struct{}
 	workerDone   chan struct{}
@@ -65,12 +92,13 @@ type Persistence struct {
 func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, error) {
 
 	logger := logging.GetLogger()
+	dbOptions := defaultBoltOptions()
 
-	db, err := bbolt.Open(dbPath, permPrivate, nil)
+	db, err := bbolt.Open(dbPath, permPrivate, dbOptions)
 	if err != nil {
 		logger.Warn("Failed to open database at %s: %v. Attempting to recreate.", dbPath, err)
 		_ = os.Remove(dbPath)
-		db, err = bbolt.Open(dbPath, permPrivate, nil)
+		db, err = bbolt.Open(dbPath, permPrivate, dbOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open or recreate database: %w", err)
 		}
@@ -86,7 +114,9 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 		dbPath:       dbPath,
 		stateManager: stateManager,
 		db:           db,
+		dbOptions:    dbOptions,
 		saveDebounce: debounceTime,
+		minSaveGap:   minSaveInterval,
 		saveCh:       make(chan struct{}, 1),
 		shutdownCh:   make(chan struct{}),
 		workerDone:   make(chan struct{}),
@@ -95,10 +125,26 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 	if err := persistence.initializeDatabase(); err != nil {
 		return nil, err
 	}
+	if err := persistence.maybeCompactOnOpen(); err != nil {
+		return nil, err
+	}
 
 	go persistence.saveWorker()
 
+	logger.Debug(
+		"Persistence opened: path=%s freelist_type=%s no_freelist_sync=%t",
+		dbPath, dbOptions.FreelistType, dbOptions.NoFreelistSync,
+	)
+
 	return persistence, nil
+}
+
+func defaultBoltOptions() *bbolt.Options {
+	return &bbolt.Options{
+		Timeout:        boltOpenTimeout,
+		NoFreelistSync: true,
+		FreelistType:   bbolt.FreelistMapType,
+	}
 }
 
 // Close safely closes the database.
@@ -115,6 +161,12 @@ func (p *Persistence) Close() {
 	})
 }
 
+func (p *Persistence) SetMetadataNotifier(notifier func(*api.DatabaseMetadata)) {
+	p.notifierMu.Lock()
+	defer p.notifierMu.Unlock()
+	p.metadataNotifier = notifier
+}
+
 // MarkDirty triggers a state save with debounce
 func (p *Persistence) MarkDirty() {
 	select {
@@ -126,8 +178,9 @@ func (p *Persistence) MarkDirty() {
 	select {
 	case p.saveCh <- struct{}{}:
 	case <-p.shutdownCh:
+		logging.GetLogger().Debug("Active state flush queued")
 	default:
-		// channel already has a pending signal — ignore
+		logging.GetLogger().Debug("Active state flush skipped: save already pending")
 	}
 }
 
@@ -150,11 +203,11 @@ func (p *Persistence) SaveState() error {
 	metadata.Version = ps.Version
 	metadata.Valid = len(ps.State) > 0
 
-	if err := p.saveMetadata(metadata); err != nil {
+	if err := p.saveMetadataWithNotify(metadata, false); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(true); err != nil {
 		return fmt.Errorf("failed to update metadata hash: %w", err)
 	}
 
@@ -231,12 +284,14 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	defer p.mutex.Unlock()
 
 	var (
-		update    bool
-		snapshots map[string]any
-		tasks     map[string]any
-		audio     map[string]any
-		device    map[string]any
-		ok        bool
+		update       bool
+		snapshots    map[string]any
+		snapshotDefs map[string]any
+		sceneSets    map[string]any
+		tasks        map[string]any
+		audio        map[string]any
+		device       map[string]any
+		ok           bool
 	)
 
 	if snapshotsData, exists := importData[bucketSnapshots]; exists {
@@ -249,6 +304,22 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 		}
 		if err := validateImportedSnapshots(snapshots); err != nil {
 			return err
+		}
+		update = true
+	}
+
+	if snapshotDefsData, exists := importData[bucketSnapshotDefs]; exists {
+		snapshotDefs, ok = snapshotDefsData.(map[string]any)
+		if !ok {
+			return fmt.Errorf("snapshot definitions data is not in the expected format")
+		}
+		update = true
+	}
+
+	if sceneSetsData, exists := importData[bucketSceneSets]; exists {
+		sceneSets, ok = sceneSetsData.(map[string]any)
+		if !ok {
+			return fmt.Errorf("scene sets data is not in the expected format")
 		}
 		update = true
 	}
@@ -356,6 +427,18 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 			}
 		}
 
+		if snapshotDefs != nil {
+			if err := replaceBucketDataTx(tx, bucketSnapshotDefs, snapshotDefs); err != nil {
+				return err
+			}
+		}
+
+		if sceneSets != nil {
+			if err := replaceBucketDataTx(tx, bucketSceneSets, sceneSets); err != nil {
+				return err
+			}
+		}
+
 		if audio != nil {
 			if err := replaceBucketDataTx(tx, bucketAudio, audio); err != nil {
 				return err
@@ -424,13 +507,12 @@ func validateImportedDevice(device map[string]any) error {
 			return fmt.Errorf("failed to unmarshal imported device record %q: %w", key, err)
 		}
 	}
-
 	return nil
 }
 
 // persistStateToBucket saves the current state into the given bucket/key.
 // Used by both snapshot persistence and active state persistence.
-func (p *Persistence) persistStateToBucket(bucketName, key string) (*PersistentState, error) {
+func (p *Persistence) persistStateToBucket(bucketName, key string, bumpMetadataVersion bool) (*PersistentState, error) {
 	state := p.stateManager.GetFullState()
 
 	// Ensure we always have a checksum
@@ -455,34 +537,91 @@ func (p *Persistence) persistStateToBucket(bucketName, key string) (*PersistentS
 		return nil, fmt.Errorf("failed to marshal state: %w", err)
 	}
 
+	var changed bool
 	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
 			return fmt.Errorf("%w: %s bucket not found", ErrNotFound, bucketName)
 		}
-		return bucket.Put([]byte(key), data)
+		var err error
+		changed, err = putIfChanged(bucket, []byte(key), data)
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to save state to %s/%s: %w", bucketName, key, err)
 	}
 
-	if err := p.updateHash(); err != nil {
-		return nil, err
+	if changed {
+		if bumpMetadataVersion {
+			if err := p.updateHash(true); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := p.updateHash(false); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		logging.GetLogger().Debug("Persistence write skipped: bucket=%s key=%s unchanged", bucketName, key)
 	}
 
 	return ps, nil
 }
 
+func putIfChanged(bucket *bbolt.Bucket, key, value []byte) (bool, error) {
+	existing := bucket.Get(key)
+	if bytes.Equal(existing, value) {
+		return false, nil
+	}
+	if err := bucket.Put(key, value); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (p *Persistence) getValue(bucketName, key string) ([]byte, error) {
+	var dataCopy []byte
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return ErrNotFound
+		}
+		value := bucket.Get([]byte(key))
+		if value == nil {
+			return nil
+		}
+		dataCopy = append([]byte(nil), value...)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dataCopy, nil
+}
+
+func (p *Persistence) keyExists(bucketName, key string) (bool, error) {
+	var exists bool
+	err := p.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return ErrNotFound
+		}
+		exists = bucket.Get([]byte(key)) != nil
+		return nil
+	})
+	return exists, err
+}
+
 // persistState saves the current state under the given snapshot key
 // in the snapshots bucket. This is ONLY for explicit snapshot creation.
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
-	return p.persistStateToBucket(bucketSnapshots, snapshotKey)
+	return p.persistStateToBucket(bucketSnapshots, snapshotKey, true)
 }
 
 // persistActiveState saves the current state as the live "active" state.
 // This is what SaveState() uses instead of mutating snapshots.
 func (p *Persistence) persistActiveState() (*PersistentState, error) {
-	return p.persistStateToBucket(bucketActive, keyActiveState)
+	return p.persistStateToBucket(bucketActive, keyActiveState, false)
 }
 
 // loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
@@ -501,17 +640,36 @@ func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
 
 // saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
 func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
+	return p.saveMetadataWithNotify(meta, true)
+}
+
+func (p *Persistence) saveMetadataWithNotify(meta *api.DatabaseMetadata, notify bool) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	return p.db.Update(func(tx *bbolt.Tx) error {
+	if err := p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketFusion))
 		if bucket == nil {
 			return fmt.Errorf("%w: metadata bucket not found", ErrNotFound)
 		}
-		return bucket.Put([]byte(keyMetadata), data)
-	})
+		_, err := putIfChanged(bucket, []byte(keyMetadata), data)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if notify {
+		p.notifierMu.RLock()
+		notifier := p.metadataNotifier
+		p.notifierMu.RUnlock()
+		if notifier != nil {
+			metaCopy := *meta
+			go notifier(&metaCopy)
+		}
+	}
+
+	return nil
 }
 
 func metadataBytesFromTx(tx *bbolt.Tx) ([]byte, error) {
@@ -558,7 +716,7 @@ func saveMetadataToTx(tx *bbolt.Tx, meta *api.DatabaseMetadata) error {
 }
 
 // updateHash recalculates the overall database hash and updates it in metadata.
-func (p *Persistence) updateHash() error {
+func (p *Persistence) updateHash(notify bool) error {
 	newHash, err := p.computeHash()
 	if err != nil {
 		return fmt.Errorf("failed to compute DB hash: %w", err)
@@ -567,8 +725,29 @@ func (p *Persistence) updateHash() error {
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
+	if metadata.Version.NodeID == "" {
+		metadata.Version.NodeID = p.stateManager.GetVersion().NodeID
+	}
 	metadata.Hash = newHash
-	return p.saveMetadata(metadata)
+	return p.saveMetadataWithNotify(metadata, notify)
+}
+
+func (p *Persistence) updateHashWithVersionBump(notify bool) error {
+	newHash, err := p.computeHash()
+	if err != nil {
+		return fmt.Errorf("failed to compute DB hash: %w", err)
+	}
+
+	metadata, err := p.loadMetadata()
+	if err != nil {
+		return fmt.Errorf("failed to load metadata: %w", err)
+	}
+
+	metadata.Version = p.stateManager.NextVersionAfter(metadata.Version)
+	metadata.Hash = newHash
+	metadata.Valid = true
+
+	return p.saveMetadataWithNotify(metadata, notify)
 }
 
 func updateHashTx(tx *bbolt.Tx) error {
@@ -600,25 +779,26 @@ func (p *Persistence) computeHash() (string, error) {
 func computeHashTx(tx *bbolt.Tx) (string, error) {
 	hash := sha256.New()
 	if err := tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
+		bucketName := string(name)
 		hash.Write(name)
 		cursor := b.Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			hash.Write(k)
-			normalizedValue, err := normalizeHashValue(string(name), string(k), v)
+
+			sanitized, err := sanitizeHashValue(bucketName, string(k), v)
 			if err != nil {
 				return err
 			}
-			hash.Write(normalizedValue)
+			hash.Write(sanitized)
 		}
 		return nil
 	}); err != nil {
 		return "", err
 	}
-
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func normalizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
+func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 	if bucketName != bucketFusion || key != keyMetadata {
 		return value, nil
 	}
@@ -628,7 +808,6 @@ func normalizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
 	}
 
-	// Exclude the stored DB hash from the hash input so the value is stable.
 	metadata.Hash = ""
 
 	normalized, err := json.Marshal(metadata)
@@ -637,6 +816,143 @@ func normalizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 	}
 
 	return normalized, nil
+}
+
+func normalizeAntiEntropyValue(bucketName string, value any) (any, error) {
+	switch bucketName {
+	case bucketSnapshots:
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal snapshot for normalization: %w", err)
+		}
+		var state PersistentState
+		if err := json.Unmarshal(raw, &state); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal snapshot for normalization: %w", err)
+		}
+		state.Timestamp = time.Time{}
+		return state, nil
+	default:
+		return value, nil
+	}
+}
+
+func antiEntropyValueChecksum(bucketName string, value any) (string, error) {
+	normalized, err := normalizeAntiEntropyValue(bucketName, value)
+	if err != nil {
+		return "", err
+	}
+	return utils.JSONChecksum(normalized)
+}
+
+func mapStringAny(value any) map[string]any {
+	if value == nil {
+		return nil
+	}
+	if m, ok := value.(map[string]any); ok {
+		return m
+	}
+	return nil
+}
+
+// AntiEntropyDiffSummary returns a human-readable summary of how the convergent
+// persisted buckets differ from the provided remote export payload.
+func (p *Persistence) AntiEntropyDiffSummary(remoteData map[string]any) string {
+	localExportAny, err := p.ExportData()
+	if err != nil {
+		return fmt.Sprintf("failed to export local data: %v", err)
+	}
+
+	localExport, ok := localExportAny.(map[string]map[string]any)
+	if !ok {
+		return "failed to interpret local export data"
+	}
+
+	parts := make([]string, 0, len(antiEntropyBuckets))
+	for _, bucketName := range antiEntropyBuckets {
+		localBucket := localExport[bucketName]
+		remoteBucket := mapStringAny(remoteData[bucketName])
+
+		keySet := make(map[string]struct{}, len(localBucket)+len(remoteBucket))
+		for key := range localBucket {
+			keySet[key] = struct{}{}
+		}
+		for key := range remoteBucket {
+			keySet[key] = struct{}{}
+		}
+
+		if len(keySet) == 0 {
+			continue
+		}
+
+		keys := make([]string, 0, len(keySet))
+		for key := range keySet {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		changed := make([]string, 0, 3)
+		localOnly := make([]string, 0, 3)
+		remoteOnly := make([]string, 0, 3)
+
+		changedCount := 0
+		localOnlyCount := 0
+		remoteOnlyCount := 0
+
+		for _, key := range keys {
+			localValue, hasLocal := localBucket[key]
+			remoteValue, hasRemote := remoteBucket[key]
+
+			switch {
+			case hasLocal && !hasRemote:
+				localOnlyCount++
+				if len(localOnly) < 3 {
+					localOnly = append(localOnly, key)
+				}
+			case !hasLocal && hasRemote:
+				remoteOnlyCount++
+				if len(remoteOnly) < 3 {
+					remoteOnly = append(remoteOnly, key)
+				}
+			default:
+				localChecksum, err := antiEntropyValueChecksum(bucketName, localValue)
+				if err != nil {
+					return fmt.Sprintf("failed to checksum local %s/%s: %v", bucketName, key, err)
+				}
+				remoteChecksum, err := antiEntropyValueChecksum(bucketName, remoteValue)
+				if err != nil {
+					return fmt.Sprintf("failed to checksum remote %s/%s: %v", bucketName, key, err)
+				}
+				if localChecksum != remoteChecksum {
+					changedCount++
+					if len(changed) < 3 {
+						changed = append(changed, key)
+					}
+				}
+			}
+		}
+
+		if changedCount == 0 && localOnlyCount == 0 && remoteOnlyCount == 0 {
+			continue
+		}
+
+		summary := fmt.Sprintf("%s changed=%d local_only=%d remote_only=%d", bucketName, changedCount, localOnlyCount, remoteOnlyCount)
+		if len(changed) > 0 {
+			summary += fmt.Sprintf(" sample_changed=%v", changed)
+		}
+		if len(localOnly) > 0 {
+			summary += fmt.Sprintf(" sample_local_only=%v", localOnly)
+		}
+		if len(remoteOnly) > 0 {
+			summary += fmt.Sprintf(" sample_remote_only=%v", remoteOnly)
+		}
+		parts = append(parts, summary)
+	}
+
+	if len(parts) == 0 {
+		return "no bucket-level differences found"
+	}
+
+	return strings.Join(parts, "; ")
 }
 
 func createBucketIfNotExists(tx *bbolt.Tx, bucket string) error {
@@ -693,7 +1009,7 @@ func (p *Persistence) initializeDatabase() error {
 		return err
 	}
 
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(false); err != nil {
 		return fmt.Errorf("failed to update DB hash after initialization: %w", err)
 	}
 
@@ -703,11 +1019,54 @@ func (p *Persistence) initializeDatabase() error {
 func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) error {
 
 	// Replace the entire bucket in an atomic transaction.
+	var changed bool
 	err := p.db.Update(func(tx *bbolt.Tx) error {
-		return replaceBucketDataTx(tx, bucketName, data)
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return fmt.Errorf("%w: %s bucket not found", ErrNotFound, bucketName)
+		}
+
+		existing := make(map[string][]byte)
+		err := bucket.ForEach(func(k, v []byte) error {
+			existing[string(k)] = append([]byte(nil), v...)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		for key, value := range data {
+			marshaledValue, err := json.Marshal(value)
+			if err != nil {
+				return fmt.Errorf("failed to marshal value for key %s: %w", key, err)
+			}
+			if bytes.Equal(existing[key], marshaledValue) {
+				delete(existing, key)
+				continue
+			}
+			if err := bucket.Put([]byte(key), marshaledValue); err != nil {
+				return fmt.Errorf("failed to put key %s: %w", key, err)
+			}
+			changed = true
+			delete(existing, key)
+		}
+
+		for key := range existing {
+			if err := bucket.Delete([]byte(key)); err != nil {
+				return fmt.Errorf("failed to delete key %s: %w", key, err)
+			}
+			changed = true
+		}
+		return nil
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return nil
+	}
+	return p.updateHash(false)
 }
 
 func replaceBucketDataTx(tx *bbolt.Tx, bucketName string, data map[string]any) error {
@@ -820,6 +1179,7 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) (bool, error) {
 	}
 
 	meta := &api.DatabaseMetadata{
+		Version:        p.stateManager.GetVersion(),
 		ActiveSnapshot: keyDefaultSnapshot,
 		Hash:           "",
 		Valid:          true,
@@ -863,8 +1223,10 @@ func (p *Persistence) saveWorker() {
 	for {
 		select {
 		case <-p.saveCh:
+			delay := p.nextSaveDelay()
 			if timer == nil {
-				timer = time.NewTimer(p.saveDebounce)
+				logging.GetLogger().Debug("Active state flush scheduled in %s", delay)
+				timer = time.NewTimer(delay)
 				timerCh = timer.C
 				continue
 			}
@@ -874,7 +1236,8 @@ func (p *Persistence) saveWorker() {
 				default:
 				}
 			}
-			timer.Reset(p.saveDebounce)
+			timer.Reset(delay)
+			logging.GetLogger().Debug("Active state flush rescheduled in %s", delay)
 		case <-timerCh:
 			stopTimer()
 			if err := p.SaveState(); err != nil {
@@ -885,6 +1248,31 @@ func (p *Persistence) saveWorker() {
 			return
 		}
 	}
+}
+
+func (p *Persistence) nextSaveDelay() time.Duration {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	delay := p.saveDebounce
+	if p.minSaveGap <= 0 || p.lastSave.IsZero() {
+		return delay
+	}
+
+	elapsed := time.Since(p.lastSave)
+	if elapsed >= p.minSaveGap {
+		return delay
+	}
+
+	waitForMinGap := p.minSaveGap - elapsed
+	if waitForMinGap > delay {
+		logging.GetLogger().Debug(
+			"Active state save delayed to preserve flash: wait=%s debounce=%s min_gap=%s",
+			waitForMinGap, delay, p.minSaveGap,
+		)
+		return waitForMinGap
+	}
+	return delay
 }
 
 // RemoveAudioFile removes an audio file from a node
@@ -978,4 +1366,116 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 
 func (p *Persistence) GetVersion() api.Version {
 	return p.stateManager.GetVersion()
+}
+
+func (p *Persistence) maybeCompactOnOpen() error {
+	freeBytes, ratio, err := p.compactionEstimate()
+	if err != nil {
+		return err
+	}
+	logging.GetLogger().Debug(
+		"BoltDB compaction check: path=%s reclaimable=%d ratio=%.2f threshold_bytes=%d threshold_ratio=%.2f",
+		p.dbPath, freeBytes, ratio, compactMinFreeBytes, compactMinFreeRatio,
+	)
+	if freeBytes < compactMinFreeBytes || ratio < compactMinFreeRatio {
+		logging.GetLogger().Debug("BoltDB compaction skipped: path=%s below threshold", p.dbPath)
+		return nil
+	}
+
+	logging.GetLogger().Info(
+		"Compacting BoltDB on open: reclaimable=%d bytes ratio=%.2f path=%s",
+		freeBytes, ratio, p.dbPath,
+	)
+	return p.compactAndReopen()
+}
+
+func (p *Persistence) compactionEstimate() (int64, float64, error) {
+	info, err := os.Stat(p.dbPath)
+	if err != nil {
+		return 0, 0, fmt.Errorf("stat %s: %w", p.dbPath, err)
+	}
+	size := info.Size()
+	if size <= 0 {
+		return 0, 0, nil
+	}
+
+	stats := p.db.Stats()
+	freeBytes := int64(stats.FreeAlloc)
+	return freeBytes, float64(freeBytes) / float64(size), nil
+}
+
+func (p *Persistence) compactAndReopen() error {
+	tmpPath := p.dbPath + ".compact"
+	_ = os.Remove(tmpPath)
+	beforeInfo, _ := os.Stat(p.dbPath)
+
+	if err := p.db.Close(); err != nil {
+		return fmt.Errorf("close db before compact: %w", err)
+	}
+
+	src, err := bbolt.Open(p.dbPath, permPrivate, &bbolt.Options{
+		Timeout:  boltOpenTimeout,
+		ReadOnly: true,
+	})
+	if err != nil {
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("open source db for compact: %w", err)
+	}
+
+	dst, err := bbolt.Open(tmpPath, permPrivate, p.dbOptions)
+	if err != nil {
+		_ = src.Close()
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("open destination db for compact: %w", err)
+	}
+
+	compactErr := bbolt.Compact(dst, src, compactTxMaxSize)
+	closeErr := dst.Close()
+	srcCloseErr := src.Close()
+	if compactErr != nil {
+		_ = os.Remove(tmpPath)
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("compact db: %w", compactErr)
+	}
+	if closeErr != nil {
+		_ = os.Remove(tmpPath)
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("close compacted db: %w", closeErr)
+	}
+	if srcCloseErr != nil {
+		_ = os.Remove(tmpPath)
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("close source db: %w", srcCloseErr)
+	}
+
+	if err := os.Rename(tmpPath, p.dbPath); err != nil {
+		_ = os.Remove(tmpPath)
+		_ = p.reopenPrimaryDB()
+		return fmt.Errorf("replace compacted db: %w", err)
+	}
+
+	if err := p.reopenPrimaryDB(); err != nil {
+		return err
+	}
+
+	afterInfo, err := os.Stat(p.dbPath)
+	if err == nil && beforeInfo != nil {
+		logging.GetLogger().Debug(
+			"BoltDB compaction complete: path=%s before=%d after=%d reclaimed=%d",
+			p.dbPath, beforeInfo.Size(), afterInfo.Size(), beforeInfo.Size()-afterInfo.Size(),
+		)
+	} else {
+		logging.GetLogger().Debug("BoltDB compaction complete: path=%s", p.dbPath)
+	}
+
+	return nil
+}
+
+func (p *Persistence) reopenPrimaryDB() error {
+	db, err := bbolt.Open(p.dbPath, permPrivate, p.dbOptions)
+	if err != nil {
+		return fmt.Errorf("reopen db after compact: %w", err)
+	}
+	p.db = db
+	return nil
 }

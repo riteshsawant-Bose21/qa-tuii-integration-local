@@ -103,6 +103,15 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 		return fmt.Errorf("%w: snapshot %q does not exist", ErrNotFound, snapshotName)
 	}
 
+	exists, err = p.keyExists(bucketSnapshots, snapshotName)
+	if err != nil {
+		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotName, err)
+	}
+	if !exists {
+		logging.GetLogger().Debug("Snapshot delete skipped: snapshot=%s missing", snapshotName)
+		return nil
+	}
+
 	// Perform deletion in a single atomic transaction.
 	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSnapshots))
@@ -151,7 +160,7 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 	}
 
 	// Update the database hash
-	if err := p.updateHash(); err != nil {
+	if err := p.updateHash(true); err != nil {
 		return fmt.Errorf("to update DB hash after deleting snapshot '%s': %v", snapshotName, err)
 	}
 
