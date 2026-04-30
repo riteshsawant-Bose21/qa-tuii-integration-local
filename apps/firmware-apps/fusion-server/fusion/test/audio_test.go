@@ -48,23 +48,66 @@ func TestAudioUploadAndDeleteSuccess(t *testing.T) {
 		t.Errorf("unexpected size_bytes: got %d", meta.SizeBytes)
 	}
 
-	// Delete the uploaded asset
-	req, err := http.NewRequestWithContext(ctx, "DELETE",
-		fmt.Sprintf("%s%s/%s", audioServerAddr, routes.PAVAMessagesEndpoint, meta.Id), nil)
-	if err != nil {
-		t.Fatalf("creating DELETE request failed: %v", err)
+	deleteAudio(t, ctx, audioServerAddr, meta.Id)
+}
+
+// TestAudioUploadBinaryIntegrity verifies upload metadata checksum and streamed bytes
+// both match the original uploaded payload exactly.
+func TestAudioUploadBinaryIntegrity(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	filename := "binary_integrity.wav"
+	displayName := "Binary Integrity Clip"
+
+	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
+	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
+
+	expectedSum := sha256.Sum256(wav)
+	expectedChecksum := hex.EncodeToString(expectedSum[:])
+
+	if meta.Checksum != expectedChecksum {
+		t.Fatalf("unexpected checksum: got %s want %s", meta.Checksum, expectedChecksum)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	if meta.SizeBytes != int64(len(wav)) {
+		t.Fatalf("unexpected size_bytes: got %d want %d", meta.SizeBytes, len(wav))
+	}
+
+	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", meta.Id, 1)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s%s", audioServerAddr, streamEndpoint), nil)
 	if err != nil {
-		t.Fatalf("DELETE %s failed: %v", routes.PAVAMessagesEndpoint, err)
+		t.Fatalf("creating stream request failed: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET %s failed: %v", routes.PAVAMessageStreamEndpoint, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("DELETE %s returned %d, want 204; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
+		t.Fatalf("GET %s returned %d, want 200; body=%s", routes.PAVAMessageStreamEndpoint, resp.StatusCode, string(body))
+	}
+
+	if got := resp.Header.Get("Content-Type"); got != "audio/wav" {
+		t.Fatalf("unexpected content-type: got %q want %q", got, "audio/wav")
+	}
+
+	streamed, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading stream failed: %v", err)
+	}
+
+	if !bytes.Equal(streamed, wav) {
+		t.Fatalf("streamed payload differs from uploaded payload: got %d bytes want %d", len(streamed), len(wav))
+	}
+
+	streamedSum := sha256.Sum256(streamed)
+	if got := hex.EncodeToString(streamedSum[:]); got != expectedChecksum {
+		t.Fatalf("stream checksum mismatch: got %s want %s", got, expectedChecksum)
 	}
 }
 
@@ -173,6 +216,27 @@ func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data 
 	}
 
 	return &meta
+}
+
+func deleteAudio(t *testing.T, ctx context.Context, base, id string) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+		fmt.Sprintf("%s%s/%s", base, routes.PAVAMessagesEndpoint, id), nil)
+	if err != nil {
+		t.Fatalf("creating DELETE request failed: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("DELETE %s failed: %v", routes.PAVAMessagesEndpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE %s returned %d, want 204; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
+	}
 }
 
 // makeTestWAV constructs a minimal PCM RIFF/WAVE file with the given

@@ -64,7 +64,7 @@ class ProcessingBlockModel {
         PropertySetting(name: "frequency", value: 1000, dimension: i),
         PropertySetting(name: "gain", value: 0.0, dimension: i),
         PropertySetting(name: "q", value: 1.0, dimension: i),
-        PropertySetting(name: "bypass", value: false, dimension: i),
+        PropertySetting(name: "band_enable", value: false, dimension: i),
       ],
     ],
   );

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 
-	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/controllers"
@@ -14,6 +13,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/routes"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -34,36 +35,51 @@ const (
 	bleCharacterUUID       = "AD10"
 	bleServiceUUID         = "B053"
 	clusterLeaveTime       = 5 * time.Second
-	fusionDataPath         = "/var/lib/fusion"
 	fusionDatabaseName     = "fusion.db"
-	fusionDatabasePath     = fusionDataPath + "/" + fusionDatabaseName
 	networkMonitorInterval = 5 * time.Second
 	startupWaitDelay       = 100
 )
 
+var (
+	fusionDataPath     = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
+	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
+	fusionLogDir       = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+	corsWarningOnce    sync.Once
+)
+
+func getEnvOrDefault(key string, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
 var SAPGroups = []string{"224.2.127.254", "239.255.255.255"}
 
 type App struct {
-	Logger            *logging.Logger
-	StateManager      *persistence.StateManager
-	Persistence       *persistence.Persistence
-	TaskManager       *tasks.TaskManager
-	ConnectionHandler *handler.Handler
-	Cluster           *cluster.Cluster
-	Delegate          *cluster.ClusterDelegate
-	Server            *server.FusionServer
-	BLEServer         *network.BLEServer
-	SAPServer         *network.SAPServer
-	UDPServer         *network.UDPServer
-	ControllerManager *controllers.ControllerManager
-	memberlist        *memberlist.Memberlist
-	monitor           *network.Monitor
-	config            *api.AppConfig
-	publicRouter      *mux.Router
-	privateRouter     *mux.Router
-	MDNSManager       *network.MDNSManager
-	VIPMonitor        *vipmonitor.VIPMonitor
-	Hub               *pubsub.Hub
+	Logger              *logging.Logger
+	StateManager        *persistence.StateManager
+	Persistence         *persistence.Persistence
+	TaskManager         *tasks.TaskManager
+	ConnectionHandler   *handler.Handler
+	Cluster             *cluster.Cluster
+	Delegate            *cluster.ClusterDelegate
+	Server              *server.FusionServer
+	BLEServer           *network.BLEServer
+	SAPServer           *network.SAPServer
+	UDPServer           *network.UDPServer
+	ControllerManager   *controllers.ControllerManager
+	memberlist          *memberlist.Memberlist
+	monitor             *network.Monitor
+	config              *api.AppConfig
+	publicRouter        *mux.Router
+	privateRouter       *mux.Router
+	MDNSManager         *network.MDNSManager
+	VIPMonitor          *vipmonitor.VIPMonitor
+	Hub                 *pubsub.Hub
+	discoveryReconciler *DiscoveryReconciler
+	vipEventCoordinator *VIPEventCoordinator
+	profiler            *cpuProfiler
 }
 
 // NewApp is a factory function to set up the application
@@ -76,18 +92,22 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	taskManager := initTaskManager(config, persistence, hub)
+	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
+	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 
 	memberlist := cluster.CreateMemberlist(config, delegate)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	hub.SetClusterTransport(clusterInstance)
-	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
-	mdnsManager := initMDNSManager()
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager, sceneActivator)
+
+	// Set the sync handler on the delegate so it can handle software update acknowledgments
+	delegate.SetSyncHandler(connectionHandler)
+	mdnsManager := initMDNSManager(config.NetIface)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
-	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
+	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub, config)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
 	// Initialize VIPMonitor
@@ -126,13 +146,19 @@ func NewApp(config *api.AppConfig) *App {
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
 		Hub:               hub,
+		profiler:          newCPUProfiler(),
 	}
-	vipMonitor.SetCallback(app.handleVIPStateChange)
+	app.discoveryReconciler = NewDiscoveryReconciler(app)
+	app.vipEventCoordinator = NewVIPEventCoordinator(app)
+	vipMonitor.SetCallback(app.vipEventCoordinator.Handle)
 	return app
 }
 
 // Close shuts down all components gracefully.
 func (app *App) Close() {
+	if _, err := app.profiler.Stop(); err != nil {
+		app.Logger.Error("Failed to stop CPU profiler: %v", err)
+	}
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
@@ -144,6 +170,9 @@ func (app *App) Close() {
 		if err := app.MDNSManager.Close(); err != nil {
 			app.Logger.Error("Failed to close mDNS manager: %v", err)
 		}
+	}
+	if app.discoveryReconciler != nil {
+		app.discoveryReconciler.Stop()
 	}
 	if app.VIPMonitor != nil {
 		app.VIPMonitor.Stop()
@@ -201,7 +230,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	if app.config.UDPDiagnostics {
+		app.registerPublicGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
+	app.registerPublicPOST(routes.ClusterSoftwareUpdateEndpoint, app.Cluster.SoftwareUpdateSystem)
 
 	// Controllers
 	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
@@ -211,7 +244,11 @@ func (app *App) setupPublicRoutes() {
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
+	app.registerPublicGET(routes.DevicesVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPStatus)
+	app.registerPublicGET(routes.DevicesVIPOperationEndpoint, app.VIPMonitor.HandleGetVIPOperation)
+	app.registerPublicGET(routes.DeviceReloadVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPReloadStatus)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
+	app.registerPublicPOST(routes.DevicesIDVIPMasterPriorityEndpoint, app.VIPMonitor.HandleSetMasterPriority)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Server.UpdateDeviceInfo)
 
@@ -241,6 +278,12 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
 	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
+
+	// Software Update
+	app.registerPublicPOST(routes.SoftwareUpdateUploadEndpoint, app.ConnectionHandler.HandleSoftwareUpdateUpload)
+	app.registerPublicGET(routes.SoftwareUpdateDownloadEndpoint, app.ConnectionHandler.HandleSoftwareUpdateDownload)
+	app.registerPublicGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateList)
+
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
@@ -255,22 +298,42 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsEndpoint, app.Server.GetSessions)
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
+	// Time Machine
+	app.registerPublicPOST(routes.TimeMachineActivateEndpoint, app.Server.ActivateTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineUpdateEndpoint, app.Server.SaveTimeMachine)
+	app.registerPublicPOST(routes.TimeMachineNameEndpoint, app.Server.CreateTimeMachine)
+	app.registerPublicGET(routes.TimeMachineEndpoint, app.Server.ListTimeMachines)
+	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
+	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
+	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
+
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
-	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
-	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
-	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
-	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
-	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
+	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshotDefinition)
+
+	// Scenes
+	app.registerPublicGET(routes.ScenesEndpoint, app.Server.ListScenes)
+	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
+
+	// Scene Sets
+	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
+	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
+	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsEndpoint, app.Server.DeleteSceneSets)
+	app.registerPublicDELETE(routes.ScenesSetsNameEndpoint, app.Server.DeleteSceneSet)
+
+	// Scene Catalog
+	app.registerPublicGET(routes.SceneCatalogEndpoint, app.Server.ListSceneCatalog)
 
 	// Tasks
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
-	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
+	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateTask)
 	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
-	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateTaskHandler)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -294,16 +357,32 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	if app.config.UDPDiagnostics {
+		app.registerPrivateGET(routes.ClusterUDPStatusEndpoint, app.HandleUDPStatus)
+	}
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
+	app.registerPrivatePOST(routes.ClusterSoftwareUpdateLocalEndpoint, app.Cluster.SoftwareUpdateSystemLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Server.GetDeviceInfoLocal)
+	app.registerPrivateGET(routes.DeviceDiscoveryMDNSEndpoint, app.HandleResolveLocalMDNS)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Server.UpdateDeviceInfoLocal)
 	app.registerPrivateGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
+	app.registerPrivateGET(routes.DevicesVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPStatus)
+	app.registerPrivateGET(routes.DevicesVIPOperationEndpoint, app.VIPMonitor.HandleGetVIPOperation)
+	app.registerPrivateGET(routes.DeviceReloadVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPReloadStatus)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
+	app.registerPrivatePOST(routes.DevicesIDVIPMasterPriorityEndpoint, app.VIPMonitor.HandleSetMasterPriorityLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Server.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Server.ResetDeviceCertificate)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Server.SetDeviceCertificate)
+
+	app.registerPrivateGET(routes.SoftwareUpdateInfoLocalEndpoint, app.Server.GetLocalSwUpdateInfo)
+	app.registerPrivateGET(routes.SoftwareUpdateListEndpoint, app.ConnectionHandler.HandleSoftwareUpdateListLocal)
+	app.registerPrivateGET(routes.DebugProfileStatusEndpoint, app.HandleProfileStatus)
+	app.registerPrivatePOST(routes.DebugProfileHeapEndpoint, app.HandleHeapProfileCapture)
+	app.registerPrivatePOST(routes.DebugProfileStartEndpoint, app.HandleProfileStart)
+	app.registerPrivatePOST(routes.DebugProfileStopEndpoint, app.HandleProfileStop)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -315,7 +394,7 @@ func (app *App) setupPrivateRoutes() {
 func (app *App) startNetworkMonitor() {
 
 	logger := logging.GetLogger()
-	logger.Info("Network monitor is active")
+	logger.Debug("Network monitor is active")
 
 	app.monitor = network.NewMonitor(networkMonitorInterval, app.config.NetIface, func(oldIP, newIP string) {
 		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
@@ -324,153 +403,6 @@ func (app *App) startNetworkMonitor() {
 	})
 
 	app.monitor.Start()
-}
-
-// handleVIPStateChange is called when VIP state changes (gained/lost/moved)
-func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
-
-	logger := logging.GetLogger()
-
-	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
-		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
-
-	if event.VIP == "" {
-		logger.Fatal("VIP event has VIP empty")
-
-		// // Stop mDNS service
-		// if err := app.MDNSManager.Close(); err != nil {
-		// 	logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		// } else {
-		// 	logger.Debug("[Discovery] mDNS service stopped")
-		// }
-
-		// // Send local status notification
-		// if err := vip.SendLocalStatus("", "", false); err != nil {
-		// 	logger.Error("Failed to send UDP status: %v", err)
-		// }
-		return
-	}
-
-	// Ensure we’re in the memberlist irrespective of the event type
-	// This adds a safety check for split clusters.
-	if member, err := app.Cluster.IsMember(); err != nil {
-		logger.Error("isMember: %v", err)
-	} else if !member {
-		if err := app.Cluster.JoinMemberlist(); err != nil {
-			logger.Error("JoinMemberlist: %v", err)
-		} else {
-			logger.Info("Joined memberlist with VIP %s", event.VIP)
-		}
-	}
-
-	switch event.EventType {
-
-	case vipmonitor.EventGainedOnLocalInterface:
-		// VIP gained locally
-		logger.Info("VIP %s gained locally", event.VIP)
-
-		// Send local status notification
-		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
-			logger.Error("Failed to send UDP status: %v", err)
-		}
-
-		// Start mDNS service
-		if ip := net.ParseIP(event.VIP); ip == nil {
-			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
-		} else {
-			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
-				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
-			} else {
-				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
-			}
-		}
-
-	case vipmonitor.EventLostOnLocalInterface:
-		// VIP lost locally
-		logger.Info("VIP %s lost", event.VIP)
-
-		// Send local status notification
-		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
-			logger.Error("Failed to send UDP status: %v", err)
-		}
-
-		// Stop mDNS service
-		if err := app.MDNSManager.Close(); err != nil {
-			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		} else {
-			logger.Debug("[Discovery] mDNS service stopped")
-		}
-
-	case vipmonitor.EventGainedOnVRRPUpdate:
-		// VIP gained locally (detected via VRRP update - rare case)
-		logger.Info("VIP %s gained (VRRP update), holder=%s", event.VIP, event.Holder)
-
-		// Send local status notification
-		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
-			logger.Error("Failed to send UDP status: %v", err)
-		}
-
-		// Start mDNS service
-		if ip := net.ParseIP(event.VIP); ip == nil {
-			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
-		} else {
-			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
-				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
-			} else {
-				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
-			}
-		}
-
-	case vipmonitor.EventLostOnVRRPUpdate:
-		// VIP lost locally (detected via VRRP update)
-		logger.Info("VIP %s lost (VRRP update), holder=%s", event.VIP, event.Holder)
-
-		// Send local status notification
-		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
-			logger.Error("Failed to send UDP status: %v", err)
-		}
-
-		// Stop mDNS service
-		if err := app.MDNSManager.Close(); err != nil {
-			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		} else {
-			logger.Debug("[Discovery] mDNS service stopped")
-		}
-	case vipmonitor.EventMovedOnVRRPUpdate:
-		// VIP moved to different remote node
-		logger.Info("VIP %s moved from %s to %s", event.VIP, event.OldHolder, event.Holder)
-
-		// Send status notification
-		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
-			logger.Error("Failed to send UDP status: %v", err)
-		}
-
-		// Stop mDNS service if it was running
-		if err := app.MDNSManager.Close(); err != nil {
-			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		} else {
-			logger.Debug("[Discovery] mDNS service stopped")
-		}
-
-	case vipmonitor.EventAddressChanged:
-		// VIP address changed (config already updated, need to restart monitoring)
-		logger.Info("VIP address changed from %s to %s", event.OldVIP, event.VIP)
-
-		// Update mDNS with new VIP
-		if ip := net.ParseIP(event.VIP); ip == nil {
-			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
-		} else {
-			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
-				logger.Error("[Discovery] Failed to update mDNS service: %v", err)
-			} else {
-				logger.Info("[Discovery] mDNS service updated with new VIP %s", event.VIP)
-			}
-		}
-	case vipmonitor.EventVIPHolderChanged:
-		// VIP holder changed but same VIP (detected via VRRP update)
-		logger.Info("VIP %s holder changed from %s to %s", event.VIP, event.OldHolder, event.Holder)
-
-	}
 }
 
 // leaveCluster leaves the cluster
@@ -506,7 +438,7 @@ func startAPIServer(router *mux.Router, port string, ctx context.Context, wg *sy
 	}
 
 	logger := logging.GetLogger()
-	logger.Info("Starting %s API server on %s", serverType, apiPort)
+	logger.Debug("Starting %s API server on %s", serverType, apiPort)
 
 	srv := &http.Server{
 		Addr:    apiPort,
@@ -542,6 +474,8 @@ func (app *App) Start(ctx context.Context) {
 	app.setupPrivateRoutes()
 	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
 
+	app.discoveryReconciler.Start()
+	app.startControlPlaneHealthMonitor(ctx)
 	app.startNetworkMonitor()
 	if err := app.VIPMonitor.Start(); err != nil {
 		app.Logger.Error("Failed to start VIP monitoring: %v", err)
@@ -557,12 +491,8 @@ func (app *App) Start(ctx context.Context) {
 	go startAPIServer(app.publicRouter, api.HTTPPort, ctx, &wg)
 	go startAPIServer(app.privateRouter, api.AdminPort, ctx, &wg)
 
-	// Wait for the API server to come up before printing info
+	// Give the API servers a brief head start before finishing startup.
 	time.Sleep(startupWaitDelay * time.Millisecond)
-	app.Logger.Info("%s is ALIVE and RUNNING", app.config.NodeName)
-	app.Logger.Info("     Version: %s", version.Version)
-	app.Logger.Info("     Commit: %s", version.Commit)
-	app.Logger.Info("     Build Time: %s", version.BuildTime)
 
 	app.StateManager.Start(app.memberlist)
 
@@ -571,12 +501,75 @@ func (app *App) Start(ctx context.Context) {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
 	}
 
-	vip := app.VIPMonitor.GetCurrentVIP()
-	if vip == "" {
-		app.MDNSManager.StartFusionAdvertismentOnly(net.ParseIP(app.config.BindAddr))
-	}
+	app.discoveryReconciler.RequestReconcile("startup")
+
+	app.Logger.Info("%s is ALIVE and RUNNING", app.config.NodeName)
+	app.Logger.Debug("     Version: %s", version.Version)
+	app.Logger.Debug("     Commit: %s", version.Commit)
+	app.Logger.Debug("     Build Time: %s", version.BuildTime)
 
 	wg.Wait()
+}
+
+func (app *App) startControlPlaneHealthMonitor(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				app.logControlPlaneHealth()
+			}
+		}
+	}()
+}
+
+func (app *App) logControlPlaneHealth() {
+	if app.discoveryReconciler == nil || app.VIPMonitor == nil || app.memberlist == nil {
+		return
+	}
+
+	currentVIP := app.VIPMonitor.GetCurrentVIP()
+	holder := app.VIPMonitor.GetVIPHolder()
+	isLocalOwner := app.VIPMonitor.IsLocalVIPHolder()
+	discovery := app.discoveryReconciler.Snapshot()
+
+	aliveCount := 0
+	localState := "unknown"
+	localName := ""
+	if app.memberlist.LocalNode() != nil {
+		localName = app.memberlist.LocalNode().Name
+	}
+	for _, member := range app.memberlist.Members() {
+		if member.State == memberlist.StateAlive {
+			aliveCount++
+		}
+		if localName != "" && member.Name == localName {
+			localState = cluster.GetStateString(member.State)
+		}
+	}
+
+	logger := app.Logger
+
+	if currentVIP != "" && isLocalOwner && (discovery.Mode != "vip" || discovery.VIP != currentVIP) {
+		logger.Warn("[Health] local VIP owner but discovery is not advertising expected VIP: currentVIP=%s holder=%s discoveryMode=%s discoveryVIP=%s aliveMembers=%d localState=%s",
+			currentVIP, holder, discovery.Mode, discovery.VIP, aliveCount, localState)
+		return
+	}
+
+	if currentVIP != "" && !isLocalOwner && discovery.Mode == "vip" {
+		logger.Warn("[Health] discovery still advertising VIP while node is not local owner: currentVIP=%s holder=%s discoveryVIP=%s aliveMembers=%d localState=%s",
+			currentVIP, holder, discovery.VIP, aliveCount, localState)
+		return
+	}
+
+	if currentVIP == "" && discovery.Mode == "" {
+		logger.Warn("[Health] VIP and discovery state are both empty: holder=%s aliveMembers=%d localState=%s",
+			holder, aliveCount, localState)
+	}
 }
 
 func initDataPaths() {
@@ -637,8 +630,13 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence, hub)
+func initTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneActivator tasks.SceneCatalogActivator,
+) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub, sceneActivator)
 	taskManager.Start()
 	return taskManager
 }
@@ -646,12 +644,14 @@ func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence
 // initBLEServer initializes the Bluetooth server.
 func initBLEServer() *network.BLEServer {
 
-	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
-	if err != nil {
-		logging.GetLogger().Info("Bluetooth not available: %v", err)
-		return nil
-	}
-	return bleServer
+	// bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
+	// if err != nil {
+	// 	logging.GetLogger().Info("Bluetooth not available: %v", err)
+	// 	return nil
+	// }
+	// return bleServer
+	logging.GetLogger().Info("BLE Server is disabled")
+	return nil
 }
 
 // initSAPServer initializes the SAP server
@@ -675,10 +675,10 @@ func initSAPServer(config *api.AppConfig, port string, handler *handler.Handler,
 }
 
 // initUDPServer initializes the UDP server.
-func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *network.UDPServer {
+func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub, config *api.AppConfig) *network.UDPServer {
 
 	udpPort := fmt.Sprintf(":%s", port)
-	udpServer, err := network.NewUDPServer(udpPort, handler)
+	udpServer, err := network.NewUDPServer(udpPort, handler, config.UDPDiagnostics)
 	if err != nil {
 		logger := logging.GetLogger()
 		logger.Fatal("Failed to create UDP server: %v", err)
@@ -698,7 +698,7 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    config.NodeName,
-		LogDir:      "/var/log/fusion",
+		LogDir:      fusionLogDir,
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,
@@ -706,13 +706,13 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 	return logging.GetLogger()
 }
 
-func initMDNSManager() *network.MDNSManager {
+func initMDNSManager(netIface string) *network.MDNSManager {
 	logger := logging.GetLogger()
-	logger.Info("Initializing mDNS manager")
+	logger.Debug("Initializing mDNS manager")
 
-	manager := network.NewMDNSManager()
+	manager := network.NewMDNSManager(netIface)
 
-	logger.Info("mDNS manager initialized successfully")
+	logger.Debug("mDNS manager initialized successfully")
 	return manager
 }
 
@@ -783,9 +783,11 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // corsMiddleware adds CORS headers to all responses
 func corsMiddleware() mux.MiddlewareFunc {
-	logging.GetLogger().Warn(
-		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
-	)
+	corsWarningOnce.Do(func() {
+		logging.GetLogger().Warn(
+			"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+		)
+	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set CORS headers

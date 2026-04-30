@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension EventsService on ProjectService {
@@ -362,5 +364,34 @@ extension EventsService on ProjectService {
 
   List<FusionEvent> getAllTimedEvents() {
     return events.getAll().where((event) => event.action == EventActionType.timedEvent).toList();
+  }
+
+  List<CreateScheduleTaskDto> getScheduledEventsDto() {
+    final List<CreateScheduleTaskDto> scheduledEvents = [];
+    final List<FusionEvent> allEvents = events.getAll();
+    final List<FusionEvent> scheduleEvents = allEvents
+        .where((event) => event.triggerType == EventTriggerType.schedule && event.action == EventActionType.timedEvent)
+        .toList();
+
+    for (var event in scheduleEvents) {
+      final ScheduleConfig? schedule = schedulerConfig.get(event.item!.itemId);
+      if (schedule != null) {
+        scheduledEvents.add(
+          CreateScheduleTaskDto(
+            id: schedule.id,
+            description: schedule.name,
+            type: 'scene_snapshot',
+            cronExpr: schedule.cronExpression,
+            startAt: schedule.startDate.toLocal(),
+            endAt: schedule.endDate?.toLocal(),
+            params: ScheduleTaskParams(
+              snapshotDefinitionId: event.id,
+            ),
+            enabled: event.isEnabled,
+          ),
+        );
+      }
+    }
+    return scheduledEvents;
   }
 }

@@ -2,22 +2,57 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic, paging }
+enum SourceType {
+  mic,
+  media,
+  generic,
+  paging;
 
-enum PagingSourceType { messagePlayer, messagePlayerWithZoneSelect, pagingMic, pagingMicWithZoneSelect }
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceType.generic;
+    return SourceType.values.firstWhereOrNull((SourceType e) => e.name.toLowerCase() == value.toLowerCase()) ?? SourceType.generic;
+  }
+}
+
+enum PagingSourceType {
+  messagePlayer,
+  messagePlayerWithZoneSelect,
+  pagingMic,
+  pagingMicWithZoneSelect;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static PagingSourceType? fromString(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return PagingSourceType.values.firstWhereOrNull((PagingSourceType e) => e.name.toLowerCase() == value.toLowerCase());
+  }
+}
 
 enum SourceConnectionType {
   analogInput("Wired"),
   aes67input("Aes67"),
   bluetooth("Bluetooth"),
   usb("USB"),
-  audioJack("RCA/Jack"),
+  audioJack("Audio Jack"),
+  rca("RCA"),
+  endpoint("Endpoint"),
   xlr("XLR"),
-  hdmi("HDMI");
+  hdmi("HDMI"),
+  messagePlayer("Message Player");
 
   const SourceConnectionType(this.displayName);
 
   final String displayName;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceConnectionType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceConnectionType.analogInput;
+    return SourceConnectionType.values.firstWhereOrNull((SourceConnectionType e) => e.name.toLowerCase() == value.toLowerCase()) ??
+        SourceConnectionType.analogInput;
+  }
 }
 
 extension SourceConnectionTypeExtension on SourceConnectionType {
@@ -28,15 +63,21 @@ extension SourceConnectionTypeExtension on SourceConnectionType {
       case SourceConnectionType.aes67input:
         return 'aes67';
       case SourceConnectionType.bluetooth:
-        return 'analog';
+        return 'bluetooth';
       case SourceConnectionType.usb:
+        return 'usb';
+      case SourceConnectionType.rca:
         return 'analog';
       case SourceConnectionType.audioJack:
         return 'analog';
+      case SourceConnectionType.endpoint:
+        return 'endpoint';
       case SourceConnectionType.xlr:
         return 'analog';
       case SourceConnectionType.hdmi:
-        return 'analog';
+        return 'hdmi';
+      case SourceConnectionType.messagePlayer:
+        return 'playback';
     }
   }
 }
@@ -59,7 +100,7 @@ class Source extends HardwareComponent {
     super.zAxis,
     required this.type,
     required this.connectionType,
-    required super.assetImagePath,
+    required super.image,
     this.ipAddress,
     List<int>? portNumbers,
     required this.sku,
@@ -87,7 +128,7 @@ class Source extends HardwareComponent {
     double? zAxis,
     SourceType? type,
     SourceConnectionType? connectionType,
-    String? assetImagePath,
+    String? image,
     LocationModel? locationEntity,
     String? ipAddress,
     String? sku,
@@ -109,7 +150,7 @@ class Source extends HardwareComponent {
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       connectionType: connectionType ?? this.connectionType,
-      assetImagePath: assetImagePath ?? this.assetImagePath,
+      image: image ?? this.image,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
       sku: sku ?? this.sku,
@@ -141,7 +182,8 @@ class Source extends HardwareComponent {
           (e) => e.name == json['type'],
         ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
-      assetImagePath: json['assetImagePath'] as String,
+      image:
+          DeserializationUtil.stringDeserializer.deserialize(json['image']) ?? DeserializationUtil.stringDeserializer.deserialize(json['assetImagePath']) ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
       sku: json['sku'] as String? ?? '',
@@ -172,7 +214,7 @@ class Source extends HardwareComponent {
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
       'connectionType': connectionType.name,
-      'assetImagePath': assetImagePath,
+      'image': image,
       'componentType': 'source',
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,

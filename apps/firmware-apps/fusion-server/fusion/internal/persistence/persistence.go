@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -24,12 +24,14 @@ import (
 )
 
 const (
-	bucketActive    = "active"
-	bucketAudio     = "audio"
-	bucketDevice    = "device"
-	bucketFusion    = "fusion"
-	bucketSnapshots = "snapshots"
-	bucketTasks     = "tasks"
+	bucketActive       = "active"
+	bucketAudio        = "audio"
+	bucketDevice       = "device"
+	bucketFusion       = "fusion"
+	bucketSceneSets    = "scene_sets"
+	bucketSnapshotDefs = "snapshot_definitions"
+	bucketSnapshots    = "snapshots"
+	bucketTasks        = "tasks"
 
 	keyActiveState     = "state"
 	keyDefaultSnapshot = "default"
@@ -50,6 +52,9 @@ const (
 
 // ErrNotFound is returned when a record or bucket doesn't exist.
 var ErrNotFound = errors.New("not found")
+
+// ErrNotMember is returned when a scene is not a member of the given scene set.
+var ErrNotMember = errors.New("not a member of scene set")
 
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
@@ -480,6 +485,8 @@ func (p *Persistence) initializeDatabase() error {
 			tx.Bucket([]byte(bucketAudio)) != nil &&
 			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
+			tx.Bucket([]byte(bucketSceneSets)) != nil &&
+			tx.Bucket([]byte(bucketSnapshotDefs)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
 			tx.Bucket([]byte(bucketSnapshots)) != nil {
 			return nil
@@ -491,6 +498,8 @@ func (p *Persistence) initializeDatabase() error {
 			bucketAudio,
 			bucketDevice,
 			bucketFusion,
+			bucketSceneSets,
+			bucketSnapshotDefs,
 			bucketTasks,
 			bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {
@@ -598,6 +607,9 @@ func (p *Persistence) initializeActiveState(bucket *bbolt.Bucket) error {
 }
 
 func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
+	if existing := bucket.Get([]byte(keyDefaultSnapshot)); existing != nil {
+		return nil
+	}
 
 	state := p.stateManager.GetFullState()
 

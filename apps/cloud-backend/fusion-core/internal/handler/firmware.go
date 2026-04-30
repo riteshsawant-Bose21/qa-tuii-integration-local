@@ -48,15 +48,15 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateFirmwareVersionFormat(payload.MinPrevVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.MinPrevVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid min_required_prev_version: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.MinDesktopAppVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.MinDesktopAppVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid min_desktop_app_version: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.Version); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.Version); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid version: %s", err.Error()))
 		return
 	}
@@ -140,6 +140,7 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param action query string true "Action to perform" Enums(approve, revoke)
+// @Param bundleID path string true "Unique identifier of the firmware bundle (UUID format)"
 // @Success 204 "Bundle successfully approved or revoked"
 // @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload or bundle not approved"
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
@@ -198,11 +199,12 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // CheckForUpdate checks for available firmware updates for a device
 // @Summary Check for Firmware Updates
 // @Description Checks for the latest available firmware bundle. Steps performed:
-// @Description 1. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
-// @Description 2. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
-// @Description 3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
-// @Description 4. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
-// @Description 5. Otherwise: return update_available=false
+// @Description 1. The release channel is auto-inferred from the prerelease tag of current_firmware_version (e.g. "beta" from 1.2.3-beta.1, empty for stable 1.2.3)
+// @Description 2. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
+// @Description 3. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
+// @Description 4. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
+// @Description 5. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
+// @Description 6. Otherwise: return update_available=false
 // @Description
 // @Description **Response Scenarios:**
 // @Description
@@ -222,9 +224,8 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // @Description ```
 // @Tags Firmware Update - Client API
 // @Produce json
-// @Param current_firmware_version query string true "Current firmware version (semver format)"
+// @Param current_firmware_version query string true "Current firmware version (semver format, e.g. 1.2.3 for stable, 1.2.3-beta.1 for beta channel). The release channel is auto-inferred from the prerelease tag."
 // @Param current_desktop_app_version query string true "Current desktop application version (semver format)"
-// @Param channel query string false "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)"
 // @Success 200 {object} types.FirmwareUpdateResponse "Response varies by scenario - see description above"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
@@ -239,12 +240,16 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 		return
 	}
 
+	// Strip build metadata (irrelevant for version comparison)
+	payload.CurrentFirmwareVersion = validation.StripBuildMetadata(payload.CurrentFirmwareVersion)
+	payload.CurrentDesktopAppVersion = validation.StripBuildMetadata(payload.CurrentDesktopAppVersion)
+
 	// Validate version formats
-	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentFirmwareVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.CurrentFirmwareVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid current_firmware_version format: %s", err.Error()))
 		return
 	}
-	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
+	if err := validation.ValidateBundleVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
 		response.BadRequest(c, fmt.Sprintf("invalid current_desktop_app_version format: %s", err.Error()))
 		return
 	}
@@ -261,28 +266,28 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 
 // GetBundleDownloadURL generates a presigned download URL for a firmware bundle
 // @Summary Get Firmware Bundle Download URL
-// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
+// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact by version. The URL is valid for 15 minutes and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json
-// @Param bundleID path string true "Unique identifier of the firmware bundle (UUID format)"
+// @Param version path string true "Semantic version of the firmware bundle (e.g. 1.2.3, 1.0.0-beta.1)"
 // @Success 200 {object} types.DownloadArtifactResponse "Presigned download URL and file checksum"
-// @Failure 400 {object} types.ErrorResponse "Missing or invalid bundleID"
+// @Failure 400 {object} types.ErrorResponse "Missing or invalid version"
 // @Failure 403 {object} types.ErrorResponse "Bundle not approved for download"
 // @Failure 404 {object} types.ErrorResponse "Firmware bundle not found, or bundle artifact not found in storage"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/bundles/{bundleID}/request-download-url [get]
+// @Router /firmware/bundles/{version}/request-download-url [get]
 func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
-	bundleID := c.Param("bundleID")
-	if !validation.IsValidUUID(bundleID) {
-		response.BadRequest(c, "invalid bundleID")
+	version := c.Param("version")
+	if err := validation.ValidateBundleVersionFormat(version); err != nil {
+		response.BadRequest(c, "invalid version format")
 		return
 	}
 
 	logger := log.GetLogger(c)
 
-	res, err := h.firmware.GetBundleDownloadURL(c, bundleID, logger)
+	res, err := h.firmware.GetBundleDownloadURL(c, version, logger)
 	if err != nil {
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(c, "bundle not found")
@@ -305,7 +310,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
 // LogBundleUpdateStatus records the status of a firmware bundle update
 // @Summary Log Bundle Update Status
-// @Description Records the success or failure of a firmware bundle update installation.
+// @Description Records the success or failure of a firmware bundle update installation. Allowed values: INSTALL_SUCCESS, INSTALL_FAIL
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json

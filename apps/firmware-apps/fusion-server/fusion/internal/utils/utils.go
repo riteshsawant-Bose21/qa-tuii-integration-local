@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"io"
 	"log"
@@ -14,7 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gibson042/canonicaljson-go"
@@ -314,44 +315,19 @@ func CalculateDiff(before, after any) map[string]any {
 	barr, bIsArr := before.([]any)
 	aarr, aIsArr := after.([]any)
 	if bIsArr || aIsArr {
-
-		// before not array → treat as empty
-		if !bIsArr && aIsArr {
-			barr = []any{}
-		}
-
-		// after not array → primitive replace
+		// Arrays are treated as atomic values for diff output. This preserves
+		// observer/update semantics and avoids converting slices into
+		// string-keyed sparse maps like {"0":...,"1":...}.
 		if bIsArr && !aIsArr {
 			return map[string]any{"": after}
 		}
-
-		diff := map[string]any{}
-
-		max := min(len(aarr), len(barr))
-
-		for i := 0; i < max; i++ {
-			sub := CalculateDiff(barr[i], aarr[i])
-			if sub == nil {
-				continue
-			}
-
-			if val, ok := unwrapPrimitiveDiff(sub); ok {
-				diff[strconv.Itoa(i)] = val
-			} else {
-				diff[strconv.Itoa(i)] = sub
-			}
+		if !bIsArr && aIsArr {
+			return map[string]any{"": DeepCopy(aarr)}
 		}
-
-		if len(aarr) > len(barr) {
-			for i := len(barr); i < len(aarr); i++ {
-				diff[strconv.Itoa(i)] = aarr[i]
-			}
-		}
-
-		if len(diff) == 0 {
+		if reflect.DeepEqual(barr, aarr) {
 			return nil
 		}
-		return diff
+		return map[string]any{"": DeepCopy(aarr)}
 	}
 
 	// -----------------------------
@@ -432,9 +408,10 @@ func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 	if !ok {
 		return nil, false
 	}
-	// Only unwrap true primitives
+	// Unwrap atomic replacements. Nested map diffs must remain wrapped so
+	// callers can distinguish them from a direct replacement value.
 	switch v.(type) {
-	case map[string]any, []any:
+	case map[string]any:
 		return nil, false
 	default:
 		return v, true
@@ -451,4 +428,37 @@ func ToMap(v any) (map[string]any, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+// CleanupStaleSwuFiles removes all .swu files in otaPath whose SHA-256 checksum
+// does not match keepChecksum, ensuring no stale bundles remain before a new
+// upload or download begins.
+func CleanupStaleSwuFiles(otaPath, keepChecksum string, logger *logging.Logger) {
+	entries, err := os.ReadDir(otaPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Warn("[SWUCleanup] Could not read OTA directory %s: %v", otaPath, err)
+		}
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".swu") {
+			continue
+		}
+		fullPath := filepath.Join(otaPath, entry.Name())
+		checksum, csErr := FileChecksum(fullPath)
+		if csErr != nil {
+			logger.Warn("[SWUCleanup] Could not checksum %s: %v — skipping", fullPath, csErr)
+			continue
+		}
+		if strings.EqualFold(checksum, keepChecksum) {
+			logger.Debug("[SWUCleanup] Keeping %s (checksum matches)", entry.Name())
+			continue
+		}
+		if rmErr := os.Remove(fullPath); rmErr != nil {
+			logger.Warn("[SWUCleanup] Failed to remove stale bundle %s: %v", fullPath, rmErr)
+		} else {
+			logger.Info("[SWUCleanup] Removed stale bundle %s (checksum %s != expected %s)", fullPath, checksum, keepChecksum)
+		}
+	}
 }

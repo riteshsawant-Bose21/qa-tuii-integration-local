@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
 	json "github.com/goccy/go-json"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/utils"
@@ -40,6 +41,11 @@ type ExecutionRecord struct {
 // TaskFunc is a task function that take a context
 type TaskFunc func(context.Context) error
 
+type SceneCatalogActivator interface {
+	ActivateScene(setID, sceneID string) error
+	ActivateSnapshotByID(id string) error
+}
+
 // TaskManager manages tasks and provides execution history with rotation.
 type TaskManager struct {
 	cron             *cron.Cron
@@ -49,6 +55,7 @@ type TaskManager struct {
 	node             string
 	persistence      *persistence.Persistence
 	hub              *pubsub.Hub
+	sceneCatalog     SceneCatalogActivator
 	running          bool
 	historyDirty     bool
 	historyTimer     *time.Timer
@@ -58,7 +65,12 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
+func NewTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneCatalog SceneCatalogActivator,
+) *TaskManager {
 	tm := &TaskManager{
 		cron: cron.New(
 			cron.WithParser(
@@ -78,6 +90,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		node:             config.NodeName,
 		persistence:      persistence,
 		hub:              hub,
+		sceneCatalog:     sceneCatalog,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -88,6 +101,12 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		},
 		api.TaskTypeMessage: func(t *api.Task) func() {
 			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
+		},
+		api.TaskTypeSceneSnapshot: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneSnapshotFunc(t))
+		},
+		api.TaskTypeSceneActivate: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneFunc(t))
 		},
 	}
 	return tm
@@ -603,22 +622,50 @@ func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 }
 
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
+	requiredStringParam := func(key string) error {
+		value, ok := task.Params[key]
+		if !ok {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		stringValue, ok := value.(string)
+		if !ok || strings.TrimSpace(stringValue) == "" {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		return nil
+	}
+
 	switch task.Type {
 
 	case api.TaskTypeMessage:
-		id := task.Params[api.MessageIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		if err := requiredStringParam(api.MessageIDKey); err != nil {
+			return nil, err
 		}
 
 		return tm.taskTriggerMessageFunc(task), nil
 
 	case api.TaskTypeSnapshot:
-		id := task.Params[api.SnapshotIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
+		if err := requiredStringParam(api.SnapshotIDKey); err != nil {
+			return nil, err
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneSnapshot:
+		if err := requiredStringParam(api.SnapshotDefinitionIDKey); err != nil {
+			return nil, err
+		}
+		return tm.taskActivateSceneSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneActivate:
+		if err := requiredStringParam(api.SceneSetIDKey); err != nil {
+			return nil, err
+		}
+
+		if err := requiredStringParam(api.SceneIDKey); err != nil {
+			return nil, err
+		}
+		return tm.taskActivateSceneFunc(task), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)

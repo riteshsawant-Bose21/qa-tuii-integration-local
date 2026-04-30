@@ -2,8 +2,8 @@ package persistence
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/utils"
 	"time"
 
@@ -67,7 +67,8 @@ func (p *Persistence) ActivateSnapshot(snapshotName string) error {
 	}
 
 	p.stateManager.state.State = restored
-	p.stateManager.updateChecksumUnsafe()
+	p.stateManager.markChecksumDirtyUnsafe()
+	p.stateManager.ensureChecksumUnsafe()
 	p.stateManager.Unlock()
 
 	// Update metadata snapshot
@@ -267,7 +268,8 @@ func (p *Persistence) LoadActiveSnapshot() error {
 	} else if ps != nil && len(ps.State) > 0 {
 		p.stateManager.Lock()
 		p.stateManager.state.State = deepCopyState(ps.State)
-		p.stateManager.updateChecksumUnsafe()
+		p.stateManager.markChecksumDirtyUnsafe()
+		p.stateManager.ensureChecksumUnsafe()
 		p.stateManager.Unlock()
 
 		// Use the version stored with the active state

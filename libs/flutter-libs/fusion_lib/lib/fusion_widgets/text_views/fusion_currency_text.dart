@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 
 /// Supported currency types for [FusionAppText].
 enum CurrencyType {
@@ -20,9 +21,9 @@ enum CurrencyType {
     }
   }
 
-  static CurrencyType? fromJson(String value) {
+  static CurrencyType? fromJson(String? value) {
     try {
-      return CurrencyType.values.firstWhere((CurrencyType element) => element.name == value);
+      return CurrencyType.values.firstWhereOrNull((CurrencyType element) => element.name == value);
     } catch (e) {
       return null;
     }

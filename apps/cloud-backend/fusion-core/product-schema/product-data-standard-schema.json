@@ -1,6 +1,6 @@
 {
-  "version": "1.0.4",
-  "date": "23-03-2026",
+  "version": "1.0.5",
+  "date": "15-04-2026",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boseprofessional.com/schemas/project-data-schema",
   "title": "Bose Professional Product Data Schema",
@@ -10,11 +10,14 @@
     "version": {
       "type": "string",
       "description": "Data schema version",
-      "pattern": "^\\d+\\.\\d+$",
+      "pattern": "^v?\\d+\\.\\d+(\\.\\d+)?$",
       "examples": [
         "1.0",
         "1.1",
-        "2.0"
+        "2.0",
+        "v1.0.0",
+        "v1.1.0",
+        "v2.0.0"
       ]
     },
     "title": {
@@ -124,13 +127,7 @@
           "description": "URL to DSP EQ file"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "max_spl": {
           "type": "object",
@@ -178,33 +175,41 @@
           "$ref": "#/$defs/measurement"
         },
         "frequency_range": {
-          "type": "object",
+          "type": "array",
           "title": "Frequency Range",
-          "description": "Frequency Range (−10 dB)",
-          "properties": {
-            "unit": {
-              "type": "string",
-              "const": "Hz"
+          "description": "Frequency ranges at different dB reference levels",
+          "items": {
+            "type": "object",
+            "title": "Frequency Range Entry",
+            "properties": {
+              "reference_db": {
+                "type": "number",
+                "enum": [
+                  -10,
+                  -3
+                ]
+              },
+              "unit": {
+                "type": "string",
+                "const": "Hz"
+              },
+              "low": {
+                "type": "number",
+                "minimum": 0
+              },
+              "high": {
+                "type": "number",
+                "minimum": 0
+              }
             },
-            "reference_db": {
-              "type": "number",
-              "const": -10
-            },
-            "low": {
-              "type": "number",
-              "minimum": 0
-            },
-            "high": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "unit",
-            "low",
-            "high"
-          ],
-          "additionalProperties": false
+            "required": [
+              "reference_db",
+              "unit",
+              "low",
+              "high"
+            ],
+            "additionalProperties": false
+          }
         },
         "frequency_response": {
           "type": "array",
@@ -370,7 +375,7 @@
             "accessories": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/accessory"
+                "$ref": "#/$defs/skus"
               }
             }
           },
@@ -424,31 +429,6 @@
             "Pendant",
             "Surface"
           ]
-        },
-        "impedance": {
-          "type": "object",
-          "title": "Impedance Range",
-          "properties": {
-            "unit": {
-              "type": "string",
-              "enum": [
-                "ohms",
-                "ohm"
-              ]
-            },
-            "low": {
-              "type": "number",
-              "minimum": 0
-            },
-            "high": {
-              "type": "number",
-              "minimum": 0
-            }
-          },
-          "required": [
-            "unit"
-          ],
-          "additionalProperties": false
         },
         "impedance_curve": {
           "type": "array",
@@ -646,7 +626,6 @@
         "environment",
         "dimensions",
         "mount_type",
-        "impedance",
         "voltage_taps",
         "images",
         "is_subwoofer",
@@ -680,13 +659,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "power_output": {
           "type": "object",
@@ -909,6 +882,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -955,13 +934,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "number_of_inputs_and_outputs": {
           "$ref": "#/$defs/inputsOutputs"
@@ -1027,6 +1000,12 @@
           "type": "string",
           "description": "Path to rear panel image"
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1070,13 +1049,7 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "zone_control_count": {
           "type": "string",
@@ -1128,6 +1101,12 @@
             "type": "string"
           }
         },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
+        },
         "updated_at": {
           "type": "string",
           "format": "epoch",
@@ -1171,19 +1150,19 @@
           "description": "URL to product data sheet"
         },
         "skus": {
-          "type": "array",
-          "description": "Array of SKU numbers",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1
+          "$ref": "#/$defs/skus"
         },
         "number_of_inputs_and_outputs": {
           "$ref": "#/$defs/inputsOutputs"
         },
         "images": {
           "$ref": "#/$defs/productImages"
+        },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skus"
+          }
         },
         "updated_at": {
           "type": "string",
@@ -1227,8 +1206,7 @@
           "description": "Accessory model family"
         },
         "skus": {
-          "type": "array",
-          "description": "SKU identifier"
+          "$ref": "#/$defs/skus"
         },
         "images": {
           "type": "object",
@@ -1660,6 +1638,33 @@
         }
       },
       "additionalProperties": false
+    },
+    "color": {
+      "type": "string",
+      "title": "Product Color Variant",
+      "description": "Allowed color variants for Bose Professional products",
+      "enum": [
+        "black",
+        "white",
+        "green",
+        "gray"
+      ]
+    },
+    "skus": {
+      "type": "object",
+      "title": "Product SKUs by Color",
+      "description": "SKU numbers organized by color variant",
+      "propertyNames": {
+        "$ref": "#/$defs/color"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "description": "SKU numbers for the color variant",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   }
 }

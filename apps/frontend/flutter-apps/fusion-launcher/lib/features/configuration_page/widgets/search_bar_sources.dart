@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
@@ -156,8 +157,8 @@ class SearchBarSources extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 )
                 : null,
-        child: Image.asset(
-          image,
+        child: FusionImageAuto(
+          path: image,
           height: 16,
           width: 16,
         ),

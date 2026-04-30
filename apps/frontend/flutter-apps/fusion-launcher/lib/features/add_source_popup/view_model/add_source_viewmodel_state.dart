@@ -1,5 +1,7 @@
 part of 'add_source_viewmodel.dart';
 
+// AssignedStreamChannel is now defined in fusion_lib (aes67_config.dart)
+
 class AddSourceViewModelState extends Equatable {
   final SourceSectionType selectedSourceSectionType;
   final SourceSelectionOption selectedSourceOption;
@@ -8,6 +10,12 @@ class AddSourceViewModelState extends Equatable {
   final ListeningArea? selectedListeningArea;
   final SourceConnectionType? selectedConnectionType;
   final String? selectedSourceName;
+  final Aes67Config? selectedStream;
+  final List<Aes67Config> availableStreams;
+  final int? selectedMonoChannel;
+  final int? selectedLeftChannel;
+  final int? selectedRightChannel;
+  final List<AssignedStreamChannel> assignedStreamChannels;
 
   const AddSourceViewModelState({
     this.selectedSourceSectionType = SourceSectionType.microPhone,
@@ -17,6 +25,12 @@ class AddSourceViewModelState extends Equatable {
     this.selectedListeningArea,
     this.selectedConnectionType,
     this.selectedSourceName,
+    this.selectedStream,
+    this.availableStreams = const <Aes67Config>[],
+    this.selectedMonoChannel = 1,
+    this.selectedLeftChannel = 1,
+    this.selectedRightChannel = 2,
+    this.assignedStreamChannels = const <AssignedStreamChannel>[],
   });
 
   AddSourceViewModelState copyWith({
@@ -27,6 +41,12 @@ class AddSourceViewModelState extends Equatable {
     ListeningArea? selectedListeningArea,
     SourceConnectionType? selectedConnectionType,
     String? selectedSourceName,
+    Aes67Config? selectedStream,
+    List<Aes67Config>? availableStreams,
+    int? selectedMonoChannel,
+    int? selectedLeftChannel,
+    int? selectedRightChannel,
+    List<AssignedStreamChannel>? assignedStreamChannels,
   }) {
     return AddSourceViewModelState(
       selectedSourceSectionType: selectedSourceSectionType ?? this.selectedSourceSectionType,
@@ -36,6 +56,27 @@ class AddSourceViewModelState extends Equatable {
       selectedConnectionType: selectedConnectionType ?? this.selectedConnectionType,
       selectedSourceName: selectedSourceName ?? this.selectedSourceName,
       selectedListeningArea: selectedListeningArea ?? this.selectedListeningArea,
+      selectedStream: selectedStream ?? this.selectedStream,
+      availableStreams: availableStreams ?? this.availableStreams,
+      selectedMonoChannel: selectedMonoChannel ?? this.selectedMonoChannel,
+      selectedLeftChannel: selectedLeftChannel ?? this.selectedLeftChannel,
+      selectedRightChannel: selectedRightChannel ?? this.selectedRightChannel,
+      assignedStreamChannels: assignedStreamChannels ?? this.assignedStreamChannels,
+    );
+  }
+
+  AddSourceViewModelState resetConnectionType() {
+    // When the source section type changes,
+    // we want to reset the connection type to null
+    // since different source types may have different connection options.
+    return AddSourceViewModelState(
+      selectedSourceSectionType: selectedSourceSectionType,
+      selectedSourceOption: selectedSourceOption,
+      selectedSignalType: selectedSignalType,
+      selectedSources: selectedSources,
+      selectedConnectionType: null,
+      selectedSourceName: selectedSourceName,
+      selectedListeningArea: selectedListeningArea,
     );
   }
 
@@ -48,6 +89,12 @@ class AddSourceViewModelState extends Equatable {
     selectedListeningArea,
     selectedConnectionType,
     selectedSourceName,
+    selectedStream,
+    availableStreams,
+    selectedMonoChannel,
+    selectedLeftChannel,
+    selectedRightChannel,
+    assignedStreamChannels,
   ];
 }
 
@@ -78,29 +125,32 @@ enum SourceSectionType {
     }
   }
 
-  List<SourceConnectionType> get connectionTypes {
-    switch (this) {
-      case SourceSectionType.microPhone:
-        return <SourceConnectionType>[
-          SourceConnectionType.analogInput,
-          // SourceConnectionType.xlr,
-          // SourceConnectionType.ethernet,
-        ];
-      case SourceSectionType.mediaSources:
-        return <SourceConnectionType>[
-          SourceConnectionType.usb,
-          SourceConnectionType.hdmi,
-          SourceConnectionType.bluetooth,
-          SourceConnectionType.audioJack,
-          // SourceConnectionType.ethernet,
-          // SourceConnectionType.wired,
-          // SourceConnectionType.rca,
-        ];
+  // List<SourceConnectionType> get connectionTypes {
+  //   switch (this) {
+  //     case SourceSectionType.microPhone:
+  //       return <SourceConnectionType>[
+  //         SourceConnectionType.analogInput,
+  //         SourceConnectionType.endpoint,
+  //         SourceConnectionType.aes67input,
+  //         // SourceConnectionType.xlr,
+  //         // SourceConnectionType.ethernet,
+  //       ];
+  //     case SourceSectionType.mediaSources:
+  //       return <SourceConnectionType>[
+  //         SourceConnectionType.usb,
+  //         SourceConnectionType.hdmi,
+  //         SourceConnectionType.bluetooth,
+  //         SourceConnectionType.audioJack,
+  //         SourceConnectionType.rca,
+  //         // SourceConnectionType.ethernet,
+  //         // SourceConnectionType.wired,
+  //         // SourceConnectionType.rca,
+  //       ];
 
-      case SourceSectionType.paging:
-        return <SourceConnectionType>[];
-    }
-  }
+  //     case SourceSectionType.paging:
+  //       return <SourceConnectionType>[];
+  //   }
+  // }
 }
 
 // enum SourceConnectionType {

@@ -27,13 +27,25 @@ class MeterBlock {
       }
       final double? n = double.tryParse(value);
       if (n != null) return <double>[n];
+      // Handle string booleans: "true" / "false"
+      final String lower = value.trim().toLowerCase();
+      if (lower == 'true') return <double>[1.0];
+      if (lower == 'false') return <double>[0.0];
       return <double>[];
     }
     if (value is List) {
       return value.map((dynamic e) {
         if (e is num) return e.toDouble();
         if (e is bool) return e ? 1.0 : 0.0;
-        if (e is String) return double.tryParse(e) ?? 0.0;
+        if (e is String) {
+          final double? n = double.tryParse(e);
+          if (n != null) return n;
+          // Handle string booleans inside lists
+          final String lower = e.trim().toLowerCase();
+          if (lower == 'true') return 1.0;
+          if (lower == 'false') return 0.0;
+          return 0.0;
+        }
         return 0.0;
       }).toList();
     } else if (value is num) {
@@ -84,12 +96,36 @@ class MeterBlock {
     return match?.group(1) ?? blockName;
   }
 
+  /// Whether this block represents a boolean meter (e.g. hold, open/closed).
+  bool get isBoolType => valueType == 'bool';
+
+  /// Whether this block represents an integer meter (e.g. active_input).
+  bool get isIntegerType => valueType == 'integer';
+
+  /// Whether this block represents a numeric level (float dB values).
+  bool get isFloatType => valueType == 'float';
+
   String get valueLabel {
+    if (value.isEmpty) return '—';
+    if (isBoolType) {
+      if (value.length == 1) return value[0] >= 1.0 ? 'ON' : 'OFF';
+      return value.map((double v) => v >= 1.0 ? 'ON' : 'OFF').join(' / ');
+    }
+    if (isIntegerType) {
+      if (value.length == 1) return value[0].toInt().toString();
+      return value.map((double v) => v.toInt().toString()).join(' / ');
+    }
     if (value.length == 1) return '${value[0].toStringAsFixed(1)} dB';
     return '${value.map((double v) => v.toStringAsFixed(1)).join(' / ')} dB';
   }
 
   Color get levelColor {
+    if (value.isEmpty) return const Color(0xFF4A5568);
+    if (isBoolType) {
+      final bool anyOn = value.any((double v) => v >= 1.0);
+      return anyOn ? const Color(0xFF48BB78) : const Color(0xFF718096);
+    }
+    if (isIntegerType) return const Color(0xFF90CDF4);
     final double peak = value.reduce((double a, double b) => a > b ? a : b);
     if (peak <= -100) return const Color(0xFF4A5568);
     if (peak <= -60) return const Color(0xFF48BB78);
@@ -100,6 +136,9 @@ class MeterBlock {
 
 class MeterPacket {
   final String name;
+  final String messageName;
+  final String deviceId;
+  final String packetId;
   final String type;
   final int length;
   final List<MeterBlock> blocks;
@@ -109,18 +148,24 @@ class MeterPacket {
     required this.type,
     required this.length,
     required this.blocks,
+    required this.messageName,
+    required this.deviceId,
+    required this.packetId,
   });
 
   factory MeterPacket.fromMap(Map<String, dynamic> map) {
     final Map<String, dynamic>? params = map['parameters'] as Map<String, dynamic>?;
     if (params == null) {
-      return const MeterPacket(name: '', type: '', length: 0, blocks: <MeterBlock>[]);
+      return const MeterPacket(name: '', type: '', length: 0, blocks: <MeterBlock>[], messageName: '', deviceId: '', packetId: '');
     }
     return MeterPacket(
       name: params['name']?.toString() ?? '',
       type: params['type']?.toString() ?? '',
       length: (params['length'] is num) ? (params['length'] as num).toInt() : int.tryParse(params['length']?.toString() ?? '') ?? 0,
       blocks: _parseBlocks(params['value']),
+      messageName: map['message_name']?.toString() ?? '',
+      deviceId: map['device_id']?.toString() ?? '',
+      packetId: map['packet_id']?.toString() ?? '',
     );
   }
 
@@ -151,5 +196,29 @@ class MeterPacket {
           .toList();
     }
     return <MeterBlock>[];
+  }
+
+  //to json
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'name': name,
+      'type': type,
+      'length': length,
+      'message_name': messageName,
+      'device_id': deviceId,
+      'packet_id': packetId,
+      'blocks':
+          blocks
+              .map(
+                (MeterBlock e) => <String, Object>{
+                  'block_name': e.blockName,
+                  'meter_name': e.meterName,
+                  'value_type': e.valueType,
+                  'dimensions': e.dimensions,
+                  'value': e.value,
+                },
+              )
+              .toList(),
+    };
   }
 }

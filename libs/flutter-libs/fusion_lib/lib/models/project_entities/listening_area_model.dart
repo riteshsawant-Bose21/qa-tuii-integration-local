@@ -268,10 +268,49 @@ extension ListExtension<T> on List<T> {
     return null;
   }
 
+  // single where or null
+  T? singleWhereOrNull(bool Function(T element) test) {
+    T? result;
+    for (final T element in this) {
+      if (test(element)) {
+        if (result != null) {
+          // More than one match
+          return null;
+        }
+        result = element;
+      }
+    }
+    return result;
+  }
+
   T? elementAtOrNull(int index) {
     if (index < 0 || index >= length) return null;
     return this[index];
   }
+}
+
+class SpeakerPlacementAlgorithmResult {
+  List<Offset> positions;
+  SurfacePlacementResult? surfacePlacementResult;
+  PlacementResult? placementResult;
+  final double coverageAngle;
+  final double listnersHeight;
+  final CoveragePreference coveragePreference;
+  final double width;
+  final double length;
+  final CeilingPlacementParams? ceilingPlacementParams;
+
+  SpeakerPlacementAlgorithmResult({
+    required this.positions,
+    this.surfacePlacementResult,
+    this.placementResult,
+    required this.coverageAngle,
+    required this.listnersHeight,
+    required this.coveragePreference,
+    required this.width,
+    required this.length,
+    this.ceilingPlacementParams,
+  });
 }
 
 class AutoPlacementResult {
@@ -333,7 +372,7 @@ class ListeningArea {
   final bool isDrawn;
 
   final Color? preferredSpeakerColor;
-  final SplRange? splRange;
+  final SplRange splRange;
   final ListeningPreference? listeningPreference;
 
   /// THESE ARE FILTER OPTIONS
@@ -366,7 +405,7 @@ class ListeningArea {
     this.autoPlacement = false,
     this.autoPlacementResult,
     this.preferredSpeakerColor,
-    this.splRange,
+    this.splRange = SplRange.backgroundMusic,
     this.listeningPreference,
     bool? isDrawn,
   }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}",
@@ -525,7 +564,7 @@ class ListeningArea {
     'customListeningAreaHeight': customListeningAreaHeight,
     'isDrawn': isDrawn,
     'preferredSpeakerColor': preferredSpeakerColor,
-    'splRange': splRange?.name,
+    'splRange': splRange.name,
     'listeningPreference': listeningPreference?.name,
     'signalType': signalType.name,
     'backgroundNoise': backgroundNoise?.name,
@@ -560,7 +599,7 @@ class ListeningArea {
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
       preferredSpeakerColor: json['preferredSpeakerColor'] != null ? Color(json['preferredSpeakerColor'] as int) : null,
-      splRange: SplRange.fromJson(json['splRange'] as String?),
+      splRange: SplRange.fromJson(json['splRange'] as String?) ?? SplRange.backgroundMusic,
       listeningPreference: ListeningPreference.fromJson(json['listeningPreference']),
       signalType: SignalType.fromJson(json['signalType']) ?? SignalType.mono,
       mountingType: MountingType.fromJson(json['mountingType']) ?? MountingType.surface,
@@ -739,4 +778,25 @@ class _Edge {
   final Offset a, b;
 
   _Edge(this.a, this.b);
+}
+
+class CeilingPlacementParams {
+  final Room room;
+  final LayoutPattern selectedLayoutPattern;
+  final double boundaryOverlapThreshold;
+  final CoveragePreference selectedCoveragePreference;
+  final SpeakerType selectedSpeakerType;
+  final RoomType selectedRoomType;
+  final double coverageAngle;
+  final List<Point2D>? customGeometry;
+  CeilingPlacementParams({
+    required this.room,
+    required this.selectedLayoutPattern,
+    required this.boundaryOverlapThreshold,
+    required this.selectedCoveragePreference,
+    required this.selectedSpeakerType,
+    required this.selectedRoomType,
+    required this.coverageAngle,
+    this.customGeometry,
+  });
 }

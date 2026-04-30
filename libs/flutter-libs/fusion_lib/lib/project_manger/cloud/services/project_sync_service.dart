@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:archive/archive_io.dart';
 import 'package:dio/dio.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -68,13 +69,11 @@ class ProjectSyncService {
   }
 
   /// Create a new project and get upload URLs
-  Future<ResponseCallback<ProjectUploadUrls>> uploadProject({
-    required ProjectData projectData,
-  }) async {
+  Future<ResponseCallback<ProjectUploadUrls>> uploadProject({required ProjectData projectData}) async {
     try {
       if (projectData.lastUploadedAt == null && !projectData.isCloudInstance) {
         Map<String, dynamic> data = {
-          'projectId': projectData.id,
+          'project_id': projectData.id,
           'name': projectData.name,
           'application': projectData.application ?? 'General',
           'environment_type': projectData.environmentType ?? 'indoor',

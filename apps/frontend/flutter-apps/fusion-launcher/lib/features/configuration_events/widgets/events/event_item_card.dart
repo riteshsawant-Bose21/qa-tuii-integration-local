@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
+
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
@@ -10,17 +13,21 @@ class EventItemCard extends StatefulWidget {
   final FusionEvent eventData;
   final ConfigEventsViewmodel cubit;
   final bool isSelected;
+  final bool isInControlMode;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
-  final Function(String eventId)? onSwitchChanged;
+  final Future<void> Function()? onEventRecall;
+  final Function(String eventId, bool isEnabled)? onSwitchChanged;
   final int index;
 
   const EventItemCard({
     this.isSelected = false,
+    this.isInControlMode = false,
     super.key,
     required this.eventData,
     this.onDelete,
     this.onTap,
+    this.onEventRecall,
     required this.index,
     this.onSwitchChanged,
     required this.cubit,
@@ -32,6 +39,12 @@ class EventItemCard extends StatefulWidget {
 
 class _EventItemCardState extends State<EventItemCard> {
   bool _isHovered = false;
+  bool _isPressed = false;
+
+  void _handleRecallTap() {
+    if (!widget.isInControlMode || widget.onEventRecall == null) return;
+    widget.onEventRecall!();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,14 +91,47 @@ class _EventItemCardState extends State<EventItemCard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FusionImage.asset(
-                  semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
-
-                  Assets.playIcon,
-                  width: 24,
-                  height: 24,
-                  assetColor: context.colorScheme.iconWhite,
-                  fit: BoxFit.contain,
+                Tooltip(
+                  message: widget.isInControlMode ? 'Recall Event' : 'Enable control mode to recall',
+                  child: BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+                    builder: (BuildContext context, ConfigEventsState eventsState) {
+                      final bool isRecalling = eventsState.recallingEventId == widget.eventData.id;
+                      return GestureDetector(
+                        onTap: widget.isInControlMode && !isRecalling ? _handleRecallTap : null,
+                        onTapDown: widget.isInControlMode && !isRecalling ? (_) => setState(() => _isPressed = true) : null,
+                        onTapUp: (_) => setState(() => _isPressed = false),
+                        onTapCancel: () => setState(() => _isPressed = false),
+                        child: AnimatedScale(
+                          scale: _isPressed ? 0.6 : 1.0,
+                          duration: const Duration(milliseconds: 100),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child:
+                                isRecalling
+                                    ? Center(
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: context.colorScheme.iconWhite,
+                                        ),
+                                      ),
+                                    )
+                                    : FusionImageAuto(
+                                      path: Assets.playIcon,
+                                      semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+                                      width: 24,
+                                      height: 24,
+                                      color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
+                                      fit: BoxFit.contain,
+                                    ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
 
@@ -107,15 +153,21 @@ class _EventItemCardState extends State<EventItemCard> {
                 SemanticHelper.toggle(
                   testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${FusionTestKeys.instance.eventsswitch}_${widget.index}"),
                   value: widget.eventData.isEnabled,
-                  child: FusionSwitch(
-                    height: 22,
-                    width: 36,
-                    value: widget.eventData.isEnabled,
-                    onChanged: (bool value) {
-                      if (widget.onSwitchChanged != null) {
-                        widget.onSwitchChanged!(widget.eventData.id);
-                      }
-                    },
+                  child: IgnorePointer(
+                    ignoring: !widget.isInControlMode,
+                    child: Opacity(
+                      opacity: widget.isInControlMode ? 1.0 : 0.4,
+                      child: FusionSwitch(
+                        height: 22,
+                        width: 36,
+                        value: widget.eventData.isEnabled,
+                        onChanged: (bool value) {
+                          if (widget.onSwitchChanged != null) {
+                            widget.onSwitchChanged!(widget.eventData.id, value);
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -144,13 +196,12 @@ class _EventItemCardState extends State<EventItemCard> {
                             ),
                       );
                     },
-                    child: FusionImage.asset(
+                    child: FusionImageAuto(
+                      path: Assets.deleteIcon,
                       semanticId: "${FusionTestKeys.instance.deletevent}_${widget.index}",
-                      Assets.deleteIcon,
                       width: 17,
                       height: 17,
-                      assetColor: context.colorScheme.iconWhite,
-
+                      color: context.colorScheme.iconWhite,
                       fit: BoxFit.contain,
                     ),
                   ),

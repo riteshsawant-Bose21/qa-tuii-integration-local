@@ -15,55 +15,53 @@ abstract class DeviceComponent {
   });
 }
 
-class SpeakerData extends DeviceComponent {
-  final String sku;
-  final OutputType type;
-
-  const SpeakerData({
-    required this.sku,
-    required this.type,
-    required super.assetPath,
-    required super.name,
-    required super.price,
-  }) : super(id: sku);
-
-  static const List<SpeakerData> demoSpeakers = <SpeakerData>[
-    SpeakerData(
-      assetPath: 'assets/images/speakers/MSA12X.png',
-      name: 'MSA12X',
-      sku: 'MSA12X',
-      type: OutputType.analogOutput,
-      price: 500.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/array1.png',
-      name: 'ArenaMatch AM40',
-      sku: 'CO-12 H120',
-      type: OutputType.analogOutput,
-      price: 600.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/DM_pendant.png',
-      name: 'DesignMax DM6PE',
-      sku: 'MSA12XOHS',
-      type: OutputType.analogOutput,
-      price: 700.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/icons/aes67.png',
-      name: 'AES67 Output',
-      sku: 'AES67OUT',
-      type: OutputType.aes67output,
-      price: 100.0,
-    ),
-  ];
-
-  static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
-}
+// class SpeakerData extends DeviceComponent {
+//   final String sku;
+//   final OutputType type;
+//   const SpeakerData({
+//     required this.sku,
+//     required this.type,
+//     required super.assetPath,
+//     required super.name,
+//     required super.price,
+//   }) : super(id: sku);
+//   static const List<SpeakerData> demoSpeakers = <SpeakerData>[
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/MSA12X.png',
+//       name: 'MSA12X',
+//       sku: 'MSA12X',
+//       type: OutputType.analogOutput,
+//       price: 500.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/array1.png',
+//       name: 'ArenaMatch AM40',
+//       sku: 'CO-12 H120',
+//       type: OutputType.analogOutput,
+//       price: 600.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/DM_pendant.png',
+//       name: 'DesignMax DM6PE',
+//       sku: 'MSA12XOHS',
+//       type: OutputType.analogOutput,
+//       price: 700.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/icons/aes67.png',
+//       name: 'AES67 Output',
+//       sku: 'AES67OUT',
+//       type: OutputType.aes67output,
+//       price: 100.0,
+//     ),
+//   ];
+//   static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
+// }
 
 class SourceData extends DeviceComponent {
   final SourceType type;
   final SourceConnectionType connectionType;
+  final List<SourceConnectionType> supportedConnectionTypes;
 
   final PagingSourceType? pagingSourceType; // Only applicable for paging sources
 
@@ -75,6 +73,7 @@ class SourceData extends DeviceComponent {
     required super.id,
     required super.price,
     this.pagingSourceType,
+    this.supportedConnectionTypes = const <SourceConnectionType>[],
   });
 
   static const List<SourceData> microphoneItems = <SourceData>[
@@ -85,6 +84,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "hanging",
@@ -93,6 +98,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "condenser",
@@ -101,6 +112,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "dynamic",
@@ -109,6 +126,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "shotgun",
@@ -117,6 +140,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "pzm",
@@ -125,6 +154,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "lavalier",
@@ -133,6 +168,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "headset",
@@ -141,6 +182,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "handheld",
@@ -149,6 +196,12 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "beltpack",
@@ -157,16 +210,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
-    SourceData(
-      id: "paging",
-      name: "Paging",
-      assetPath: "assets/images/products/paging_mic.png",
-      type: SourceType.mic,
-      connectionType: SourceConnectionType.analogInput,
-      price: 100.0,
-    ),
-
     SourceData(
       id: "table",
       name: "Table",
@@ -174,6 +224,54 @@ class SourceData extends DeviceComponent {
       type: SourceType.mic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
+    ),
+    SourceData(
+      id: "wireless_handheld",
+      name: "Wireless Handheld",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
+    ),
+    SourceData(
+      id: "wireless_headset",
+      name: "Wireless Headset",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
+    ),
+    SourceData(
+      id: "wireless_beltpack",
+      name: "Wireless Beltpack",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.xlr,
+        SourceConnectionType.aes67input,
+      ],
     ),
   ];
 
@@ -185,6 +283,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "cd",
@@ -193,6 +298,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "dvd",
@@ -201,6 +313,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "bluray",
@@ -209,6 +328,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "sat_cable",
@@ -217,6 +343,29 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.hdmi,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
+    ),
+    SourceData(
+      id: "tv",
+      name: "TV",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.hdmi,
+      price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.hdmi,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "tuner",
@@ -225,6 +374,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "laptop",
@@ -233,6 +389,15 @@ class SourceData extends DeviceComponent {
       connectionType: SourceConnectionType.usb,
       type: SourceType.media,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.usb,
+        SourceConnectionType.bluetooth,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "deskpc",
@@ -241,6 +406,15 @@ class SourceData extends DeviceComponent {
       connectionType: SourceConnectionType.usb,
       type: SourceType.media,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.usb,
+        SourceConnectionType.bluetooth,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "mixer",
@@ -249,6 +423,13 @@ class SourceData extends DeviceComponent {
       type: SourceType.generic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
       id: "generic",
@@ -257,14 +438,30 @@ class SourceData extends DeviceComponent {
       type: SourceType.generic,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.usb,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
     SourceData(
-      id: "message_player",
-      name: "Message Player",
+      id: "phone",
+      name: "Phone",
       assetPath: "assets/images/products/dvdplayer.png",
       type: SourceType.media,
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[
+        SourceConnectionType.analogInput,
+        SourceConnectionType.audioJack,
+        SourceConnectionType.rca,
+        SourceConnectionType.bluetooth,
+        SourceConnectionType.endpoint,
+        SourceConnectionType.aes67input,
+      ],
     ),
   ];
 
@@ -274,9 +471,10 @@ class SourceData extends DeviceComponent {
       name: "Message Player",
       assetPath: "assets/images/products/dvdplayer.png",
       type: SourceType.paging,
-      connectionType: SourceConnectionType.analogInput,
+      connectionType: SourceConnectionType.messagePlayer,
       pagingSourceType: PagingSourceType.messagePlayer,
       price: 100.0,
+      supportedConnectionTypes: <SourceConnectionType>[],
     ),
     // todo : uncomment below paging sources once we have different configuration options for each paging source type
     // SourceData(
@@ -313,7 +511,7 @@ class SourceData extends DeviceComponent {
 
   static SourceConnectionType getSourceConnectionType(String id) {
     //search both microphone list and media list and return type
-    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems, ...pagingItems]) {
       if (item.id == id) {
         return item.connectionType;
       }

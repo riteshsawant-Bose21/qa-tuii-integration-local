@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <atomic>
 #include <iostream>
+#include <memory>
 
 static std::string device_id = "";
 
@@ -257,7 +258,7 @@ static void handle_parameter(const std::string &path,
 
     std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
 
-    Json::Value message_json; 
+    Json::Value message_json;
     message_json["target"] = path_parts[2].key;
     message_json["name"] = path_parts[3].key;
 
@@ -265,16 +266,62 @@ static void handle_parameter(const std::string &path,
     {
         Json::Value index_array(Json::arrayValue);
         index_array.append(static_cast<Json::Int>(path_parts[4].arrayIndex + 1));
-        
+
         if (path_parts.size() > 5 && path_parts[5].isArrayAccess)
         {
             index_array.append(static_cast<Json::Int>(path_parts[5].arrayIndex + 1));
         }
-        
+
         message_json["index"] = index_array;
+        message_json["value"] = new_value;
+    }
+    else if (new_value.isObject())
+    {
+        Json::Value::Members members = new_value.getMemberNames();
+
+        for (auto &m : members)
+        {
+            int param_index;
+            Json::Value index_array(Json::arrayValue);
+
+            try {
+                size_t pos;
+                param_index = std::stoi(m, &pos);
+                if (pos != m.size())
+                {
+                    SPDLOG_WARN("Unable to convert patch update index: too long: {}",
+                                new_value.asCString());
+                    continue;
+                }
+                index_array.append(static_cast<Json::Int>(param_index + 1));
+            } catch (const std::invalid_argument&) {
+                SPDLOG_WARN("Unable to convert patch update index: not an integer.: {}",
+                            new_value.asCString());
+                continue;
+            } catch (const std::out_of_range&) {
+                SPDLOG_WARN("Unable to convert patch update index: out of range.: {}",
+                            new_value.asCString());
+                continue;
+            }
+
+            message_json["index"] = index_array;
+            message_json["value"] = new_value[m];
+
+            Json::StreamWriterBuilder writer;
+            writer["indentation"] = "";
+            std::string message = Json::writeString(writer, message_json);
+
+            handle_update(message);
+        }
+
+        return;
+    }
+    else
+    {
+        // Scalar value
+        message_json["value"] = new_value;
     }
 
-    message_json["value"] = new_value;
 
     Json::StreamWriterBuilder writer;
     writer["indentation"] = "";
@@ -324,6 +371,7 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(config_path + "/algorithm-definitions.json"), "algorithm definition file")
+        ("composite-definitions,x", boost::program_options::value<std::string>()->default_value(config_path + "/composite-algorithm-definitions.json"), "composite algorithm definition file")
         ("time,t", boost::program_options::value<int>(), "time to run (seconds)")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
@@ -373,7 +421,21 @@ int main(int argc, char *argv[])
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::Definition definitions(vm["definitions"].as<std::string>());
-    bosepro::Session session(configuration.get_session(), definitions);
+
+    std::unique_ptr<bosepro::CompositeDefinition> composite_definitions;
+    try
+    {
+        composite_definitions = std::make_unique<bosepro::CompositeDefinition>(
+            vm["composite-definitions"].as<std::string>());
+    }
+    catch (const std::exception &e)
+    {
+        SPDLOG_WARN("Composite definitions unavailable: {}", e.what());
+    }
+
+    bosepro::Session session(configuration.get_session(),
+                            definitions,
+                            composite_definitions.get());
 
     auto& telemetry_monitor = bosepro::TelemetryMonitor::get_instance();
 
@@ -425,13 +487,15 @@ int main(int argc, char *argv[])
         {
             SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
             client = new UDPValueMonitor(vm["serverip"].as<std::string>(),
-                                         7947);
+                                         7947,
+                                         false);
 
             client->watchDeviceID(handle_device_id);
             client->watchPattern("devices[*]", handle_devices);
             client->watchPattern("settings.audio.*.*[*][*]", handle_parameter);
             client->watchPattern("settings.audio.*.*[*]", handle_parameter);
             client->watchPattern("settings.audio.*.*", handle_parameter);
+            client->start();
         }
 
         // if we boot up on empty config, no need to start up telemetry

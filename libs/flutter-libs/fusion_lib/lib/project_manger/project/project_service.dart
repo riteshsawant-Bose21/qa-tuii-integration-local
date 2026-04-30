@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
+
 import '../../fusion_lib.dart';
 
 /// -------------------
@@ -38,6 +40,7 @@ class ProjectService {
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
+  final WallRepository walls;
   final ZoneRepository zones;
   final SourceSetRepository sourceSets;
   final HardwareRepository hardware;
@@ -59,6 +62,13 @@ class ProjectService {
   final EventsRepository events;
   final MediaFileRepository mediaFiles;
   final MessageRepository messages;
+  final Aes67Repository aes67Devices;
+
+  // ─── Controller-specific repositories ────────────────────────────────────────
+
+  /// All [ControllerPageModel] entries (scene-set / snapshot / message pages),
+  /// keyed by page ID.
+  final ControllerPageRepository controllerPages;
 
   final RelationshipManager relationships;
 
@@ -102,6 +112,7 @@ class ProjectService {
 
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
+    WallRepository? walls,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -124,8 +135,11 @@ class ProjectService {
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
     MessageRepository? messages,
+    Aes67Repository? aes67Devices,
+    ControllerPageRepository? controllerPages,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
+       walls = walls ?? WallRepository(),
        zones = zones ?? ZoneRepository(),
        subZones = subZones ?? SubZoneRepository(),
        sourceSets = sourceSets ?? SourceSetRepository(),
@@ -147,7 +161,9 @@ class ProjectService {
        schedulerConfig = schedulerConfig ?? SchedulerRepository(),
        events = events ?? EventsRepository(),
        mediaFiles = mediaFiles ?? MediaFileRepository(),
-       messages = messages ?? MessageRepository();
+       messages = messages ?? MessageRepository(),
+       aes67Devices = aes67Devices ?? Aes67Repository(),
+       controllerPages = controllerPages ?? ControllerPageRepository();
 
   ProjectService updateVip(String? vip) {
     ProjectService projectService = ProjectService(
@@ -178,6 +194,7 @@ class ProjectService {
       lastUploadedAt: lastUploadedAt,
       floors: floors,
       listeningAreas: listeningAreas,
+      walls: walls,
       zones: zones,
       subZones: subZones,
       sourceSets: sourceSets,
@@ -203,6 +220,7 @@ class ProjectService {
       mediaFiles: mediaFiles,
       messages: messages,
       metadata: metadata,
+      aes67Devices: aes67Devices,
     );
 
     // Preserve undo/redo stacks
@@ -242,6 +260,7 @@ class ProjectService {
     ProjectMetaData? metadata,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
+    WallRepository? walls,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -265,6 +284,8 @@ class ProjectService {
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
     MessageRepository? messages,
+    Aes67Repository? aes67Devices,
+    ControllerPageRepository? controllerPages,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -294,6 +315,7 @@ class ProjectService {
       lastUploadedAt: lastUploadedAt ?? this.lastUploadedAt,
       floors: floors ?? this.floors,
       listeningAreas: listeningAreas ?? this.listeningAreas,
+      walls: walls ?? this.walls,
       zones: zones ?? this.zones,
       subZones: subZones ?? this.subZones,
       sourceSets: sourceSets ?? this.sourceSets,
@@ -319,6 +341,8 @@ class ProjectService {
       mediaFiles: mediaFiles ?? this.mediaFiles,
       messages: messages ?? this.messages,
       metadata: metadata ?? this.metadata,
+      aes67Devices: aes67Devices ?? this.aes67Devices,
+      controllerPages: controllerPages ?? this.controllerPages,
     );
 
     // Preserve undo/redo stacks
@@ -362,6 +386,7 @@ class ProjectService {
       "isCloudInstance": isCloudInstance,
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
+      "walls": walls.toJson((w) => w.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
       "subZones": subZones.toJson((sz) => sz.toJson()),
       "sourceSet": sourceSets.toJson((m) => m.toJson()),
@@ -394,7 +419,10 @@ class ProjectService {
       "events": events.toJson((e) => e.toJson()),
       "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
       "messages": messages.toJson((m) => m.toJson()),
+      "aes67Devices": aes67Devices.toJson((a) => a.toJson()),
       'metadata': metadata.toJson(),
+      // Controller-specific repositories
+      'controllerPages': controllerPages.toJson((p) => p.toJson()),
     };
   }
 
@@ -432,6 +460,7 @@ class ProjectService {
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
     service.listeningAreas.fromJsonList(json["listeningAreas"], (m) => ListeningArea.fromJson(m), "id");
+    service.walls.fromJsonList(json["walls"], (m) => Wall.fromJson(m), "id");
     service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
     service.subZones.fromJsonList(json["subZones"], (m) => SubZone.fromJson(m), "id");
     service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");
@@ -476,9 +505,105 @@ class ProjectService {
     service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
     service.mediaFiles.fromJsonList(json["mediaFiles"], (m) => MediaFileModel.fromJson(m), "id");
     service.messages.fromJsonList(json["messages"], (m) => MessageModel.fromJson(m), "id");
+    service.aes67Devices.fromJsonList(json["aes67Devices"], (m) => Aes67Config.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 
+    // Load controller-specific repositories (new format)
+    service.controllerPages.fromJson(json['controllerPages'], (m) => ControllerPageModel.fromJson(m));
+
+    // ── Backward-compat migration ────────────────────────────────────────────
+    // Old project files embedded controller config inside the hardware JSON.
+    // If the new keys are absent, migrate from the old embedded fields.
+    if (json['controllerPages'] == null) {
+      if (json['hardware'] is List) {
+        for (final dynamic e in json['hardware'] as List) {
+          final Map<String, dynamic> m = Map<String, dynamic>.from(e as Map);
+          if (m['componentType'] == 'controller') {
+            _migrateLegacyControllerData(service, m);
+          }
+        }
+      }
+    }
+
     return service;
+  }
+
+  /// Migrates per-controller config embedded in old [FusionController] JSON
+  /// into the new [ControllerPageRepository] and [RelationshipManager].
+  /// Display settings and schedule preferences are already read by
+  /// [FusionController.fromJson] directly.
+  static void _migrateLegacyControllerData(
+    ProjectService service,
+    Map<String, dynamic> controllerJson,
+  ) {
+    final String controllerId = controllerJson['id'] as String;
+
+    // ── assignedZoneIds → controllerAssignedZones relationship ──────────────
+    if (service.relationships.getChildren(RelationshipType.controllerAssignedZones, controllerId).isEmpty) {
+      final List<String> zoneIds = (controllerJson['assignedZoneIds'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+      for (final String zoneId in zoneIds) {
+        service.relationships.link(RelationshipType.controllerAssignedZones, controllerId, zoneId);
+      }
+    }
+
+    // ── pages / snapshotPagesData → controllerPages repo + relationships ─────
+    final dynamic rawPages = controllerJson['pages'] ?? controllerJson['snapshotPagesData'];
+    if (rawPages is List) {
+      for (final dynamic entry in rawPages) {
+        final Map<String, dynamic> m = Map<String, dynamic>.from(entry as Map);
+        final String typeStr = m['type'] as String? ?? ControllerPageType.snapshotPage.name;
+        final ControllerPageType type = ControllerPageType.values.firstWhere(
+          (ControllerPageType t) => t.name == typeStr,
+          orElse: () => ControllerPageType.snapshotPage,
+        );
+        final ControllerPageModel page = ControllerPageModel(
+          id: m['id'] as String,
+          type: type,
+          name: m['name'] as String? ?? '',
+        );
+        service.controllerPages.add(page.id, page);
+        service.relationships.link(RelationshipType.controllerPages, controllerId, page.id);
+
+        // Migrate snapshotIds for snapshot pages
+        if (type == ControllerPageType.snapshotPage) {
+          final List<String> snapshotIds = (m['snapshotIds'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+          for (final String snapId in snapshotIds) {
+            service.relationships.link(RelationshipType.controllerPageSnapshots, page.id, snapId);
+          }
+        }
+      }
+    }
+
+    // ── messagePages → controllerPages repo (type = message) ─────────────────
+    final dynamic rawMessagePages = controllerJson['messagePages'];
+    if (rawMessagePages is List) {
+      for (final dynamic entry in rawMessagePages) {
+        final Map<String, dynamic> m = Map<String, dynamic>.from(entry as Map);
+        final String sourceId = m['sourceId'] as String;
+        final ControllerPageModel page = ControllerPageModel(
+          id: sourceId,
+          type: ControllerPageType.message,
+          name: '',
+        );
+        service.controllerPages.add(page.id, page);
+        service.relationships.link(RelationshipType.controllerPages, controllerId, page.id);
+        final List<String> messageIds = (m['selectedMessageIds'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+        for (final String msgId in messageIds) {
+          service.relationships.link(RelationshipType.controllerPageMessages, page.id, msgId);
+        }
+      }
+    }
+
+    // ── schedulePageConfig.selectedScheduleIds → controllerSchedules relationship
+    // (displayMode / showUpcoming are already read by FusionController.fromJson)
+    final dynamic rawSched = controllerJson['schedulePageConfig'];
+    if (rawSched is Map) {
+      final Map<String, dynamic> m = Map<String, dynamic>.from(rawSched);
+      final List<String> schedIds = (m['selectedScheduleIds'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+      for (final String schedId in schedIds) {
+        service.relationships.link(RelationshipType.controllerSchedules, controllerId, schedId);
+      }
+    }
   }
 }

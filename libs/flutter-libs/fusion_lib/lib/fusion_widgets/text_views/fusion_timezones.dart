@@ -1,5 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
+import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
+
 enum FusionTimeZones {
   IST('India Standard Time', 330),
   UTC('Coordinated Universal Time', 0),
@@ -23,7 +25,7 @@ enum FusionTimeZones {
     return 'UTC$sign$hours:$minutes';
   }
 
-  static FusionTimeZones? fromString(String value) {
+  static FusionTimeZones? fromString(String? value) {
     try {
       return FusionTimeZones.values.firstWhere((FusionTimeZones element) => element.name == value);
     } catch (e) {
@@ -31,9 +33,9 @@ enum FusionTimeZones {
     }
   }
 
-  static FusionTimeZones? fromJson(String json) {
+  static FusionTimeZones? fromJson(String? json) {
     try {
-      return FusionTimeZones.values.firstWhere((FusionTimeZones element) => element.name == json);
+      return FusionTimeZones.values.firstWhereOrNull((FusionTimeZones element) => element.name == json);
     } catch (e) {
       return null;
     }

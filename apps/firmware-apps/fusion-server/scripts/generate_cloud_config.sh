@@ -5,19 +5,12 @@ set -eu
 # Fusion server configuration and startup script
 fusion_server_service_path=/lib/systemd/system/fusion-server.service
 
-# haproxy confi
-haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
-
 # Keepalived configuration
 keepalived_service_path=/lib/systemd/system/keepalived.service
 keepalived_conf_path=/etc/keepalived/keepalived.conf
 keepalived_conf_data() {
   cat << EOF_K
 # Fusion customized keepalived configuration
-vrrp_track_process haproxy-service {
-  process haproxy
-  delay 2
-}
 global_defs {
   enable_script_security
 }
@@ -34,40 +27,8 @@ vrrp_instance VI_1 {
   virtual_ipaddress {
     $VIRTUAL_IP/24
   }
-  track_process {
-    haproxy-service
-  }
 }
 EOF_K
-}
-
-# HAProxy configuration
-haproxy_service_path=/lib/systemd/system/haproxy.service
-haproxy_conf_path=/etc/haproxy/haproxy.cfg
-haproxy_conf_data() {
-  cat << EOF_H
-# Fusion default configuration for haproxy
-# NOTE: This will be overwritten at runtime by fusion-server.
-#       See fusion/internal/network/haproxy.go:generateConfig
-global
-  log /dev/log local0
-  stats socket /var/run/haproxy.sock mode 600 level admin expose-fd listeners
-  stats timeout 2m
-  maxconn 4096
-defaults
-  log global
-  mode http
-  option httplog
-  option dontlognull
-  timeout connect 5000
-  timeout client 50000
-  timeout server 50000
-frontend http-in
-  bind *:80
-  default_backend servers
-backend servers
-  balance roundrobin
-EOF_H
 }
 
 indent_content() {
@@ -75,7 +36,7 @@ indent_content() {
   # Indenting properly for the cloud-config yaml file.
   # Args: 
   #   $1 - A file to indent or the name of a function to call that outputs a
-  #        string, see haproxy_conf_data for an example.
+  #        string.
   if [ -f "$1" ]; then
     # Indent all lines except blank lines (yamllint).
     sed "s/^\([^$]\)/      \1/" "$1"
@@ -95,7 +56,6 @@ package_update: true
 package_upgrade: true
 packages:
   - chrony
-  - haproxy
   - keepalived
   - libjsoncpp25
   - net-tools
@@ -117,20 +77,6 @@ $(indent_content "$scripts_dir/keepalived.service")
     owner: root:root
     content: |
 $(indent_content 'keepalived_conf_data')
-  - path: $haproxy_service_path
-    permissions: '0644'
-    owner: root:root
-    content: |
-$(indent_content "$scripts_dir/haproxy.service")
-  - path: $haproxy_conf_path
-    permissions: '0644'
-    owner: root:root
-    content: |
-$(indent_content 'haproxy_conf_data')
-  - path: $haproxy_conf_data_path
-    permissions: '0755'
-    owner: root:root
-    content: |
 EOF
 }
 
@@ -148,12 +94,6 @@ write_configs_to_path() {
   mkdir -p "$(dirname "${output_path}$keepalived_conf_path")"
   cp -f "$scripts_dir/keepalived.service" "${output_path}$keepalived_service_path"
   keepalived_conf_data > "${output_path}$keepalived_conf_path"
-
-  # haproxy
-  mkdir -p "$(dirname "${output_path}$haproxy_service_path")"
-  mkdir -p "$(dirname "${output_path}$haproxy_conf_path")"
-  cp -f "$scripts_dir/haproxy.service" "${output_path}$haproxy_service_path"
-  haproxy_conf_data > "${output_path}$haproxy_conf_path"
 }
 
 # Main execution

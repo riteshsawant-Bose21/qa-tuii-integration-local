@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
+import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/projects/widget/building/toolbar/canvas_toolbar.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -15,16 +16,21 @@ import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
-import '../../../fusion_canvas/view/painters/elements/derived/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/spl_loader_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/wall_painter.dart';
+import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
+import '../../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../../presentation/project_work_area.dart';
 import '../../viewmodel/building_page_viewmodel.dart';
 
@@ -52,78 +58,24 @@ class BuildingCanvas extends StatefulWidget {
   State<BuildingCanvas> createState() => _BuildingCanvasState();
 }
 
-class _BuildingCanvasState extends State<BuildingCanvas> {
+class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProviderStateMixin {
   Offset viewPortCenter = Offset.zero;
-
+  late final AnimationController animationController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
   // bool showLiveSpl = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   void dispose() {
+    animationController.dispose();
+
     super.dispose();
   }
 
-  // void zoneSelectionMode(Zone zone) async {
-  //   final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
-  //     serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-  //       zoneId: zone.id,
-  //     ),
-  //     zone,
-  //   );
-
-  //   if (selectedAreas != null) {
-  //     print(
-  //       "Selected areas for zone ${zone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
-  //     );
-  //     serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
-  //       zoneId: zone.id,
-  //       listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
-  //     );
-  //   } else {
-  //     serviceLocator<ProjectViewModel>().clearSelectedZone();
-  //   }
-  // // }
-
-  // void subzoneSelectionMode(SubZone subZone) async {
-  //   final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelectionForSubZone(
-  //     serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
-  //       subZoneId: subZone.id,
-  //     ),
-  //     subZone,
-  //   );
-
-  //   if (selectedAreas != null) {
-  //     print(
-  //       "Selected areas for subzone ${subZone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
-  //     );
-  //     serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(
-  //       subZoneId: subZone.id,
-  //       listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
-  //     );
-  //   } else {
-  //     serviceLocator<ProjectViewModel>().clearSelectedSubZone();
-  //   }
-  // }
-
-  // Offset? cursorPosition;
+  @override
+  void initState() {
+    animationController.repeat();
+    super.initState();
+  }
 
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-  // // bool get shouldUseCustomCursor => projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers;
-
-  // MouseCursor get cursorType {
-  //   // if (widget.floorCanvasController.isDrawing.value) {
-  //   //   return SystemMouseCursors.precise;
-  //   // } else if (projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers) {
-  //   //   return SystemMouseCursors.none;
-  //   // } else {
-  //   return SystemMouseCursors.basic;
-  //   // }
-  // }
 
   void calculateSpl(BuildContext context) {
     if (context.read<BuildingPageViewModel>().isSplMode) {
@@ -171,275 +123,395 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: Builder(
                                         builder: (BuildContext context) {
+                                          final List<HardwareComponent> hardwareInFloorWithPosition = serviceLocator<ProjectViewModel>()
+                                              .getHardwareInFloorWithPosition(floorId: floor.id);
+
+                                          final bool isAcousticsMode = context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.acoustics;
+
                                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
-                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floorId: floor.id,
-                                            ))
-                                              ListeningAreaPainter(listeningArea: area, isShowingSpl: buildingPageViewModel.isSplMode),
+                                            for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
+                                              ListeningAreaPainter(
+                                                backgoundColor: serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id),
+                                                listeningArea: area,
+                                                isShowingSpl: buildingPageViewModel.isSplMode,
+                                              ),
                                           ];
 
-                                          return FusionCanvas(
-                                            selectedIds: <String>{
-                                              if (buildingPageViewModel.state.selectedListeningAreaId != null)
-                                                buildingPageViewModel.state.selectedListeningAreaId!,
-                                              if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
-                                            },
-                                            elements: <FusionBasePainter>[
-                                              if (buildingPageViewModel.isSplMode)
-                                                SplPainter(
-                                                  listeningAreas: listeningAreaPainters,
-                                                  minSpl: projectViewModel.minSPL,
-                                                  maxSpl: projectViewModel.maxSPL,
-                                                  splPanelData: widget.splPanelData,
-                                                ),
-                                              FloorPlanPainter(
-                                                image: floor.floorPlan.imagePath,
-                                                position: floor.floorPlan.position,
-                                                size: floor.floorPlan.size,
-                                                showSpl: true,
-                                              ),
-                                              ...listeningAreaPainters,
-                                              for (final HardwareComponent hw in serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
-                                                floorId: floor.id,
-                                              ))
-                                                HardwareComponentPainter(
-                                                  hardware: hw,
-                                                ),
-                                            ],
-                                            toolbarEvents: FusionCanvasEvents(
-                                              onLayerSelected: (FusionBasePainter? value) {
-                                                if (value is ListeningAreaPainter) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                } else if (value is HardwareComponentPainter) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value.hardware.id);
-                                                } else if (value == null) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                }
-                                              },
-                                              onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
-                                                // print("Add Points: $points");
-                                                if (painter is ListeningAreaPainter) {
-                                                  final ListeningArea area = painter.listeningArea;
-                                                  final FusionCanvasPoint start = line.start;
-                                                  final int indexToInsert = area.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
-                                                  final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(area.vertices);
-                                                  updatedPoints.insertAll(indexToInsert + 1, points);
-                                                  serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                    area: area.copyWith(vertices: updatedPoints),
-                                                  );
-                                                  calculateSpl(context);
-                                                }
-                                              },
-                                              onMoveLayer: (FusionBasePainter painter, Offset offset) {
-                                                if (painter is ListeningAreaPainter) {
-                                                  final ListeningArea area = painter.listeningArea;
-                                                  serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                    area: area.copyWith(
-                                                      vertices: area.vertices.map((FusionCanvasPoint v) => v.copyWith(position: v.position + offset)).toList(),
-                                                    ),
-                                                  );
-                                                  calculateSpl(context);
-                                                } else if (painter is HardwareComponentPainter) {
-                                                  final HardwareComponent hw = painter.hardware;
-                                                  serviceLocator<ProjectViewModel>().updateHardware(
-                                                    hardware: hw.copyWith(
-                                                      pos: (hw.pos ?? Offset.zero) + offset,
-                                                    ),
-                                                  );
-                                                  calculateSpl(context);
-                                                }
-                                              },
-                                              onDeleteLayer: (FusionBasePainter painter) {
-                                                if (painter is ListeningAreaPainter) {
-                                                  serviceLocator<ProjectViewModel>().removeListeningArea(areaId: painter.listeningArea.id);
-                                                  calculateSpl(context);
-                                                } else if (painter is HardwareComponentPainter) {
-                                                  serviceLocator<ProjectViewModel>().removeHardware(hardwareId: painter.hardware.id);
-                                                  calculateSpl(context);
-                                                }
-                                              },
-                                              onRemovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points) {
-                                                if (painter is ListeningAreaPainter) {
-                                                  final ListeningArea area = painter.listeningArea;
-                                                  final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices
-                                                          .where((FusionCanvasPoint v) => points.every((FusionCanvasPoint p) => p.id != v.id))
-                                                          .toList();
-                                                  serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                    area: area.copyWith(vertices: updatedPoints),
-                                                  );
-                                                }
-                                                calculateSpl(context);
-                                              },
-                                              onMovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta) {
-                                                if (painter is ListeningAreaPainter) {
-                                                  final ListeningArea area = painter.listeningArea;
-                                                  final List<FusionCanvasPoint> updatedPoints =
-                                                      area.vertices.map((FusionCanvasPoint v) {
-                                                        if (points.any((FusionCanvasPoint p) => p.id == v.id)) {
-                                                          return v.copyWith(position: v.position + delta);
-                                                        } else {
-                                                          return v;
-                                                        }
-                                                      }).toList();
-                                                  serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                    area: area.copyWith(vertices: updatedPoints),
-                                                  );
-                                                  calculateSpl(context);
-                                                } else if (painter is HardwareComponentPainter) {
-                                                  final HardwareComponent hw = painter.hardware;
-                                                  serviceLocator<ProjectViewModel>().updateHardware(
-                                                    hardware: hw.copyWith(
-                                                      pos: (hw.pos ?? Offset.zero) + delta,
-                                                    ),
-                                                  );
-                                                  calculateSpl(context);
-                                                }
-                                              },
-                                              inputEvents: FusionCanvasInputEvents(
-                                                onMouseUp: (FusionCanvasInputTapUpState event) {
-                                                  final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
-                                                  if (!buildingPageViewModel.canPlaceSpeakerOnMouseUp(event)) {
-                                                    return false;
-                                                  }
-                                                  projectViewModel.placeSelectedSpeaker(position: event.tapPosition, isFromBuildingPage: true);
-                                                  final bool hasPendingSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea().isNotEmpty;
-                                                  buildingPageViewModel.onSpeakerPlaced(hasPendingSpeakers: hasPendingSpeakers);
-                                                  return true;
+                                          return AnimatedBuilder(
+                                            animation: animationController,
+                                            builder: (BuildContext context, Widget? child) {
+                                              return FusionCanvas(
+                                                selectedIds: <String>{
+                                                  if (buildingPageViewModel.state.selectedListeningAreaId != null)
+                                                    buildingPageViewModel.state.selectedListeningAreaId!,
+                                                  if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
+                                                  if (buildingPageViewModel.state.selectedWallId != null) buildingPageViewModel.state.selectedWallId!,
                                                 },
-                                              ),
-                                              penToolEvents: FusionPenToolEvents(
-                                                onPathClosed: (List<FusionCanvasPoint> value) {
-                                                  final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
-                                                  final ListeningArea listeningArea = ListeningArea(
-                                                    vertices: value,
-                                                    name: "Listening Area ${projectVM.listeningAreas.length + 1}",
-                                                  );
-                                                  projectVM.addListeningArea(
-                                                    area: listeningArea,
-                                                    floorId: floor.id,
-                                                  );
-                                                  projectVM.setCurrentSelectedHardware(null);
-                                                  projectVM.setCurrentSelectedListeningArea(listeningArea.id);
 
-                                                  calculateSpl(context);
-                                                },
-                                              ),
-                                            ),
-                                            builder:
-                                                (BuildContext context) => Stack(
-                                                  children: <Widget>[
-                                                    Positioned(left: 0, child: widget.leftPanel),
-                                                    Positioned(
-                                                      right: 0,
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.end,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: <Widget>[
-                                                          widget.rightPanel,
-                                                          WorkSafeAreaContent(
-                                                            child: SizedBox(
-                                                              height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
-                                                              child: SplSlider(
-                                                                splPanelData: widget.splPanelData,
-                                                                splRangeController: widget.splRangeController,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
+                                                elements: <FusionBasePainter>[
+                                                  FusionDottedBgPainter(
+                                                    color: Colors.grey.shade300,
+                                                  ),
+                                                  if (buildingPageViewModel.isSplMode) ...<FusionBasePainter>[
+                                                    SplLoaderPainter(
+                                                      animation: animationController,
+                                                      listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
                                                     ),
-                                                    const Align(
-                                                      alignment: Alignment.bottomCenter,
-                                                      child: Padding(
-                                                        padding: EdgeInsets.all(20),
-                                                        child: CanvasToolBar(),
-                                                      ),
+                                                    SplPainter(
+                                                      listeningAreas: listeningAreaPainters,
+                                                      minSpl: projectViewModel.minSPL,
+                                                      maxSpl: projectViewModel.maxSPL,
+                                                      splPanelData: widget.splPanelData,
+                                                      splState: context.watch<SplViewModel>().state,
                                                     ),
                                                   ],
-                                                ),
+                                                  FloorPlanPainter(
+                                                    image: floor.floorPlan.imagePath,
+                                                    position: floor.floorPlan.position,
+                                                    size: floor.floorPlan.size,
+                                                    showSpl: true,
+                                                  ),
 
-                                            cursorBuilder: (BuildContext context) {
-                                              final BuildingPageViewModel buildingPageViewModel = context.watch<BuildingPageViewModel>();
-                                              // final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
-                                              final SpeakerPlacementCursorState? cursorState = buildingPageViewModel.getSpeakerPlacementCursorState();
-                                              if (cursorState == null) {
-                                                return null;
-                                              }
-                                              return (
-                                                Alignment.center,
-                                                Builder(
-                                                  builder: (BuildContext context) {
-                                                    final MountingType? speakerMountType = cursorState.mountingType;
-
-                                                    return Stack(
-                                                      clipBehavior: Clip.none,
-                                                      children: <Widget>[
-                                                        Builder(
-                                                          builder: (BuildContext context) {
-                                                            if (speakerMountType == MountingType.surface) {
-                                                              return const RotatedBox(
-                                                                quarterTurns: 1,
-                                                                child: Icon(
-                                                                  Icons.rectangle,
-                                                                  size: 32,
-                                                                  color: Colors.black,
-                                                                ),
-                                                              );
-                                                            } else if (speakerMountType == MountingType.pendant) {
-                                                              return SizedBox(
-                                                                width: 24,
-                                                                height: 24,
-                                                                child: CustomPaint(
-                                                                  painter: TrianglePainter(
-                                                                    color: Colors.black,
-                                                                    isUp: true,
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            } else {
-                                                              return const Icon(
-                                                                Icons.circle,
-                                                                size: 32,
-                                                                color: Colors.black,
-                                                              );
-                                                            }
-                                                          },
+                                                  ...listeningAreaPainters,
+                                                  for (final Wall wall in serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: floor.id))
+                                                    WallPainter(wall: wall),
+                                                  for (final HardwareComponent hw in hardwareInFloorWithPosition)
+                                                    if (isAcousticsMode && hw is Speaker)
+                                                      HardwareComponentPainter(hardware: hw)
+                                                    else if (!isAcousticsMode)
+                                                      HardwareComponentPainter(hardware: hw),
+                                                ],
+                                                toolbarEvents: FusionCanvasEvents(
+                                                  onLayerSelected: (List<FusionBasePainter>? values) {
+                                                    final FusionBasePainter? value = values != null && values.isNotEmpty ? values.first : null;
+                                                    if (value is ListeningAreaPainter) {
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                                    } else if (value is HardwareComponentPainter) {
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value.hardware.id);
+                                                    } else if (value is WallPainter) {
+                                                      context.read<BuildingPageViewModel>().selectWall(value.wall.id);
+                                                    } else if (value == null) {
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                                    }
+                                                  },
+                                                  onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
+                                                    // print("Add Points: $points");
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      final FusionCanvasPoint start = line.start;
+                                                      final int indexToInsert = area.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
+                                                      final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(area.vertices);
+                                                      updatedPoints.insertAll(indexToInsert + 1, points);
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final FusionCanvasPoint start = line.start;
+                                                      final int indexToInsert = wall.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
+                                                      final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(wall.vertices);
+                                                      updatedPoints.insertAll(indexToInsert + 1, points);
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
+                                                    }
+                                                  },
+                                                  onMoveLayer: (FusionBasePainter painter, Offset offset) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(
+                                                          vertices:
+                                                              area.vertices.map((FusionCanvasPoint v) => v.copyWith(position: v.position + offset)).toList(),
                                                         ),
-                                                        Positioned(
-                                                          bottom: -10,
-                                                          right: -10,
-                                                          child: Container(
-                                                            decoration: const BoxDecoration(
-                                                              color: Colors.black,
-                                                              shape: BoxShape.circle,
-                                                            ),
-                                                            padding: const EdgeInsets.all(5),
-                                                            child: FusionAppText(
-                                                              text: '${cursorState.pendingCount}',
-                                                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                                color: context.colorScheme.onPrimary,
-                                                                fontSize: 10,
+                                                      );
+                                                      calculateSpl(context);
+                                                    } else if (painter is HardwareComponentPainter) {
+                                                      final HardwareComponent hw = painter.hardware;
+                                                      serviceLocator<ProjectViewModel>().updateHardware(
+                                                        hardware: hw.copyWith(
+                                                          pos: (hw.pos ?? Offset.zero) + offset,
+                                                        ),
+                                                      );
+                                                      calculateSpl(context);
+                                                    }
+                                                  },
+                                                  onDeleteLayer: (FusionBasePainter painter) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      serviceLocator<ProjectViewModel>().removeListeningArea(areaId: painter.listeningArea.id);
+                                                      calculateSpl(context);
+                                                    } else if (painter is HardwareComponentPainter) {
+                                                      serviceLocator<ProjectViewModel>().removeHardware(hardwareId: painter.hardware.id);
+                                                      calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      serviceLocator<ProjectViewModel>().removeWall(wallId: painter.wall.id);
+                                                      calculateSpl(context);
+                                                    }
+                                                  },
+                                                  onRemovePoints: (FusionBasePainter painter, List<String> points) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          area.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                      if (updatedPoints.length < 3) {
+                                                        FusionToast.error(context, message: "Listening area should have minimum 3 points");
+                                                        return;
+                                                      }
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          wall.vertices.where((FusionCanvasPoint v) => points.every((String p) => !p.contains(v.id))).toList();
+                                                      if (updatedPoints.length < 2) {
+                                                        FusionToast.error(context, message: "Wall should have minimum 2 points");
+                                                        return;
+                                                      }
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
+                                                      );
+                                                    }
+                                                    calculateSpl(context);
+                                                  },
+                                                  onMovePoints: (FusionBasePainter painter, List<String> points, Offset delta) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          area.vertices.map((FusionCanvasPoint v) {
+                                                            if (points.any((String p) => p == v.id)) {
+                                                              return v.copyWith(position: v.position + delta);
+                                                            } else {
+                                                              return v;
+                                                            }
+                                                          }).toList();
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
+                                                    } else if (painter is HardwareComponentPainter) {
+                                                      final HardwareComponent hw = painter.hardware;
+                                                      serviceLocator<ProjectViewModel>().updateHardware(
+                                                        hardware: hw.copyWith(
+                                                          pos: (hw.pos ?? Offset.zero) + delta,
+                                                        ),
+                                                      );
+                                                      calculateSpl(context);
+                                                    } else if (painter is WallPainter) {
+                                                      final Wall wall = painter.wall;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          wall.vertices.map((FusionCanvasPoint v) {
+                                                            if (points.any((String p) => p == v.id)) {
+                                                              return v.copyWith(position: v.position + delta);
+                                                            } else {
+                                                              return v;
+                                                            }
+                                                          }).toList();
+                                                      serviceLocator<ProjectViewModel>().updateWall(
+                                                        wall: wall.copyWith(vertices: updatedPoints),
+                                                      );
+                                                      calculateSpl(context);
+                                                    }
+                                                  },
+                                                  inputEvents: FusionCanvasInputEvents(
+                                                    onMouseUp: (FusionCanvasInputTapUpState event) {
+                                                      final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
+                                                      if (!buildingPageViewModel.canPlaceSpeakerOnMouseUp(event)) {
+                                                        return false;
+                                                      }
+                                                      projectViewModel.placeSelectedSpeaker(position: event.tapPosition, isFromBuildingPage: true);
+                                                      final bool hasPendingSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea().isNotEmpty;
+                                                      buildingPageViewModel.onSpeakerPlaced(hasPendingSpeakers: hasPendingSpeakers);
+                                                      return true;
+                                                    },
+                                                  ),
+                                                  penToolEvents: FusionPenToolEvents(
+                                                    onPathCancelled: (List<FusionCanvasPoint> value) {
+                                                      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                      final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+                                                      if (state is DrawingWallState) {
+                                                        if (value.length >= 2) projectVM.addWall(wall: Wall(vertices: value), floorId: floor.id);
+                                                      }
+                                                    },
+                                                    onPathClosed: (List<FusionCanvasPoint> value) {
+                                                      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                      if (value.last == value.first) {
+                                                        value.removeLast();
+                                                      }
+                                                      final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+                                                      if (state is DrawingListeningAreaState) {
+                                                        final String? listeningAreaId =
+                                                            state
+                                                                .listeningAreaId; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
+                                                        final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
+                                                          (ListeningArea element) => element.id == listeningAreaId,
+                                                        );
+                                                        if (existingArea == null) {
+                                                          final ListeningArea listeningArea = ListeningArea(
+                                                            vertices: value,
+                                                            name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                          );
+                                                          projectVM.addListeningArea(
+                                                            area: listeningArea,
+                                                            floorId: floor.id,
+                                                          );
+                                                          projectVM.setCurrentSelectedHardware(null);
+                                                          projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                                        } else {
+                                                          projectVM.updateListeningArea(
+                                                            area: existingArea.copyWith(vertices: value, isDrawn: true),
+                                                          );
+                                                          projectVM.setCurrentSelectedHardware(null);
+                                                          projectVM.setCurrentSelectedListeningArea(existingArea.id);
+                                                        }
+                                                      } else if (state is DrawingWallState) {
+                                                        projectVM.addWall(wall: Wall(vertices: value), floorId: floor.id);
+                                                      }
+
+                                                      calculateSpl(context);
+                                                    },
+                                                  ),
+                                                ),
+                                                builder:
+                                                    (BuildContext context) => BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                                                      listenWhen:
+                                                          (ProjectViewModelState previous, ProjectViewModelState current) =>
+                                                              previous != current && current is FloorsUpdated,
+                                                      listener: (BuildContext context, ProjectViewModelState state) {
+                                                        if (state is FloorsUpdated) {
+                                                          Future<void>.delayed(const Duration(milliseconds: 100), () {
+                                                            context.read<FusionCanvasStateViewModel>().fitToScreen(
+                                                              padding: EdgeInsets.only(
+                                                                left: 250,
+                                                                right: 250,
+                                                                top: WorkAreaScope.of(context).appBarHeight,
+                                                                bottom: 20 + 50,
+                                                              ),
+                                                            );
+                                                          });
+                                                          // onFloorUpdated();
+                                                        }
+                                                      },
+                                                      builder: (BuildContext context, _) {
+                                                        return Stack(
+                                                          children: <Widget>[
+                                                            Positioned(left: 0, child: widget.leftPanel),
+                                                            Positioned(
+                                                              right: 0,
+                                                              child: Row(
+                                                                mainAxisAlignment: MainAxisAlignment.end,
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: <Widget>[
+                                                                  widget.rightPanel,
+                                                                  WorkSafeAreaContent(
+                                                                    child: SizedBox(
+                                                                      height: constraints.maxHeight - WorkAreaScope.of(context).appBarHeight,
+                                                                      child: SplSlider(
+                                                                        splPanelData: widget.splPanelData,
+                                                                        splRangeController: widget.splRangeController,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
                                                               ),
                                                             ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    );
-                                                    // } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
-                                                    //   return Image.asset(
-                                                    //     serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
-                                                    //     width: 32,
-                                                    //     height: 32,
-                                                    //   );
-                                                    // } else {
-                                                    //   return const SizedBox.shrink();
-                                                    // }
-                                                  },
-                                                ),
+                                                            const Align(
+                                                              alignment: Alignment.bottomCenter,
+                                                              child: Padding(
+                                                                padding: EdgeInsets.all(20),
+                                                                child: CanvasToolBar(),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      },
+                                                    ),
+
+                                                cursorBuilder: (BuildContext context) {
+                                                  final BuildingPageViewModel buildingPageViewModel = context.watch<BuildingPageViewModel>();
+                                                  // final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
+                                                  final SpeakerPlacementCursorState? cursorState = buildingPageViewModel.getSpeakerPlacementCursorState();
+                                                  if (cursorState == null) {
+                                                    return null;
+                                                  }
+                                                  return (
+                                                    Alignment.center,
+                                                    Builder(
+                                                      builder: (BuildContext context) {
+                                                        final MountingType? speakerMountType = cursorState.mountingType;
+
+                                                        return Stack(
+                                                          clipBehavior: Clip.none,
+                                                          children: <Widget>[
+                                                            Builder(
+                                                              builder: (BuildContext context) {
+                                                                if (speakerMountType == MountingType.surface) {
+                                                                  return const RotatedBox(
+                                                                    quarterTurns: 1,
+                                                                    child: Icon(
+                                                                      Icons.rectangle,
+                                                                      size: 32,
+                                                                      color: Colors.black,
+                                                                    ),
+                                                                  );
+                                                                } else if (speakerMountType == MountingType.pendant) {
+                                                                  return SizedBox(
+                                                                    width: 24,
+                                                                    height: 24,
+                                                                    child: CustomPaint(
+                                                                      painter: TrianglePainter(
+                                                                        color: Colors.black,
+                                                                        isUp: true,
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                } else {
+                                                                  return const Icon(
+                                                                    Icons.circle,
+                                                                    size: 32,
+                                                                    color: Colors.black,
+                                                                  );
+                                                                }
+                                                              },
+                                                            ),
+                                                            Positioned(
+                                                              bottom: -10,
+                                                              right: -10,
+                                                              child: Container(
+                                                                decoration: const BoxDecoration(
+                                                                  color: Colors.black,
+                                                                  shape: BoxShape.circle,
+                                                                ),
+                                                                padding: const EdgeInsets.all(5),
+                                                                child: FusionAppText(
+                                                                  text: '${cursorState.pendingCount}',
+                                                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                                    color: context.colorScheme.onPrimary,
+                                                                    fontSize: 10,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                        // } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
+                                                        //   return Image.asset(
+                                                        //     serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
+                                                        //     width: 32,
+                                                        //     height: 32,
+                                                        //   );
+                                                        // } else {
+                                                        //   return const SizedBox.shrink();
+                                                        // }
+                                                      },
+                                                    ),
+                                                  );
+                                                },
                                               );
                                             },
                                           );
@@ -491,8 +563,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               Theme.of(context).colorScheme.primaryWhite,
               BlendMode.srcIn,
             ),
-            child: const FusionImage.asset(
-              "assets/images/upload_floor_plan.png",
+            child: const FusionImageAuto(
+              path: "assets/images/upload_floor_plan.png",
               width: 64,
               height: 64,
             ),
@@ -745,13 +817,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Widget _buildFloorPlanImage(String imagePath) {
     if (imagePath.startsWith('assets/')) {
-      return Image.asset(
-        imagePath,
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
       );
     } else {
-      return Image.file(
-        File(imagePath),
+      return FusionImageAuto(
+        path: imagePath,
         fit: BoxFit.cover,
         errorBuilder: (
           BuildContext context,
@@ -938,7 +1010,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (_) {
           return Dialog(
             insetPadding: const EdgeInsets.all(100),
@@ -1137,6 +1209,7 @@ class SplSlider extends StatelessWidget {
                   maxValue: serviceLocator<ProjectViewModel>().maxSPL,
                   invertedColors: splPanelData.splInvertColor,
                   onChanged: (double min, double max) {
+                    context.read<SplViewModel>().startLoading();
                     // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                     serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
@@ -1147,6 +1220,8 @@ class SplSlider extends StatelessWidget {
                     // }
                   },
                   onChangeEnd: (double min, double max) {
+                    context.read<SplViewModel>().stopLoading();
+
                     // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
                     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                     serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);

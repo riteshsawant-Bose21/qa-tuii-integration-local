@@ -6,8 +6,11 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/fusion_canvas_input_state.dart';
 import '../fusion_canvas_tool_viewmodel.dart';
+import '../tools/fusion_canvas_tool.dart';
 
-class PenToolHelper {
+class PenToolHelper extends FusionCanvasToolTransformer<PenToolState> {
+  const PenToolHelper();
+  @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
     required FusionCanvasInputContext context,
@@ -33,7 +36,31 @@ class PenToolHelper {
 
     if (inputState is FusionCanvasInputSecondaryTapState) {
       // Right-click cancels pen tool and resets to idle
-      return IdlePenToolState();
+      if (currentState is DrawingPenToolState) {
+        return CancelledPenToolState(points: currentState.points);
+      } else {
+        return IdlePenToolState();
+      }
+    }
+
+    if (inputState.isEscPressed) {
+      // Pressing ESC cancels the pen tool
+      if (currentState is DrawingPenToolState) {
+        return CancelledPenToolState(points: currentState.points);
+      } else {
+        return IdlePenToolState();
+      }
+    }
+    if (inputState.isEnterPressed) {
+      // Pressing Enter closes the path if we have at least 3 points
+      if (currentState is DrawingPenToolState) {
+        final DrawingPenToolState drawingState = currentState;
+        if (drawingState.points.length >= 3) {
+          return ClosedPenToolState(points: drawingState.points);
+        } else {
+          return CancelledPenToolState(points: drawingState.points);
+        }
+      }
     }
 
     return currentState;

@@ -30,7 +30,7 @@ abstract class HardwareComponent {
   Offset? pos;
   Offset? wiringPos;
   double? zAxis;
-  final String assetImagePath;
+  final String image; // Can be URL, asset path, or base64 string. use [FusionImageAuto] to handle different types of image sources.
   final LocationModel locationEntity;
   final double price;
   final int? equipmentLocationPosition;
@@ -49,7 +49,7 @@ abstract class HardwareComponent {
     this.pos,
     this.wiringPos,
     this.zAxis,
-    required this.assetImagePath,
+    required this.image,
     required this.locationEntity,
     required this.price,
     required this.hardwareName,
@@ -66,7 +66,6 @@ abstract class HardwareComponent {
            List<PortData>.generate(
              portData?.inputPorts ?? 0,
              (index) {
-               print("Port Data: ${portData?.inputPortType}");
                return PortData(
                  id: FusionUtils.shortStringUUID(),
                  name: '${index + 1}',
@@ -74,7 +73,6 @@ abstract class HardwareComponent {
                  portNumber: index + 1,
                  description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
                  position: portData?.portPosition ?? PortPosition.topLeft,
-                 compatibleTypes: portData?.compatibleInputTypes ?? [],
                );
              },
            ),
@@ -83,13 +81,12 @@ abstract class HardwareComponent {
            List<PortData>.generate(
              portData?.outputPorts ?? 0,
              (index) => PortData(
-               id: _uuid.v4(),
+               id: FusionUtils.shortStringUUID(),
                name: '${index + 1}',
                description: "${(portData?.outputPortType ?? PortType.analogOutput).description} ${index + 1}",
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,
-               compatibleTypes: portData?.compatibleOutputTypes ?? [],
              ),
            );
   @override
@@ -101,19 +98,13 @@ abstract class HardwareComponent {
         equipmentLocationPosition == other.equipmentLocationPosition &&
         pos == other.pos &&
         wiringPos == other.wiringPos &&
-        assetImagePath == other.assetImagePath &&
+        image == other.image &&
         locationEntity == other.locationEntity;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        pos.hashCode ^
-        wiringPos.hashCode ^
-        assetImagePath.hashCode ^
-        locationEntity.hashCode ^
-        equipmentLocationPosition.hashCode;
+    return id.hashCode ^ name.hashCode ^ pos.hashCode ^ wiringPos.hashCode ^ image.hashCode ^ locationEntity.hashCode ^ equipmentLocationPosition.hashCode;
   }
 
   HardwareComponent copyWith({
@@ -122,7 +113,7 @@ abstract class HardwareComponent {
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    String? assetImagePath,
+    String? image,
     LocationModel? locationEntity,
     double? price,
     int? equipmentLocationPosition,

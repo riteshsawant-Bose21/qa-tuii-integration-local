@@ -16,9 +16,10 @@ require (
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.11.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
 )
+
+require github.com/vishvananda/netlink v1.3.1 // indirect
 
 replace github.com/go-ble/ble => ../third-party/go-ble
 
@@ -28,6 +29,7 @@ require (
 	github.com/JuulLabs-OSS/cbgo v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect

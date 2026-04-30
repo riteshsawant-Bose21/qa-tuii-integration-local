@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
@@ -15,15 +14,13 @@ import (
 
 // RoleManagementHandler handles role and permission management endpoints
 type RoleManagementHandler struct {
-	userService           fusion.User
-	roleManagementService *userdb.RoleManagementService
+	userService fusion.User
 }
 
 // NewRoleManagementHandler creates a new role management handler
-func NewRoleManagementHandler(userService fusion.User, roleManagementService *userdb.RoleManagementService) *RoleManagementHandler {
+func NewRoleManagementHandler(userService fusion.User) *RoleManagementHandler {
 	return &RoleManagementHandler{
-		userService:           userService,
-		roleManagementService: roleManagementService,
+		userService: userService,
 	}
 }
 
@@ -38,7 +35,7 @@ func NewRoleManagementHandler(userService fusion.User, roleManagementService *us
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions for role management"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/role-management [get]
+// @Router /organizations/role-management [get]
 func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -51,7 +48,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 	}
 
 	// Check if user has admin permissions for role management
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -69,7 +66,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 	}
 
 	// Get role management data for the organization
-	roleManagementData, err := h.roleManagementService.GetOrganizationRoleManagement(ctx, user.Account.ID)
+	roleManagementData, err := h.userService.GetOrganizationRoleManagement(ctx, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -94,7 +91,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to create roles"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/roles [post]
+// @Router /organizations/roles [post]
 func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -107,7 +104,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -135,7 +132,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	}
 
 	// Create the role
-	role, err := h.roleManagementService.CreateRole(ctx, user.Account.ID, &req)
+	role, err := h.userService.CreateRole(ctx, user.Account.ID, &req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -161,7 +158,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to update user roles"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/users/{userID}/role [put]
+// @Router /organizations/users/{userID}/role [put]
 func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -174,7 +171,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -212,7 +209,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	}
 
 	// Update user role
-	err = h.roleManagementService.UpdateUserRole(ctx, userID, user.Account.ID, req.RoleID)
+	err = h.userService.UpdateUserRole(ctx, userID, user.Account.ID, req.RoleID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -238,7 +235,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to update role permissions"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/roles/{roleID}/permissions [put]
+// @Router /organizations/roles/{roleID}/permissions [put]
 func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -251,7 +248,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -298,7 +295,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	}
 
 	// Update role permissions
-	err = h.roleManagementService.UpdateRolePermissions(ctx, roleID, user.Account.ID, permissions)
+	err = h.userService.UpdateRolePermissions(ctx, roleID, user.Account.ID, permissions)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -321,7 +318,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
 // @Failure 403 {object} map[string]string "Forbidden - Insufficient permissions to view organization users"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /organization/users [get]
+// @Router /organizations/users [get]
 func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
 	user, err := middleware.GetUserAuth(ctx)
@@ -334,7 +331,7 @@ func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, user.User.Email, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -352,7 +349,7 @@ func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	}
 
 	// Get organization users via role management data
-	roleManagementData, err := h.roleManagementService.GetOrganizationRoleManagement(ctx, user.Account.ID)
+	roleManagementData, err := h.userService.GetOrganizationRoleManagement(ctx, user.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
