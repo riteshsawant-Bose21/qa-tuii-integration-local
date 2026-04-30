@@ -31,6 +31,18 @@ func init() {
 	})
 }
 
+func newPersistenceForStateTest(t *testing.T, dbPath string, sm *persistence.StateManager) (*persistence.Persistence, error) {
+	t.Helper()
+
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(t.TempDir(), "audio")
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
+
+	return persistence.NewPersistence(dbPath, sm)
+}
+
 func TestSetAndGetSimpleValue(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 	value := "hello world"
@@ -582,7 +594,7 @@ func TestNotifyMsgVersionUpdateIgnoresSameHash(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(t.TempDir(), "delegate.db")
-	p, err := persistence.NewPersistence(dbPath, sm)
+	p, err := newPersistenceForStateTest(t, dbPath, sm)
 	if err != nil {
 		t.Fatalf("NewPersistence failed: %v", err)
 	}
@@ -641,7 +653,7 @@ func TestNotifyMsgVersionUpdateTriggersRepairOnDivergence(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(t.TempDir(), "delegate.db")
-	p, err := persistence.NewPersistence(dbPath, sm)
+	p, err := newPersistenceForStateTest(t, dbPath, sm)
 	if err != nil {
 		t.Fatalf("NewPersistence failed: %v", err)
 	}
@@ -693,7 +705,7 @@ func TestNotifyMsgVersionUpdateIgnoresDuplicatePayload(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(t.TempDir(), "delegate.db")
-	p, err := persistence.NewPersistence(dbPath, sm)
+	p, err := newPersistenceForStateTest(t, dbPath, sm)
 	if err != nil {
 		t.Fatalf("NewPersistence failed: %v", err)
 	}
