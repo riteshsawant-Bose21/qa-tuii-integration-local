@@ -2,6 +2,14 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 /// Extension on ProjectManager for managing Messages linked to Sources
 extension MessagePlayerManager on ProjectManager {
+  /// Get all message player sources
+  List<Source> getAllMessagePlayerSources() {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return projectService!.getAllMessagePlayerSources();
+  }
+
   /// Get all messages for a source (message player)
   List<MessageModel> getMessagesForSource(String sourceId) {
     if (projectService == null) {

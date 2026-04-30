@@ -19,8 +19,21 @@ class TimelineCubit extends Cubit<TimelineState> {
     goToMonth(DateTime(state.visibleMonth.year, state.visibleMonth.month - 1));
   }
 
+  void nextWeek() {
+    emit(state.changeMonth(state.visibleMonth.add(const Duration(days: 7))));
+  }
+
+  void previousWeek() {
+    final DateTime target = state.visibleMonth.subtract(const Duration(days: 7));
+    // Do not navigate before the Sunday that starts the current week.
+    final DateTime now = DateTime.now();
+    final DateTime currentWeekStart = DateTime(now.year, now.month, now.day - (now.weekday % 7));
+    if (target.isBefore(currentWeekStart)) return;
+    emit(state.changeMonth(target));
+  }
+
   void goToMonth(DateTime month) {
-    if (month.isBefore(maxBackableMonth) || month.isAfter(maxForwardableMonth)) {
+    if (month.isBefore(maxBackableMonth)) {
       return;
     }
     emit(state.changeMonth(month));
@@ -31,8 +44,7 @@ class TimelineCubit extends Cubit<TimelineState> {
     return DateTime(now.year, now.month);
   }
 
-  DateTime get maxForwardableMonth {
-    final DateTime now = DateTime.now();
-    return DateTime(now.year + 1, now.month);
-  }
+  /// No hard upper limit – the UI year picker controls how far forward
+  /// the user can navigate.
+  DateTime get maxForwardableMonth => DateTime(2045, 12);
 }

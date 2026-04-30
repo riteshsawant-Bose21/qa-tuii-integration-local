@@ -209,6 +209,16 @@ static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
     return READ_ONCE(cn_mgr->timing_ready);
 }
 
+static inline u64 fusion_cn_fc_advance_time(u64 action_time)
+{
+    u64 ns_from_ms_boundary = action_time % NSEC_PER_MSEC;
+
+    if (ns_from_ms_boundary == (2 * TIMER_BASE_INTERVAL_NS))
+        return action_time + TIMER_BASE_INTERVAL_NS + 1;
+
+    return action_time + TIMER_BASE_INTERVAL_NS;
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
 {
@@ -220,8 +230,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
         // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
         //         to playback silence in packet_time, we keep time with next_action_time instead
-        //         next_action_time is managed completely from here
-        //         played_action_time tracks the latest action time actually consumed
+        //         played_action_time tracks the latest action time actually consumed--we won't play packets scheduled before that
         //         EARLY_SLACK_NS is a window after the tick to still play back the packet
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
@@ -251,7 +260,13 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             if (playing_silence) {
                 fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
                                             s->info.frames_per_packet);
-                s->next_action_time += s->packet_time;
+                fusion_cn_metrics_kernel_silence_sub(s->metrics,
+                                                     s->info.frames_per_packet);
+                if (s->info.is_fusion_connect &&
+                    s->packet_time == TIMER_BASE_INTERVAL_NS)
+                    s->next_action_time = fusion_cn_fc_advance_time(s->next_action_time);
+                else
+                    s->next_action_time += s->packet_time;
             }
 
             s->played_action_time = action_time;
@@ -342,7 +357,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     }
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_sink, node) {
         struct fusion_cn_rtp_stream *r = node->rtp_stream;
         struct fusion_cn_substream  *a = node->alsa_stream;
@@ -368,7 +383,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
             }
         }
     }
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (profiling)
         t0 = ktime_get_ns();
@@ -386,7 +401,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         fusion_cn_prof_add(&fusion_cn_worker_prof.fc_phase, ktime_get_ns() - t0);
 
     /* -------- Phase 2: FC sources + AES67 sinks + AES67 sources -------- */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
 
     /* FC sources */
     list_for_each_entry_safe(node, tmp, &mgr->active_streams.fn_source, node) {
@@ -439,7 +454,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         }
     }
 
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (profiling)
         t0 = ktime_get_ns();
@@ -485,7 +500,7 @@ static void do_metrics(struct fusion_cn_manager *mgr)
     if (!atomic_read(&mgr->state.is_started))
         return;
 
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
 
     /* Collect work under lock, then aggregate outside */
 #define COLLECT_PENDING(list_head)                                             \
@@ -521,7 +536,7 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 
 #undef COLLECT_PENDING
 
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     {
         u64 snapshot_ns = READ_ONCE(mgr->tick_ns);
@@ -577,7 +592,7 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
 }
 
 /* --- Tick queue helper --- */
-static inline void fusion_cn_queue_process(void)
+static inline void fusion_cn_queue_process(struct fusion_cn_manager *mgr)
 {
     struct kthread_worker *worker = READ_ONCE(process_worker);
 
@@ -586,8 +601,9 @@ static inline void fusion_cn_queue_process(void)
         return;
 
     /* Coalesce: only queue if not already pending */
-    if (atomic_cmpxchg(&process_pending, 0, 1) == 0)
+    if (atomic_cmpxchg(&process_pending, 0, 1) == 0) {
         kthread_queue_work(worker, &process_work);
+    } 
 }
 
 /* --- GPT client callback --- */
@@ -598,7 +614,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
     WRITE_ONCE(mgr->tick_ns, tick_ns);
     WRITE_ONCE(mgr->timing_ready, true);
 
-    fusion_cn_queue_process();
+    fusion_cn_queue_process(mgr);
 }
 
 static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
@@ -725,7 +741,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     struct kthread_worker *worker;
 
     if (atomic_read(&mgr->state.is_started)) {
-        pr_debug("fusion_cn: mgr already started\n");
+        printk(KERN_DEBUG "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
     }
 
@@ -750,6 +766,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         process_worker = worker;
     }
     g_fusion_cn_mgr = mgr;
+    rwlock_init(&mgr->active_streams_lock);
     INIT_LIST_HEAD(&mgr->active_streams.fn_sink);
     INIT_LIST_HEAD(&mgr->active_streams.fn_source);
     INIT_LIST_HEAD(&mgr->active_streams.aes67_sink);
@@ -759,7 +776,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     atomic_set(&mgr->state.is_started, true);
     queue_delayed_work(system_unbound_wq, &metrics_work,
                        msecs_to_jiffies(FUSION_CN_METRICS_INTERVAL_MS));
-    pr_debug("fusion_cn: mgr_start: Started manager\n");
+    printk(KERN_DEBUG "fusion_cn: mgr_start: Started manager\n");
     return MGR_START_OK;
 }
 
@@ -784,7 +801,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     atomic_set(&mgr->netfilter.is_enabled, false);
     atomic_set(&mgr->state.is_started, false);
     WRITE_ONCE(mgr->timing_ready, false);
-    pr_debug("fusion_cn: mgr_stop: Stopped manager\n");
+    printk(KERN_DEBUG "fusion_cn: mgr_stop: Stopped manager\n");
     return true;
 }
 
@@ -814,23 +831,26 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     int ret;
     unsigned long flags;
 
+
     /* Stop stream activity */
     ret = alsa_ops_stop_interrupts(mgr, handle);
     if (ret < 0)
         pr_warn("fusion_cn: remove_stream: stop_interrupts (%s) = %d\n", stream_name, ret);
 
     /* Unlink node from active lists and clear back-pointer */
-    write_lock_irqsave(&mgr->rtp.lock, flags);
+    write_lock_irqsave(&mgr->active_streams_lock, flags);
     sn = rtp_stream->stream_node;
     list_del_init(&sn->node);
     kfree(sn);
     rtp_stream->stream_node = NULL;
-    write_unlock_irqrestore(&mgr->rtp.lock, flags);
+    write_unlock_irqrestore(&mgr->active_streams_lock, flags);
+
+    /* Drop extra refs taken when the stream was added to the active list. */
+    kref_put(&alsa_stream->ref, fusion_cn_alsa_substream_release);
+    kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
 
     /* Remove RTP stream from hash/lists */
-    write_lock_irqsave(&mgr->rtp.lock, flags);
     ret = fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
-    write_unlock_irqrestore(&mgr->rtp.lock, flags);
     if (ret < 0) {
         pr_warn("fusion_cn: remove_stream: rtp_remove_stream (%s) failed with %d\n", stream_name, ret);
         return ret;
@@ -839,7 +859,7 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     /* Metrics are released with the RTP stream refcount */
 
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
-    
+
     return ret;
 }
 
@@ -936,7 +956,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     rtp_stream->stream_node = stream_node;
 
     /* add to active list under write lock */
-    write_lock_irqsave(&mgr->rtp.lock, flags);
+    write_lock_irqsave(&mgr->active_streams_lock, flags);
     if (!config->is_source) {
         if (config->is_fusion_connect)
             list_add_tail(&stream_node->node, &mgr->active_streams.fn_sink);
@@ -948,7 +968,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
         else
             list_add_tail(&stream_node->node, &mgr->active_streams.aes67_source);
     }
-    write_unlock_irqrestore(&mgr->rtp.lock, flags);
+    write_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     reply->err = 0;
     reply->data_size = sizeof(u64);
@@ -963,7 +983,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     kref_get(&rtp_stream->ref);
     kref_get(&alsa_stream->ref);
 
-    pr_debug("fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
+    printk(KERN_DEBUG "fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
            config->stream_name, config->stream_handle);
     return 0;
 }
@@ -988,16 +1008,17 @@ static int handle_remove_stream(struct fusion_cn_manager *mgr,
     rtp_stream = fusion_cn_rtp_get_stream(&mgr->rtp, handle);
     if (!rtp_stream) {
         read_unlock_irqrestore(&mgr->rtp.lock, flags);
-        pr_err("fusion_cn: handle_remove_stream: rtp stream %llu not found\n", handle);
-        return (reply->err = -ENOENT);
+        printk(KERN_DEBUG "fusion_cn: handle_remove_stream: rtp stream %llu already gone\n", handle);
+        return (reply->err = 0);
     }
     strscpy(stream_name, rtp_stream->info.stream_name, sizeof(stream_name));
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
 
     alsa_stream = fusion_cn_find_substream(stream_name);
     if (!alsa_stream) {
-        pr_warn("fusion_cn: handle_remove_stream: alsa stream %s not found\n", stream_name);
-        return (reply->err = -ENOENT);
+        printk(KERN_DEBUG "fusion_cn: handle_remove_stream: alsa stream %s already gone\n", stream_name);
+        kref_put(&rtp_stream->ref, fusion_cn_rtp_stream_release);
+        return (reply->err = 0);
     }
 
     reply->err = remove_stream(mgr, handle, stream_name, rtp_stream, alsa_stream);
@@ -1054,7 +1075,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
 #define COUNT_LIST(head) \
     list_for_each_entry(tmp_node, &(head), node) { count++; }
 
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     {
         struct stream_node *tmp_node;
         COUNT_LIST(mgr->active_streams.fn_sink);
@@ -1063,7 +1084,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
         COUNT_LIST(mgr->active_streams.aes67_source);
     }
     cap = count;
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     if (!cap) {
         reply->data = NULL;
@@ -1076,7 +1097,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
     if (!out) return reply->err = -ENOMEM;
 
     /* Second pass: fill (re-lock for stable traversal) */
-    read_lock_irqsave(&mgr->rtp.lock, flags);
+    read_lock_irqsave(&mgr->active_streams_lock, flags);
     {
         struct stream_node *n;
         size_t i = 0;
@@ -1099,7 +1120,7 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
 
         cap = i;
     }
-    read_unlock_irqrestore(&mgr->rtp.lock, flags);
+    read_unlock_irqrestore(&mgr->active_streams_lock, flags);
 
     reply->data      = out;
     reply->data_size = cap * sizeof(*out);
@@ -1191,12 +1212,11 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         struct fusion_cn_substream *alsa_stream = NULL;
 
         spin_lock(&stream->lock);
+        alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;
-        if (stream->info.is_source) {
-            alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
-        } else {
+        if (!stream->info.is_source) {
             stream->playback_slot = 0;
             atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)

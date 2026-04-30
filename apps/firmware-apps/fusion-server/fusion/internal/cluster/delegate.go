@@ -259,6 +259,20 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			logger.Error("Error upserting snapshot definitions: %v", err)
 		}
 
+	case api.NotifyOpSnapshotDefsDeleteAll:
+		if err := d.persistence.DeleteAllSnapshotDefinitions(); err != nil {
+			logger.Error("Error deleting snapshot definitions: %v", err)
+		}
+
+	case api.NotifyOpSnapshotDefDelete:
+		if message.SnapshotOperation == nil {
+			logger.Error("SnapshotDefDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteSnapshotDefinition(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error deleting snapshot definition '%s': %v", message.SnapshotOperation.Name, err)
+		}
+
 	case api.NotifyOpSceneSetsUpsert:
 		if len(message.SceneSets) == 0 {
 			logger.Error("SceneSetsUpsert message with empty payload from %s", message.Node)
@@ -266,6 +280,29 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 		if err := d.persistence.UpsertSceneSets(message.SceneSets); err != nil {
 			logger.Error("Error upserting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSceneSetsDeleteAll:
+		if err := d.persistence.DeleteAllSceneSets(); err != nil {
+			logger.Error("Error deleting scene sets: %v", err)
+		}
+
+	case api.NotifyOpSceneSetDelete:
+		if message.SceneSetOperation == nil {
+			logger.Error("SceneSetDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteSceneSet(message.SceneSetOperation.SetID); err != nil {
+			logger.Error("Error deleting scene set '%s': %v", message.SceneSetOperation.SetID, err)
+		}
+
+	case api.NotifyOpSceneDelete:
+		if message.SceneOperation == nil {
+			logger.Error("SceneDelete message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.persistence.DeleteScene(message.SceneOperation.SceneID); err != nil {
+			logger.Error("Error deleting scene '%s': %v", message.SceneOperation.SceneID, err)
 		}
 
 	case api.NotifyOpSnapshotV2Activate:
@@ -386,6 +423,9 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 		logger.Error("SoftwareUpdateAvailable message with nil payload from %s", message.Node)
 		return
 	}
+
+	// Clean up any stale .swu files whose checksum differs from the incoming bundle.
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Checksum, logging.GetLogger())
 
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {

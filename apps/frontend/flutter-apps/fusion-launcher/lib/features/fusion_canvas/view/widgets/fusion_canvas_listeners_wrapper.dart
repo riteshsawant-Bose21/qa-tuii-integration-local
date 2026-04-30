@@ -137,6 +137,14 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
           },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDraggingState) {
+              for (final String layerId in state.layerIds) {
+                final FusionBasePainter layerPainter = painters.firstWhere(
+                  (FusionBasePainter p) => p.id == layerId,
+                  orElse: () => throw Exception('Painter with id $layerId not found'),
+                );
+                toolbarEvents?.onMoveLayerDuringDrag?.call(layerPainter, state.delta);
+              }
+
               context.read<FusionSnapViewModel>().updateCursorPositions(
                 <Offset>[
                   for (final FusionBasePainter painter in painters)
@@ -176,6 +184,10 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               );
             } else if (state is DrawingPenToolState) {
               toolbarEvents?.penToolEvents?.onPointsChanged?.call(
+                state.points,
+              );
+            } else if (state is CancelledPenToolState) {
+              toolbarEvents?.penToolEvents?.onPathCancelled?.call(
                 state.points,
               );
             }
@@ -223,6 +235,9 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 }
               }
             } else if (state is LayerDragStartState) {
+              toolbarEvents?.onLayerDragStart?.call(
+                painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
+              );
               toolbarEvents?.onLayerSelected?.call(
                 painters.where((FusionBasePainter p) => state.layerIds.contains(p.id)).toList(),
               );

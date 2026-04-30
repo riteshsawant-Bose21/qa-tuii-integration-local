@@ -17,7 +17,6 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/server/handler"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
@@ -41,6 +40,11 @@ type ExecutionRecord struct {
 // TaskFunc is a task function that take a context
 type TaskFunc func(context.Context) error
 
+type SceneCatalogActivator interface {
+	ActivateScene(setID, sceneID string) error
+	ActivateSnapshotByID(id string) error
+}
+
 // TaskManager manages tasks and provides execution history with rotation.
 type TaskManager struct {
 	cron             *cron.Cron
@@ -49,8 +53,8 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
-	handler          *handler.Handler
 	hub              *pubsub.Hub
+	sceneCatalog     SceneCatalogActivator
 	running          bool
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
@@ -58,7 +62,12 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
+func NewTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneCatalog SceneCatalogActivator,
+) *TaskManager {
 	tm := &TaskManager{
 		cron: cron.New(
 			cron.WithParser(
@@ -78,6 +87,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		node:             config.NodeName,
 		persistence:      persistence,
 		hub:              hub,
+		sceneCatalog:     sceneCatalog,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -97,10 +107,6 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		},
 	}
 	return tm
-}
-
-func (tm *TaskManager) SetHandler(handler *handler.Handler) {
-	tm.handler = handler
 }
 
 func (tm *TaskManager) AddTask(t *api.Task) error {

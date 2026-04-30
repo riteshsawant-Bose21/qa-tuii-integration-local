@@ -114,24 +114,6 @@ class ZoneControlViewModel extends Cubit<ZoneControlState> {
     _pushMuteToDevice(newMuted);
   }
 
-  /// Converts a percentage value (0–100) to a dBFS value (-60 to 12)
-  double percentageToDbfs(double percentage) {
-    const double minDb = -60.0;
-    const double maxDb = 12.0;
-
-    final double clamped = percentage.clamp(0.0, 100.0);
-    return minDb + (clamped / 100.0) * (maxDb - minDb);
-  }
-
-  /// Converts a dBFS value (-60 to 12) to a percentage value (0–100)
-  double dbfsToPercentage(double dbfs) {
-    const double minDb = -60.0;
-    const double maxDb = 12.0;
-
-    final double clamped = dbfs.clamp(minDb, maxDb);
-    return ((clamped - minDb) / (maxDb - minDb)) * 100.0;
-  }
-
   // ── private helpers ────────────────────────────────────────────────────
   Future<void> _fetchInitialValues() async {
     final String? blockId = processingBlock?.id;

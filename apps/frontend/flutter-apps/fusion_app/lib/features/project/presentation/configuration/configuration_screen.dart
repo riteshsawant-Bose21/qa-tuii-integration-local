@@ -20,7 +20,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: CommonAppBar(title: 'Configuration'),
+      appBar: CommonMobileAppBar(title: 'Configuration'),
       body: SafeArea(
         child: Column(
           children: [
