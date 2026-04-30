@@ -427,6 +427,16 @@ type WebSocketResponse struct {
 	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
 }
 
+// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
+// Clients should treat "patch" mode as a partial update that must be merged
+// into their local cached state, while "snapshot" mode replaces local state.
+type WebSocketConfigUpdateEvent struct {
+	Mode    string         `json:"mode"`              // "patch" or "snapshot"
+	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
+	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
+	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
+}
+
 // WebSocketStats represents connection and usage statistics
 type WebSocketStats struct {
 	Connections    int              `json:"connections"`                // Active connections
