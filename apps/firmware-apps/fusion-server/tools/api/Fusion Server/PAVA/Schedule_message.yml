@@ -15,7 +15,7 @@ http:
         "cron_expr": "@every 1m",
         "description":"Time For lunch",
         "priority":100,
-        "zones":"lobby"
+        "zones":["lobby"]
       }
 
 settings:

@@ -635,23 +635,22 @@ public:
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state)
   {
-    // Mutate state and compute diffs under state_mutex_
-    Json::Value oldData, newData, oldValue, newValue;
+    // Extract only the affected subtree before and after mutation instead of
+    // deep-copying the entire state tree twice.
+    Json::Value oldValue, newValue;
     {
       std::lock_guard<std::mutex> slk(state_mutex_);
       SPDLOG_DEBUG("Received update for path: {}", path);
 
-      oldData = data_;
+      oldValue = extractValue(data_, path);
       updateInternalState(path, new_state);
-      newData = data_;
+      newValue = extractValue(data_, path);
 
-      if (oldData == newData)
+      if (oldValue == newValue)
       {
         SPDLOG_DEBUG("No change detected for path: {}", path);
         return;
       }
-      oldValue = extractValue(oldData, path);
-      newValue = extractValue(newData, path);
     }
 
     // Collect callbacks under watchers_mutex_
@@ -1454,12 +1453,29 @@ private:
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
 
-    // Send a keepalive every KEEPALIVE_INTERVAL_S seconds to prevent the
-    // server from pruning this client (clientStaleTTL = 10s).
-    int keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
+    // Send a keepalive based on wall-clock time to prevent the server from
+    // pruning this client (clientStaleTTL = 10s). Using wall-clock time
+    // instead of poll-timeout counting ensures keepalives are sent even when
+    // the socket is busy receiving broadcasts (poll never times out).
+    auto lastKeepaliveSent = std::chrono::steady_clock::now();
 
     while (running_)
     {
+      // Send keepalive if enough wall-clock time has elapsed, regardless of
+      // whether poll returned data or timed out. This prevents the server
+      // from pruning us during sustained broadcast traffic.
+      if (receivedInitialState_)
+      {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - lastKeepaliveSent).count();
+        if (elapsed >= timingConfig_.keepaliveIntervalSeconds)
+        {
+          sendKeepalive(serverAddr_);
+          lastKeepaliveSent = now;
+        }
+      }
+
       const int pollResult = poll(&pfd, 1, 1000);
       if (pollResult < 0)
       {
@@ -1473,17 +1489,6 @@ private:
         if (!receivedInitialState_)
         {
           requestInitialDeviceInfo(serverAddr_);
-        }
-        else
-        {
-          // Keep our UDP client registration alive so the server continues
-          // broadcasting to us. Without this, the server prunes idle clients
-          // after 10 seconds and silently stops sending config_update packets.
-          if (--keepaliveCountdown <= 0)
-          {
-            sendKeepalive(serverAddr_);
-            keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
-          }
         }
         continue;
       }
