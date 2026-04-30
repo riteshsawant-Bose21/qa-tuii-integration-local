@@ -31,6 +31,12 @@ func newTestPersistence(t *testing.T, dbPath string) *Persistence {
 		})
 	})
 
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(t.TempDir(), "audio")
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
+
 	sm := NewStateManager(&api.AppConfig{NodeName: "test-node"})
 	p, err := NewPersistence(dbPath, sm)
 	require.NoError(t, err)
