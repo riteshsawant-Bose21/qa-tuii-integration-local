@@ -722,9 +722,12 @@ private:
     bool ptp_sync_good;
     bool ptp_anchor_pending;
     bool ptp_anchor_armed;
+    bool ptp_anchor_allow_pre_gm_lock;
+    bool ptp_anchor_have_armed_pps_seq;
     bool ptp_force_reanchor;
     bool ptp_force_reanchor_have_armed_pps_seq;
     bool ptp_have_timing_pps_seq;
+    uint32_t ptp_anchor_armed_pps_seq;
     uint32_t ptp_force_reanchor_armed_pps_seq;
     uint32_t ptp_last_timing_pps_seq;
     int ptp_good_streak;
@@ -772,8 +775,10 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
       gpt_discipline_continuity_logged(false), sap_announcer(""),
       audio_streams_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_anchor_armed(false),
+      ptp_anchor_allow_pre_gm_lock(false), ptp_anchor_have_armed_pps_seq(false),
       ptp_force_reanchor(false), ptp_force_reanchor_have_armed_pps_seq(false),
-      ptp_have_timing_pps_seq(false), ptp_force_reanchor_armed_pps_seq(0),
+      ptp_have_timing_pps_seq(false), ptp_anchor_armed_pps_seq(0),
+      ptp_force_reanchor_armed_pps_seq(0),
       ptp_last_timing_pps_seq(0), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET), ptp_wait_lock_from_holdover(false) {
@@ -1299,7 +1304,10 @@ void FusionConnectClient::reset_timing_session(const char *reason)
 
     ptp_anchor_pending = false;
     ptp_anchor_armed = false;
+    ptp_anchor_allow_pre_gm_lock = false;
+    ptp_anchor_have_armed_pps_seq = false;
     ptp_have_timing_pps_seq = false;
+    ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
     ptp_force_reanchor_have_armed_pps_seq = false;
     ptp_force_reanchor_armed_pps_seq = 0;
@@ -1317,7 +1325,10 @@ void FusionConnectClient::reset_timing_holdover(const char *reason)
 
     ptp_anchor_pending = false;
     ptp_anchor_armed = false;
+    ptp_anchor_allow_pre_gm_lock = false;
+    ptp_anchor_have_armed_pps_seq = false;
     ptp_have_timing_pps_seq = false;
+    ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
     ptp_force_reanchor = false;
     ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1342,7 +1353,10 @@ void FusionConnectClient::start_timing_session(TimingResetType reset_type)
 
     ptp_anchor_pending = true;
     ptp_anchor_armed = false;
+    ptp_anchor_allow_pre_gm_lock = (reset_type == TimingResetType::Holdover);
+    ptp_anchor_have_armed_pps_seq = false;
     ptp_have_timing_pps_seq = false;
+    ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
     ptp_force_reanchor_have_armed_pps_seq = false;
     ptp_force_reanchor_armed_pps_seq = 0;
@@ -1391,7 +1405,10 @@ void FusionConnectClient::update_ptp_state()
         ptp_bad_streak = 0;
         ptp_anchor_pending = false;
         ptp_anchor_armed = false;
+        ptp_anchor_allow_pre_gm_lock = false;
+        ptp_anchor_have_armed_pps_seq = false;
         ptp_have_timing_pps_seq = false;
+        ptp_anchor_armed_pps_seq = 0;
         ptp_last_timing_pps_seq = 0;
         ptp_role_flag = -1;
         ptp_force_reanchor = false;
@@ -1415,7 +1432,10 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
                 ptp_have_timing_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1431,7 +1451,10 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
                 ptp_have_timing_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1451,7 +1474,10 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
                 ptp_have_timing_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1475,7 +1501,9 @@ void FusionConnectClient::update_ptp_state()
                     ptp_bad_streak = 0;
                     ptp_anchor_pending = false;
                     ptp_anchor_armed = false;
+                    ptp_anchor_have_armed_pps_seq = false;
                     ptp_have_timing_pps_seq = false;
+                    ptp_anchor_armed_pps_seq = 0;
                     ptp_last_timing_pps_seq = 0;
                     ptp_force_reanchor_have_armed_pps_seq = false;
                     ptp_force_reanchor_armed_pps_seq = 0;
@@ -1499,7 +1527,10 @@ void FusionConnectClient::update_ptp_state()
                     ptp_bad_streak = 0;
                     ptp_anchor_pending = false;
                     ptp_anchor_armed = false;
+                    ptp_anchor_allow_pre_gm_lock = false;
+                    ptp_anchor_have_armed_pps_seq = false;
                     ptp_have_timing_pps_seq = false;
+                    ptp_anchor_armed_pps_seq = 0;
                     ptp_last_timing_pps_seq = 0;
                     ptp_force_reanchor = true;
                     ptp_force_reanchor_have_armed_pps_seq = false;
@@ -1519,6 +1550,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
@@ -1560,6 +1594,9 @@ void FusionConnectClient::update_ptp_state()
                 ptp_bad_streak = 0;
                 ptp_anchor_pending = false;
                 ptp_anchor_armed = false;
+                ptp_anchor_allow_pre_gm_lock = false;
+                ptp_anchor_have_armed_pps_seq = false;
+                ptp_anchor_armed_pps_seq = 0;
                 ptp_force_reanchor = false;
                 ptp_force_reanchor_have_armed_pps_seq = false;
                 ptp_force_reanchor_armed_pps_seq = 0;
@@ -1638,23 +1675,37 @@ void FusionConnectClient::maybe_set_phc_anchor()
         return;
     }
 
-    if (ptp_force_reanchor && ptp_anchor_armed &&
-        ptp_force_reanchor_have_armed_pps_seq &&
-        pps_seq_advanced(ptp_force_reanchor_armed_pps_seq, pps_seq) &&
+    if (ptp_anchor_armed && ptp_anchor_have_armed_pps_seq &&
+        pps_seq_advanced(ptp_anchor_armed_pps_seq, pps_seq) &&
         epoch_valid && aligned) {
-        SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after GM-to-follower transition",
-                    pps_seq);
-        ptp_force_reanchor = false;
-        ptp_force_reanchor_have_armed_pps_seq = false;
-        ptp_force_reanchor_armed_pps_seq = 0;
+        if (ptp_force_reanchor) {
+            SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after GM-to-follower transition",
+                        pps_seq);
+            ptp_force_reanchor = false;
+            ptp_force_reanchor_have_armed_pps_seq = false;
+            ptp_force_reanchor_armed_pps_seq = 0;
+        } else {
+            SPDLOG_INFO("PHC anchor settled on PPS seq {}", pps_seq);
+        }
         ptp_anchor_pending = false;
         ptp_anchor_armed = false;
+        ptp_anchor_allow_pre_gm_lock = false;
+        ptp_anchor_have_armed_pps_seq = false;
+        ptp_anchor_armed_pps_seq = 0;
         return;
     }
 
     if (!ptp_force_reanchor && discipline_gm_locked && epoch_valid && aligned) {
         ptp_anchor_pending = false;
         ptp_anchor_armed = false;
+        ptp_anchor_allow_pre_gm_lock = false;
+        ptp_anchor_have_armed_pps_seq = false;
+        ptp_anchor_armed_pps_seq = 0;
+        return;
+    }
+
+    if (!discipline_gm_locked && !ptp_anchor_allow_pre_gm_lock) {
+        SPDLOG_DEBUG("GPT timing waiting for GM lock before PHC anchor (pps_seq={})", pps_seq);
         return;
     }
 
@@ -1678,6 +1729,8 @@ void FusionConnectClient::maybe_set_phc_anchor()
         SPDLOG_WARN("GPT timing epoch still invalid after PHC anchor; retrying");
         ptp_anchor_pending = true;
         ptp_anchor_armed = false;
+        ptp_anchor_have_armed_pps_seq = false;
+        ptp_anchor_armed_pps_seq = 0;
         ptp_force_reanchor_have_armed_pps_seq = false;
         ptp_force_reanchor_armed_pps_seq = 0;
     }
@@ -1697,6 +1750,8 @@ void FusionConnectClient::maybe_set_phc_anchor()
     if (nl_set_phc_anchor(client, next_pps_ns)) {
         ptp_anchor_pending = false;
         ptp_anchor_armed = true;
+        ptp_anchor_have_armed_pps_seq = true;
+        ptp_anchor_armed_pps_seq = pps_seq;
         ptp_last_anchor = now;
         if (ptp_force_reanchor) {
             ptp_force_reanchor_have_armed_pps_seq = true;
