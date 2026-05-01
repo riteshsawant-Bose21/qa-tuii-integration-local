@@ -636,8 +636,6 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
                 *gm_identity = normalized;
                 *gm_identity_valid = true;
                 found_any = true;
-                SPDLOG_WARN("Found gmIdentity in TIME_STATUS_NP: {}", v);
-
             } else if (!v.empty()) {
                 SPDLOG_WARN("Invalid gmIdentity in TIME_STATUS_NP: {}", v);
             }
@@ -1650,40 +1648,32 @@ void FusionConnectClient::update_ptp_state()
                 } else if (gm_identity != ptp_gm_identity) {
                     if (!ptp_have_pending_gm_identity ||
                         ptp_pending_gm_identity != gm_identity) {
+                        const std::string previous_gm_identity = ptp_gm_identity;
                         ptp_pending_gm_identity = gm_identity;
                         ptp_have_pending_gm_identity = true;
                         ptp_pending_gm_lock_streak = 0;
-                        SPDLOG_WARN("PTP GM identity changed from {} to {}; waiting for PHC alignment before re-anchor",
-                                    ptp_gm_identity, ptp_pending_gm_identity);
-                    }
-
-                    if (master_offset_valid) {
-                        const long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-                        if (best_abs <= OFFSET_LOCK_NS) {
-                            ptp_pending_gm_lock_streak++;
-                        } else {
-                            ptp_pending_gm_lock_streak = 0;
-                        }
-
-                        if (ptp_pending_gm_lock_streak >= LOCK_CONSEC) {
-                            const std::string previous_gm_identity = ptp_gm_identity;
-                            ptp_gm_identity = ptp_pending_gm_identity;
-                            clear_pending_ptp_gm_identity();
-                            ptp_anchor_pending = false;
-                            ptp_anchor_armed = false;
-                            ptp_anchor_allow_pre_gm_lock = false;
-                            ptp_anchor_have_armed_pps_seq = false;
-                            ptp_have_timing_pps_seq = false;
-                            ptp_anchor_armed_pps_seq = 0;
-                            ptp_last_timing_pps_seq = 0;
-                            ptp_force_reanchor = true;
-                            ptp_force_reanchor_have_armed_pps_seq = false;
-                            ptp_force_reanchor_armed_pps_seq = 0;
-                            SPDLOG_WARN("PTP GM identity changed from {} to {}; PHC aligned after {} polls, forcing re-anchor",
-                                        previous_gm_identity, ptp_gm_identity, LOCK_CONSEC);
-                        }
-                    } else {
-                        ptp_pending_gm_lock_streak = 0;
+                        ptp_gm_identity = ptp_pending_gm_identity;
+                        clear_pending_ptp_gm_identity();
+                        ptp_sync_good = false;
+                        ptp_good_streak = 0;
+                        ptp_bad_streak = 0;
+                        ptp_anchor_pending = false;
+                        ptp_anchor_armed = false;
+                        ptp_anchor_allow_pre_gm_lock = false;
+                        ptp_anchor_have_armed_pps_seq = false;
+                        ptp_have_timing_pps_seq = false;
+                        ptp_anchor_armed_pps_seq = 0;
+                        ptp_last_timing_pps_seq = 0;
+                        ptp_force_reanchor = true;
+                        ptp_force_reanchor_have_armed_pps_seq = false;
+                        ptp_force_reanchor_armed_pps_seq = 0;
+                        ptp_wait_lock_from_holdover = false;
+                        ptp_state = PtpState::WAIT_LOCK;
+                        ptp_state_since = now;
+                        SPDLOG_WARN("PTP GM identity changed from {} to {}; resetting timing session and waiting for lock",
+                                    previous_gm_identity, ptp_gm_identity);
+                        reset_timing_session("PTP GM identity change");
+                        break;
                     }
                 } else if (ptp_have_pending_gm_identity) {
                     SPDLOG_INFO("PTP GM identity returned to {}; canceling pending re-anchor",
