@@ -23,6 +23,7 @@ const (
 	checkInterval         = 30 * time.Second
 	dataRepairMinInterval = 1 * time.Second
 	dataRepairSkipWindow  = checkInterval
+	checksumDebounce      = 50 * time.Millisecond
 )
 
 // StateManagerInterface defines the interface for state management
@@ -95,6 +96,8 @@ type StateManager struct {
 	// checksumDirty tracks whether state.Checksum must be recomputed from the
 	// current full state before it can be treated as authoritative.
 	checksumDirty bool
+	checksumTimer *time.Timer
+	checksumGen   uint64
 }
 
 // NewStateManager creates and initializes a new StateManager for the given node.
@@ -233,30 +236,58 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 	logger := logging.GetLogger()
 
-	var current any = sm.GetStateMap()
+	sm.RLock()
+	defer sm.RUnlock()
+
+	var current any
 
 	parts := strings.Split(key, ".")
+	if len(parts) == 0 {
+		return nil, false
+	}
 
-	for _, part := range parts {
+	firstPart := parts[0]
+	if strings.Contains(firstPart, "[") && strings.Contains(firstPart, "]") {
+		keyPart := firstPart[:strings.Index(firstPart, "[")]
+		entry, exists := sm.state.State[keyPart]
+		if !exists || entry == nil {
+			logger.Warn("%s not found.", keyPart)
+			return nil, false
+		}
+		current = entry.Data
+	} else {
+		entry, exists := sm.state.State[firstPart]
+		if !exists || entry == nil {
+			logger.Warn("%s not found.", firstPart)
+			return nil, false
+		}
+		current = entry.Data
+	}
+
+	for i, part := range parts {
 		if strings.Contains(part, "[") && strings.Contains(part, "]") {
 			keyPart := part[:strings.Index(part, "[")]
 			arrayAccess := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
 
-			nestedMap, ok := current.(map[string]any)
-			if !ok {
-				logger.Warn("%s is not a supported type. Current type: %T", part, current)
-				return nil, false
+			if i > 0 {
+				nestedMap, ok := current.(map[string]any)
+				if !ok {
+					logger.Warn("%s is not a supported type. Current type: %T", part, current)
+					return nil, false
+				}
+
+				value, exists := nestedMap[keyPart]
+				if !exists {
+					logger.Warn("%s not found.", keyPart)
+					return nil, false
+				}
+
+				current = value
 			}
 
-			value, exists := nestedMap[keyPart]
-			if !exists {
-				logger.Warn("%s not found.", keyPart)
-				return nil, false
-			}
-
-			array, ok := value.([]any)
+			array, ok := current.([]any)
 			if !ok {
-				logger.Warn("%s is not an array. Current type: %T", keyPart, value)
+				logger.Warn("%s is not an array. Current type: %T", keyPart, current)
 				return nil, false
 			}
 
@@ -291,6 +322,9 @@ func (sm *StateManager) Get(key string) (any, bool) {
 				current = array[index]
 			}
 		} else {
+			if i == 0 {
+				continue
+			}
 			nestedMap, ok := current.(map[string]any)
 			if !ok {
 				logger.Warn("%s is not a supported type. Current type: %T", part, current)
@@ -307,7 +341,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 		}
 	}
 
-	return current, true
+	return utils.DeepCopy(current), true
 }
 
 // Set updates a key in the state with the given value and applies the update.
@@ -341,8 +375,7 @@ func (sm *StateManager) Set(key string, value any) error {
 func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
-	// Apply patch to full current state snapshot
-	existing := sm.getFullStateUnsafe()
+	existing := sm.patchBaseStateUnsafe(update)
 	before := utils.DeepCopy(existing)
 
 	if err := utils.ApplyPatch(existing, update); err != nil {
@@ -357,20 +390,12 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 		return nil, nil
 	}
 
-	// Compute the checksum once — this is the only JSONChecksum needed.
-	hash, err := utils.JSONChecksum(existing)
-	if err != nil {
-		sm.Unlock()
-		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
-	}
-
 	sm.version.Counter++
 	localVersion := sm.version
 
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
-		Hash:    hash,
 		Clear:   false,
 	}
 
@@ -480,6 +505,30 @@ func (sm *StateManager) ensureChecksumUnsafe() {
 func (sm *StateManager) markChecksumDirtyUnsafe() {
 	sm.state.Checksum = ""
 	sm.checksumDirty = true
+	sm.scheduleChecksumRefreshUnsafe()
+}
+
+func (sm *StateManager) scheduleChecksumRefreshUnsafe() {
+	sm.checksumGen++
+	gen := sm.checksumGen
+
+	if sm.checksumTimer != nil {
+		sm.checksumTimer.Stop()
+	}
+
+	sm.checksumTimer = time.AfterFunc(checksumDebounce, func() {
+		sm.Lock()
+		defer sm.Unlock()
+
+		if gen != sm.checksumGen {
+			return
+		}
+
+		sm.ensureChecksumUnsafe()
+		if gen == sm.checksumGen {
+			sm.checksumTimer = nil
+		}
+	})
 }
 
 // applyWhileLocked applies a configuration update to the internal state,
@@ -574,6 +623,36 @@ func (sm *StateManager) GetFullState() VersionedState {
 		Checksum: checksum,
 		State:    state,
 	}
+}
+
+func (sm *StateManager) patchBaseStateUnsafe(update map[string]any) map[string]any {
+	keys := topLevelPatchKeys(update)
+	out := make(map[string]any, len(keys))
+	for key := range keys {
+		entry := sm.state.State[key]
+		if entry == nil {
+			continue
+		}
+		out[key] = utils.DeepCopy(entry.Data)
+	}
+	return out
+}
+
+func topLevelPatchKeys(update map[string]any) map[string]struct{} {
+	keys := make(map[string]struct{}, len(update))
+	for key := range update {
+		top := key
+		if dot := strings.IndexByte(top, '.'); dot >= 0 {
+			top = top[:dot]
+		}
+		if bracket := strings.IndexByte(top, '['); bracket >= 0 {
+			top = top[:bracket]
+		}
+		if top != "" {
+			keys[top] = struct{}{}
+		}
+	}
+	return keys
 }
 
 func (sm *StateManager) GetStateSummary() StateSummary {
