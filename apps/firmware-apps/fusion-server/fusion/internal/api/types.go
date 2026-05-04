@@ -243,6 +243,18 @@ type SnapshotOperation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// SceneSetOperation represents a scene-set operation broadcast across the cluster.
+type SceneSetOperation struct {
+	SetID     string    `json:"set_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SceneOperation represents a scene operation broadcast across the cluster.
+type SceneOperation struct {
+	SceneID   string    `json:"scene_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 // SnapshotDefinition represents a stored Snapshot definition.
 type SnapshotDefinition struct {
 	ID   string         `json:"id"`
@@ -413,6 +425,16 @@ type WebSocketResponse struct {
 	Message   string    `json:"message"`   // Human-readable message
 	Data      any       `json:"data"`      // Response payload (can be null)
 	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
+}
+
+// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
+// Clients should treat "patch" mode as a partial update that must be merged
+// into their local cached state, while "snapshot" mode replaces local state.
+type WebSocketConfigUpdateEvent struct {
+	Mode    string         `json:"mode"`              // "patch" or "snapshot"
+	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
+	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
+	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
 }
 
 // WebSocketStats represents connection and usage statistics

@@ -55,7 +55,7 @@ void SourceSelector::process()
     {
         std::memcpy(out[channel], in[start_channel + channel],
                     get_frame_size() * sizeof(float));
-    }   
+    }
 }
 
 

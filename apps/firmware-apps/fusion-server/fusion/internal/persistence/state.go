@@ -59,6 +59,16 @@ func NewVersionedState() *VersionedState {
 	}
 }
 
+// PatchResult holds the outputs of a Patch operation so callers can avoid
+// redundant state copies, diffs, and checksum computations.
+type PatchResult struct {
+	// ConfigUpdate is the fully-formed update (with hash and version) ready
+	// to be broadcast. Callers may set ObserverData before broadcasting.
+	ConfigUpdate *api.ConfigUpdate
+	// Diff is the calculated difference between the pre-patch and post-patch state.
+	Diff map[string]any
+}
+
 // StateManager manages a synchronized in-memory application state across distributed nodes.
 // It supports versioning, and nested key access.
 type StateManager struct {
@@ -68,15 +78,19 @@ type StateManager struct {
 	httpClient *http.Client
 	memberlist *memberlist.Memberlist
 	verbose    bool
+	// checksumDirty tracks whether state.Checksum must be recomputed from the
+	// current full state before it can be treated as authoritative.
+	checksumDirty bool
 }
 
 // NewStateManager creates and initializes a new StateManager for the given node.
 func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
-		state:      *NewVersionedState(),
-		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient: &http.Client{Timeout: api.HTTPTimeout},
-		verbose:    config.Verbose,
+		state:         *NewVersionedState(),
+		version:       api.Version{Counter: 0, NodeID: config.NodeName},
+		httpClient:    &http.Client{Timeout: api.HTTPTimeout},
+		verbose:       config.Verbose,
+		checksumDirty: true,
 	}
 }
 
@@ -244,7 +258,7 @@ func (sm *StateManager) Set(key string, value any) error {
 }
 
 // Patch applies an updated patch to the internal state.
-func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
+func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	// Apply patch to full current state snapshot
@@ -257,34 +271,46 @@ func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	}
 
 	// Calculate the difference between the original and updated configuration.
-	changed := utils.CalculateDiff(before, existing)
-	if changed == nil {
+	diff := utils.CalculateDiff(before, existing)
+	if diff == nil {
 		sm.Unlock()
 		return nil, nil
+	}
+
+	// Compute the checksum once — this is the only JSONChecksum needed.
+	hash, err := utils.JSONChecksum(existing)
+	if err != nil {
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
 
 	sm.version.Counter++
 	localVersion := sm.version
 
-	sm.Unlock()
-
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
+		Hash:    hash,
 		Clear:   false,
 	}
 
-	hash, err := utils.JSONChecksum(existing)
+	// Apply the update to internal state entries while still holding the lock.
+	// This avoids a second lock acquisition plus a redundant checksum pass.
+	dirty, err := sm.applyWhileLocked(configUpdate, localVersion, localVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
+		sm.Unlock()
+		return nil, fmt.Errorf("failed to apply patched config: %w", err)
 	}
-	configUpdate.Hash = hash
-
-	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
-		return nil, err
+	if dirty {
+		sm.markChecksumDirtyUnsafe()
 	}
 
-	return &existing, nil
+	sm.Unlock()
+
+	return &PatchResult{
+		ConfigUpdate: &configUpdate,
+		Diff:         diff,
+	}, nil
 }
 
 // ApplyUpdate applies a ConfigUpdate received via memberlist replication.
@@ -349,20 +375,31 @@ apply:
 	}
 
 	if dirty {
-		sm.updateChecksumUnsafe()
+		sm.markChecksumDirtyUnsafe()
 	}
 
 	return dirty, nil
 }
 
-// updateChecksumUnsafe updates the checksum. Do not lock here.
-func (sm *StateManager) updateChecksumUnsafe() {
+// ensureChecksumUnsafe recomputes the checksum if it is marked dirty.
+// Do not lock here.
+func (sm *StateManager) ensureChecksumUnsafe() {
+	if !sm.checksumDirty {
+		return
+	}
 	payload := sm.getFullStateUnsafe()
 	if sum, err := utils.JSONChecksum(payload); err != nil {
 		logging.GetLogger().Error("failed to calculate checksum: %v", err)
 	} else {
 		sm.state.Checksum = sum
+		sm.checksumDirty = false
 	}
+}
+
+// markChecksumDirtyUnsafe invalidates the cached checksum. Do not lock here.
+func (sm *StateManager) markChecksumDirtyUnsafe() {
+	sm.state.Checksum = ""
+	sm.checksumDirty = true
 }
 
 // applyWhileLocked applies a configuration update to the internal state,
@@ -436,11 +473,26 @@ func (sm *StateManager) applyWhileLocked(
 // GetFullState returns the internal state after deep copy.
 func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
-	defer sm.RUnlock()
+	if !sm.checksumDirty {
+		state := deepCopyState(sm.state.State)
+		checksum := sm.state.Checksum
+		sm.RUnlock()
+		return VersionedState{
+			Checksum: checksum,
+			State:    state,
+		}
+	}
+	sm.RUnlock()
+
+	sm.Lock()
+	sm.ensureChecksumUnsafe()
+	state := deepCopyState(sm.state.State)
+	checksum := sm.state.Checksum
+	sm.Unlock()
 
 	return VersionedState{
-		Checksum: sm.state.Checksum,
-		State:    deepCopyState(sm.state.State),
+		Checksum: checksum,
+		State:    state,
 	}
 }
 
@@ -499,7 +551,7 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 		}
 	}
 
-	sm.updateChecksumUnsafe()
+	sm.markChecksumDirtyUnsafe()
 }
 
 // ReplaceFullState does a global replacement of all state data
@@ -509,17 +561,17 @@ func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, ne
 
 	sm.state.State = deepCopyState(newState)
 	sm.version = newVersion
-	sm.updateChecksumUnsafe()
+	sm.markChecksumDirtyUnsafe()
 }
 
 // SetState replaces the entire state map and advances the version.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Lock()
-	sm.state.State = state
-	sm.version.Counter++
-	sm.Unlock()
+	defer sm.Unlock()
 
-	sm.updateChecksumUnsafe()
+	sm.state.State = deepCopyState(state)
+	sm.version.Counter++
+	sm.markChecksumDirtyUnsafe()
 }
 
 // BumpEpochLocked caller must hold sm.Lock()
@@ -543,6 +595,8 @@ func (sm *StateManager) SetVersion(newVersion api.Version) {
 }
 
 func (sm *StateManager) GetMemberList() *memberlist.Memberlist {
+	sm.RLock()
+	defer sm.RUnlock()
 	return sm.memberlist
 }
 
@@ -553,8 +607,9 @@ func (sm *StateManager) validateState() {
 
 	sm.RLock()
 	ml := sm.memberlist
-	checksum := sm.state.Checksum
 	sm.RUnlock()
+
+	checksum := sm.GetFullState().Checksum
 
 	if ml == nil {
 		logger.Warn("memberlist is not yet set")
@@ -577,7 +632,9 @@ func (sm *StateManager) validateState() {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -644,7 +701,9 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			logger.Warn("Unexpected status %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			logger.Warn("Unexpected status %d from %s: %s", resp.StatusCode, member.Name, string(body))
 			continue
 		}
 
@@ -707,7 +766,7 @@ func (sm *StateManager) validateData() {
 	exportURL := utils.BuildInternalURL(
 		mostCurrent.Member.Addr.String(),
 		api.AdminPort,
-		routes.StateEndpoint,
+		routes.DataEndpoint,
 	)
 
 	resp, err := sm.httpClient.Get(exportURL)
@@ -719,7 +778,11 @@ func (sm *StateManager) validateData() {
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
-		logger.Error("Export returned %v with body %s", err, string(body))
+		if err != nil {
+			logger.Error("Failed to read export error body from %s: %v", mostCurrent.Member.Name, err)
+			return
+		}
+		logger.Error("Export from %s returned status %d with body %s", mostCurrent.Member.Name, resp.StatusCode, string(body))
 		return
 	}
 

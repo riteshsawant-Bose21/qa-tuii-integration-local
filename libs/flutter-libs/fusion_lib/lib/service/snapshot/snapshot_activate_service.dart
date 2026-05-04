@@ -13,9 +13,7 @@ class SnapshotActivateService {
     try {
       final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.snapshotsActivate,
-        data: {
-          'id': name,
-        },
+        additionalPath: name,
         baseUrlToOverride: vip,
         isSecure: false,
       );

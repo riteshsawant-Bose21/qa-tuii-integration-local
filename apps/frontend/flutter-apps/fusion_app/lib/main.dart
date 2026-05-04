@@ -23,37 +23,27 @@ import 'features/landing/viewmodel/project_view_model.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+     WidgetsFlutterBinding.ensureInitialized();
 
     SystemChrome.setPreferredOrientations(<DeviceOrientation>[
       DeviceOrientation.portraitUp,
       //DeviceOrientation.landscapeLeft,
     ]);
-    final uri = Uri(
-      scheme: 'com.bosepro.fusion',
-      host: 'connect',
-      queryParameters: {
-        'vip': '192.168.1.100',
-        'controller_id': 'CTRL1762958340064766236',
-      },
-    );
 
-    final s = uri.toString();
-
-    final qrString = jsonEncode(s);
-    print("qrString");
-    print(qrString);
-   await AppConfig.initialize();
-
+    await AppConfig.initialize();
+    print('start setupServiceLocator');
     await setupServiceLocator();
-    FusionUtils();
+    print('end setupServiceLocator');
+  //  FusionUtils();
+    print('start FusionThemeController');
     FusionThemeController.setThemeMode(ThemeMode.dark);
+    print('end FusionThemeController');
     runApp(const MyApp());
 
     //TODO: Only for web automation build
     //This needs to be conditionally switched on based on some commandline param.
     //Else, this would create the semantics tree everytime misusing computation power.
-    SemanticsBinding.instance.ensureSemantics();
+    //SemanticsBinding.instance.ensureSemantics();
 
     //_setupMacOSDeepLinkListener();
   }, reportCrash);
@@ -92,6 +82,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('MyApp Launched');
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
         BlocProvider<SessionViewModel>.value(

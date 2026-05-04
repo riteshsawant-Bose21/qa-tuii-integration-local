@@ -32,7 +32,7 @@ class GainValue {
 
   factory GainValue.fromJson(Map<String, dynamic> json) {
     return GainValue(
-      gain: json['gain'] ?? 0,
+      gain: toDouble(json['gain']),
       mute: json['mute'] ?? false,
     );
   }
@@ -43,4 +43,7 @@ class GainValue {
       'mute': mute,
     };
   }
+}
+double toDouble(dynamic value) {
+  return (value as num?)?.toDouble() ?? 0;
 }

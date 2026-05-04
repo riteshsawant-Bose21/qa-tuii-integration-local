@@ -151,7 +151,7 @@ curl --request POST   --url http://localhost:8080/pava/messages   --header 'cont
 Uploaded files are stored in:
 
 ```
-/var/lib/fusion/audio
+/persist/fusion/audio
 ```
 
 Files placed manually in this folder are not automatically detected; they must be uploaded via REST or added to the internal DB with a maintenance tool.
@@ -174,7 +174,7 @@ curl --request PUT   --url http://localhost:8080/pava/messages/:id/trigger   --h
 Example console output from `fusion-server`:
 
 ```
-Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
+Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/persist/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
 ```
 
 ## Monitoring Trigger Broadcasts
@@ -190,7 +190,7 @@ Triggered messages display a JSON structure:
 ```json
 {
   "id": "01K8TYPMWW9HSK2QS5Y5W10ABS",
-  "path": "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
+  "path": "/persist/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
   "priority": 100,
   "zones": "all",
   "timestamp": 1761844571

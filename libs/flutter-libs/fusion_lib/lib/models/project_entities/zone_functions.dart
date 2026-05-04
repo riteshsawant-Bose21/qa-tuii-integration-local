@@ -196,6 +196,20 @@ class ZoneFunctions {
       // return "matrix_mixer";
     }
   }
+
+  String get paramName {
+    switch (type) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMatrix:
+        return id;
+      case ZoneFunctionsType.sourceSelectWithPriority:
+        return "$id/selector";
+      case ZoneFunctionsType.sourceMixWithPriority:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
+        return "$id/mixer";
+    }
+  }
 }
 
 ZoneFunctions getNewZoneFunction({required ZoneFunctionsType type, String? name}) {

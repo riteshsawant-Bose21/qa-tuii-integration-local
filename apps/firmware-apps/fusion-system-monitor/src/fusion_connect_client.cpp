@@ -106,6 +106,8 @@ struct fusion_cn_metrics_snapshot
     uint64_t packets_marked, malformed_count;
     uint64_t late_drop_count;
     uint64_t rx_queue_drop_count;
+    uint64_t kernel_silence_sub_count;
+    uint64_t kernel_silence_sub_frames;
     uint64_t burst_loss_max;
 
     uint32_t rfc3550_jitter_ns;
@@ -1062,6 +1064,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             if (create_source) {
                 config.is_source = true;
                 std::snprintf(config.stream_name, sizeof(config.stream_name), "FC_TX_%u", config.source_port);
+                json_stream_names.insert(config.stream_name);
 
                 // Role invariants: TX must set source_ip=local, dest_ip=peer
                 config.source_ip = local_ip_be;
@@ -1077,7 +1080,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[config.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[config.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect source stream {} to pending", config.stream_name);
-                    json_stream_names.insert(config.stream_name);
                 }
             }
 
@@ -1085,6 +1087,7 @@ bool FusionConnectClient::process_audio_streams_update() {
                 fusion_cn_stream_config sink_cfg = config; // copy common defaults/overrides
                 sink_cfg.is_source = false;
                 std::snprintf(sink_cfg.stream_name, sizeof(sink_cfg.stream_name), "FC_RX_%u", sink_cfg.source_port);
+                json_stream_names.insert(sink_cfg.stream_name);
 
                 // Role invariants: RX must set dest_ip=local, source_ip=peer
                 sink_cfg.dest_ip = local_ip_be;
@@ -1100,7 +1103,6 @@ bool FusionConnectClient::process_audio_streams_update() {
                     pending_streams[sink_cfg.stream_name].state = STREAM_CREATE_PENDING;
                     pending_streams[sink_cfg.stream_name].retry_cnt = STREAM_RETRY_CNT;
                     SPDLOG_DEBUG("Added Fusion Connect sink stream {} to pending", sink_cfg.stream_name);
-                    json_stream_names.insert(sink_cfg.stream_name);
                 }
             }
         } else {
@@ -1115,7 +1117,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
 
             if (!has_explicit_playout_delay && config.sample_rate != 0)
-                config.playout_delay = static_cast<uint32_t>((5ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
+                config.playout_delay = static_cast<uint32_t>((10ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             // role
             const bool is_source = (properties.isMember("is_source") && properties["is_source"].isBool())
@@ -1166,6 +1168,11 @@ bool FusionConnectClient::process_audio_streams_update() {
         }
     }
 
+    if (needs_retry) {
+        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
+        return false;
+    }
+
     // --- Remove missing Fusion Connect streams --------------------------------
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end(); ) {
         if (!json_stream_names.count(it->first)) {
@@ -1201,11 +1208,6 @@ bool FusionConnectClient::process_audio_streams_update() {
         } else {
             ++it;
         }
-    }
-
-    if (needs_retry) {
-        SPDLOG_DEBUG("Deferring audio_streams_update until peer device discovery is available");
-        return false;
     }
 
     return true;
@@ -1627,7 +1629,7 @@ void FusionConnectClient::process() {
                     // RX
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
-                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} rxq_drop={} burst_max={} batch_max={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late={} rxq_drop={} ksil={} ksil_frames={} burst_max={} batch_max={} "
                         "iat_min={}us p50={}us p99={}us jitter={}us "
                         "jb: cur={} min={} max={} avg={} "
                         "lat: path={}ns min={}ns max={}ns p50={}ns p99={}ns ",
@@ -1635,7 +1637,9 @@ void FusionConnectClient::process() {
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
-                        s.late_drop_count, s.rx_queue_drop_count, s.burst_loss_max, s.batch_max,
+                        s.late_drop_count, s.rx_queue_drop_count,
+                        s.kernel_silence_sub_count, s.kernel_silence_sub_frames,
+                        s.burst_loss_max, s.batch_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
                         s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
