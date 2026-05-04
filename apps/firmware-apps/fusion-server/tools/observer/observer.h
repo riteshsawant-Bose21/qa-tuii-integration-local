@@ -22,6 +22,7 @@
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 /**
@@ -634,23 +635,22 @@ public:
   void handleExternalUpdate(const std::string &path,
                             const Json::Value &new_state)
   {
-    // Mutate state and compute diffs under state_mutex_
-    Json::Value oldData, newData, oldValue, newValue;
+    // Extract only the affected subtree before and after mutation instead of
+    // deep-copying the entire state tree twice.
+    Json::Value oldValue, newValue;
     {
       std::lock_guard<std::mutex> slk(state_mutex_);
       SPDLOG_DEBUG("Received update for path: {}", path);
 
-      oldData = data_;
+      oldValue = extractValue(data_, path);
       updateInternalState(path, new_state);
-      newData = data_;
+      newValue = extractValue(data_, path);
 
-      if (oldData == newData)
+      if (oldValue == newValue)
       {
         SPDLOG_DEBUG("No change detected for path: {}", path);
         return;
       }
-      oldValue = extractValue(oldData, path);
-      newValue = extractValue(newData, path);
     }
 
     // Collect callbacks under watchers_mutex_
@@ -1104,6 +1104,77 @@ private:
     }
   }
 
+  bool isPatternSubscription(const std::string &path) const
+  {
+    return path.find('*') != std::string::npos;
+  }
+
+  void collectMatchingPathsForClear(const Json::Value &node,
+                                    std::vector<PathComponent> &currentPath,
+                                    const std::vector<PatternComponent> &parsedPattern,
+                                    std::unordered_set<std::string> &matches)
+  {
+    if (patternMatchesPath(parsedPattern, currentPath))
+    {
+      matches.insert(constructPath(currentPath));
+    }
+    if (node.isObject())
+    {
+      for (const auto &key : node.getMemberNames())
+      {
+        currentPath.push_back(PathComponent(key));
+        collectMatchingPathsForClear(node[key], currentPath, parsedPattern,
+                                     matches);
+        currentPath.pop_back();
+      }
+    }
+    else if (node.isArray())
+    {
+      for (Json::ArrayIndex i = 0; i < node.size(); ++i)
+      {
+        currentPath.push_back(PathComponent(static_cast<int>(i)));
+        collectMatchingPathsForClear(node[i], currentPath, parsedPattern,
+                                     matches);
+        currentPath.pop_back();
+      }
+    }
+  }
+
+  void handleClearMessage(const std::vector<std::string> &targetPaths)
+  {
+    const Json::Value currentState = jsonMonitor_.get("");
+    std::unordered_set<std::string> pathsToClear;
+
+    for (const auto &path : targetPaths)
+    {
+      if (path.empty())
+      {
+        continue;
+      }
+
+      if (isPatternSubscription(path))
+      {
+        const auto &parsedPattern = jsonMonitor_.getParsedPattern(path);
+        std::vector<PathComponent> currentPath;
+        collectMatchingPathsForClear(currentState, currentPath, parsedPattern,
+                                     pathsToClear);
+        continue;
+      }
+
+      if (!jsonMonitor_.get(path).isNull())
+      {
+        pathsToClear.insert(path);
+      }
+    }
+
+    for (const auto &path : pathsToClear)
+    {
+      jsonMonitor_.handleExternalUpdate(path, Json::Value());
+    }
+
+    jsonMonitor_.handleExternalUpdate("", Json::objectValue);
+  }
+
   void handleUpdateMessage(const Json::Value &update, bool useVersion = true)
   {
     SPDLOG_TRACE("Received update {}", summarizeUpdateMetadata(update));
@@ -1139,9 +1210,15 @@ private:
       targetPaths = targetPaths_;
     }
 
+    if (update.isMember("_fusion_clear") && update["_fusion_clear"].asBool())
+    {
+      handleClearMessage(targetPaths);
+      return;
+    }
+
     for (const auto &path : targetPaths)
     {
-      if (path.find('*') != std::string::npos)
+      if (isPatternSubscription(path))
       {
         const auto &parsedPattern = jsonMonitor_.getParsedPattern(path);
         std::vector<PathComponent> currentPath;
@@ -1376,12 +1453,29 @@ private:
     sockaddr_in senderAddr;
     socklen_t senderLen = sizeof(senderAddr);
 
-    // Send a keepalive every KEEPALIVE_INTERVAL_S seconds to prevent the
-    // server from pruning this client (clientStaleTTL = 10s).
-    int keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
+    // Send a keepalive based on wall-clock time to prevent the server from
+    // pruning this client (clientStaleTTL = 10s). Using wall-clock time
+    // instead of poll-timeout counting ensures keepalives are sent even when
+    // the socket is busy receiving broadcasts (poll never times out).
+    auto lastKeepaliveSent = std::chrono::steady_clock::now();
 
     while (running_)
     {
+      // Send keepalive if enough wall-clock time has elapsed, regardless of
+      // whether poll returned data or timed out. This prevents the server
+      // from pruning us during sustained broadcast traffic.
+      if (receivedInitialState_)
+      {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - lastKeepaliveSent).count();
+        if (elapsed >= timingConfig_.keepaliveIntervalSeconds)
+        {
+          sendKeepalive(serverAddr_);
+          lastKeepaliveSent = now;
+        }
+      }
+
       const int pollResult = poll(&pfd, 1, 1000);
       if (pollResult < 0)
       {
@@ -1395,17 +1489,6 @@ private:
         if (!receivedInitialState_)
         {
           requestInitialDeviceInfo(serverAddr_);
-        }
-        else
-        {
-          // Keep our UDP client registration alive so the server continues
-          // broadcasting to us. Without this, the server prunes idle clients
-          // after 10 seconds and silently stops sending config_update packets.
-          if (--keepaliveCountdown <= 0)
-          {
-            sendKeepalive(serverAddr_);
-            keepaliveCountdown = timingConfig_.keepaliveIntervalSeconds;
-          }
         }
         continue;
       }
