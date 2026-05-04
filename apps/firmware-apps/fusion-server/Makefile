@@ -12,7 +12,7 @@ DEBUG_FLAGS=-gcflags "all=-N -l"
 PROTOC ?= protoc
 PROTO_SRC_DIR=../../../libs/proto
 PROTO_GO_OUT=fusion/internal/gen/proto
-PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/snapshots.proto $(PROTO_SRC_DIR)/fusion/devices.proto
+PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto $(PROTO_SRC_DIR)/fusion/software_update.proto $(PROTO_SRC_DIR)/fusion/vip.proto $(PROTO_SRC_DIR)/fusion/health.proto $(PROTO_SRC_DIR)/fusion/udp.proto $(PROTO_SRC_DIR)/fusion/version.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -30,17 +30,17 @@ SHELL := /bin/bash
 
 all: deps build
 
-build:
+build: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME) fusion-server
 
-debug:
+debug: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)-debug -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)-debug fusion-server
 
-release:
+release: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)-release -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)-release fusion-server
@@ -49,7 +49,7 @@ clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_DIR)
 
-run:
+run: proto
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 	./$(BUILD_DIR)/$(BINARY_NAME)
 
@@ -71,41 +71,51 @@ proto:
 proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/device_config.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/tasks.pb.go
-	rm -f $(PROTO_GO_OUT)/fusion/snapshots.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/time_machine.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/devices.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/websocket.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/controllers.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/pava.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/sessions.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/metadata.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/software_update.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/vip.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/health.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/udp.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/version.pb.go
 
 # Cross compilation
-build-linux-amd64:
+build-linux-amd64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_amd64 fusion-server
 
-build-linux-arm32:
+build-linux-arm32: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm32 fusion-server
 
-build-linux-arm64:
+build-linux-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm64 fusion-server
 
-build-darwin-arm64:
+build-darwin-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_darwin_arm64 fusion-server
 
-release-linux-amd64:
+release-linux-amd64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_amd64 fusion-server
 
-release-linux-arm32:
+release-linux-arm32: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm32 fusion-server
 
-release-linux-arm64:
+release-linux-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm64 fusion-server

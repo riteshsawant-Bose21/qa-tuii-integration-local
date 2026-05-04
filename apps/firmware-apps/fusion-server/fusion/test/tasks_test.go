@@ -6,14 +6,12 @@ import (
 	"fusion/internal/api"
 	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
-	"fusion/internal/tasks"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -56,6 +54,16 @@ func decodeTaskResponse(t *testing.T, body io.Reader) *fusionpb.Task {
 	var task fusionpb.Task
 	require.NoError(t, protojson.Unmarshal(data, &task))
 	return &task
+}
+
+func decodeTaskHistoryResponse(t *testing.T, body io.Reader) *fusionpb.TaskHistoryResponse {
+	t.Helper()
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var resp fusionpb.TaskHistoryResponse
+	require.NoError(t, protojson.Unmarshal(data, &resp))
+	return &resp
 }
 
 func newSnapshotTaskRequest(id, snapshot, cronExpr, description string) *fusionpb.SnapshotTaskCreateRequest {
@@ -106,18 +114,14 @@ func clearHistory(t *testing.T) {
 }
 
 // fetchHistory fetches the current execution history.
-func fetchHistory(t *testing.T) []tasks.ExecutionRecord {
+func fetchHistory(t *testing.T) []*fusionpb.TaskExecutionRecord {
 	resp, err := http.Get(tasksServerURL + routes.TasksHistoryEndpoint)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var history []tasks.ExecutionRecord
-	err = json.NewDecoder(resp.Body).Decode(&history)
-	require.NoError(t, err)
-
-	return history
+	return decodeTaskHistoryResponse(t, resp.Body).History
 }
 
 func TestTaskManagerEndpoints(t *testing.T) {
@@ -198,9 +202,8 @@ func TestTaskManagerEndpoints(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 
-		var history []tasks.ExecutionRecord
-		err = json.NewDecoder(resp.Body).Decode(&history)
-		require.NoError(t, err, "Expected valid JSON for execution history")
+		history := decodeTaskHistoryResponse(t, resp.Body)
+		require.NotNil(t, history, "Expected valid protobuf JSON for execution history")
 		// Optionally, add more assertions based on the expected state.
 	})
 
@@ -280,8 +283,8 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("AddTaskHandler missing required fields", func(t *testing.T) {
-		payload := `{"id": "", "cron_expr": "", "description": ""}`
-		resp, err := http.Post(tasksURL, api.JsonMIMEType, strings.NewReader(payload))
+		payload := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{})
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(payload))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -322,8 +325,13 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("UpdateTaskHandler missing required fields", func(t *testing.T) {
-		payload := `{"cron_expr": "", "description": ""}`
-		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+testTaskId, strings.NewReader(payload))
+		desc := ""
+		cron := ""
+		payload := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
+			Description: &desc,
+			CronExpr:    &cron,
+		})
+		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+testTaskId, bytes.NewReader(payload))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
@@ -595,7 +603,7 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 
 	history := fetchHistory(t)
 	for _, rec := range history {
-		if rec.TaskID == taskID {
+		if rec.GetTaskId() == taskID {
 			t.Fatalf("task %s should not execute before recurring window opens, but history entry was found: %+v", taskID, rec)
 		}
 	}
@@ -639,7 +647,7 @@ func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
 
 	history := fetchHistory(t)
 	for _, rec := range history {
-		if rec.TaskID == taskID {
+		if rec.GetTaskId() == taskID {
 			t.Fatalf("task %s should not execute on a non-matching weekday, but history entry was found: %+v", taskID, rec)
 		}
 	}
@@ -684,7 +692,7 @@ func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
 	history := fetchHistory(t)
 	found := false
 	for _, rec := range history {
-		if rec.TaskID == taskID {
+		if rec.GetTaskId() == taskID {
 			found = true
 			break
 		}

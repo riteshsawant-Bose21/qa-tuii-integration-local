@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -19,14 +20,6 @@ const (
 	setupVIPPollTimeout    = 3 * time.Second
 	setupVIPStressCycles   = 3
 )
-
-type vipOperationResponse struct {
-	ID         string `json:"id"`
-	DesiredVIP string `json:"desired_vip"`
-	StatusHost string `json:"status_host"`
-	Phase      string `json:"phase"`
-	Message    string `json:"message"`
-}
 
 func setupVIPTarget(t *testing.T) (nodeURLs []string, originalVIP string, nodeNamesByIP map[string]string) {
 	t.Helper()
@@ -127,7 +120,7 @@ func candidateVIPs(t *testing.T, originalVIP string) []string {
 	return candidates
 }
 
-func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (vipOperationResponse, time.Duration) {
+func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (*fusionpb.VIPOperationStatus, time.Duration) {
 	t.Helper()
 
 	client := &http.Client{Timeout: setupVIPRequestTimeout}
@@ -143,18 +136,18 @@ func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (vipOperation
 		t.Fatalf("expected %d from VIP setup endpoint for %s, got %d", http.StatusAccepted, targetVIP, resp.StatusCode)
 	}
 
-	var payload vipOperationResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	var payload fusionpb.VIPOperationStatus
+	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode VIP operation response for %s: %v", targetVIP, err)
 	}
-	if payload.ID == "" {
+	if payload.GetId() == "" {
 		t.Fatalf("VIP operation response for %s did not include an id", targetVIP)
 	}
-	if payload.StatusHost == "" {
+	if payload.GetStatusHost() == "" {
 		t.Fatalf("VIP operation response for %s did not include a status host", targetVIP)
 	}
 
-	return payload, duration
+	return &payload, duration
 }
 
 func postAdminNoBody(t *testing.T, adminHost string, path string) {
@@ -197,8 +190,8 @@ func waitForVIPOperationComplete(t *testing.T, statusHost string, operationID st
 			continue
 		}
 
-		var payload vipOperationResponse
-		decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+		var payload fusionpb.VIPOperationStatus
+		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil {
 			lastMessage = decodeErr.Error()
@@ -206,16 +199,16 @@ func waitForVIPOperationComplete(t *testing.T, statusHost string, operationID st
 			continue
 		}
 
-		lastPhase = payload.Phase
-		lastMessage = payload.Message
-		switch payload.Phase {
+		lastPhase = payload.GetPhase()
+		lastMessage = payload.GetMessage()
+		switch payload.GetPhase() {
 		case "complete":
 			t.Logf("VIP operation %s completed", operationID)
 			return
 		case "failed":
-			t.Fatalf("VIP operation %s failed: %s", operationID, payload.Message)
+			t.Fatalf("VIP operation %s failed: %s", operationID, payload.GetMessage())
 		default:
-			t.Logf("VIP operation %s still in phase %s: %s", operationID, payload.Phase, payload.Message)
+			t.Logf("VIP operation %s still in phase %s: %s", operationID, payload.GetPhase(), payload.GetMessage())
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -223,7 +216,7 @@ func waitForVIPOperationComplete(t *testing.T, statusHost string, operationID st
 	t.Fatalf("VIP operation %s did not complete within %v (last phase=%s message=%s)", operationID, setupVIPTimeout, lastPhase, lastMessage)
 }
 
-func waitForVIPState(t *testing.T, vipHost string) map[string]string {
+func waitForVIPState(t *testing.T, vipHost string) *fusionpb.CurrentVIPResponse {
 	t.Helper()
 
 	client := setupVIPPollClient()
@@ -233,12 +226,12 @@ func waitForVIPState(t *testing.T, vipHost string) map[string]string {
 	for time.Now().Before(deadline) {
 		getResp, err := client.Get(fmt.Sprintf("%s/devices/vip", vipURLForHost(vipHost)))
 		if err == nil {
-			var payload map[string]string
-			decodeErr := json.NewDecoder(getResp.Body).Decode(&payload)
+			var payload fusionpb.CurrentVIPResponse
+			decodeErr := decodeProtoBody(getResp.Body, &payload)
 			getResp.Body.Close()
-			if decodeErr == nil && getResp.StatusCode == http.StatusOK && payload["vip"] == vipHost && payload["local"] != "" {
-				t.Logf("VIP %s is reachable via %s and owned by %s", vipHost, vipURLForHost(vipHost), payload["local"])
-				return payload
+			if decodeErr == nil && getResp.StatusCode == http.StatusOK && payload.GetVip() == vipHost && payload.GetLocal() != "" {
+				t.Logf("VIP %s is reachable via %s and owned by %s", vipHost, vipURLForHost(vipHost), payload.GetLocal())
+				return &payload
 			}
 
 			if decodeErr != nil {
@@ -270,10 +263,10 @@ func waitForOldVIPRetirement(t *testing.T, oldVIP string) {
 			return
 		}
 
-		var payload map[string]string
-		decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+		var payload fusionpb.CurrentVIPResponse
+		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
-		if decodeErr != nil || resp.StatusCode != http.StatusOK || payload["vip"] != oldVIP {
+		if decodeErr != nil || resp.StatusCode != http.StatusOK || payload.GetVip() != oldVIP {
 			t.Logf("Old VIP %s stopped reporting itself", oldVIP)
 			return
 		}
@@ -301,10 +294,10 @@ func waitForExclusiveVIPState(t *testing.T, activeVIP string, candidateVIPs []st
 				continue
 			}
 
-			var payload map[string]string
-			decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+			var payload fusionpb.CurrentVIPResponse
+			decodeErr := decodeProtoBody(resp.Body, &payload)
 			resp.Body.Close()
-			if decodeErr != nil || resp.StatusCode != http.StatusOK || payload["vip"] != vip {
+			if decodeErr != nil || resp.StatusCode != http.StatusOK || payload.GetVip() != vip {
 				continue
 			}
 
@@ -324,6 +317,30 @@ func waitForExclusiveVIPState(t *testing.T, activeVIP string, candidateVIPs []st
 	}
 
 	t.Fatalf("VIP %s did not become the exclusive active candidate within %v", activeVIP, setupVIPTimeout)
+}
+
+func detectActiveVIPCandidate(t *testing.T, candidateVIPs []string) string {
+	t.Helper()
+
+	client := setupVIPPollClient()
+	for _, candidate := range candidateVIPs {
+		resp, err := client.Get(fmt.Sprintf("%s/devices/vip", vipURLForHost(candidate)))
+		if err != nil {
+			continue
+		}
+
+		var payload fusionpb.CurrentVIPResponse
+		decodeErr := decodeProtoBody(resp.Body, &payload)
+		resp.Body.Close()
+		if decodeErr != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+		if payload.GetVip() == candidate {
+			return candidate
+		}
+	}
+
+	return ""
 }
 
 func resolveFusionMDNSIPsViaNode(resolverHost string, serviceName string) ([]string, error) {
@@ -400,23 +417,36 @@ func ensureVIPBaseline(t *testing.T, nodeURLs []string, originalVIP string, node
 	t.Helper()
 
 	t.Logf("Ensuring baseline VIP %s across cluster before transitions", originalVIP)
-	for _, nodeURL := range nodeURLs {
-		adminHost := hostFromNodeURL(t, nodeURL)
-		postAdminNoBody(t, adminHost, fmt.Sprintf("/devices/vip/%s", url.PathEscape(originalVIP)))
-	}
-	for _, nodeURL := range nodeURLs {
-		adminHost := hostFromNodeURL(t, nodeURL)
-		postAdminNoBody(t, adminHost, "/device/reload/vip")
+
+	activeVIP := detectActiveVIPCandidate(t, candidateVIPs)
+	switch {
+	case activeVIP == originalVIP:
+		t.Logf("Baseline VIP %s is already active", originalVIP)
+	case activeVIP != "":
+		t.Logf("Restoring baseline VIP %s from active VIP %s", originalVIP, activeVIP)
+		operation, _ := setVIPRequest(t, vipURLForHost(activeVIP), originalVIP)
+		waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
+		waitForOldVIPRetirement(t, activeVIP)
+	default:
+		t.Logf("No active VIP candidate reachable; falling back to admin VIP write+reload for %s", originalVIP)
+		for _, nodeURL := range nodeURLs {
+			adminHost := hostFromNodeURL(t, nodeURL)
+			postAdminNoBody(t, adminHost, fmt.Sprintf("/devices/vip/%s", url.PathEscape(originalVIP)))
+		}
+		for _, nodeURL := range nodeURLs {
+			adminHost := hostFromNodeURL(t, nodeURL)
+			postAdminNoBody(t, adminHost, "/device/reload/vip")
+		}
 	}
 
 	payload := waitForVIPState(t, originalVIP)
 	waitForExclusiveVIPState(t, originalVIP, candidateVIPs)
 
-	serviceName, ok := nodeNamesByIP[payload["local"]]
+	serviceName, ok := nodeNamesByIP[payload.GetLocal()]
 	if !ok {
-		t.Fatalf("could not map baseline VIP holder IP %s to a node name", payload["local"])
+		t.Fatalf("could not map baseline VIP holder IP %s to a node name", payload.GetLocal())
 	}
-	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload["local"]), serviceName, originalVIP)
+	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload.GetLocal()), serviceName, originalVIP)
 }
 
 func runVIPTransitionSequence(t *testing.T, nodeURLs []string, originalVIP string, nodeNamesByIP map[string]string, targets []string) {
@@ -444,14 +474,14 @@ func runVIPTransitionSequence(t *testing.T, nodeURLs []string, originalVIP strin
 		restoreNodeURL := vipURLForHost(currentVIP)
 		t.Logf("Restoring VIP %s via %s", originalVIP, restoreNodeURL)
 		operation, _ := setVIPRequest(t, restoreNodeURL, originalVIP)
-		waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
+		waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
 		payload := waitForVIPState(t, originalVIP)
 		waitForExclusiveVIPState(t, originalVIP, allCandidateVIPs)
-		serviceName, ok := nodeNamesByIP[payload["local"]]
+		serviceName, ok := nodeNamesByIP[payload.GetLocal()]
 		if !ok {
-			t.Fatalf("could not map restored VIP holder IP %s to a node name", payload["local"])
+			t.Fatalf("could not map restored VIP holder IP %s to a node name", payload.GetLocal())
 		}
-		waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload["local"]), serviceName, originalVIP)
+		waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload.GetLocal()), serviceName, originalVIP)
 	})
 
 	for _, targetVIP := range targets {
@@ -462,16 +492,16 @@ func runVIPTransitionSequence(t *testing.T, nodeURLs []string, originalVIP strin
 			t.Fatalf("VIP setup request for %s took too long: %v", targetVIP, duration)
 		}
 		t.Logf("VIP transition request for %s returned in %v", targetVIP, duration)
-		waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
+		waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
 
 		payload := waitForVIPState(t, targetVIP)
 		waitForOldVIPRetirement(t, currentVIP)
 
-		serviceName, ok := nodeNamesByIP[payload["local"]]
+		serviceName, ok := nodeNamesByIP[payload.GetLocal()]
 		if !ok {
-			t.Fatalf("could not map VIP holder IP %s to a node name", payload["local"])
+			t.Fatalf("could not map VIP holder IP %s to a node name", payload.GetLocal())
 		}
-		waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload["local"]), serviceName, targetVIP)
+		waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload.GetLocal()), serviceName, targetVIP)
 
 		currentVIP = targetVIP
 	}

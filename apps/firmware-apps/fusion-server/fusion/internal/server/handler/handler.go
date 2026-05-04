@@ -5,6 +5,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/scene_catalog"
@@ -39,16 +40,6 @@ type Handler struct {
 	// Software update sync tracking
 	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
 	syncTrackersLock sync.RWMutex
-}
-
-type serverInfoResponse struct {
-	Name        string   `json:"name"`
-	Version     string   `json:"version"`
-	Commit      string   `json:"commit"`
-	BuildTime   string   `json:"build_time"`
-	NodeID      string   `json:"node_id"`
-	Endpoints   []string `json:"endpoints"`
-	ClusterSize int      `json:"cluster_size"`
 }
 
 func NewHandler(
@@ -302,15 +293,15 @@ func (h *Handler) GetMembers() []*memberlist.Node {
 	return h.clusterTransport.MemberListMembers()
 }
 
-func (h *Handler) GetServerInfo() (any, error) {
-	info := serverInfoResponse{
+func (h *Handler) GetServerInfo() (*fusionpb.ServerInfoResponse, error) {
+	info := &fusionpb.ServerInfoResponse{
 		Name:        "Fusion Server",
 		Version:     version.Version,
 		Commit:      version.Commit,
 		BuildTime:   version.BuildTime,
-		NodeID:      h.clusterTransport.LocalNode().Name,
+		NodeId:      h.clusterTransport.LocalNode().Name,
 		Endpoints:   h.endpoints,
-		ClusterSize: len(h.clusterTransport.MemberListMembers()),
+		ClusterSize: uint32(len(h.clusterTransport.MemberListMembers())),
 	}
 
 	return info, nil

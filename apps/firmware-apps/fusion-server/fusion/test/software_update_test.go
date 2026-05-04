@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
@@ -41,19 +42,19 @@ func TestSoftwareUpdateUploadAndListSuccess(t *testing.T) {
 	// Upload the bundle
 	resp := uploadSoftwareUpdate(t, ctx, softwareUpdateServerAddr, filename, bundleData, checksum, http.StatusCreated)
 
-	if resp.Filename != filename {
-		t.Errorf("unexpected filename: got %q want %q", resp.Filename, filename)
+	if resp.GetFilename() != filename {
+		t.Errorf("unexpected filename: got %q want %q", resp.GetFilename(), filename)
 	}
 
-	if !strings.EqualFold(resp.Checksum, checksum) {
-		t.Errorf("unexpected checksum: got %q want %q", resp.Checksum, checksum)
+	if !strings.EqualFold(resp.GetChecksum(), checksum) {
+		t.Errorf("unexpected checksum: got %q want %q", resp.GetChecksum(), checksum)
 	}
 
-	if resp.SizeBytes != int64(len(bundleData)) {
-		t.Errorf("unexpected size_bytes: got %d want %d", resp.SizeBytes, len(bundleData))
+	if resp.GetSizeBytes() != int64(len(bundleData)) {
+		t.Errorf("unexpected size_bytes: got %d want %d", resp.GetSizeBytes(), len(bundleData))
 	}
 
-	if resp.Uploaded.IsZero() {
+	if resp.GetUploaded() == nil || resp.GetUploaded().AsTime().IsZero() {
 		t.Error("uploaded timestamp should not be zero")
 	}
 
@@ -62,10 +63,10 @@ func TestSoftwareUpdateUploadAndListSuccess(t *testing.T) {
 
 	found := false
 	for _, bundle := range bundles {
-		if bundle.Filename == filename && strings.EqualFold(bundle.Checksum, checksum) {
+		if bundle.GetFilename() == filename && strings.EqualFold(bundle.GetChecksum(), checksum) {
 			found = true
-			if bundle.SizeBytes != int64(len(bundleData)) {
-				t.Errorf("listed bundle size mismatch: got %d want %d", bundle.SizeBytes, len(bundleData))
+			if bundle.GetSizeBytes() != int64(len(bundleData)) {
+				t.Errorf("listed bundle size mismatch: got %d want %d", bundle.GetSizeBytes(), len(bundleData))
 			}
 			break
 		}
@@ -233,20 +234,20 @@ func TestSoftwareUpdateDownloadNotFound(t *testing.T) {
 		t.Fatalf("download returned %d, want 404; body=%s", resp.StatusCode, string(body))
 	}
 
-	var errorResp api.SoftwareUpdateErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
+	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
 
-	if errorResp.Error != "not_found" {
-		t.Errorf("unexpected error type: got %q want %q", errorResp.Error, "not_found")
+	if errorResp.GetError() != "not_found" {
+		t.Errorf("unexpected error type: got %q want %q", errorResp.GetError(), "not_found")
 	}
 }
 
 // Helper functions
 
 // uploadSoftwareUpdate uploads a software bundle and expects success.
-func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename string, data []byte, checksum string, expectedStatus int) *api.SoftwareUpdateUploadResponse {
+func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename string, data []byte, checksum string, expectedStatus int) *fusionpb.SoftwareUpdateUploadResponse {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -290,8 +291,8 @@ func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename stri
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var uploadResp api.SoftwareUpdateUploadResponse
-	if err := json.NewDecoder(resp.Body).Decode(&uploadResp); err != nil {
+	var uploadResp fusionpb.SoftwareUpdateUploadResponse
+	if err := decodeProtoBody(resp.Body, &uploadResp); err != nil {
 		t.Fatalf("decoding upload response failed: %v", err)
 	}
 
@@ -342,13 +343,13 @@ func uploadSoftwareUpdateExpectError(t *testing.T, ctx context.Context, base, fi
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var errorResp api.SoftwareUpdateErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
+	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
 
-	if errorResp.Error != expectedError {
-		t.Errorf("unexpected error type: got %q want %q", errorResp.Error, expectedError)
+	if errorResp.GetError() != expectedError {
+		t.Errorf("unexpected error type: got %q want %q", errorResp.GetError(), expectedError)
 	}
 }
 
@@ -401,18 +402,18 @@ func uploadSoftwareUpdateMissingFields(t *testing.T, ctx context.Context, base, 
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var errorResp api.SoftwareUpdateErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
+	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
 
-	if errorResp.Error != expectedError {
-		t.Errorf("unexpected error type: got %q want %q", errorResp.Error, expectedError)
+	if errorResp.GetError() != expectedError {
+		t.Errorf("unexpected error type: got %q want %q", errorResp.GetError(), expectedError)
 	}
 }
 
 // listSoftwareUpdates gets the list of all software updates.
-func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []api.SoftwareUpdateSync {
+func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []*fusionpb.SoftwareUpdateBundle {
 	t.Helper()
 
 	req, err := http.NewRequestWithContext(ctx, "GET",
@@ -433,12 +434,12 @@ func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []api.S
 			routes.SoftwareUpdateListEndpoint, resp.StatusCode, string(body))
 	}
 
-	var bundles []api.SoftwareUpdateSync
-	if err := json.NewDecoder(resp.Body).Decode(&bundles); err != nil {
+	var bundles fusionpb.SoftwareUpdateListResponse
+	if err := decodeProtoBody(resp.Body, &bundles); err != nil {
 		t.Fatalf("decoding list response failed: %v", err)
 	}
 
-	return bundles
+	return bundles.Bundles
 }
 
 // downloadSoftwareUpdate downloads a software bundle by filename.
@@ -518,8 +519,8 @@ func TestSoftwareUpdateSyncAcrossNodes(t *testing.T) {
 
 	// Upload to VIP
 	uploadResp := uploadSoftwareUpdate(t, ctx, softwareUpdateServerAddr, filename, bundleData, checksum, http.StatusCreated)
-	if uploadResp.Filename != filename {
-		t.Fatalf("upload returned wrong filename: got %q want %q", uploadResp.Filename, filename)
+	if uploadResp.GetFilename() != filename {
+		t.Fatalf("upload returned wrong filename: got %q want %q", uploadResp.GetFilename(), filename)
 	}
 
 	// Wait for each follower node to sync the software update metadata
@@ -567,14 +568,14 @@ func hasSoftwareUpdateMetadata(_ *testing.T, baseURL, filename string) bool {
 		return false
 	}
 
-	var updates []api.SoftwareUpdateSync
-	if err := json.NewDecoder(resp.Body).Decode(&updates); err != nil {
+	var updates fusionpb.SoftwareUpdateListResponse
+	if err := decodeProtoBody(resp.Body, &updates); err != nil {
 		return false
 	}
 
 	// Check if our filename is in the list
-	for _, update := range updates {
-		if update.Filename == filename {
+	for _, update := range updates.GetBundles() {
+		if update.GetFilename() == filename {
 			return true
 		}
 	}
@@ -639,18 +640,18 @@ func getSoftwareUpdateClusterNodeURLs(t *testing.T, ctx context.Context, vipURL 
 		t.Fatalf("/devices returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var devices []api.DeviceInfo
-	if err := json.NewDecoder(resp.Body).Decode(&devices); err != nil {
+	var devicesResp fusionpb.DeviceListResponse
+	if err := decodeProtoBody(resp.Body, &devicesResp); err != nil {
 		t.Fatalf("failed to decode /devices: %v", err)
 	}
 
 	// Build the list of follower node URLs
 	urls := make([]string, 0)
-	for _, d := range devices {
-		url := fmt.Sprintf("http://%s:8080", d.Address)
+	for _, d := range devicesResp.GetDevices() {
+		url := fmt.Sprintf("http://%s:8080", d.GetAddress())
 
 		// Skip VIP/primary node - we only test propagation to followers
-		if d.IsPrimaryNode {
+		if d.GetIsPrimary() {
 			continue
 		}
 

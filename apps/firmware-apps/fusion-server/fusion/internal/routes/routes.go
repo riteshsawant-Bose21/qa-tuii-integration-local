@@ -2,10 +2,8 @@ package routes
 
 import (
 	"fmt"
-	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"net/http"
-
-	json "github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 )
@@ -210,10 +208,7 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
-	type routesResponse struct {
-		Routes []string `json:"routes"`
+	if err := writeProtoJSON(w, &fusionpb.EndpointListResponse{Routes: Endpoints}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(routesResponse{Routes: Endpoints})
 }

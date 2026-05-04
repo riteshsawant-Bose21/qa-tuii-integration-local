@@ -15,9 +15,12 @@ function show_help() {
     echo "  --certs             Run only certificate tests (GetCSR, SetDeviceCertificate, ResetDeviceCertificate)"
     echo "  --cluster           Run only cluster tests"
     echo "  --controllers       Run only controller tests"
+    echo "  --endpoints         Run only endpoints tests"
     echo "  --fusion            Run only fusion tests"     
+    echo "  --health            Run only health tests"
     echo "  --integration       Run only integration tests (ex: --integration --size 5) (build tag integration)"
     echo "  --logger            Run only logger tests"     
+    echo "  --metadata          Run only metadata tests"
     echo "  --persistence       Run only persistence tests"     
     echo "  --protobuf          Run only protobuf compatibility tests"
     echo "  --sap               Run only SAP tests"     
@@ -29,6 +32,7 @@ function show_help() {
     echo "  --udp               Run only UDP tests"     
     echo "  --udp-chaos         Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
     echo "  --udp-latency       Run UDP observer latency diagnostic"
+    echo "  --version           Run only version tests"
     echo "  --vip-api           Run VIP REST API tests"
     echo "  --vip-bootstrap     Run VIP bootstrap tests (resets VIP on all nodes)"
     echo "  --vip-convergence   Run VIP/mDNS convergence tests"
@@ -52,8 +56,11 @@ while [[ $# -gt 0 ]]; do
         --bluetooth)        test_type="bluetooth"; shift ;;
         --cluster)          test_type="cluster"; shift ;;
         --controllers)      test_type="controllers"; shift ;;
+        --endpoints)        test_type="endpoints"; shift ;;
         --fusion)           test_type="fusion"; shift ;;
+        --health)           test_type="health"; shift ;;
         --logger)           test_type="logger"; shift ;;
+        --metadata)         test_type="metadata"; shift ;;
         --persistence)      test_type="persistence"; shift ;;
         --protobuf)         test_type="protobuf"; shift ;;
         --sap)              test_type="sap"; shift ;;
@@ -65,13 +72,30 @@ while [[ $# -gt 0 ]]; do
         --udp)              test_type="udp"; shift ;;
         --udp-latency)      test_type="udp-latency"; shift ;;
         --udp-chaos)        test_type="udp-chaos"; shift ;;
+        --version)          test_type="version"; shift ;;
         --vip-api)          test_type="vip-api"; shift ;;       
         --vip-bootstrap)    test_type="vip-bootstrap"; shift ;;        
         --vip-convergence)  test_type="vip-convergence"; shift ;;
         --websocket)        test_type="websocket"; shift ;;
         --integration)      test_type="integration"; shift ;;
-        --size)             cluster_size="$2"; shift 2 ;;
-        --vip)              vip="$2"; shift 2 ;;
+        --size)
+            if [[ $# -ge 2 && "$2" != --* ]]; then
+                cluster_size="$2"
+                shift 2
+            else
+                echo "Error: --size requires a value"
+                exit 1
+            fi
+            ;;
+        --vip)
+            if [[ $# -ge 2 && "$2" != --* ]]; then
+                vip="$2"
+                shift 2
+            else
+                echo "Error: --vip requires a value like 192.168.2.100:8080"
+                exit 1
+            fi
+            ;;
         --test-name)
             if [[ $# -ge 2 && "$2" != --* ]]; then
                 test_name="$2"
@@ -232,8 +256,11 @@ function test_file_for_type() {
         certs)                  echo "cluster_certs_test.go" ;;
         cluster)                echo "cluster_test.go, reboot_test.go" ;;
         controllers)            echo "controllers_test.go" ;;
+        endpoints)              echo "endpoints_test.go" ;;
         fusion)                 echo "fusion_test.go" ;;
+        health)                 echo "health_test.go" ;;
         logger)                 echo "logger_test.go" ;;
+        metadata)               echo "metadata_test.go" ;;
         persistence)            echo "persistence_test.go" ;;
         protobuf)               echo "protobuf_test.go" ;;
         sap)                    echo "sap_test.go" ;;
@@ -247,6 +274,7 @@ function test_file_for_type() {
         udp-observer-latency)   echo "udp_observer_latency_test.go" ;;
         udp-latency)            echo "udp_observer_latency_test.go" ;;
         udp-chaos)              echo "udp_chaos_test.go" ;;
+        version)                echo "version_test.go" ;;
         vip-api)                echo "vip_endpoints_test.go" ;;
         vip-bootstrap)          echo "bootstrap_vip_test.go" ;;
         vip-convergence)        echo "setup_vip_test.go" ;;
@@ -372,11 +400,15 @@ case "$test_type" in
     certs)              run_package_tests "$(regex_for_test_file ./cluster_certs_test.go)" ;;
     cluster)            run_package_tests "$(regex_for_test_file ./cluster_test.go)" ;;
     controllers)        run_package_tests "$(regex_for_test_file ./controllers_test.go)" ;;
+    endpoints)          run_package_tests "$(regex_for_test_file ./endpoints_test.go)" ;;
     fusion)             run_package_tests "$(regex_for_test_file ./fusion_test.go)" ;;
+    health)             run_package_tests "$(regex_for_test_file ./health_test.go)" ;;
     logger)             run_logger_tests ;;
+    metadata)           run_package_tests "$(regex_for_test_file ./metadata_test.go)" ;;
     persistence)
         run_subpackage_tests "./persistence"
         ;;
+    protobuf)           run_package_tests "$(regex_for_test_file ./protobuf_test.go)" ;;
     sap)                run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
     scheduler)          run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;
     software-update)    run_package_tests "$(regex_for_test_file ./software_update_test.go)" ;;
@@ -421,6 +453,7 @@ case "$test_type" in
         export FUSION_UDP_OBSERVER_LATENCY_TEST=1
         run_package_tests "$(regex_for_test_file ./udp_observer_latency_test.go)"
         ;;
+    version)      run_package_tests "$(regex_for_test_file ./version_test.go)" ;;
     websocket)    run_package_tests "$(regex_for_test_file ./websocket_test.go)" ;;
     integration)
         # Export env for integration helpers

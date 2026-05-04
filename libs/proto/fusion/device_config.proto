@@ -41,6 +41,11 @@ message DeviceConfigurationPackage {
   FusionConnectAdditions fusion_connect_additions = 2;
 }
 
+message DeviceConfigurationPackagePutResponse {
+  string status = 1;
+  google.protobuf.Struct updates = 2;
+}
+
 // FusionConnectAdditions captures the extra deployment-time information added
 // outside the raw DRO-conditioned output.
 message FusionConnectAdditions {

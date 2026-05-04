@@ -6,15 +6,14 @@ import (
 	"sync"
 	"time"
 
-	json "github.com/goccy/go-json"
-
-	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -167,34 +166,32 @@ func (mc *MetricsCollector) GetClusterStatus(w http.ResponseWriter, r *http.Requ
 	mc.mutex.RLock()
 	defer mc.mutex.RUnlock()
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(mc.clusterInfo)
+	if err := writeProtoJSON(w, clusterInfoToProto(mc.clusterInfo)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (mc *MetricsCollector) GetHealthCheck(w http.ResponseWriter, r *http.Request) {
-	type healthCheckResponse struct {
-		Status        string     `json:"status"`
-		NodeHealth    NodeHealth `json:"node_health"`
-		ClusterHealth float64    `json:"cluster_health"`
-	}
-
 	mc.mutex.RLock()
 	health := mc.metrics.NodeHealth
 	clusterHealth := mc.clusterInfo.ClusterHealth
 	mc.mutex.RUnlock()
 
 	status := "healthy"
+	statusCode := http.StatusOK
 	if clusterHealth < 50 || health.Status != "ALIVE" {
 		status = "unhealthy"
-		w.WriteHeader(http.StatusServiceUnavailable)
+		statusCode = http.StatusServiceUnavailable
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(healthCheckResponse{
+	resp := &fusionpb.HealthCheckResponse{
 		Status:        status,
-		NodeHealth:    health,
+		NodeHealth:    nodeHealthToProto(health),
 		ClusterHealth: clusterHealth,
-	})
+	}
+	if err := writeProtoJSONWithStatus(w, statusCode, resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (mc *MetricsCollector) UpdateWSCount(delta int) {
@@ -269,4 +266,44 @@ func (mc *MetricsCollector) getCPUUsage() float64 {
 	// a native in-process implementation if it is still needed. Shelling out from the
 	// daemon to sample CPU is the wrong layer for system monitoring.
 	return 0
+}
+
+func clusterInfoToProto(info ClusterInfo) *fusionpb.ClusterInfo {
+	resp := &fusionpb.ClusterInfo{
+		MemberCount:      uint32(info.MemberCount),
+		AliveCount:       uint32(info.AliveCount),
+		LocalNode:        info.LocalNode,
+		Members:          make([]*fusionpb.ClusterMember, 0, len(info.Members)),
+		SuspectNodes:     uint32(info.SuspectNodes),
+		DeadNodes:        uint32(info.DeadNodes),
+		ClusterHealth:    info.ClusterHealth,
+		AvgPingLatencyMs: info.AvgPingLatency,
+	}
+	if !info.LastUpdateTime.IsZero() {
+		resp.LastUpdateTime = timestamppb.New(info.LastUpdateTime)
+	}
+	for _, member := range info.Members {
+		resp.Members = append(resp.Members, &fusionpb.ClusterMember{
+			Name:    member.Name,
+			Address: member.Address,
+			Port:    uint32(member.Port),
+			State:   member.State,
+		})
+	}
+	return resp
+}
+
+func nodeHealthToProto(health NodeHealth) *fusionpb.NodeHealth {
+	resp := &fusionpb.NodeHealth{
+		Status:           health.Status,
+		UptimeSeconds:    health.UptimeSeconds,
+		HealthCheckCount: health.HealthCheckCount,
+	}
+	if !health.LastHeartbeat.IsZero() {
+		resp.LastHeartbeat = timestamppb.New(health.LastHeartbeat)
+	}
+	if !health.StartTime.IsZero() {
+		resp.StartTime = timestamppb.New(health.StartTime)
+	}
+	return resp
 }

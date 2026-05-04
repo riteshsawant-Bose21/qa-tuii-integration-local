@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package fusion.vip.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message CurrentVIPResponse {
+  string local = 1;
+  string vip = 2;
+}
+
+message VIPNodeResult {
+  string node = 1;
+  string host = 2;
+  string phase = 3;
+  bool success = 4;
+  int32 status_code = 5;
+  string error = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp completed_at = 8;
+}
+
+message VIPOperationStatus {
+  string id = 1;
+  string desired_vip = 2;
+  string status_host = 3;
+  string observed_vip = 4;
+  string observed_holder = 5;
+  string phase = 6;
+  string message = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+  map<string, VIPNodeResult> node_results = 10;
+}
+
+message VIPApplyStatus {
+  string desired_vip = 1;
+  string phase = 2;
+  string message = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}

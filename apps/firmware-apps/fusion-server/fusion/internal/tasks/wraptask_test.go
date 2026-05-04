@@ -30,8 +30,6 @@ func runWrapped(tm *mockTM, task *api.Task, now time.Time) (called bool) {
 	return
 }
 
-var nowFunction = time.Now
-
 func init() {
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "test",

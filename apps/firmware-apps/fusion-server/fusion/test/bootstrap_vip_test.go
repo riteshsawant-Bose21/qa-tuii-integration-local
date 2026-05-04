@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -11,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	json "github.com/goccy/go-json"
 )
 
 const (
@@ -112,19 +111,19 @@ func verifyVIPStatusOnNode(t *testing.T, nodeHost string, expectedVIP string) {
 			continue
 		}
 
-		var status vipStatusResponse
-		decErr := json.NewDecoder(resp.Body).Decode(&status)
+		var status fusionpb.VIPOperationStatus
+		decErr := decodeProtoBody(resp.Body, &status)
 		resp.Body.Close()
 		if decErr != nil {
 			time.Sleep(bootstrapPollInterval)
 			continue
 		}
 
-		if status.ObservedVIP == expectedVIP {
-			t.Logf("Node %s reports observed VIP %s (phase=%s)", nodeHost, expectedVIP, status.Phase)
+		if status.GetObservedVip() == expectedVIP {
+			t.Logf("Node %s reports observed VIP %s (phase=%s)", nodeHost, expectedVIP, status.GetPhase())
 			return
 		}
-		t.Logf("Node %s reports observed VIP %q (want %s), retrying", nodeHost, status.ObservedVIP, expectedVIP)
+		t.Logf("Node %s reports observed VIP %q (want %s), retrying", nodeHost, status.GetObservedVip(), expectedVIP)
 		time.Sleep(bootstrapPollInterval)
 	}
 
@@ -176,16 +175,16 @@ func TestBootstrapVIPFromReset(t *testing.T) {
 	nodeURL := findReachableNodeURL(t)
 	t.Logf("Phase 2: Setting VIP %s via direct node %s", bootstrapTargetVIP, nodeURL)
 	operation, duration := setVIPRequest(t, nodeURL, bootstrapTargetVIP)
-	t.Logf("Set VIP request returned in %v (operation=%s, statusHost=%s)", duration, operation.ID, operation.StatusHost)
+	t.Logf("Set VIP request returned in %v (operation=%s, statusHost=%s)", duration, operation.GetId(), operation.GetStatusHost())
 
 	// ── Phase 3: Wait for operation to complete ─────────────────────────
 	t.Log("Phase 3: Waiting for VIP operation to complete")
-	waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
+	waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
 
 	// ── Phase 4: Verify VIP is live and serving ─────────────────────────
 	t.Log("Phase 4: Verifying VIP is reachable")
 	payload := waitForVIPState(t, bootstrapTargetVIP)
-	t.Logf("VIP %s is live, held by %s", bootstrapTargetVIP, payload["local"])
+	t.Logf("VIP %s is live, held by %s", bootstrapTargetVIP, payload.GetLocal())
 
 	// ── Phase 5: Verify all nodes converged ─────────────────────────────
 	t.Log("Phase 5: Verifying all nodes have correct VIP config")
@@ -198,11 +197,11 @@ func TestBootstrapVIPFromReset(t *testing.T) {
 
 	// ── Phase 6: Verify mDNS advertisement ──────────────────────────────
 	t.Log("Phase 6: Verifying mDNS advertisement")
-	serviceName, ok := nodeNamesByIP[payload["local"]]
+	serviceName, ok := nodeNamesByIP[payload.GetLocal()]
 	if !ok {
-		t.Fatalf("Could not map VIP holder IP %s to a node name", payload["local"])
+		t.Fatalf("Could not map VIP holder IP %s to a node name", payload.GetLocal())
 	}
-	resolverHost := choosePeerResolverHost(t, nodeURLs, payload["local"])
+	resolverHost := choosePeerResolverHost(t, nodeURLs, payload.GetLocal())
 	waitForMDNSVIP(t, resolverHost, serviceName, bootstrapTargetVIP)
 
 	// ── Phase 7: Verify exclusive VIP ownership ─────────────────────────
@@ -228,7 +227,7 @@ func TestBootstrapVIPThenTransition(t *testing.T) {
 	nodeURL := findReachableNodeURL(t)
 	t.Logf("Setting VIP %s via %s", bootstrapTargetVIP, nodeURL)
 	operation, _ := setVIPRequest(t, nodeURL, bootstrapTargetVIP)
-	waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
+	waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
 	waitForVIPState(t, bootstrapTargetVIP)
 
 	// Verify all nodes converged before transitioning
@@ -242,27 +241,27 @@ func TestBootstrapVIPThenTransition(t *testing.T) {
 	targetVIP := alternates[0]
 	t.Logf("Phase 2: Transitioning VIP from %s to %s", bootstrapTargetVIP, targetVIP)
 	transitionOp, _ := setVIPRequest(t, vipURLForHost(bootstrapTargetVIP), targetVIP)
-	waitForVIPOperationComplete(t, transitionOp.StatusHost, transitionOp.ID)
+	waitForVIPOperationComplete(t, transitionOp.GetStatusHost(), transitionOp.GetId())
 	payload := waitForVIPState(t, targetVIP)
 	waitForOldVIPRetirement(t, bootstrapTargetVIP)
-	serviceName, ok := nodeNamesByIP[payload["local"]]
+	serviceName, ok := nodeNamesByIP[payload.GetLocal()]
 	if !ok {
-		t.Fatalf("Could not map VIP holder IP %s to a node name", payload["local"])
+		t.Fatalf("Could not map VIP holder IP %s to a node name", payload.GetLocal())
 	}
-	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload["local"]), serviceName, targetVIP)
+	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload.GetLocal()), serviceName, targetVIP)
 
 	// ── Phase 3: Restore original VIP ───────────────────────────────────
 	t.Logf("Phase 3: Restoring VIP to %s", originalVIP)
 	restoreOp, _ := setVIPRequest(t, vipURLForHost(targetVIP), originalVIP)
-	waitForVIPOperationComplete(t, restoreOp.StatusHost, restoreOp.ID)
+	waitForVIPOperationComplete(t, restoreOp.GetStatusHost(), restoreOp.GetId())
 	waitForVIPState(t, originalVIP)
 	waitForExclusiveVIPState(t, originalVIP, allCandidateVIPs)
 	payload2 := waitForVIPState(t, originalVIP)
-	serviceName2, ok := nodeNamesByIP[payload2["local"]]
+	serviceName2, ok := nodeNamesByIP[payload2.GetLocal()]
 	if !ok {
-		t.Fatalf("Could not map VIP holder IP %s to a node name", payload2["local"])
+		t.Fatalf("Could not map VIP holder IP %s to a node name", payload2.GetLocal())
 	}
-	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload2["local"]), serviceName2, originalVIP)
+	waitForMDNSVIP(t, choosePeerResolverHost(t, nodeURLs, payload2.GetLocal()), serviceName2, originalVIP)
 
 	t.Log("Bootstrap + transition test passed")
 }

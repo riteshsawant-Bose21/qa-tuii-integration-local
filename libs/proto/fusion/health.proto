@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package fusion;
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+import "google/protobuf/timestamp.proto";
+
+message ClusterMember {
+  string name = 1;
+  string address = 2;
+  uint32 port = 3;
+  string state = 4;
+}
+
+message ClusterInfo {
+  uint32 member_count = 1;
+  uint32 alive_count = 2;
+  string local_node = 3;
+  repeated ClusterMember members = 4;
+  google.protobuf.Timestamp last_update_time = 5;
+  uint32 suspect_nodes = 6;
+  uint32 dead_nodes = 7;
+  double cluster_health = 8;
+  double avg_ping_latency_ms = 9;
+}
+
+message NodeHealth {
+  string status = 1;
+  google.protobuf.Timestamp last_heartbeat = 2;
+  int64 uptime_seconds = 3;
+  google.protobuf.Timestamp start_time = 4;
+  int64 health_check_count = 5;
+}
+
+message HealthCheckResponse {
+  string status = 1;
+  NodeHealth node_health = 2;
+  double cluster_health = 3;
+}

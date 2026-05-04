@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package fusion.snapshots.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message SnapshotDefinition {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Struct data = 3;
+}
+
+message Scene {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Struct data = 3;
+}
+
+message SceneSet {
+  string set_id = 1;
+  string name = 2;
+  string default_scene = 3;
+  string current_scene_id = 4;
+  repeated Scene scenes = 5;
+}
+
+message ActivateSnapshotRequest {
+  string id = 1;
+}
+
+message ActivateSceneSetRequest {
+  string set_id = 1;
+  string scene_id = 2;
+}
+
+message CurrentSceneRequest {
+  string set_id = 1;
+}
+
+message CurrentSceneMetadata {
+  string scene_id = 1;
+  string name = 2;
+}
+
+message CurrentSceneResponse {
+  string set_id = 1;
+  CurrentSceneMetadata current_scene = 2;
+}
+
+message SnapshotDefinitionListResponse {
+  repeated SnapshotDefinition snapshots = 1;
+}
+
+message SceneListResponse {
+  repeated Scene scenes = 1;
+}
+
+message SceneSetListResponse {
+  repeated SceneSet scene_sets = 1;
+}
+
+message SceneCatalogListResponse {
+  repeated SnapshotDefinition snapshots = 1;
+  repeated SceneSet scene_sets = 2;
+}
+
+message TimeMachineListResponse {
+  repeated string snapshots = 1;
+}
+
+message ActiveTimeMachineResponse {
+  string active_snapshot = 1;
+}
+
+message TimeMachineOperationStatus {
+  string name = 1;
+  string status = 2;
+}

@@ -2,29 +2,12 @@ package main
 
 import (
 	"fmt"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
-
-	json "github.com/goccy/go-json"
 )
-
-type vipStatusResponse struct {
-	ID             string `json:"id"`
-	DesiredVIP     string `json:"desired_vip"`
-	StatusHost     string `json:"status_host"`
-	ObservedVIP    string `json:"observed_vip"`
-	ObservedHolder string `json:"observed_holder"`
-	Phase          string `json:"phase"`
-	Message        string `json:"message"`
-}
-
-type vipReloadStatusResponse struct {
-	DesiredVIP string `json:"desired_vip"`
-	Phase      string `json:"phase"`
-	Message    string `json:"message"`
-}
 
 func TestVIPStatusEndpoint(t *testing.T) {
 	nodeURLs, originalVIP, nodeNamesByIP := setupVIPTarget(t)
@@ -40,15 +23,15 @@ func TestVIPStatusEndpoint(t *testing.T) {
 		t.Fatalf("expected 200 from /devices/vip/status, got %d", resp.StatusCode)
 	}
 
-	var payload vipStatusResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	var payload fusionpb.VIPOperationStatus
+	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode /devices/vip/status response: %v", err)
 	}
 
-	if payload.ObservedVIP != originalVIP {
-		t.Fatalf("expected observed_vip=%s, got %s", originalVIP, payload.ObservedVIP)
+	if payload.GetObservedVip() != originalVIP {
+		t.Fatalf("expected observed_vip=%s, got %s", originalVIP, payload.GetObservedVip())
 	}
-	if payload.Phase == "" {
+	if payload.GetPhase() == "" {
 		t.Fatal("expected phase in /devices/vip/status response")
 	}
 }
@@ -80,11 +63,11 @@ func TestVIPReloadStatusEndpoint(t *testing.T) {
 		t.Fatalf("expected 200 from /device/reload/vip/status, got %d", resp.StatusCode)
 	}
 
-	var payload vipReloadStatusResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	var payload fusionpb.VIPApplyStatus
+	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode reload status response: %v", err)
 	}
-	if payload.Phase == "" {
+	if payload.GetPhase() == "" {
 		t.Fatal("expected phase in reload status response")
 	}
 }
@@ -136,12 +119,12 @@ func TestSetVIPRejectsConcurrentOperation(t *testing.T) {
 		t.Fatalf("expected second public VIP change to return 409, got %d", resp.StatusCode)
 	}
 
-	waitForVIPOperationComplete(t, firstOp.StatusHost, firstOp.ID)
+	waitForVIPOperationComplete(t, firstOp.GetStatusHost(), firstOp.GetId())
 	waitForVIPState(t, firstTarget)
 	waitForOldVIPRetirement(t, originalVIP)
 
 	restoreOp, _ := setVIPRequest(t, vipURLForHost(firstTarget), originalVIP)
-	waitForVIPOperationComplete(t, restoreOp.StatusHost, restoreOp.ID)
+	waitForVIPOperationComplete(t, restoreOp.GetStatusHost(), restoreOp.GetId())
 	waitForVIPState(t, originalVIP)
 	waitForExclusiveVIPState(t, originalVIP, append([]string{originalVIP}, candidates...))
 }
@@ -185,19 +168,19 @@ func waitForVIPReloadComplete(t *testing.T, adminHost string) {
 			continue
 		}
 
-		var payload vipReloadStatusResponse
-		decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+		var payload fusionpb.VIPApplyStatus
+		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil {
 			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
-		switch payload.Phase {
+		switch payload.GetPhase() {
 		case "complete", "idle":
 			return
 		case "failed":
-			t.Fatalf("VIP reload failed on %s: %s", adminHost, payload.Message)
+			t.Fatalf("VIP reload failed on %s: %s", adminHost, payload.GetMessage())
 		default:
 			time.Sleep(500 * time.Millisecond)
 		}

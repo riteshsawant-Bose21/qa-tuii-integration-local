@@ -96,6 +96,10 @@ func (h *Handler) getRemoteCSR(url string) ([]byte, error) {
 
 // setLocalCertificate writes the provided certificate content to the local file system, replacing the existing certificate if necessary
 func (h *Handler) setLocalCertificate(certPEM []byte) error {
+	if err := os.MkdirAll(api.DefaultIdentityFilePath, 0755); err != nil {
+		logging.GetLogger().Error("Error creating identity directory: %v", err)
+		return err
+	}
 
 	// Check if we should replace the certificate
 	shouldReplace, err := shouldReplaceCertificate(fmt.Sprintf("%s%s", api.DefaultIdentityFilePath, api.DefaultCertFileName), certPEM)
