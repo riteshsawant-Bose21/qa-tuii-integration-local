@@ -326,6 +326,30 @@ func waitForExclusiveVIPState(t *testing.T, activeVIP string, candidateVIPs []st
 	t.Fatalf("VIP %s did not become the exclusive active candidate within %v", activeVIP, setupVIPTimeout)
 }
 
+func detectActiveVIPCandidate(t *testing.T, candidateVIPs []string) string {
+	t.Helper()
+
+	client := setupVIPPollClient()
+	for _, candidate := range candidateVIPs {
+		resp, err := client.Get(fmt.Sprintf("%s/devices/vip", vipURLForHost(candidate)))
+		if err != nil {
+			continue
+		}
+
+		var payload map[string]string
+		decodeErr := json.NewDecoder(resp.Body).Decode(&payload)
+		resp.Body.Close()
+		if decodeErr != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+		if payload["vip"] == candidate {
+			return candidate
+		}
+	}
+
+	return ""
+}
+
 func resolveFusionMDNSIPsViaNode(resolverHost string, serviceName string) ([]string, error) {
 	client := &http.Client{Timeout: 6 * time.Second}
 	resp, err := client.Get(fmt.Sprintf("%s/device/discovery/mdns/%s", adminURLForHost(resolverHost), url.PathEscape(serviceName)))
@@ -400,13 +424,26 @@ func ensureVIPBaseline(t *testing.T, nodeURLs []string, originalVIP string, node
 	t.Helper()
 
 	t.Logf("Ensuring baseline VIP %s across cluster before transitions", originalVIP)
-	for _, nodeURL := range nodeURLs {
-		adminHost := hostFromNodeURL(t, nodeURL)
-		postAdminNoBody(t, adminHost, fmt.Sprintf("/devices/vip/%s", url.PathEscape(originalVIP)))
-	}
-	for _, nodeURL := range nodeURLs {
-		adminHost := hostFromNodeURL(t, nodeURL)
-		postAdminNoBody(t, adminHost, "/device/reload/vip")
+
+	activeVIP := detectActiveVIPCandidate(t, candidateVIPs)
+	switch {
+	case activeVIP == originalVIP:
+		t.Logf("Baseline VIP %s is already active", originalVIP)
+	case activeVIP != "":
+		t.Logf("Restoring baseline VIP %s from active VIP %s", originalVIP, activeVIP)
+		operation, _ := setVIPRequest(t, vipURLForHost(activeVIP), originalVIP)
+		waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
+		waitForOldVIPRetirement(t, activeVIP)
+	default:
+		t.Logf("No active VIP candidate reachable; falling back to admin VIP write+reload for %s", originalVIP)
+		for _, nodeURL := range nodeURLs {
+			adminHost := hostFromNodeURL(t, nodeURL)
+			postAdminNoBody(t, adminHost, fmt.Sprintf("/devices/vip/%s", url.PathEscape(originalVIP)))
+		}
+		for _, nodeURL := range nodeURLs {
+			adminHost := hostFromNodeURL(t, nodeURL)
+			postAdminNoBody(t, adminHost, "/device/reload/vip")
+		}
 	}
 
 	payload := waitForVIPState(t, originalVIP)

@@ -2,17 +2,15 @@ package server
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"net/http"
 
-	json "github.com/goccy/go-json"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // GetTimeMachine handles HTTP GET requests to retrieve a specific time machine entry.
 func (s *FusionServer) GetTimeMachine(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -29,21 +27,33 @@ func (s *FusionServer) GetTimeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(snapshot)
+	snapshotMap, ok := snapshot.(map[string]any)
+	if !ok {
+		http.Error(w, "Error getting snapshot: invalid snapshot format", http.StatusInternalServerError)
+		return
+	}
+
+	msg, err := structpb.NewStruct(snapshotMap)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, msg); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing snapshot: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // GetActiveTimeMachineName handles HTTP GET requests to retrieve the active time machine name.
 func (s *FusionServer) GetActiveTimeMachineName(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	snapshot := s.handler.HandleGetActiveSnapshotName()
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(&fusionpb.ActiveSnapshotResponse{ActiveSnapshot: snapshot})
+	if err := writeProtoJSON(w, &fusionpb.ActiveTimeMachineResponse{ActiveSnapshot: snapshot}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing active snapshot: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // ListTimeMachines handles HTTP GET requests to list available time machine entries.
@@ -52,21 +62,19 @@ func (s *FusionServer) ListTimeMachines(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Retrieve the list of snapshots from the handler.
 	snapshots, err := s.handler.HandleListSnapshots()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error listing snapshots: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(&fusionpb.SnapshotListResponse{Snapshots: snapshots})
+	if err := writeProtoJSON(w, &fusionpb.TimeMachineListResponse{Snapshots: snapshots}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing snapshot list: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // ActivateTimeMachine handles HTTP POST requests to activate a specific time machine entry.
-// It expects a query parameter "name" specifying the entry to activate.
 func (s *FusionServer) ActivateTimeMachine(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -93,14 +101,13 @@ func (s *FusionServer) ActivateTimeMachine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "activated"})
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "activated"}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing activation response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // CreateTimeMachine handles HTTP POST requests to create a new time machine entry.
 func (s *FusionServer) CreateTimeMachine(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -131,14 +138,13 @@ func (s *FusionServer) CreateTimeMachine(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "created"})
+	if err := writeProtoJSONWithStatus(w, http.StatusCreated, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "created"}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing creation response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // DeleteTimeMachine handles HTTP DELETE requests to remove an existing time machine entry.
 func (s *FusionServer) DeleteTimeMachine(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequireDelete(w, r) {
 		return
 	}
@@ -159,15 +165,14 @@ func (s *FusionServer) DeleteTimeMachine(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "deleted"})
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "deleted"}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing delete response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // SaveTimeMachine handles POST /time-machine/update/{name}
 // It overwrites an existing time machine entry with the current active state.
 func (s *FusionServer) SaveTimeMachine(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -178,13 +183,11 @@ func (s *FusionServer) SaveTimeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default snapshot cannot be overwritten
 	if s.handler.IsDefaultSnapshot(snapshotName) {
 		http.Error(w, "default snapshot cannot be overwritten", http.StatusBadRequest)
 		return
 	}
 
-	// Verify snapshot exists before overwriting
 	exists, err := s.handler.HandleSnapshotExists(snapshotName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
@@ -195,13 +198,12 @@ func (s *FusionServer) SaveTimeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Overwrite the snapshot from live active state
 	if err := s.handler.HandleSaveSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error saving snapshot: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&fusionpb.SnapshotOperationStatus{Name: snapshotName, Status: "saved"})
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "saved"}); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing save response: %v", err), http.StatusInternalServerError)
+	}
 }

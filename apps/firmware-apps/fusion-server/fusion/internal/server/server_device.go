@@ -1,18 +1,19 @@
 package server
 
 import (
-	stdjson "encoding/json"
+	"errors"
 	"fmt"
-	"fusion-services-core/logging"
 	"fusion/internal/api"
 	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	json "github.com/goccy/go-json"
-	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -28,38 +29,42 @@ func (s *FusionServer) GetDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 	var pkg fusionpb.DeviceConfigurationPackage
 
 	if value, exists := s.handler.StateManager.Get(droConditionedOutputStateKey); exists {
-		if err := decodeTypedJSON(value, &pkg.DroConditionedOutput); err != nil {
+		var output fusionpb.DroConditionedOutput
+		if err := decodeTypedJSON(value, &output); err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding %s: %v", droConditionedOutputStateKey, err), http.StatusInternalServerError)
 			return
 		}
+		pkg.DroConditionedOutput = &output
 	}
 
 	if value, exists := s.handler.StateManager.Get(fusionConnectAdditionsStateKey); exists {
-		if err := decodeTypedJSON(value, &pkg.FusionConnectAdditions); err != nil {
+		var additions fusionpb.FusionConnectAdditions
+		if err := decodeTypedJSON(value, &additions); err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding %s: %v", fusionConnectAdditionsStateKey, err), http.StatusInternalServerError)
 			return
 		}
+		pkg.FusionConnectAdditions = &additions
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := stdjson.NewEncoder(w).Encode(pkg); err != nil {
-		logging.GetLogger().Error("Error encoding DSP deployment package: %v", err)
+	if err := writeProtoJSON(w, &pkg); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding DSP deployment package: %v", err), http.StatusInternalServerError)
 	}
 }
 
 func (s *FusionServer) PutDSPDeploymentPackage(w http.ResponseWriter, r *http.Request) {
-	type putResponse struct {
-		Status  string         `json:"status"`
-		Updates map[string]any `json:"updates,omitempty"`
-	}
-
 	if !utils.RequirePut(w, r) {
 		return
 	}
 	defer r.Body.Close()
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading body: %v", err), http.StatusBadRequest)
+		return
+	}
+
 	var request fusionpb.DeviceConfigurationPackage
-	if err := stdjson.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -89,14 +94,20 @@ func (s *FusionServer) PutDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	resp := putResponse{Status: "success", Updates: diff}
+	resp := &fusionpb.DeviceConfigurationPackagePutResponse{Status: "success"}
 	if diff == nil {
 		resp.Status = "noop"
+	} else {
+		updates, err := structpb.NewStruct(diff)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding response diff: %v", err), http.StatusInternalServerError)
+			return
+		}
+		resp.Updates = updates
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		logging.GetLogger().Error("Error encoding DSP deployment package response: %v", err)
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding DSP deployment package response: %v", err), http.StatusInternalServerError)
 	}
 }
 
@@ -168,24 +179,32 @@ func projectAudioSettings(settings *fusionpb.FusionConnectAudioSettings) (map[st
 }
 
 func encodeTypedJSON(value any) (any, error) {
-	data, err := stdjson.Marshal(value)
+	var (
+		data []byte
+		err  error
+	)
+	if msg, ok := value.(proto.Message); ok {
+		data, err = serverProtoJSONMarshalOptions.Marshal(msg)
+	} else {
+		data, err = json.Marshal(value)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	var decoded any
-	if err := stdjson.Unmarshal(data, &decoded); err != nil {
+	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
 	}
 	return decoded, nil
 }
 
-func decodeTypedJSON(input any, target any) error {
-	data, err := stdjson.Marshal(input)
+func decodeTypedJSON(input any, target proto.Message) error {
+	data, err := json.Marshal(input)
 	if err != nil {
 		return err
 	}
-	return stdjson.Unmarshal(data, target)
+	return serverProtoJSONUnmarshalOptions.Unmarshal(data, target)
 }
 
 func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
@@ -198,7 +217,7 @@ func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
 		MacAddress:               info.MacAddress,
 		SerialNumber:             info.SerialNumber,
 		IsPrimary:                info.IsPrimaryNode,
-		SoftwareVersion:          info.SoftwareVersion,
+		FirmwareVersion:          info.SoftwareVersion,
 		IsDeviceCertificateValid: info.IsDeviceCertificateValid,
 	}
 }
@@ -234,11 +253,9 @@ func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 		response.Devices = append(response.Devices, deviceInfoToProto(device))
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := stdjson.NewEncoder(w).Encode(response); err != nil {
-		logging.GetLogger().Error("Error encoding device info: %v", err)
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding device info: %v", err), http.StatusInternalServerError)
 	}
-
 }
 
 func (s *FusionServer) GetDeviceInfoLocal(w http.ResponseWriter, r *http.Request) {
@@ -248,9 +265,8 @@ func (s *FusionServer) GetDeviceInfoLocal(w http.ResponseWriter, r *http.Request
 
 	info := s.handler.HandleGetDeviceInfo()
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := stdjson.NewEncoder(w).Encode(deviceInfoToProto(info)); err != nil {
-		logging.GetLogger().Error("Error encoding device info: %v", err)
+	if err := writeProtoJSON(w, deviceInfoToProto(info)); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding device info: %v", err), http.StatusInternalServerError)
 	}
 }
 
@@ -273,7 +289,7 @@ func (c *FusionServer) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var patchProto fusionpb.DevicePatch
-	if err := protojson.Unmarshal(body, &patchProto); err != nil {
+	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &patchProto); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -300,7 +316,7 @@ func (c *FusionServer) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Requ
 	}
 
 	var patchProto fusionpb.DevicePatch
-	if err := protojson.Unmarshal(body, &patchProto); err != nil {
+	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &patchProto); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -326,7 +342,7 @@ func (c *FusionServer) GetCSR(w http.ResponseWriter, r *http.Request) {
 
 	csr, err := c.handler.HandleGetCSR(deviceID)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) || errors.Is(err, os.ErrNotExist) || strings.Contains(strings.ToLower(err.Error()), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, fmt.Sprintf("Error getting CSR: %v", err), http.StatusInternalServerError)
@@ -358,6 +374,10 @@ func (c *FusionServer) SetDeviceCertificate(w http.ResponseWriter, r *http.Reque
 
 	err = c.handler.HandleSetDeviceCertificate(deviceId, certBytes)
 	if err != nil {
+		if os.IsNotExist(err) || errors.Is(err, os.ErrNotExist) || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, fmt.Sprintf("Error setting device certificate: %v", err), http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Error setting device certificate: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -378,6 +398,10 @@ func (c *FusionServer) ResetDeviceCertificate(w http.ResponseWriter, r *http.Req
 
 	err = c.handler.ResetDeviceCertificate(deviceId)
 	if err != nil {
+		if os.IsNotExist(err) || errors.Is(err, os.ErrNotExist) || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, fmt.Sprintf("Error resetting device certificate: %v", err), http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Error resetting device certificate: %v", err), http.StatusInternalServerError)
 		return
 	}

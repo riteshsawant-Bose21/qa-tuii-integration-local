@@ -14,6 +14,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
@@ -505,8 +506,20 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := s.handler.HandleGetControllers()
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(result)
+	response := &fusionpb.ControllerListResponse{
+		Controllers: make([]*fusionpb.ControllerInfo, 0, len(result)),
+	}
+	for _, controller := range result {
+		response.Controllers = append(response.Controllers, &fusionpb.ControllerInfo{
+			Id:      controller.ID,
+			Name:    controller.Name,
+			Address: controller.Address,
+			Version: controller.Version,
+		})
+	}
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // GetControllerByID handles HTTP GET requests to get a specific controller info.
@@ -537,19 +550,17 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(ctrl); err != nil {
+	response := &fusionpb.ControllerInfo{
+		Id:      ctrl.ID,
+		Name:    ctrl.Name,
+		Address: ctrl.Address,
+		Version: ctrl.Version,
+	}
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
 }
 func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
-	type winkResponse struct {
-		Status       string `json:"status"`
-		Message      string `json:"message"`
-		ControllerID string `json:"controller_id"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -572,14 +583,12 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return success response for wink command
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	response := winkResponse{
+	response := &fusionpb.ControllerWinkResponse{
 		Status:       "success",
 		Message:      "Wink command sent successfully",
-		ControllerID: id,
+		ControllerId: id,
 	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
 }

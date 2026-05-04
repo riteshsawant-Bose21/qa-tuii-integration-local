@@ -86,8 +86,9 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"id": task.ID})
+	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
 }
 
 func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,130 +120,15 @@ func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(body, &raw); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if _, ok := raw["snapshot_id"]; ok {
+	switch task.Type {
+	case api.TaskTypeSnapshot:
 		tm.updateSnapshotTaskFromProto(w, task, body)
 		return
-	}
-	if _, ok := raw["message_id"]; ok {
+	case api.TaskTypeMessage:
 		tm.updateMessageTaskFromProto(w, task, body)
 		return
-	}
-	if _, ok := raw["priority"]; ok {
-		tm.updateMessageTaskFromProto(w, task, body)
-		return
-	}
-	if _, ok := raw["zones"]; ok {
-		tm.updateMessageTaskFromProto(w, task, body)
-		return
-	}
-
-	var patch api.TaskPatchRequest
-	if err := json.Unmarshal(body, &patch); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	hasDesc := patch.Description != nil
-	hasCron := patch.CronExpr != nil
-	hasStart := patch.StartAt != nil
-	hasEnd := patch.EndAt != nil
-	hasRecurrence := patch.Recurrence != nil
-	hasParams := patch.Params != nil
-	hasSnapshot := patch.Snapshot != nil
-
-	if !(hasDesc || hasCron || hasStart || hasEnd || hasRecurrence || hasParams || hasSnapshot) {
-		http.Error(w, "At least one field must be provided", http.StatusBadRequest)
-		return
-	}
-
-	if hasDesc {
-		description := strings.TrimSpace(*patch.Description)
-		if description == "" {
-			http.Error(w, "description cannot be empty", http.StatusBadRequest)
-			return
-		}
-		task.Description = description
-	}
-
-	if hasCron {
-		cronExpr := strings.TrimSpace(*patch.CronExpr)
-		if cronExpr == "" {
-			http.Error(w, "cron_expr cannot be empty", http.StatusBadRequest)
-			return
-		}
-		task.CronExpr = cronExpr
-	}
-
-	if hasStart {
-		task.StartAt = *patch.StartAt
-	}
-
-	if hasEnd {
-		task.EndAt = *patch.EndAt
-	}
-
-	if hasRecurrence {
-		if err := validateRecurringWindow(patch.Recurrence); err != nil {
-			http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
-			return
-		}
-		task.Recurrence = patch.Recurrence
-	}
-
-	if task.Params == nil {
-		task.Params = map[string]any{}
-	}
-
-	if hasParams {
-		for key, value := range patch.Params {
-			task.Params[key] = value
-		}
-	}
-
-	if hasSnapshot {
-		snapshot := strings.TrimSpace(*patch.Snapshot)
-		if snapshot == "" {
-			http.Error(w, "snapshot cannot be empty", http.StatusBadRequest)
-			return
-		}
-		task.Params[api.SnapshotIDKey] = snapshot
-	}
-
-	if err := validateTaskParams(task.Type, task.Params); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if status, err := tm.validateTaskReferences(task); err != nil {
-		http.Error(w, err.Error(), status)
-		return
-	}
-
-	taskFunc, err := tm.makeTaskFunc(task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = tm.UpdateTask(task, taskFunc)
-	if err != nil {
-		if errors.Is(err, ErrTaskNotFound) {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported task type: %s", task.Type), http.StatusBadRequest)
 		return
 	}
 }
@@ -253,20 +139,6 @@ func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
 		return nil, err
 	}
 
-	if _, ok := raw["type"]; ok {
-		var task api.Task
-		if err := json.Unmarshal(body, &task); err != nil {
-			return nil, err
-		}
-		return &task, nil
-	}
-	if _, ok := raw["params"]; ok {
-		var task api.Task
-		if err := json.Unmarshal(body, &task); err != nil {
-			return nil, err
-		}
-		return &task, nil
-	}
 	if _, ok := raw["snapshot_id"]; ok {
 		var request fusionpb.SnapshotTaskCreateRequest
 		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
@@ -274,23 +146,41 @@ func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
 		}
 		return snapshotCreateRequestToTask(&request), nil
 	}
-
-	var request fusionpb.MessageTaskCreateRequest
-	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err == nil {
-		if request.MessageId != "" || request.Priority != 0 || request.Zones != "" {
-			task := messageCreateRequestToTask(&request)
-			if err := normalizeTaskParams(task); err != nil {
-				return nil, err
-			}
-			return task, nil
+	if _, ok := raw["message_id"]; ok {
+		var request fusionpb.MessageTaskCreateRequest
+		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
+			return nil, err
 		}
+		task := messageCreateRequestToTask(&request)
+		if err := normalizeTaskParams(task); err != nil {
+			return nil, err
+		}
+		return task, nil
+	}
+	if _, ok := raw["priority"]; ok {
+		var request fusionpb.MessageTaskCreateRequest
+		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
+			return nil, err
+		}
+		task := messageCreateRequestToTask(&request)
+		if err := normalizeTaskParams(task); err != nil {
+			return nil, err
+		}
+		return task, nil
+	}
+	if _, ok := raw["zones"]; ok {
+		var request fusionpb.MessageTaskCreateRequest
+		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
+			return nil, err
+		}
+		task := messageCreateRequestToTask(&request)
+		if err := normalizeTaskParams(task); err != nil {
+			return nil, err
+		}
+		return task, nil
 	}
 
-	var task api.Task
-	if err := json.Unmarshal(body, &task); err != nil {
-		return nil, err
-	}
-	return &task, nil
+	return nil, fmt.Errorf("task requests must use protobuf JSON and include snapshot_id or message_id")
 }
 
 func normalizeTaskParams(task *api.Task) error {

@@ -141,7 +141,7 @@ func TestPatchArrayElement(t *testing.T) {
 }
 
 // TestPatchDiffOutput sets an initial configuration, performs PATCH updates,
-// and asserts that the diff output only contains the changed elements.
+// and asserts that the diff output preserves the updated array shape.
 func TestPatchDiffOutput(t *testing.T) {
 	if err := patchAudioSetting(serverAddr, "tone_eq1", "frequencies", []float64{100.0, 200.0, 300.0}); err != nil {
 		t.Fatalf("Failed to set initial configuration: %v", err)
@@ -166,14 +166,13 @@ func TestPatchDiffOutput(t *testing.T) {
 		t.Fatalf("Patch update failed with status: %s", patchResp.Status)
 	}
 
-	// Only the array element at index 1 should be different.
+	// The PATCH diff should preserve the array value instead of converting it
+	// into a string-keyed object of changed indices.
 	expectedDiff := map[string]any{
 		"settings": map[string]any{
 			"audio": map[string]any{
 				"tone_eq1": map[string]any{
-					"frequencies": map[string]any{
-						"1": 250.0,
-					},
+					"frequencies": []any{100.0, 250.0, 300.0},
 				},
 			},
 		},

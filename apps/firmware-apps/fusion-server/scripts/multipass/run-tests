@@ -377,6 +377,7 @@ case "$test_type" in
     persistence)
         run_subpackage_tests "./persistence"
         ;;
+    protobuf)           run_package_tests "$(regex_for_test_file ./protobuf_test.go)" ;;
     sap)                run_package_tests "$(regex_for_test_file ./sap_test.go)" ;;
     scheduler)          run_package_tests "$(regex_for_test_file ./scheduler_test.go)" ;;
     software-update)    run_package_tests "$(regex_for_test_file ./software_update_test.go)" ;;

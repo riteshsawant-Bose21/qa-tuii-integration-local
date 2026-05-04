@@ -19,6 +19,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -41,17 +42,24 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 
 	logger := logging.GetLogger()
 
-	var req api.TriggerMessageRequest
+	var req fusionpb.TriggerMessageRequest
 	if r.Body != nil {
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil && !errors.Is(err, io.EOF) {
+		body, readErr := io.ReadAll(r.Body)
+		if readErr != nil {
+			http.Error(w, fmt.Sprintf("Invalid JSON format: %v", readErr), http.StatusBadRequest)
+			return
+		}
+		if len(body) > 0 {
+			err = protojson.UnmarshalOptions{DiscardUnknown: false}.Unmarshal(body, &req)
+		}
+		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 			return
 		}
 		defer r.Body.Close()
 	}
 
-	params, err := tm.buildMessageTaskParams(id, req.Priority, req.Zones)
+	params, err := tm.buildMessageTaskParams(id, int(req.GetPriority()), req.GetZones())
 	if err != nil {
 		switch {
 		case errors.Is(err, persistence.ErrNotFound):

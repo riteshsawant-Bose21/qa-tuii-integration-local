@@ -27,6 +27,7 @@ const (
 )
 
 var ErrTaskNotFound = errors.New("task not found")
+var nowFunction = time.Now
 
 // ExecutionRecord represents a log entry for a task execution.
 type ExecutionRecord struct {
@@ -366,7 +367,7 @@ func (tm *TaskManager) GetHistory(w http.ResponseWriter, r *http.Request) {
 	tm.mu.Unlock()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(history)
+	_ = writeProtoJSON(w, historyToProto(history))
 }
 
 // ClearHistory handles HTTP DELETE requests to clear the execution history.
@@ -482,7 +483,7 @@ func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
 	logger := logging.GetLogger()
 
 	return func() {
-		now := time.Now()
+		now := nowFunction()
 
 		// Skip before start window
 		if !task.StartAt.IsZero() && now.Before(task.StartAt) {

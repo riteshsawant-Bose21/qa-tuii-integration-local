@@ -6,12 +6,66 @@ import (
 	"io"
 	"net/http"
 
-	json "github.com/goccy/go-json"
-
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
+
+	"google.golang.org/protobuf/types/known/structpb"
 )
+
+func snapshotDefinitionToProto(def api.SnapshotDefinition) (*fusionpb.SnapshotDefinition, error) {
+	var data *structpb.Struct
+	var err error
+	if def.Data != nil {
+		data, err = structpb.NewStruct(def.Data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &fusionpb.SnapshotDefinition{
+		Id:   def.ID,
+		Name: def.Name,
+		Data: data,
+	}, nil
+}
+
+func sceneToProto(scene api.Scene) (*fusionpb.Scene, error) {
+	var data *structpb.Struct
+	var err error
+	if scene.Data != nil {
+		data, err = structpb.NewStruct(scene.Data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &fusionpb.Scene{
+		Id:   scene.ID,
+		Name: scene.Name,
+		Data: data,
+	}, nil
+}
+
+func sceneSetToProto(set api.SceneSet) (*fusionpb.SceneSet, error) {
+	scenes := make([]*fusionpb.Scene, 0, len(set.Scenes))
+	for _, scene := range set.Scenes {
+		sceneMsg, err := sceneToProto(scene)
+		if err != nil {
+			return nil, err
+		}
+		scenes = append(scenes, sceneMsg)
+	}
+
+	return &fusionpb.SceneSet{
+		SetId:          set.SetID,
+		Name:           set.Name,
+		DefaultScene:   set.DefaultSceneID,
+		CurrentSceneId: set.CurrentSceneID,
+		Scenes:         scenes,
+	}, nil
+}
 
 // ActivateSnapshot handles POST /snapshots/activate/{id}.
 // Patches the snapshot data onto DB State (fire-and-forget).
@@ -52,8 +106,21 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(api.SnapshotListResponse{Snapshots: snapshots})
+	resp := &fusionpb.SnapshotDefinitionListResponse{
+		Snapshots: make([]*fusionpb.SnapshotDefinition, 0, len(snapshots)),
+	}
+	for _, snapshot := range snapshots {
+		msg, err := snapshotDefinitionToProto(snapshot)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding snapshot %s: %v", snapshot.ID, err), http.StatusInternalServerError)
+			return
+		}
+		resp.Snapshots = append(resp.Snapshots, msg)
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // DeleteSnapshotDefinitions handles DELETE /snapshots.
@@ -114,8 +181,21 @@ func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 		scenes = append(scenes, set.Scenes...)
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(api.SceneListResponse{Scenes: scenes})
+	resp := &fusionpb.SceneListResponse{
+		Scenes: make([]*fusionpb.Scene, 0, len(scenes)),
+	}
+	for _, scene := range scenes {
+		msg, err := sceneToProto(scene)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding scene %s: %v", scene.ID, err), http.StatusInternalServerError)
+			return
+		}
+		resp.Scenes = append(resp.Scenes, msg)
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // ActivateSceneSet handles POST /scene-sets/activate.
@@ -133,18 +213,18 @@ func (s *FusionServer) ActivateSceneSet(w http.ResponseWriter, r *http.Request) 
 	}
 	defer r.Body.Close()
 
-	var req api.ActivateSceneSetRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	var req fusionpb.ActivateSceneSetRequest
+	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	if req.SetID == "" || req.SceneID == "" {
+	if req.GetSetId() == "" || req.GetSceneId() == "" {
 		http.Error(w, "set_id and scene_id are required", http.StatusBadRequest)
 		return
 	}
 
-	if err := s.handler.HandleActivateScene(req.SetID, req.SceneID); err != nil {
+	if err := s.handler.HandleActivateScene(req.GetSetId(), req.GetSceneId()); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
 			http.Error(w, "Error: Scene Set not found.", http.StatusNotFound)
 			return
@@ -174,20 +254,18 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req struct {
-		SetID string `json:"set_id"`
-	}
-	if err := json.Unmarshal(body, &req); err != nil {
+	var req fusionpb.CurrentSceneRequest
+	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	if req.SetID == "" {
+	if req.GetSetId() == "" {
 		http.Error(w, "set_id is required", http.StatusBadRequest)
 		return
 	}
 
-	set, err := s.handler.HandleGetSceneSet(req.SetID)
+	set, err := s.handler.HandleGetSceneSet(req.GetSetId())
 	if err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
 			http.Error(w, "Error: Scene Set not found.", http.StatusNotFound)
@@ -197,7 +275,6 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find the scene object matching CurrentSceneID so we can return its name.
 	var currentSceneName string
 	for _, scene := range set.Scenes {
 		if scene.ID == set.CurrentSceneID {
@@ -206,16 +283,17 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := api.CurrentSceneResponse{
-		SetID: set.SetID,
-		CurrentScene: api.CurrentSceneMetadata{
-			SceneID: set.CurrentSceneID,
+	resp := &fusionpb.CurrentSceneResponse{
+		SetId: set.SetID,
+		CurrentScene: &fusionpb.CurrentSceneMetadata{
+			SceneId: set.CurrentSceneID,
 			Name:    currentSceneName,
 		},
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(resp)
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // ListSceneSets handles GET /scene-sets.
@@ -231,8 +309,21 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(api.SceneSetListResponse{SceneSets: sceneSets})
+	resp := &fusionpb.SceneSetListResponse{
+		SceneSets: make([]*fusionpb.SceneSet, 0, len(sceneSets)),
+	}
+	for _, sceneSet := range sceneSets {
+		msg, err := sceneSetToProto(sceneSet)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding scene set %s: %v", sceneSet.SetID, err), http.StatusInternalServerError)
+			return
+		}
+		resp.SceneSets = append(resp.SceneSets, msg)
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // DeleteSceneSets handles DELETE /scene-sets.
@@ -319,9 +410,29 @@ func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(api.SceneCatalogListResponse{
-		Snapshots: snapshots,
-		SceneSets: sceneSets,
-	})
+	resp := &fusionpb.SceneCatalogListResponse{
+		Snapshots: make([]*fusionpb.SnapshotDefinition, 0, len(snapshots)),
+		SceneSets: make([]*fusionpb.SceneSet, 0, len(sceneSets)),
+	}
+
+	for _, snapshot := range snapshots {
+		msg, err := snapshotDefinitionToProto(snapshot)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding snapshot %s: %v", snapshot.ID, err), http.StatusInternalServerError)
+			return
+		}
+		resp.Snapshots = append(resp.Snapshots, msg)
+	}
+	for _, sceneSet := range sceneSets {
+		msg, err := sceneSetToProto(sceneSet)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding scene set %s: %v", sceneSet.SetID, err), http.StatusInternalServerError)
+			return
+		}
+		resp.SceneSets = append(resp.SceneSets, msg)
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
+	}
 }

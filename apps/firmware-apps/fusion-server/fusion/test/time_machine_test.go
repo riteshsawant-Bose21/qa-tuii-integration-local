@@ -1117,8 +1117,14 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 
 	// Create snapshot capturing the above state
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
-	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+	createResp, err := http.Post(createURL, api.JsonMIMEType, nil)
+	if err != nil {
 		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
+	}
+	defer createResp.Body.Close()
+	if createResp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(createResp.Body)
+		t.Fatalf("Failed to create snapshot %q: status=%d body=%s", snapshotName, createResp.StatusCode, string(body))
 	}
 
 	//  Mutate state after snapshot
@@ -1138,11 +1144,21 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 
 	restartAllNodes(t)
 
+	if !waitForAllNodesReady(10 * time.Second) {
+		t.Fatalf("Cluster did not become ready after restart")
+	}
+
 	// Activate snapshot after restart
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
-	if _, err := (&http.Client{}).Do(req); err != nil {
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
 		t.Fatalf("Failed to activate snapshot after restart: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Failed to activate snapshot %q after restart: status=%d body=%s", snapshotName, resp.StatusCode, string(body))
 	}
 
 	// Wait for cluster to converge to the new epoch
@@ -1192,7 +1208,15 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 	snapshotName := fmt.Sprintf("ooom_%d", time.Now().UnixNano())
 
 	// Create snapshot
-	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+	createResp, err := http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
+	}
+	defer createResp.Body.Close()
+	if createResp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(createResp.Body)
+		t.Fatalf("Create snapshot %q returned %d: %s", snapshotName, createResp.StatusCode, string(body))
+	}
 
 	//
 	// Simulate out-of-order delivery:
@@ -1207,7 +1231,15 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
-	(&http.Client{}).Do(req)
+	activateResp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to activate snapshot %q: %v", snapshotName, err)
+	}
+	defer activateResp.Body.Close()
+	if activateResp.StatusCode != http.StatusNoContent && activateResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(activateResp.Body)
+		t.Fatalf("Activate snapshot %q returned %d: %s", snapshotName, activateResp.StatusCode, string(body))
+	}
 
 	// Must converge to the new active snapshot on all nodes
 	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {

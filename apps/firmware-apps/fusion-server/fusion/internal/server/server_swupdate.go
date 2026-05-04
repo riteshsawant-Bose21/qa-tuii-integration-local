@@ -38,16 +38,7 @@ func (s *FusionServer) broadcastSoftwareUpdateProgress(message *api.NotifyMessag
 		return nil
 	}
 
-	broadcastMessage := &api.WebSocketResponse{
-		ID:        nil,
-		Version:   api.WSCurrentVersion,
-		Type:      api.WSMsgTypeUpdateProgress,
-		Code:      api.WSCodeDeviceUpdated,
-		Status:    api.WSStatusEvent,
-		Message:   fmt.Sprintf("System notification: %s", message.Operation),
-		Data:      formatSoftwareUpdateProgress(message),
-		Timestamp: time.Now(),
-	}
+	broadcastMessage := websocketResponse(nil, api.WSMsgTypeUpdateProgress, api.WSCodeDeviceUpdated, api.WSStatusEvent, fmt.Sprintf("System notification: %s", message.Operation), formatSoftwareUpdateProgress(message))
 	return s.broadcastToAllClients(broadcastMessage)
 }
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"mime"
@@ -554,18 +555,18 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 }
 
 // handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
-func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+func (h *Handler) handleSwUpdateInfo(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
 	infos := h.clusterTransport.GetAllSwUpdateInfo()
-	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
+	return createSuccessResponse(&request.Id, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
 // handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
-func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+func (h *Handler) handleListSoftwareUpdates(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
 		bundles = []api.SoftwareUpdateSync{}
 	}
-	return createSuccessResponse(&request.ID, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
+	return createSuccessResponse(&request.Id, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
 }
 
 // Helper functions for improved error handling and validation

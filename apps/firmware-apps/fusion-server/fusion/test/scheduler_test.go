@@ -198,9 +198,8 @@ func TestTasksHistoryEndpoints(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 from GET /tasks/history")
 
 	body, _ := io.ReadAll(resp.Body)
-	// Just ensure it decodes into a slice of records
-	var history []map[string]any
-	require.NoError(t, json.Unmarshal(body, &history))
+	var history fusionpb.TaskHistoryResponse
+	require.NoError(t, protojson.Unmarshal(body, &history))
 	// Not asserting length, since history depends on live task execution.
 }
 
@@ -210,8 +209,16 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	uniqueSuffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	meta := uploadAudio(t, ctx, audioServerAddr, "scheduled_empty_zones.wav", wav, "Scheduled Empty Zones")
+	meta := uploadAudio(
+		t,
+		ctx,
+		audioServerAddr,
+		"scheduled_empty_zones_"+uniqueSuffix+".wav",
+		wav,
+		"Scheduled Empty Zones "+uniqueSuffix,
+	)
 	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
 
 	taskMessage := api.TaskMessage{
@@ -223,13 +230,27 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 		Zones:       []string{},
 	}
 
-	payload, err := json.Marshal(taskMessage)
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskCreateRequest{
+		Id:          taskMessage.ID,
+		Description: taskMessage.Description,
+		CronExpr:    taskMessage.CronExpr,
+		MessageId:   taskMessage.MessageID,
+		Priority:    taskMessage.Priority,
+		Zones:       "",
+	})
 	require.NoError(t, err)
 
 	resp, err := http.Post(scheduleTasksURL(routes.PAVAScheduleEndpoint), api.JsonMIMEType, bytes.NewReader(payload))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	defer func() {
+		req, err := http.NewRequest(http.MethodDelete, scheduledMessageURL(taskMessage.ID), nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		resp.Body.Close()
+	}()
 
 	listResp, err := http.Get(scheduleTasksURL(routes.PAVAScheduleEndpoint))
 	require.NoError(t, err)
@@ -249,11 +270,10 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	}
 	require.True(t, found, "expected scheduled message to be listed")
 
-	zone := []string{"Lobby"}
-	patch := api.TaskMessagePatch{
-		Zones: &zone,
-	}
-	patchBody, err := json.Marshal(patch)
+	lobbyZones := "Lobby"
+	patchBody, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskUpdateRequest{
+		Zones: &lobbyZones,
+	})
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPatch, scheduledMessageURL(taskMessage.ID), bytes.NewReader(patchBody))
@@ -265,11 +285,10 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	patchResp.Body.Close()
 	require.Equal(t, http.StatusOK, patchResp.StatusCode)
 
-	clearZone := []string{}
-	patch = api.TaskMessagePatch{
-		Zones: &clearZone,
-	}
-	patchBody, err = json.Marshal(patch)
+	clearZones := ""
+	patchBody, err = protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskUpdateRequest{
+		Zones: &clearZones,
+	})
 	require.NoError(t, err)
 
 	req, err = http.NewRequest(http.MethodPatch, scheduledMessageURL(taskMessage.ID), bytes.NewReader(patchBody))
@@ -496,12 +515,12 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 
 	// Create a new snapshot to activate
 	snapName := fmt.Sprintf("scheduled_snap_%d", time.Now().UnixNano())
-	snapURL := taskServerURL + routes.SnapshotsEndpoint + "/" + snapName
+	snapURL := taskServerURL + routes.TimeMachineEndpoint + "/" + snapName
 
 	resp, err := http.Post(snapURL, api.JsonMIMEType, nil)
 	require.NoError(t, err)
 	resp.Body.Close()
-	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	// Schedule snapshot activation
 	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
@@ -516,6 +535,13 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	defer func() {
+		req, err := http.NewRequest(http.MethodDelete, singleTaskURL("schedule-snap"), nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		resp.Body.Close()
+	}()
 
 	// Wait for cron to fire and apply snapshot
 	time.Sleep(3500 * time.Millisecond) // 3.5 seconds = 3 ticks worst case
@@ -527,7 +553,9 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, activeResp.StatusCode)
 
-	var activeSnap fusionpb.ActiveSnapshotResponse
+	var activeSnap struct {
+		ActiveSnapshot string `json:"active_snapshot"`
+	}
 	err = json.NewDecoder(activeResp.Body).Decode(&activeSnap)
 	require.NoError(t, err, "Failed to decode active snapshot name")
 
