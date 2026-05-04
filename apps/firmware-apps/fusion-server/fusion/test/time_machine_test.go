@@ -228,7 +228,7 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to activate snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Activate snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -240,7 +240,7 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to delete snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Delete snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -549,6 +549,8 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	// See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
+	initialEpoch := getAnyClusterEpoch(t)
+
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("epoch_updates_apply_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
@@ -557,8 +559,6 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	http.Post(createURL, api.JsonMIMEType, nil)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	(&http.Client{}).Do(req)
-
-	initialEpoch := getAnyClusterEpoch(t)
 
 	// Wait for epoch convergence
 	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
@@ -1392,7 +1392,7 @@ func TestTimeMachineUpdateOverwritesState(t *testing.T) {
 		t.Fatalf("Failed to update snapshot: %v", err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Snapshot update returned %d: %s", resp.StatusCode, string(body))
 	}

@@ -96,7 +96,22 @@ func TestMain(m *testing.M) {
 	fmt.Printf("Test Configuration:\n%s\n", cfg)
 
 	clusterConfig = cfg
-	os.Exit(m.Run())
+
+	if !isLocalTestMode() {
+		if err := cleanupPersistentTestArtifacts(cfg); err != nil {
+			fmt.Printf("Warning: pre-test artifact cleanup failed: %v\n", err)
+		}
+	}
+
+	code := m.Run()
+
+	if !isLocalTestMode() {
+		if err := cleanupPersistentTestArtifacts(cfg); err != nil {
+			fmt.Printf("Warning: post-test artifact cleanup failed: %v\n", err)
+		}
+	}
+
+	os.Exit(code)
 }
 
 func TestPatchArrayElement(t *testing.T) {

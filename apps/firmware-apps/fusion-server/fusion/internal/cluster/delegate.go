@@ -6,8 +6,10 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
+	"fusion/internal/routes"
 	"fusion/internal/tasks"
 	"fusion/internal/utils"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -40,6 +42,11 @@ type SkewEntry struct {
 type SkewStore struct {
 	mu        sync.RWMutex
 	timeSkews map[string]*SkewEntry
+}
+
+type versionUpdateState struct {
+	mu   sync.Mutex
+	seen map[string]api.VersionUpdate
 }
 
 func NewSkewStore() *SkewStore {
@@ -79,6 +86,7 @@ type ClusterDelegate struct {
 	taskManager   *tasks.TaskManager
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
+	versionState  versionUpdateState
 	hub           *pubsub.Hub
 	handler       SyncHandler // Interface to handle sync acknowledgments
 }
@@ -97,6 +105,9 @@ func NewClusterDelegate(
 		hub:           hub,
 		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
 		skewStore:     NewSkewStore(),
+		versionState: versionUpdateState{
+			seen: make(map[string]api.VersionUpdate),
+		},
 	}
 
 	delegate.startSkewPruner()
@@ -338,6 +349,9 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpDeviceUpdate:
 		d.handleDeviceUpdate(&message)
 
+	case api.NotifyOpVersionUpdate:
+		d.handleVersionUpdate(&message)
+
 	case api.NotifyOpSoftwareUpdate:
 		logger.Debug("[Delegate] Processing NotifyOpSoftwareUpdate from node %s", message.Node)
 		d.handleSoftwareUpdate(&message)
@@ -374,6 +388,103 @@ func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToClusterObservers(message)
+}
+
+func (d *ClusterDelegate) handleVersionUpdate(message *api.NotifyMessage) {
+	logger := logging.GetLogger()
+
+	if message.VersionUpdate == nil {
+		logger.Error("VersionUpdate message with nil payload from %s", message.Node)
+		return
+	}
+
+	localMetadata, err := d.persistence.GetDatabaseMetadata()
+	if err != nil {
+		logger.Error("Failed to load local database metadata while handling version update from %s: %v", message.Node, err)
+		return
+	}
+
+	remote := message.VersionUpdate
+	localVersion := localMetadata.Version
+	remoteVersion := remote.Version
+
+	if localMetadata.Hash == remote.Hash {
+		logger.Debug("[DATA] Ignoring version update from %s: hash already matches (%s)", message.Node, remote.Hash)
+		return
+	}
+
+	d.versionState.mu.Lock()
+	if d.versionState.seen == nil {
+		d.versionState.seen = make(map[string]api.VersionUpdate)
+	}
+	if last, ok := d.versionState.seen[message.Node]; ok && last.Version == remote.Version && last.Hash == remote.Hash {
+		d.versionState.mu.Unlock()
+		logger.Debug("[DATA] Ignoring duplicate version update from %s (hash=%s version=%v)", message.Node, remote.Hash, remoteVersion)
+		return
+	}
+	d.versionState.seen[message.Node] = *remote
+	d.versionState.mu.Unlock()
+
+	if !d.stateManager.TriggerDataRepair(fmt.Sprintf("gossip metadata update from %s", message.Node)) {
+		logger.Debug("[DATA] Suppressing version update from %s while repair is already in flight or cooling down", message.Node)
+		return
+	}
+
+	diffSummary := d.describeVersionUpdateDiff(message.Node)
+
+	switch {
+	case localVersion.Less(remoteVersion):
+		logger.Warn("[DATA] Observed newer metadata from %s (local hash=%s version=%v, remote hash=%s version=%v); triggering repair. Diff: %s",
+			message.Node, localMetadata.Hash, localVersion, remote.Hash, remoteVersion, diffSummary)
+	case remoteVersion.Less(localVersion):
+		logger.Warn("[DATA] Observed stale metadata from %s (local hash=%s version=%v, remote hash=%s version=%v); triggering repair. Diff: %s",
+			message.Node, localMetadata.Hash, localVersion, remote.Hash, remoteVersion, diffSummary)
+	default:
+		logger.Warn("[DATA] Observed divergent metadata from %s at the same version %v (local hash=%s remote hash=%s); triggering repair. Diff: %s",
+			message.Node, localVersion, localMetadata.Hash, remote.Hash, diffSummary)
+	}
+}
+
+func (d *ClusterDelegate) describeVersionUpdateDiff(nodeName string) string {
+	ml := d.stateManager.GetMemberList()
+	if ml == nil {
+		return "memberlist unavailable"
+	}
+
+	var targetAddr string
+	for _, member := range ml.Members() {
+		if member.Name == nodeName {
+			targetAddr = member.Addr.String()
+			break
+		}
+	}
+	if targetAddr == "" {
+		return fmt.Sprintf("member %s not found", nodeName)
+	}
+
+	url := utils.BuildInternalURL(targetAddr, api.AdminPort, routes.DataEndpoint)
+	resp, err := d.stateManager.HTTPClient().Get(url)
+	if err != nil {
+		return fmt.Sprintf("failed to fetch remote data: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Sprintf("remote data export returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Sprintf("failed to read remote data body: %v", err)
+	}
+
+	var remoteData map[string]any
+	if err := json.Unmarshal(body, &remoteData); err != nil {
+		return fmt.Sprintf("failed to decode remote data export: %v", err)
+	}
+
+	return d.persistence.AntiEntropyDiffSummary(remoteData)
 }
 
 // handleSoftwareUpdate processes software update trigger notifications

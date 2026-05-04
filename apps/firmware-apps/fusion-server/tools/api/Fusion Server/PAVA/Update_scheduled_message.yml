@@ -18,7 +18,7 @@ http:
         "cron_expr": "@every 1m",
         "description":"Time For dinner",
         "priority":50,
-        "zones":"hall"
+        "zones":["hall"]
       }
 
 settings:

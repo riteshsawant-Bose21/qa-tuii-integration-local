@@ -31,7 +31,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	}
 
 	switch msg.Action {
-	case api.NotifyOpNoop:
+	case api.NotifyOpNoop, api.NotifyOp("noop"):
 		// For profiling: no state change, no broadcast, no gossip.
 		return udpResponse{FusionOp: msg.Action, Status: "ok"}, nil
 

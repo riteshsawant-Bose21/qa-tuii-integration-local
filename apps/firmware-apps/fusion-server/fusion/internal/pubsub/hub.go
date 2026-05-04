@@ -301,6 +301,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
+	case api.NotifyOpVersionUpdate:
+		if message.VersionUpdate == nil {
+			return fmt.Errorf("VersionUpdate required for operation")
+		}
+
 	case api.NotifyOpSoftwareUpdate:
 		logger.Info("[Hub] Broadcasting software update trigger")
 		// Primary starts follower orchestration: broadcast to followers first,
@@ -366,6 +371,10 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		message.SoftwareUpdateProgressAll = h.getAggregatedProgress()
 	}
 
+	if message.Operation == api.NotifyOpVersionUpdate {
+		return nil
+	}
+
 	h.BroadcastToObservers(message)
 
 	return nil
@@ -423,6 +432,26 @@ func cloneNotifyMessageForBroadcast(message *api.NotifyMessage) *api.NotifyMessa
 		cloned.DeviceInfo = &info
 	}
 	return &cloned
+}
+
+func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata) {
+	if metadata == nil || h.transport == nil || h.transport.LocalNode() == nil {
+		return
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpVersionUpdate,
+		node,
+		api.WithVersionUpdate(&api.VersionUpdate{
+			Version: metadata.Version,
+			Hash:    metadata.Hash,
+			NodeID:  node,
+		}),
+	)
+
+	if err := h.BroadcastToNodes(msg); err != nil {
+		logging.GetLogger().Error("failed to broadcast version update: %v", err)
+	}
 }
 
 func (h *Hub) broadcastToNodes(message []byte, includeLocalNode bool) {

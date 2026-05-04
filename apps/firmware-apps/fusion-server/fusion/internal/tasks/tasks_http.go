@@ -309,12 +309,7 @@ func normalizeTaskParams(task *api.Task) error {
 			return fmt.Errorf("params.%s is required", api.MessageIDKey)
 		}
 
-		zones, _ := task.Params[api.MessageZonesKey].(string)
-		zones = strings.TrimSpace(zones)
-		if zones == "" {
-			zones = defaultZones
-		}
-		task.Params[api.MessageZonesKey] = zones
+		task.Params[api.MessageZonesKey] = messageZonesFromProto(fmt.Sprintf("%v", task.Params[api.MessageZonesKey]))
 
 		priority, err := int64Param(task.Params[api.MessagePriorityKey])
 		if err != nil {
@@ -437,7 +432,7 @@ func (tm *TaskManager) updateMessageTaskFromProto(w http.ResponseWriter, task *a
 		task.Params[api.MessageIDKey] = patch.GetMessageId()
 	}
 	if hasZones {
-		task.Params[api.MessageZonesKey] = patch.GetZones()
+		task.Params[api.MessageZonesKey] = messageZonesFromProto(patch.GetZones())
 	}
 	if hasPriority {
 		task.Params[api.MessagePriorityKey] = patch.GetPriority()

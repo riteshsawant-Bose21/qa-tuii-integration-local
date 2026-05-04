@@ -231,7 +231,7 @@ This performs a full-state restore with an epoch bump — the same behaviour as 
 "message": {
     "message_id": "<id>",
     "priority": 50,
-    "zones": "all"
+    "zones": ["lobby"]
 }
 ```
 Triggers audio playback.

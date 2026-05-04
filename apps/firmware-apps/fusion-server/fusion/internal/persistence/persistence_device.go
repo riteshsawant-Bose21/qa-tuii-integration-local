@@ -18,11 +18,11 @@ func (p *Persistence) GetStoredDeviceInfo() (*api.DevicePatch, error) {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketDevice))
 		if bucket == nil {
-			return fmt.Errorf("device bucket not found")
+			return fmt.Errorf("%w: device bucket not found", ErrNotFound)
 		}
 		data := bucket.Get([]byte(keyDeviceInfo))
 		if data == nil {
-			return fmt.Errorf("device info not found")
+			return fmt.Errorf("%w: device info not found", ErrNotFound)
 		}
 		return json.Unmarshal(data, &info)
 	})
@@ -51,14 +51,14 @@ func (p *Persistence) SetDeviceInfo(info *api.DevicePatch) error {
 	err = p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketDevice))
 		if bucket == nil {
-			return fmt.Errorf("device bucket not found")
+			return fmt.Errorf("%w: device bucket not found", ErrNotFound)
 		}
 		return bucket.Put([]byte(keyDeviceInfo), data)
 	})
 	if err != nil {
 		return err
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }
 
 // GetDeviceName retrieves the "name" attribute.
@@ -89,12 +89,12 @@ func (p *Persistence) getDeviceJSONField(deviceID, field string) (string, error)
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketDevice))
 		if b == nil {
-			return fmt.Errorf("bucket %q not found", bucketDevice)
+			return fmt.Errorf("%w: bucket %q not found", ErrNotFound, bucketDevice)
 		}
 
 		raw := b.Get([]byte(deviceID))
 		if raw == nil {
-			return fmt.Errorf("device %q not found", deviceID)
+			return fmt.Errorf("%w: device %q not found", ErrNotFound, deviceID)
 		}
 
 		// Decode into a map[string]json.RawMessage so we only unmarshal the one piece we care about
@@ -105,7 +105,7 @@ func (p *Persistence) getDeviceJSONField(deviceID, field string) (string, error)
 
 		fld, ok := m[field]
 		if !ok {
-			return fmt.Errorf("field %q not found for device %q", field, deviceID)
+			return fmt.Errorf("%w: field %q not found for device %q", ErrNotFound, field, deviceID)
 		}
 
 		if err := json.Unmarshal(fld, &value); err != nil {
@@ -124,13 +124,13 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketDevice))
 		if b == nil {
-			return fmt.Errorf("bucket %q not found", bucketDevice)
+			return fmt.Errorf("%w: bucket %q not found", ErrNotFound, bucketDevice)
 		}
 
 		key := []byte(deviceID)
 		raw := b.Get(key)
 		if raw == nil {
-			return fmt.Errorf("device %q not found", deviceID)
+			return fmt.Errorf("%w: device %q not found", ErrNotFound, deviceID)
 		}
 
 		var m map[string]json.RawMessage
@@ -162,5 +162,5 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 	if !changed {
 		return nil
 	}
-	return p.updateHash()
+	return p.updateHash(false)
 }

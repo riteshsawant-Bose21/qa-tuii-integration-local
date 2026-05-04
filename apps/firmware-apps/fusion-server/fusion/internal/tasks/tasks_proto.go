@@ -3,6 +3,7 @@ package tasks
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"fusion/internal/api"
@@ -110,9 +111,58 @@ func messageCreateRequestToTask(req *fusionpb.MessageTaskCreateRequest) *api.Tas
 		Params: map[string]any{
 			api.MessageIDKey:       req.MessageId,
 			api.MessagePriorityKey: req.Priority,
-			api.MessageZonesKey:    req.Zones,
+			api.MessageZonesKey:    messageZonesFromProto(req.Zones),
 		},
 	}
+}
+
+func messageZonesFromProto(zones string) []string {
+	zones = strings.TrimSpace(zones)
+	if zones == "" {
+		return []string{}
+	}
+
+	if strings.HasPrefix(zones, "[") && strings.HasSuffix(zones, "]") {
+		trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(zones, "["), "]"))
+		if trimmed == "" {
+			return []string{}
+		}
+		return strings.Fields(trimmed)
+	}
+
+	if strings.Contains(zones, ",") {
+		parts := strings.Split(zones, ",")
+		out := make([]string, 0, len(parts))
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				out = append(out, part)
+			}
+		}
+		return out
+	}
+
+	return []string{zones}
+}
+
+func messageZonesToProto(value any) string {
+	var zones []string
+	switch v := value.(type) {
+	case []string:
+		zones = v
+	case []interface{}:
+		zones = make([]string, 0, len(v))
+		for _, item := range v {
+			s, ok := item.(string)
+			if ok && strings.TrimSpace(s) != "" {
+				zones = append(zones, strings.TrimSpace(s))
+			}
+		}
+	default:
+		zones = messageZonesFromProto(fmt.Sprintf("%v", value))
+	}
+
+	return strings.Join(zones, ",")
 }
 
 func taskToProto(task *api.Task) (*fusionpb.Task, error) {
@@ -165,7 +215,7 @@ func taskToProto(task *api.Task) (*fusionpb.Task, error) {
 			Message: &fusionpb.MessageTaskDetails{
 				MessageId: fmt.Sprintf("%v", messageID),
 				Priority:  priority,
-				Zones:     fmt.Sprintf("%v", zones),
+				Zones:     messageZonesToProto(zones),
 			},
 		}
 	default:

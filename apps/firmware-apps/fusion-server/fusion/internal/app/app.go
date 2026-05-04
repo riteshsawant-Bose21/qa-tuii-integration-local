@@ -84,6 +84,7 @@ type App struct {
 
 // NewApp is a factory function to set up the application
 func NewApp(config *api.AppConfig) *App {
+	configureRuntimePaths(config)
 
 	logger := initLogging(config)
 
@@ -92,6 +93,9 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
+	persistence.SetMetadataNotifier(func(metadata *api.DatabaseMetadata) {
+		hub.BroadcastVersionUpdate(config.NodeName, metadata)
+	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
 	taskManager := initTaskManager(config, persistence, hub, sceneActivator)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
@@ -152,6 +156,46 @@ func NewApp(config *api.AppConfig) *App {
 	app.vipEventCoordinator = NewVIPEventCoordinator(app)
 	vipMonitor.SetCallback(app.vipEventCoordinator.Handle)
 	return app
+}
+
+func configureRuntimePaths(config *api.AppConfig) {
+	fusionDataPath = getEnvOrDefault("FUSION_DATA_DIR", "/persist/fusion")
+	fusionLogDir = getEnvOrDefault("FUSION_LOG_DIR", "/var/log/fusion")
+
+	audioDir := os.Getenv("FUSION_AUDIO_DIR")
+	identityDir := os.Getenv("FUSION_IDENTITY_DIR")
+
+	if config.Local {
+		localRoot := os.Getenv("FUSION_LOCAL_ROOT")
+		if localRoot == "" {
+			localRoot = filepath.Join(os.TempDir(), "fusion-local")
+		}
+
+		if os.Getenv("FUSION_DATA_DIR") == "" {
+			fusionDataPath = filepath.Join(localRoot, "data")
+		}
+		if audioDir == "" {
+			audioDir = filepath.Join(localRoot, "audio")
+		}
+		if identityDir == "" {
+			identityDir = filepath.Join(localRoot, "pki") + string(os.PathSeparator)
+		}
+		if os.Getenv("FUSION_LOG_DIR") == "" {
+			fusionLogDir = ""
+		}
+	}
+
+	fusionDatabasePath = filepath.Join(fusionDataPath, fusionDatabaseName)
+
+	if audioDir == "" {
+		audioDir = "/persist/fusion/audio"
+	}
+	if identityDir == "" {
+		identityDir = "/persist/pki/"
+	}
+
+	api.AudioFilesLocation = audioDir
+	api.DefaultIdentityFilePath = identityDir
 }
 
 // Close shuts down all components gracefully.
@@ -308,6 +352,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
 	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
 	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
+	app.registerPublicGET(routes.ValueEndpoint, app.Server.GetValue)
+	app.registerPublicPOST(routes.ValueEndpoint, app.Server.SetValue)
+	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.PatchValue)
 
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
@@ -795,13 +842,12 @@ func corsMiddleware() mux.MiddlewareFunc {
 	})
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Set CORS headers
+
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 
-			// Handle preflight OPTIONS request
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return
