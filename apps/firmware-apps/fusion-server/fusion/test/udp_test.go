@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/network"
+	"fusion/internal/server/handler"
 	"io"
 	"net"
 	"net/http"
@@ -401,6 +403,200 @@ func TestFusionUDP_StaleClientPruned(t *testing.T) {
 		return
 	} else {
 		t.Fatalf("read error: %v", err)
+	}
+}
+
+func TestFusionUDP_ConfigBroadcastDoesNotMutateInput(t *testing.T) {
+	srv, err := network.NewUDPServer("127.0.0.1:0", &handler.Handler{}, true)
+	if err != nil {
+		t.Fatalf("NewUDPServer failed: %v", err)
+	}
+	defer srv.Close()
+
+	data := map[string]any{
+		"audio": map[string]any{
+			"settings": map[string]any{
+				"gain_block": map[string]any{
+					"mute": true,
+				},
+			},
+		},
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		"node-a",
+		api.WithConfigUpdate(&api.ConfigUpdate{
+			Data:    data,
+			Version: api.Version{Counter: 7, Epoch: 3, NodeID: "node-a"},
+		}),
+	)
+
+	if err := srv.BroadcastMessage(msg); err != nil {
+		t.Fatalf("BroadcastMessage failed: %v", err)
+	}
+
+	for _, key := range []string{
+		api.FusionVersion,
+		api.FusionEpoch,
+		api.FusionSentAtNS,
+		api.FusionMessageID,
+		api.FusionOperation,
+	} {
+		if _, ok := data[key]; ok {
+			t.Fatalf("expected config update data to remain unmodified, found metadata key %q in %#v", key, data)
+		}
+	}
+}
+
+func TestFusionUDP_CloseWhilePacketsArrive(t *testing.T) {
+	probeConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	if err != nil {
+		t.Fatalf("ListenUDP failed: %v", err)
+	}
+	addr := probeConn.LocalAddr().String()
+	_ = probeConn.Close()
+
+	srv, err := network.NewUDPServer(addr, &handler.Handler{}, false)
+	if err != nil {
+		t.Fatalf("NewUDPServer failed: %v", err)
+	}
+
+	serverAddr, err := net.ResolveUDPAddr("udp4", addr)
+	if err != nil {
+		_ = srv.Close()
+		t.Fatalf("ResolveUDPAddr failed: %v", err)
+	}
+
+	clientConn, err := net.DialUDP("udp4", nil, serverAddr)
+	if err != nil {
+		_ = srv.Close()
+		t.Fatalf("DialUDP failed: %v", err)
+	}
+	defer clientConn.Close()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		deadline := time.Now().Add(100 * time.Millisecond)
+		payload := []byte(`{"action":"noop"}`)
+		for time.Now().Before(deadline) {
+			_, _ = clientConn.Write(payload)
+			time.Sleep(1 * time.Millisecond)
+		}
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	if err := srv.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	<-done
+}
+
+func TestFusionUDP_CloseIsIdempotent(t *testing.T) {
+	probeConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	if err != nil {
+		t.Fatalf("ListenUDP failed: %v", err)
+	}
+	addr := probeConn.LocalAddr().String()
+	_ = probeConn.Close()
+
+	srv, err := network.NewUDPServer(addr, &handler.Handler{}, false)
+	if err != nil {
+		t.Fatalf("NewUDPServer failed: %v", err)
+	}
+
+	if err := srv.Close(); err != nil {
+		t.Fatalf("first Close failed: %v", err)
+	}
+	if err := srv.Close(); err != nil {
+		t.Fatalf("second Close failed: %v", err)
+	}
+}
+
+func TestFusionUDP_InvalidSenderIsNotRegisteredForBroadcasts(t *testing.T) {
+	probeConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	if err != nil {
+		t.Fatalf("ListenUDP failed: %v", err)
+	}
+	addr := probeConn.LocalAddr().String()
+	_ = probeConn.Close()
+
+	srv, err := network.NewUDPServer(addr, &handler.Handler{}, false)
+	if err != nil {
+		t.Fatalf("NewUDPServer failed: %v", err)
+	}
+	defer srv.Close()
+
+	serverAddr, err := net.ResolveUDPAddr("udp4", addr)
+	if err != nil {
+		t.Fatalf("ResolveUDPAddr failed: %v", err)
+	}
+
+	validConn, err := net.ListenUDP("udp4", nil)
+	if err != nil {
+		t.Fatalf("ListenUDP validConn failed: %v", err)
+	}
+	defer validConn.Close()
+
+	invalidConn, err := net.ListenUDP("udp4", nil)
+	if err != nil {
+		t.Fatalf("ListenUDP invalidConn failed: %v", err)
+	}
+	defer invalidConn.Close()
+
+	if _, err := validConn.WriteToUDP([]byte(`{"action":"noop"}`), serverAddr); err != nil {
+		t.Fatalf("register valid observer: %v", err)
+	}
+	buf := make([]byte, 4096)
+	_ = validConn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	if _, _, err := validConn.ReadFromUDP(buf); err != nil {
+		t.Fatalf("read valid observer response: %v", err)
+	}
+
+	if _, err := invalidConn.WriteToUDP([]byte(`{invalid json}`), serverAddr); err != nil {
+		t.Fatalf("send invalid payload: %v", err)
+	}
+	_ = invalidConn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	if _, _, err := invalidConn.ReadFromUDP(buf); err != nil {
+		t.Fatalf("read invalid sender error response: %v", err)
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		"node-a",
+		api.WithConfigUpdate(&api.ConfigUpdate{
+			Data: map[string]any{
+				"udp_invalid_sender_test": time.Now().UnixNano(),
+			},
+			Version: api.Version{Counter: 1, NodeID: "node-a"},
+		}),
+	)
+	if err := srv.BroadcastMessage(msg); err != nil {
+		t.Fatalf("BroadcastMessage failed: %v", err)
+	}
+
+	_ = validConn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	n, _, err := validConn.ReadFromUDP(buf)
+	if err != nil {
+		t.Fatalf("expected broadcast to valid observer: %v", err)
+	}
+	broadcast, err := parseJSON(buf[:n])
+	if err != nil {
+		t.Fatalf("parse valid observer broadcast: %v", err)
+	}
+	if _, ok := broadcast["udp_invalid_sender_test"]; !ok {
+		t.Fatalf("unexpected broadcast payload for valid observer: %s", string(buf[:n]))
+	}
+
+	_ = invalidConn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+	if _, _, err := invalidConn.ReadFromUDP(buf); err == nil {
+		t.Fatalf("expected invalid sender to receive no broadcast")
+	} else if ne, ok := err.(net.Error); ok && ne.Timeout() {
+		return
+	} else {
+		t.Fatalf("unexpected invalid sender read error: %v", err)
 	}
 }
 

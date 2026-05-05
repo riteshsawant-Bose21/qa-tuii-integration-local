@@ -27,6 +27,13 @@ func extractGainFromWSData(data any) (int, bool) {
 	if !ok {
 		return 0, false
 	}
+
+	if state, ok := asMap(m["state"]); ok {
+		return extractGain(state)
+	}
+	if updates, ok := asMap(m["updates"]); ok {
+		return extractGain(updates)
+	}
 	return extractGain(m)
 }
 
