@@ -94,7 +94,7 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
 
     FloorModel? floor = _selectedFloor;
 
-    if (_isAddingNewFloor) {
+    if (_isAddingNewFloor || _projectViewModel.getAllFloors().isEmpty) {
       final String floorName = _newFloorNameCtrl.text.trim();
       if (floorName.isEmpty) {
         FusionToast.error(context, message: 'Please enter a floor name');
@@ -198,7 +198,6 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
               ),
               const SizedBox(height: 12),
 
-              // ── Areas exist: dropdown ─────────────────────
               // ── Areas exist: dropdown ─────────────────────
               if (allAreas.isNotEmpty && !_isAddingArea) ...<Widget>[
                 TapRegion(

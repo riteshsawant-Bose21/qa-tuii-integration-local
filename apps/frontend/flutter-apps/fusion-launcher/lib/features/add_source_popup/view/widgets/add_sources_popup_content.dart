@@ -145,9 +145,9 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                             radiusFactor: 0.4,
                             height: 24,
                             value: _selected,
-
                             onChanged: (bool value) {
                               setState(() => _selected = value);
+                              //   TODO -use only in this location yet to be implemented
                             },
                           ),
                           const SizedBox(width: 12),
@@ -160,7 +160,6 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                         ],
                       ),
                       const SizedBox(height: 20),
-
                       // ── Signal type & Connection ─────────────
                       SourceConnectionSection(
                         selectedSectionType: state.selectedSourceSectionType,
