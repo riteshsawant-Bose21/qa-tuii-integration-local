@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"fusion/internal/api"
 	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
@@ -613,7 +612,18 @@ func decodeAudioMetadataListResponse(body io.Reader) (*fusionpb.AudioMetadataLis
 		return &protoResp, nil
 	}
 
-	var legacy []*api.AudioMetadata
+	var legacy []struct {
+		Id          string        `json:"id"`
+		OrigName    string        `json:"orig_name"`
+		DisplayName string        `json:"display_name"`
+		Filename    string        `json:"filename"`
+		MimeType    string        `json:"mime_type"`
+		Uploaded    time.Time     `json:"uploaded"`
+		Duration    time.Duration `json:"duration,omitempty"`
+		SizeBytes   int64         `json:"size_bytes"`
+		Tags        []string      `json:"tags"`
+		Checksum    string        `json:"checksum"`
+	}
 	if err := json.Unmarshal(data, &legacy); err != nil {
 		return nil, err
 	}

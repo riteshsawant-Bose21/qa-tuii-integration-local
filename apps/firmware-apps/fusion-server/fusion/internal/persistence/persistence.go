@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -72,20 +73,20 @@ var ErrNotMember = errors.New("not a member of scene set")
 
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
-	dbPath       string
-	stateManager *StateManager
-	db           *bbolt.DB
-	dbOptions    *bbolt.Options
-	mutex        sync.RWMutex
-	notifierMu   sync.RWMutex
-	metadataNotifier func(*api.DatabaseMetadata)
-	lastSave     time.Time
-	saveDebounce time.Duration
-	minSaveGap   time.Duration
-	saveCh       chan struct{}
-	shutdownCh   chan struct{}
-	workerDone   chan struct{}
-	closeOnce    sync.Once
+	dbPath           string
+	stateManager     *StateManager
+	db               *bbolt.DB
+	dbOptions        *bbolt.Options
+	mutex            sync.RWMutex
+	notifierMu       sync.RWMutex
+	metadataNotifier func(*fusionpb.DatabaseMetadata)
+	lastSave         time.Time
+	saveDebounce     time.Duration
+	minSaveGap       time.Duration
+	saveCh           chan struct{}
+	shutdownCh       chan struct{}
+	workerDone       chan struct{}
+	closeOnce        sync.Once
 }
 
 // NewPersistence opens the database and returns a new persistence instance.
@@ -165,7 +166,7 @@ func (p *Persistence) Close() {
 	})
 }
 
-func (p *Persistence) SetMetadataNotifier(notifier func(*api.DatabaseMetadata)) {
+func (p *Persistence) SetMetadataNotifier(notifier func(*fusionpb.DatabaseMetadata)) {
 	p.notifierMu.Lock()
 	defer p.notifierMu.Unlock()
 	p.metadataNotifier = notifier
@@ -204,7 +205,7 @@ func (p *Persistence) SaveState() error {
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	metadata.Version = ps.Version
+	metadata.Version = versionInfoFromAPI(ps.Version)
 	metadata.Valid = len(ps.State) > 0
 
 	if err := p.saveMetadataWithNotify(metadata, false); err != nil {
@@ -482,7 +483,7 @@ func validateImportedAudio(audio map[string]any) error {
 			return fmt.Errorf("failed to marshal imported audio metadata %q: %w", key, err)
 		}
 
-		var meta api.AudioMetadata
+		var meta fusionpb.AudioMetadata
 		if err := json.Unmarshal(data, &meta); err != nil {
 			return fmt.Errorf("failed to unmarshal imported audio metadata %q: %w", key, err)
 		}
@@ -499,7 +500,7 @@ func validateImportedDevice(device map[string]any) error {
 		}
 
 		if key == keyDeviceInfo {
-			var info api.DevicePatch
+			var info fusionpb.DevicePatch
 			if err := json.Unmarshal(data, &info); err != nil {
 				return fmt.Errorf("failed to unmarshal imported device record %q: %w", key, err)
 			}
@@ -628,8 +629,8 @@ func (p *Persistence) persistActiveState() (*PersistentState, error) {
 	return p.persistStateToBucket(bucketActive, keyActiveState, false)
 }
 
-// loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
-func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
+// loadMetadata retrieves and unmarshals the fusionpb.DatabaseMetadata from the database.
+func (p *Persistence) loadMetadata() (*fusionpb.DatabaseMetadata, error) {
 	var dataCopy []byte
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		var err error
@@ -642,12 +643,12 @@ func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
 	return decodeMetadataBytes(dataCopy)
 }
 
-// saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
-func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
+// saveMetadata saves the fusionpb.DatabaseMetadata into the metadata bucket.
+func (p *Persistence) saveMetadata(meta *fusionpb.DatabaseMetadata) error {
 	return p.saveMetadataWithNotify(meta, true)
 }
 
-func (p *Persistence) saveMetadataWithNotify(meta *api.DatabaseMetadata, notify bool) error {
+func (p *Persistence) saveMetadataWithNotify(meta *fusionpb.DatabaseMetadata, notify bool) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -688,18 +689,39 @@ func metadataBytesFromTx(tx *bbolt.Tx) ([]byte, error) {
 	return append([]byte(nil), data...), nil
 }
 
-func decodeMetadataBytes(data []byte) (*api.DatabaseMetadata, error) {
-	var metadata api.DatabaseMetadata
+func decodeMetadataBytes(data []byte) (*fusionpb.DatabaseMetadata, error) {
+	var metadata fusionpb.DatabaseMetadata
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, err
 	}
 	metadata.ActiveSnapshot = strings.Clone(metadata.ActiveSnapshot)
 	metadata.Hash = strings.Clone(metadata.Hash)
-	metadata.Version.NodeID = strings.Clone(metadata.Version.NodeID)
+	if metadata.Version != nil {
+		metadata.Version.NodeId = strings.Clone(metadata.Version.NodeId)
+	}
 	return &metadata, nil
 }
 
-func loadMetadataFromTx(tx *bbolt.Tx) (*api.DatabaseMetadata, error) {
+func versionInfoFromAPI(v api.Version) *fusionpb.VersionInfo {
+	return &fusionpb.VersionInfo{
+		Epoch:   v.Epoch,
+		Counter: v.Counter,
+		NodeId:  v.NodeID,
+	}
+}
+
+func apiVersionFromProto(v *fusionpb.VersionInfo) api.Version {
+	if v == nil {
+		return api.Version{}
+	}
+	return api.Version{
+		Epoch:   v.Epoch,
+		Counter: v.Counter,
+		NodeID:  v.NodeId,
+	}
+}
+
+func loadMetadataFromTx(tx *bbolt.Tx) (*fusionpb.DatabaseMetadata, error) {
 	data, err := metadataBytesFromTx(tx)
 	if err != nil {
 		return nil, err
@@ -707,7 +729,7 @@ func loadMetadataFromTx(tx *bbolt.Tx) (*api.DatabaseMetadata, error) {
 	return decodeMetadataBytes(data)
 }
 
-func saveMetadataToTx(tx *bbolt.Tx, meta *api.DatabaseMetadata) error {
+func saveMetadataToTx(tx *bbolt.Tx, meta *fusionpb.DatabaseMetadata) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -729,8 +751,10 @@ func (p *Persistence) updateHash(notify bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	if metadata.Version.NodeID == "" {
-		metadata.Version.NodeID = p.stateManager.GetVersion().NodeID
+	if metadata.Version == nil {
+		metadata.Version = versionInfoFromAPI(p.stateManager.GetVersion())
+	} else if metadata.Version.NodeId == "" {
+		metadata.Version.NodeId = p.stateManager.GetVersion().NodeID
 	}
 	metadata.Hash = newHash
 	return p.saveMetadataWithNotify(metadata, notify)
@@ -747,7 +771,7 @@ func (p *Persistence) updateHashWithVersionBump(notify bool) error {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
 
-	metadata.Version = p.stateManager.NextVersionAfter(metadata.Version)
+	metadata.Version = versionInfoFromAPI(p.stateManager.NextVersionAfter(apiVersionFromProto(metadata.Version)))
 	metadata.Hash = newHash
 	metadata.Valid = true
 
@@ -807,7 +831,7 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		return value, nil
 	}
 
-	var metadata api.DatabaseMetadata
+	var metadata fusionpb.DatabaseMetadata
 	if err := json.Unmarshal(value, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
 	}
@@ -1182,8 +1206,8 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) (bool, error) {
 		return false, nil
 	}
 
-	meta := &api.DatabaseMetadata{
-		Version:        p.stateManager.GetVersion(),
+	meta := &fusionpb.DatabaseMetadata{
+		Version:        versionInfoFromAPI(p.stateManager.GetVersion()),
 		ActiveSnapshot: keyDefaultSnapshot,
 		Hash:           "",
 		Valid:          true,

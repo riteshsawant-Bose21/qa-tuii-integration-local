@@ -9,6 +9,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/controllers"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -93,7 +94,7 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	persistence.SetMetadataNotifier(func(metadata *api.DatabaseMetadata) {
+	persistence.SetMetadataNotifier(func(metadata *fusionpb.DatabaseMetadata) {
 		hub.BroadcastVersionUpdate(config.NodeName, metadata)
 	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
@@ -357,6 +358,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.PatchValue)
 
 	// Snapshots
+	app.registerPublicPOST(routes.SnapshotsEndpoint, app.Server.CreateSnapshotDefinition)
+	app.registerPublicPUT(routes.SnapshotsNameEndpoint, app.Server.UpsertSnapshotDefinition)
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
 	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
@@ -367,6 +370,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
 
 	// Scene Sets
+	app.registerPublicPOST(routes.ScenesSetsEndpoint, app.Server.CreateSceneSet)
+	app.registerPublicPUT(routes.ScenesSetsNameEndpoint, app.Server.UpsertSceneSet)
 	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
 	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
 	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)

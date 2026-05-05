@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"os/exec"
 
 	"fusion-services-core/logging"
@@ -461,7 +462,7 @@ func (c *Cluster) FetchGenericWithTargetDevice(
 
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *api.DeviceInfo
+	var targetDevice *fusionpb.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -492,7 +493,7 @@ func (c *Cluster) DoGenericToTargetDevice(
 ) error {
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *api.DeviceInfo
+	var targetDevice *fusionpb.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -600,12 +601,12 @@ func (c *Cluster) isLocalNodePrimary() bool {
 
 func (c *Cluster) getKeepalivedPriority() int {
 	if c.vipMonitor != nil {
-		 priority, err := c.vipMonitor.GetKeepalivedPriority()
-		 if err != nil {
-			 logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
-			 return 0
-		 }
-		 return priority
+		priority, err := c.vipMonitor.GetKeepalivedPriority()
+		if err != nil {
+			logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
+			return 0
+		}
+		return priority
 	}
 	logging.GetLogger().Warn("VIP Monitor not set, cannot get keepalived priority")
 	return 0

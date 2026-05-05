@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -14,15 +15,15 @@ import (
 	json "github.com/goccy/go-json"
 )
 
-func (c *Cluster) GetAllDevicesInfo() []api.DeviceInfo {
+func (c *Cluster) GetAllDevicesInfo() []fusionpb.DeviceInfo {
 	return c.fetchAllDeviceInfos()
 }
 
-func (c *Cluster) GetDeviceInfoLocal() api.DeviceInfo {
+func (c *Cluster) GetDeviceInfoLocal() fusionpb.DeviceInfo {
 	return c.getDeviceInfoLocal()
 }
 
-func (c *Cluster) UpdateDeviceInfo(device_id string, patch *api.DevicePatch) error {
+func (c *Cluster) UpdateDeviceInfo(device_id string, patch *fusionpb.DevicePatch) error {
 
 	localInfo, err := c.findAndValidateDevice(device_id, patch)
 	if err != nil {
@@ -36,7 +37,7 @@ func (c *Cluster) UpdateDeviceInfo(device_id string, patch *api.DevicePatch) err
 
 }
 
-func (c *Cluster) UpdateDeviceInfoLocal(patch *api.DevicePatch) error {
+func (c *Cluster) UpdateDeviceInfoLocal(patch *fusionpb.DevicePatch) error {
 
 	stored, err := c.delegate.persistence.GetStoredDeviceInfo()
 	if err != nil {
@@ -54,10 +55,10 @@ func (c *Cluster) UpdateDeviceInfoLocal(patch *api.DevicePatch) error {
 }
 
 // findAndValidateDevice finds the device and validates the patch
-func (c *Cluster) findAndValidateDevice(device_id string, patch *api.DevicePatch) (*api.DeviceInfo, error) {
+func (c *Cluster) findAndValidateDevice(device_id string, patch *fusionpb.DevicePatch) (*fusionpb.DeviceInfo, error) {
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var localInfo *api.DeviceInfo
+	var localInfo *fusionpb.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == device_id {
 			localInfo = &deviceInfos[i]
@@ -76,7 +77,7 @@ func (c *Cluster) findAndValidateDevice(device_id string, patch *api.DevicePatch
 	return localInfo, nil
 }
 
-func (c *Cluster) fetchAllDeviceInfos() []api.DeviceInfo {
+func (c *Cluster) fetchAllDeviceInfos() []fusionpb.DeviceInfo {
 	return fetchFromAdmin(
 		c,
 		c.getDeviceInfoLocal,
@@ -84,13 +85,13 @@ func (c *Cluster) fetchAllDeviceInfos() []api.DeviceInfo {
 	)
 }
 
-func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
+func (c *Cluster) getDeviceInfoLocal() fusionpb.DeviceInfo {
 
 	savedInfo, err := c.delegate.persistence.GetStoredDeviceInfo()
 	if err != nil {
 		//This doesnt return error as this fuction is called from fetchGenericFromAdmin which cant return partial errors
 		logging.GetLogger().Error("Failed to get local device info: %v", err)
-		return api.DeviceInfo{}
+		return fusionpb.DeviceInfo{}
 	}
 
 	id := ""
@@ -106,29 +107,24 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 		location = *savedInfo.Location
 	}
 
-	deviceInfo := api.DeviceInfo{
+	deviceInfo := fusionpb.DeviceInfo{
 		Address:                  c.appConfig.BindAddr,
 		Id:                       id,
 		Location:                 location,
 		Name:                     name,
 		ModelName:                utils.GetModelName(),
 		SerialNumber:             utils.GetSerialNumber(),
-		SoftwareVersion:          utils.GetSoftwareUpdateVersion(),
+		FirmwareVersion:          utils.GetSoftwareUpdateVersion(),
 		MacAddress:               utils.GetMacAddress(),
-		IsPrimaryNode:            c.isLocalNodePrimary(),
+		IsPrimary:                c.isLocalNodePrimary(),
 		IsDeviceCertificateValid: utils.IsCertificateValid(),
-		FusionMonorepoBranch:     utils.GetBranchName(),
-		FusionMonorepoCommitHash: utils.GetCommitHash(),
-		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
-		PreReleaseTag:            utils.GetPreReleaseTag(),
-		VrrpPriority:             c.getKeepalivedPriority(),
 	}
 
 	return deviceInfo
 }
 
 // updateRemoteDevice updates a device that is hosted on a remote node
-func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *api.DeviceInfo, patch *api.DevicePatch) error {
+func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *fusionpb.DeviceInfo, patch *fusionpb.DevicePatch) error {
 	jsonBody, err := json.Marshal(patch)
 	if err != nil {
 		return fmt.Errorf("Failed to encode patch: %v", err)
@@ -159,7 +155,7 @@ func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *api.DeviceInfo,
 }
 
 // broadcastDeviceUpdate sends device updates via gossip protocol
-func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
+func (c *Cluster) broadcastDeviceUpdate(deviceData *fusionpb.DeviceInfo) {
 	if c.delegate.hub == nil {
 		return
 	}
@@ -177,7 +173,7 @@ func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 
 }
 
-func (c *Cluster) applyPatch(patch *api.DevicePatch, storedInfo *api.DevicePatch) {
+func (c *Cluster) applyPatch(patch *fusionpb.DevicePatch, storedInfo *fusionpb.DevicePatch) {
 
 	if patch.Location != nil {
 		storedInfo.Location = patch.Location
@@ -196,8 +192,8 @@ func (c *Cluster) applyPatch(patch *api.DevicePatch, storedInfo *api.DevicePatch
 // validateNoDuplication returns an error if any of the non‐nil fields in patch
 // would collide with another DeviceInfo other than the one with ID == currentID.
 func validateNoDuplication(
-	allInfos []api.DeviceInfo,
-	patch api.DevicePatch,
+	allInfos []fusionpb.DeviceInfo,
+	patch fusionpb.DevicePatch,
 	currentID string,
 ) error {
 	for _, info := range allInfos {
@@ -226,7 +222,7 @@ func validateNoDuplication(
 func (c *Cluster) refreshDeviceDefaultsIfRequired() {
 	stored, err := c.delegate.persistence.GetStoredDeviceInfo()
 	if err != nil {
-		stored = &api.DevicePatch{}
+		stored = &fusionpb.DevicePatch{}
 	}
 
 	changed := false

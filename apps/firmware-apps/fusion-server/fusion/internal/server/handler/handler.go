@@ -212,7 +212,7 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 	return result.Diff, nil
 }
 
-func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, sceneSets []api.SceneSet) error {
+func (h *Handler) persistFeatureDefinitions(snapshots []*fusionpb.SnapshotDefinition, sceneSets []*fusionpb.SceneSet) error {
 	if len(snapshots) > 0 {
 		if err := h.persistence.UpsertSnapshotDefinitions(snapshots); err != nil {
 			return err
@@ -248,8 +248,8 @@ func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, 
 
 func (h *Handler) SplitFeaturePayload(update map[string]any) (
 	config map[string]any,
-	snapshots []api.SnapshotDefinition,
-	sceneSets []api.SceneSet,
+	snapshots []*fusionpb.SnapshotDefinition,
+	sceneSets []*fusionpb.SceneSet,
 	err error,
 ) {
 	config = make(map[string]any, len(update))

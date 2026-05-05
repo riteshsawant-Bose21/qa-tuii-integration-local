@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	"github.com/stretchr/testify/assert"
 )
 
 // clusterNode represents a node in the test cluster
@@ -387,7 +389,7 @@ func TestRootEndpoint(t *testing.T) {
 
 	assert.NotEmpty(t, response.Name, "root.name should be populated")
 	assert.NotEmpty(t, response.Version, "root.version should be populated")
-	assert.NotEmpty(t, response.NodeID, "root.node_id should be populated")
+	assert.NotEmpty(t, response.NodeId, "root.node_id should be populated")
 	assert.NotEmpty(t, response.Endpoints, "root.endpoints should be populated")
 	assert.NotZero(t, response.ClusterSize, "root.cluster_size should be populated")
 }

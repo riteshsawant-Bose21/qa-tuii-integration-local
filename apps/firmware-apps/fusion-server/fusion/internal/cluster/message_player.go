@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -52,7 +53,7 @@ func (c *Cluster) initialAudioSyncFromPeer(peer *hashicorpMemberlist.Node) error
 		return fmt.Errorf("metadata list error: %d %s", resp.StatusCode, string(body))
 	}
 
-	var metas []api.AudioMetadata
+	var metas []fusionpb.AudioMetadata
 	if err := json.NewDecoder(resp.Body).Decode(&metas); err != nil {
 		return fmt.Errorf("decode metadata: %w", err)
 	}
@@ -82,7 +83,7 @@ func (c *Cluster) reconcileLocalAudioState() {
 		return
 	}
 
-	metaByFilename := make(map[string]*api.AudioMetadata, len(metas))
+	metaByFilename := make(map[string]*fusionpb.AudioMetadata, len(metas))
 	for _, m := range metas {
 		metaByFilename[m.Filename] = m
 	}

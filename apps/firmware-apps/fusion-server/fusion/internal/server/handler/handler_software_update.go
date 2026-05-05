@@ -271,16 +271,16 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	// Broadcast SoftwareUpdate availability to cluster so followers can initiate download
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	update := &api.SoftwareUpdateSync{
+	update := &fusionpb.SoftwareUpdateBundle{
 		Filename:  origName,
 		Checksum:  actualChecksum,
 		SizeBytes: written,
-		Uploaded:  uploaded,
-		SourceIP:  sourceIP,
+		Uploaded:  timestamppb.New(uploaded),
+		SourceIp:  sourceIP,
 	}
 
 	// Add sync ID to the update for tracking
-	update.SyncID = syncID
+	update.SyncId = syncID
 
 	msg := api.NewNotifyMessage(
 		api.NotifyOpSoftwareUpdateAvailable,
@@ -408,8 +408,9 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No SoftwareUpdate directory yet — return empty list
-			w.Header().Set(api.ContentType, api.JsonMIMEType)
-			w.Write([]byte("[]"))
+			if err := writeProtoJSON(w, &fusionpb.SoftwareUpdateListResponse{}); err != nil {
+				logger.Error("SoftwareUpdate list (local): json encode empty list: %v", err)
+			}
 			return
 		}
 		logger.Error("SoftwareUpdate list (local): readdir %s: %v", api.SoftwareUpdateOTAPath, err)
@@ -419,7 +420,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	var bundles []api.SoftwareUpdateSync
+	var bundles []*fusionpb.SoftwareUpdateBundle
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -442,17 +443,17 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 			continue
 		}
 
-		bundles = append(bundles, api.SoftwareUpdateSync{
+		bundles = append(bundles, &fusionpb.SoftwareUpdateBundle{
 			Filename:  name,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),
-			Uploaded:  info.ModTime().UTC(),
-			SourceIP:  sourceIP,
+			Uploaded:  timestamppb.New(info.ModTime().UTC().Round(0)),
+			SourceIp:  sourceIP,
 		})
 	}
 
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*fusionpb.SoftwareUpdateBundle{}
 	}
 
 	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
@@ -464,7 +465,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*fusionpb.SoftwareUpdateBundle{}
 	}
 	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
 		logging.GetLogger().Error("SoftwareUpdate list: json encode: %v", err)
@@ -480,24 +481,11 @@ func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes in
 	}
 }
 
-func softwareUpdateSyncToProto(update api.SoftwareUpdateSync) *fusionpb.SoftwareUpdateBundle {
-	return &fusionpb.SoftwareUpdateBundle{
-		Filename:  update.Filename,
-		Checksum:  update.Checksum,
-		SizeBytes: update.SizeBytes,
-		Uploaded:  timestamppb.New(update.Uploaded),
-		SourceIp:  update.SourceIP,
-		SyncId:    update.SyncID,
-	}
-}
-
-func softwareUpdateListToProto(bundles []api.SoftwareUpdateSync) *fusionpb.SoftwareUpdateListResponse {
+func softwareUpdateListToProto(bundles []*fusionpb.SoftwareUpdateBundle) *fusionpb.SoftwareUpdateListResponse {
 	resp := &fusionpb.SoftwareUpdateListResponse{
 		Bundles: make([]*fusionpb.SoftwareUpdateBundle, 0, len(bundles)),
 	}
-	for _, bundle := range bundles {
-		resp.Bundles = append(resp.Bundles, softwareUpdateSyncToProto(bundle))
-	}
+	resp.Bundles = append(resp.Bundles, bundles...)
 	return resp
 }
 
@@ -575,7 +563,7 @@ func (h *Handler) handleSwUpdateInfo(request *fusionpb.WebSocketRequest) (*fusio
 func (h *Handler) handleListSoftwareUpdates(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*fusionpb.SoftwareUpdateBundle{}
 	}
 	return createSuccessResponse(&request.Id, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
 }
@@ -822,13 +810,13 @@ func (h *Handler) ensureSWUFilesOnFollowers(swuFilePaths []string) (int, error) 
 		h.StartSyncTracking(syncID, filename, checksum, followers, 5*time.Minute)
 
 		// Broadcast availability gossip so followers HTTP-pull if they don't have it yet
-		update := &api.SoftwareUpdateSync{
+		update := &fusionpb.SoftwareUpdateBundle{
 			Filename:  filename,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),
-			Uploaded:  info.ModTime().UTC(),
-			SourceIP:  localIP,
-			SyncID:    syncID,
+			Uploaded:  timestamppb.New(info.ModTime().UTC().Round(0)),
+			SourceIp:  localIP,
+			SyncId:    syncID,
 		}
 		msg := api.NewNotifyMessage(
 			api.NotifyOpSoftwareUpdateAvailable,

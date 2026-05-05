@@ -2,7 +2,7 @@ package persistence
 
 import (
 	"fmt"
-	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 
 	json "github.com/goccy/go-json"
 
@@ -10,7 +10,7 @@ import (
 )
 
 // UpsertSnapshotDefinitions creates or overwrites snapshot definitions by ID.
-func (p *Persistence) UpsertSnapshotDefinitions(items []api.SnapshotDefinition) error {
+func (p *Persistence) UpsertSnapshotDefinitions(items []*fusionpb.SnapshotDefinition) error {
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
 		if bucket == nil {
@@ -18,15 +18,15 @@ func (p *Persistence) UpsertSnapshotDefinitions(items []api.SnapshotDefinition) 
 		}
 
 		for _, item := range items {
-			if item.ID == "" {
+			if item.GetId() == "" {
 				return fmt.Errorf("snapshot definition id is required")
 			}
 			data, err := json.Marshal(item)
 			if err != nil {
-				return fmt.Errorf("failed to marshal snapshot definition '%s': %w", item.ID, err)
+				return fmt.Errorf("failed to marshal snapshot definition '%s': %w", item.GetId(), err)
 			}
-			if err := bucket.Put([]byte(item.ID), data); err != nil {
-				return fmt.Errorf("failed to put snapshot definition '%s': %w", item.ID, err)
+			if err := bucket.Put([]byte(item.GetId()), data); err != nil {
+				return fmt.Errorf("failed to put snapshot definition '%s': %w", item.GetId(), err)
 			}
 		}
 
@@ -44,8 +44,8 @@ func (p *Persistence) UpsertSnapshotDefinitions(items []api.SnapshotDefinition) 
 }
 
 // GetSnapshotDefinition returns a snapshot definition by ID.
-func (p *Persistence) GetSnapshotDefinition(id string) (*api.SnapshotDefinition, error) {
-	var out api.SnapshotDefinition
+func (p *Persistence) GetSnapshotDefinition(id string) (*fusionpb.SnapshotDefinition, error) {
+	var out fusionpb.SnapshotDefinition
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
 		if bucket == nil {
@@ -70,8 +70,8 @@ func (p *Persistence) GetSnapshotDefinition(id string) (*api.SnapshotDefinition,
 }
 
 // ListSnapshotDefinitions returns all stored snapshot definitions.
-func (p *Persistence) ListSnapshotDefinitions() ([]api.SnapshotDefinition, error) {
-	items := make([]api.SnapshotDefinition, 0)
+func (p *Persistence) ListSnapshotDefinitions() ([]*fusionpb.SnapshotDefinition, error) {
+	items := make([]*fusionpb.SnapshotDefinition, 0)
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSnapshotDefs))
 		if bucket == nil {
@@ -79,11 +79,11 @@ func (p *Persistence) ListSnapshotDefinitions() ([]api.SnapshotDefinition, error
 		}
 
 		return bucket.ForEach(func(_, value []byte) error {
-			var item api.SnapshotDefinition
+			var item fusionpb.SnapshotDefinition
 			if err := json.Unmarshal(value, &item); err != nil {
 				return err
 			}
-			items = append(items, item)
+			items = append(items, &item)
 			return nil
 		})
 	})
@@ -157,7 +157,7 @@ func (p *Persistence) SnapshotDefinitionExists(id string) (bool, error) {
 }
 
 // UpsertSceneSets creates or overwrites scene sets by set_id.
-func (p *Persistence) UpsertSceneSets(items []api.SceneSet) error {
+func (p *Persistence) UpsertSceneSets(items []*fusionpb.SceneSet) error {
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSceneSets))
 		if bucket == nil {
@@ -165,15 +165,15 @@ func (p *Persistence) UpsertSceneSets(items []api.SceneSet) error {
 		}
 
 		for _, item := range items {
-			if item.SetID == "" {
+			if item.GetSetId() == "" {
 				return fmt.Errorf("scene set id is required")
 			}
 			data, err := json.Marshal(item)
 			if err != nil {
-				return fmt.Errorf("failed to marshal scene set '%s': %w", item.SetID, err)
+				return fmt.Errorf("failed to marshal scene set '%s': %w", item.GetSetId(), err)
 			}
-			if err := bucket.Put([]byte(item.SetID), data); err != nil {
-				return fmt.Errorf("failed to put scene set '%s': %w", item.SetID, err)
+			if err := bucket.Put([]byte(item.GetSetId()), data); err != nil {
+				return fmt.Errorf("failed to put scene set '%s': %w", item.GetSetId(), err)
 			}
 		}
 
@@ -191,8 +191,8 @@ func (p *Persistence) UpsertSceneSets(items []api.SceneSet) error {
 }
 
 // GetSceneSet returns a scene set by set_id.
-func (p *Persistence) GetSceneSet(setID string) (*api.SceneSet, error) {
-	var out api.SceneSet
+func (p *Persistence) GetSceneSet(setID string) (*fusionpb.SceneSet, error) {
+	var out fusionpb.SceneSet
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSceneSets))
 		if bucket == nil {
@@ -217,8 +217,8 @@ func (p *Persistence) GetSceneSet(setID string) (*api.SceneSet, error) {
 }
 
 // ListSceneSets returns all stored scene sets.
-func (p *Persistence) ListSceneSets() ([]api.SceneSet, error) {
-	items := make([]api.SceneSet, 0)
+func (p *Persistence) ListSceneSets() ([]*fusionpb.SceneSet, error) {
+	items := make([]*fusionpb.SceneSet, 0)
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketSceneSets))
 		if bucket == nil {
@@ -226,11 +226,11 @@ func (p *Persistence) ListSceneSets() ([]api.SceneSet, error) {
 		}
 
 		return bucket.ForEach(func(_, value []byte) error {
-			var item api.SceneSet
+			var item fusionpb.SceneSet
 			if err := json.Unmarshal(value, &item); err != nil {
 				return err
 			}
-			items = append(items, item)
+			items = append(items, &item)
 			return nil
 		})
 	})
@@ -309,15 +309,15 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 
 		c := bucket.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var set api.SceneSet
+			var set fusionpb.SceneSet
 			if err := json.Unmarshal(v, &set); err != nil {
 				return fmt.Errorf("failed to unmarshal scene set '%s': %w", string(k), err)
 			}
 
-			filtered := make([]api.Scene, 0, len(set.Scenes))
+			filtered := make([]*fusionpb.Scene, 0, len(set.GetScenes()))
 			removedFromSet := false
-			for _, scene := range set.Scenes {
-				if scene.ID == sceneID {
+			for _, scene := range set.GetScenes() {
+				if scene.GetId() == sceneID {
 					removedFromSet = true
 					continue
 				}
@@ -330,16 +330,16 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 
 			found = true
 			set.Scenes = filtered
-			if set.DefaultSceneID == sceneID {
-				set.DefaultSceneID = ""
+			if set.GetDefaultScene() == sceneID {
+				set.DefaultScene = ""
 			}
-			if set.CurrentSceneID == sceneID {
-				set.CurrentSceneID = ""
+			if set.GetCurrentSceneId() == sceneID {
+				set.CurrentSceneId = ""
 			}
 
 			updated, err := json.Marshal(set)
 			if err != nil {
-				return fmt.Errorf("failed to marshal updated scene set '%s': %w", set.SetID, err)
+				return fmt.Errorf("failed to marshal updated scene set '%s': %w", set.GetSetId(), err)
 			}
 
 			// Copy the key — cursor keys are only valid for the lifetime of the transaction step.
@@ -396,12 +396,12 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 			return ErrNotFound
 		}
 
-		var set api.SceneSet
+		var set fusionpb.SceneSet
 		if err := json.Unmarshal(data, &set); err != nil {
 			return fmt.Errorf("failed to unmarshal scene set '%s': %w", setID, err)
 		}
 
-		set.CurrentSceneID = sceneID
+		set.CurrentSceneId = sceneID
 
 		updated, err := json.Marshal(set)
 		if err != nil {
@@ -422,16 +422,16 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 }
 
 // GetSceneInSet returns the scene by ID if it belongs to the specified scene set.
-func (p *Persistence) GetSceneInSet(setID, sceneID string) (*api.Scene, error) {
+func (p *Persistence) GetSceneInSet(setID, sceneID string) (*fusionpb.Scene, error) {
 	set, err := p.GetSceneSet(setID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, scene := range set.Scenes {
-		if scene.ID == sceneID {
+	for _, scene := range set.GetScenes() {
+		if scene.GetId() == sceneID {
 			found := scene
-			return &found, nil
+			return found, nil
 		}
 	}
 

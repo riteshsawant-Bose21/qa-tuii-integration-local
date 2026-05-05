@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -39,10 +40,10 @@ func firstDeviceID(t *testing.T) string {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	var devices []api.DeviceInfo
+	var devices []fusionpb.DeviceInfo
 	if err := json.Unmarshal(body, &devices); err != nil || len(devices) == 0 {
 		var wrapped struct {
-			Devices []api.DeviceInfo `json:"devices"`
+			Devices []fusionpb.DeviceInfo `json:"devices"`
 		}
 		require.NoError(t, json.Unmarshal(body, &wrapped))
 		devices = wrapped.Devices

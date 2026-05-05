@@ -12,6 +12,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 
 	json "github.com/goccy/go-json"
 	"github.com/hashicorp/memberlist"
@@ -54,15 +55,15 @@ func (s *stubClusterTransport) DoGenericToTargetDevice(deviceID, endpointTemplat
 	return nil
 }
 
-func (s *stubClusterTransport) GetAllDevicesInfo() []api.DeviceInfo { return nil }
+func (s *stubClusterTransport) GetAllDevicesInfo() []fusionpb.DeviceInfo { return nil }
 
-func (s *stubClusterTransport) GetDeviceInfoLocal() api.DeviceInfo { return api.DeviceInfo{} }
+func (s *stubClusterTransport) GetDeviceInfoLocal() fusionpb.DeviceInfo { return fusionpb.DeviceInfo{} }
 
-func (s *stubClusterTransport) UpdateDeviceInfo(deviceID string, patch *api.DevicePatch) error {
+func (s *stubClusterTransport) UpdateDeviceInfo(deviceID string, patch *fusionpb.DevicePatch) error {
 	return nil
 }
 
-func (s *stubClusterTransport) UpdateDeviceInfoLocal(patch *api.DevicePatch) error { return nil }
+func (s *stubClusterTransport) UpdateDeviceInfoLocal(patch *fusionpb.DevicePatch) error { return nil }
 
 func TestHandleReloadVIPReturnsAcceptedOperation(t *testing.T) {
 	ensureTestLogger()

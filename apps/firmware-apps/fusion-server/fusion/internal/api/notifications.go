@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -61,17 +62,17 @@ type NotifyMessage struct {
 	AudioSync                 *AudioSyncUpdate
 	ConfigUpdate              *ConfigUpdate
 	ConfigValue               *ConfigValue
-	DeviceInfo                *DeviceInfo
-	SoftwareUpdate            *SoftwareUpdateSync
+	DeviceInfo                *fusionpb.DeviceInfo
+	SoftwareUpdate            *fusionpb.SoftwareUpdateBundle
 	SoftwareUpdateAck         *SoftwareUpdateSyncAck
 	SoftwareUpdateProgress    *SoftwareUpdateProgress
 	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
 	SceneActivation           *ActivateSceneSetRequest
 	SceneOperation            *SceneOperation
 	SceneSetOperation         *SceneSetOperation
-	SceneSets                 []SceneSet
+	SceneSets                 []*fusionpb.SceneSet
 	SnapshotActivation        *ActivateSnapshotRequest
-	SnapshotDefinitions       []SnapshotDefinition
+	SnapshotDefinitions       []*fusionpb.SnapshotDefinition
 	SnapshotOperation         *SnapshotOperation
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
@@ -240,13 +241,13 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 	}
 }
 
-func WithSnapshotDefinitions(definitions []SnapshotDefinition) func(*NotifyMessage) {
+func WithSnapshotDefinitions(definitions []*fusionpb.SnapshotDefinition) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SnapshotDefinitions = definitions
 	}
 }
 
-func WithSceneSets(sceneSets []SceneSet) func(*NotifyMessage) {
+func WithSceneSets(sceneSets []*fusionpb.SceneSet) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SceneSets = sceneSets
 	}
@@ -282,7 +283,7 @@ func WithTask(task *Task) func(*NotifyMessage) {
 	}
 }
 
-func WithSoftwareUpdate(update *SoftwareUpdateSync) func(*NotifyMessage) {
+func WithSoftwareUpdate(update *fusionpb.SoftwareUpdateBundle) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SoftwareUpdate = update
 	}
@@ -300,7 +301,7 @@ func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
 	}
 }
 
-func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+func WithDeviceInfo(info *fusionpb.DeviceInfo) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.DeviceInfo = info
 	}

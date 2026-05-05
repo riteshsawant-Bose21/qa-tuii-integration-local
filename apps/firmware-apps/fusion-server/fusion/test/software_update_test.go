@@ -680,11 +680,7 @@ func dialWebSocket(t *testing.T, base string) *websocket.Conn {
 	}
 
 	// Consume welcome message
-	var welcome api.WebSocketResponse
-	if err := conn.ReadJSON(&welcome); err != nil {
-		conn.Close()
-		t.Fatalf("reading welcome message failed: %v", err)
-	}
+	welcome := readWebSocketResponse(t, conn, wsTestTimeout)
 	if welcome.Type != "welcome" {
 		conn.Close()
 		t.Fatalf("expected welcome message, got type=%q", welcome.Type)
@@ -694,36 +690,25 @@ func dialWebSocket(t *testing.T, base string) *websocket.Conn {
 
 // sendWSRequest sends a typed WebSocket request and returns the immediate
 // response (the ack/reply for that request ID).
-func sendWSRequest(t *testing.T, conn *websocket.Conn, msgType string, data interface{}) *api.WebSocketResponse {
+func sendWSRequest(t *testing.T, conn *websocket.Conn, msgType string, data interface{}) *wsResponse {
 	t.Helper()
 	reqID := fmt.Sprintf("test-%d", time.Now().UnixNano())
 
-	raw, err := json.Marshal(data)
-	if err != nil {
-		t.Fatalf("marshalling WS request data failed: %v", err)
-	}
-
-	req := api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      reqID,
 		Version: api.WSCurrentVersion,
 		Type:    msgType,
-		Data:    raw,
+		Data:    data,
 	}
 
-	if err := conn.WriteJSON(req); err != nil {
-		t.Fatalf("WriteJSON failed: %v", err)
-	}
+	sendWebSocketRequest(t, conn, req)
 
 	// Read until we get a message with our request ID
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-		var resp api.WebSocketResponse
-		if err := conn.ReadJSON(&resp); err != nil {
-			t.Fatalf("ReadJSON failed: %v", err)
-		}
+		resp := readWebSocketResponse(t, conn, 5*time.Second)
 		if resp.ID != nil && *resp.ID == reqID {
-			return &resp
+			return resp
 		}
 	}
 	t.Fatalf("timed out waiting for response to request %s", reqID)
@@ -828,9 +813,9 @@ func TestSwUpdateInfoViaWebSocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var infos []api.SwUpdateInfo
+	var infos []fusionpb.SwUpdateInfo
 	if err := json.Unmarshal(raw, &infos); err != nil {
-		t.Fatalf("response data is not a []SwUpdateInfo: %v — raw: %s", err, string(raw))
+		t.Fatalf("response data is not a []fusionpb.SwUpdateInfo: %v — raw: %s", err, string(raw))
 	}
 
 	// Each entry must have the expected fields present (even if empty strings on
@@ -838,12 +823,12 @@ func TestSwUpdateInfoViaWebSocket(t *testing.T) {
 	for i, info := range infos {
 		// All fields are strings; we just confirm the struct decoded without
 		// unexpected types by checking at least one field path exists.
-		_ = info.SerialNumber         // string
-		_ = info.CurrentBundleVersion // string
-		_ = info.Status               // string
-		_ = info.BootPartition        // string
-		_ = info.UpdatedAt            // string
-		t.Logf("node[%d]: serial=%q status=%q bundle=%q", i, info.SerialNumber, info.Status, info.CurrentBundleVersion)
+		_ = info.GetSerialNumber()
+		_ = info.GetCurrentBundleVersion()
+		_ = info.GetStatus()
+		_ = info.GetBootPartition()
+		_ = info.GetUpdatedAt()
+		t.Logf("node[%d]: serial=%q status=%q bundle=%q", i, info.GetSerialNumber(), info.GetStatus(), info.GetCurrentBundleVersion())
 	}
 }
 
@@ -881,26 +866,26 @@ func TestListSoftwareUpdatesViaWebSocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var bundles []api.SoftwareUpdateSync
+	var bundles []fusionpb.SoftwareUpdateBundle
 	if err := json.Unmarshal(raw, &bundles); err != nil {
-		t.Fatalf("response data is not a []SoftwareUpdateSync: %v — raw: %s", err, string(raw))
+		t.Fatalf("response data is not a []fusionpb.SoftwareUpdateBundle: %v — raw: %s", err, string(raw))
 	}
 
 	// If bundles are present, verify required fields are non-empty.
 	for i, b := range bundles {
-		if b.Filename == "" {
+		if b.GetFilename() == "" {
 			t.Errorf("bundle[%d]: Filename is empty", i)
 		}
-		if b.Checksum == "" {
+		if b.GetChecksum() == "" {
 			t.Errorf("bundle[%d]: Checksum is empty", i)
 		}
-		if b.SizeBytes <= 0 {
-			t.Errorf("bundle[%d]: SizeBytes is %d, want > 0", i, b.SizeBytes)
+		if b.GetSizeBytes() <= 0 {
+			t.Errorf("bundle[%d]: SizeBytes is %d, want > 0", i, b.GetSizeBytes())
 		}
-		if b.Uploaded.IsZero() {
+		if b.GetUploaded() == nil || b.GetUploaded().AsTime().IsZero() {
 			t.Errorf("bundle[%d]: Uploaded timestamp is zero", i)
 		}
-		t.Logf("bundle[%d]: filename=%q checksum=%s size=%d source=%s", i, b.Filename, b.Checksum, b.SizeBytes, b.SourceIP)
+		t.Logf("bundle[%d]: filename=%q checksum=%s size=%d source=%s", i, b.GetFilename(), b.GetChecksum(), b.GetSizeBytes(), b.GetSourceIp())
 	}
 }
 
@@ -933,23 +918,23 @@ func TestListSoftwareUpdatesViaWebSocketAfterUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var bundles []api.SoftwareUpdateSync
+	var bundles []fusionpb.SoftwareUpdateBundle
 	if err := json.Unmarshal(raw, &bundles); err != nil {
-		t.Fatalf("response data is not a []SoftwareUpdateSync: %v", err)
+		t.Fatalf("response data is not a []fusionpb.SoftwareUpdateBundle: %v", err)
 	}
 
 	// The uploaded bundle must appear in the list
 	found := false
 	for _, b := range bundles {
-		if b.Filename == filename {
+		if b.GetFilename() == filename {
 			found = true
-			if !strings.EqualFold(b.Checksum, checksum) {
-				t.Errorf("checksum mismatch: got %q want %q", b.Checksum, checksum)
+			if !strings.EqualFold(b.GetChecksum(), checksum) {
+				t.Errorf("checksum mismatch: got %q want %q", b.GetChecksum(), checksum)
 			}
-			if b.SizeBytes != int64(len(bundleData)) {
-				t.Errorf("size_bytes mismatch: got %d want %d", b.SizeBytes, len(bundleData))
+			if b.GetSizeBytes() != int64(len(bundleData)) {
+				t.Errorf("size_bytes mismatch: got %d want %d", b.GetSizeBytes(), len(bundleData))
 			}
-			if b.Uploaded.IsZero() {
+			if b.GetUploaded() == nil || b.GetUploaded().AsTime().IsZero() {
 				t.Error("Uploaded timestamp is zero")
 			}
 			break
@@ -992,7 +977,7 @@ func TestSoftwareUpdateProgressReceivedAfterTrigger(t *testing.T) {
 	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		var push api.WebSocketResponse
+		var push wsResponse
 		if err := conn.ReadJSON(&push); err != nil {
 			// Deadline reached or connection closed
 			break
@@ -1037,7 +1022,7 @@ func TestSoftwareUpdateProgressMessageFormat(t *testing.T) {
 
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	for {
-		var push api.WebSocketResponse
+		var push wsResponse
 		if err := conn.ReadJSON(&push); err != nil {
 			// Timeout - no progress in flight, skip
 			t.Skip("no update_progress push received within 5s — no update in progress")

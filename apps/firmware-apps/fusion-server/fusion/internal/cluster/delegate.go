@@ -405,7 +405,11 @@ func (d *ClusterDelegate) handleVersionUpdate(message *api.NotifyMessage) {
 	}
 
 	remote := message.VersionUpdate
-	localVersion := localMetadata.Version
+	localVersion := api.Version{
+		Epoch:   localMetadata.GetVersion().GetEpoch(),
+		Counter: localMetadata.GetVersion().GetCounter(),
+		NodeID:  localMetadata.GetVersion().GetNodeId(),
+	}
 	remoteVersion := remote.Version
 
 	if localMetadata.Hash == remote.Hash {
@@ -536,7 +540,7 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 	}
 
 	// Clean up any stale .swu files whose checksum differs from the incoming bundle.
-	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Checksum, logging.GetLogger())
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.GetChecksum(), logging.GetLogger())
 
 	// Skip self-originated messages (uploader already has the file)
 	if d.appConfig.NodeName == message.Node {
@@ -545,38 +549,38 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 	}
 
 	// Check if we already have this file
-	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.Filename)
+	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, message.SoftwareUpdate.GetFilename())
 	if _, err := os.Stat(finalPath); err == nil {
 		// File exists, but we need to check if it's the same version
-		logger.Debug("[SoftwareUpdateAvailable] File %s exists locally, checking checksum", message.SoftwareUpdate.Filename)
+		logger.Debug("[SoftwareUpdateAvailable] File %s exists locally, checking checksum", message.SoftwareUpdate.GetFilename())
 
 		// Calculate checksum of existing file
 		if existingChecksum, csErr := d.calculateFileChecksum(finalPath); csErr != nil {
 			logger.Warn("[SoftwareUpdateAvailable] Could not checksum existing file %s: %v — proceeding with download", finalPath, csErr)
-		} else if strings.EqualFold(existingChecksum, message.SoftwareUpdate.Checksum) {
+		} else if strings.EqualFold(existingChecksum, message.SoftwareUpdate.GetChecksum()) {
 			// Checksums match - we already have the correct file
 			logger.Debug("[SoftwareUpdateAvailable] File %s already up-to-date (checksum: %s), skipping download",
-				message.SoftwareUpdate.Filename, existingChecksum)
+				message.SoftwareUpdate.GetFilename(), existingChecksum)
 
 			// Send acknowledgment if sync ID is provided since we already have the correct file
-			if message.SoftwareUpdate.SyncID != "" {
+			if message.SoftwareUpdate.GetSyncId() != "" {
 				go func() {
-					d.sendSyncAck(message.SoftwareUpdate.SyncID, message.SoftwareUpdate.Filename,
-						message.SoftwareUpdate.Checksum, true, "")
+					d.sendSyncAck(message.SoftwareUpdate.GetSyncId(), message.SoftwareUpdate.GetFilename(),
+						message.SoftwareUpdate.GetChecksum(), true, "")
 				}()
 			}
 			return
 		} else {
 			// Checksums differ - need to download the new version
 			logger.Debug("[SoftwareUpdateAvailable] File %s exists but checksum differs (local: %s, remote: %s) — downloading update",
-				message.SoftwareUpdate.Filename, existingChecksum, message.SoftwareUpdate.Checksum)
+				message.SoftwareUpdate.GetFilename(), existingChecksum, message.SoftwareUpdate.GetChecksum())
 		}
 	}
 
 	// Trigger Software Update sync in background
 	go func() {
 		logger.Debug("[SoftwareUpdateSync] Starting background sync for %s from %s",
-			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SourceIP)
+			message.SoftwareUpdate.GetFilename(), message.SoftwareUpdate.GetSourceIp())
 
 		// // Add 10-second delay for testing
 		// logger.Debug("[SoftwareUpdateSync] Adding 30-second delay for testing purposes")
@@ -585,21 +589,21 @@ func (d *ClusterDelegate) handleSoftwareUpdateAvailable(message *api.NotifyMessa
 
 		if err := d.persistence.SyncSoftwareUpdateFile(message.SoftwareUpdate); err != nil {
 			logger.Error("[SoftwareUpdateSync] Failed to sync %s from %s: %v",
-				message.SoftwareUpdate.Filename, message.SoftwareUpdate.SourceIP, err)
+				message.SoftwareUpdate.GetFilename(), message.SoftwareUpdate.GetSourceIp(), err)
 
 			// Send failure acknowledgment if sync ID is provided
-			if message.SoftwareUpdate.SyncID != "" {
-				d.sendSyncAck(message.SoftwareUpdate.SyncID, message.SoftwareUpdate.Filename,
-					message.SoftwareUpdate.Checksum, false, err.Error())
+			if message.SoftwareUpdate.GetSyncId() != "" {
+				d.sendSyncAck(message.SoftwareUpdate.GetSyncId(), message.SoftwareUpdate.GetFilename(),
+					message.SoftwareUpdate.GetChecksum(), false, err.Error())
 			}
 		} else {
 			logger.Debug("[SoftwareUpdateSync] Successfully synced %s from %s",
-				message.SoftwareUpdate.Filename, message.SoftwareUpdate.SourceIP)
+				message.SoftwareUpdate.GetFilename(), message.SoftwareUpdate.GetSourceIp())
 
 			// Send success acknowledgment if sync ID is provided
-			if message.SoftwareUpdate.SyncID != "" {
-				d.sendSyncAck(message.SoftwareUpdate.SyncID, message.SoftwareUpdate.Filename,
-					message.SoftwareUpdate.Checksum, true, "")
+			if message.SoftwareUpdate.GetSyncId() != "" {
+				d.sendSyncAck(message.SoftwareUpdate.GetSyncId(), message.SoftwareUpdate.GetFilename(),
+					message.SoftwareUpdate.GetChecksum(), true, "")
 			}
 		}
 	}()

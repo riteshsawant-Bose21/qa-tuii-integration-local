@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -39,7 +40,7 @@ type StateSummary struct {
 }
 
 type databaseMetadataEnvelope struct {
-	Metadata *api.DatabaseMetadata `json:"metadata"`
+	Metadata *fusionpb.DatabaseMetadata `json:"metadata"`
 }
 
 type dataRepairState struct {
@@ -895,8 +896,8 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			continue
 		}
 
-		var metadata api.DatabaseMetadata
-		if err := json.Unmarshal(body, &metadata); err != nil || (metadata == api.DatabaseMetadata{}) {
+		var metadata fusionpb.DatabaseMetadata
+		if err := json.Unmarshal(body, &metadata); err != nil || (metadata.Version == nil && metadata.ActiveSnapshot == "" && metadata.Hash == "" && !metadata.Valid) {
 			var envelope databaseMetadataEnvelope
 			if envErr := json.Unmarshal(body, &envelope); envErr != nil || envelope.Metadata == nil {
 				if err != nil {
@@ -908,8 +909,10 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			}
 			metadata = *envelope.Metadata
 		}
-		if metadata.Version.NodeID == "" {
-			metadata.Version.NodeID = member.Name
+		if metadata.Version == nil {
+			metadata.Version = &fusionpb.VersionInfo{NodeId: member.Name}
+		} else if metadata.Version.NodeId == "" {
+			metadata.Version.NodeId = member.Name
 		}
 
 		memberMetadata = append(memberMetadata, api.MemberMetadata{Member: member, Metadata: metadata})
@@ -993,10 +996,10 @@ func (sm *StateManager) validateData() bool {
 }
 
 func memberMetadataLess(a, b api.MemberMetadata) bool {
-	if a.Metadata.Version.Less(b.Metadata.Version) {
+	if apiVersionFromProto(a.Metadata.Version).Less(apiVersionFromProto(b.Metadata.Version)) {
 		return true
 	}
-	if b.Metadata.Version.Less(a.Metadata.Version) {
+	if apiVersionFromProto(b.Metadata.Version).Less(apiVersionFromProto(a.Metadata.Version)) {
 		return false
 	}
 	if a.Metadata.Hash != b.Metadata.Hash {

@@ -154,7 +154,7 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *fusionpb.WebSo
 		return createErrorResponse(&request.Id, api.WSCodeMissingDeviceID, "Missing device_id in payload"), nil
 	}
 
-	patch := api.DevicePatch{
+	patch := fusionpb.DevicePatch{
 		Id:       payload.Id,
 		Location: payload.Location,
 		Name:     payload.Name,
@@ -275,7 +275,7 @@ func (h *Handler) handleStartUpdate(request *fusionpb.WebSocketRequest) (*fusion
 }
 
 // getDevicesList retrieves all devices
-func (h *Handler) getDevicesList() ([]api.DeviceInfo, error) {
+func (h *Handler) getDevicesList() ([]fusionpb.DeviceInfo, error) {
 
 	devicesInfo := h.clusterTransport.GetAllDevicesInfo()
 
@@ -284,7 +284,7 @@ func (h *Handler) getDevicesList() ([]api.DeviceInfo, error) {
 }
 
 // getDeviceByID retrieves a specific device by ID
-func (h *Handler) getDeviceByID(deviceID string) (*api.DeviceInfo, error) {
+func (h *Handler) getDeviceByID(deviceID string) (*fusionpb.DeviceInfo, error) {
 
 	// Search all cluster devices
 	allDevices := h.clusterTransport.GetAllDevicesInfo()
@@ -301,6 +301,6 @@ func (h *Handler) getDeviceByID(deviceID string) (*api.DeviceInfo, error) {
 }
 
 // updateDeviceInfo updates device information
-func (h *Handler) updateDeviceInfo(deviceID string, patch *api.DevicePatch) error {
+func (h *Handler) updateDeviceInfo(deviceID string, patch *fusionpb.DevicePatch) error {
 	return h.clusterTransport.UpdateDeviceInfo(deviceID, patch)
 }

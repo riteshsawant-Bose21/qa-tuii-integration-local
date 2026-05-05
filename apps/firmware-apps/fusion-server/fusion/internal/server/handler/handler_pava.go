@@ -63,7 +63,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Filter
-	filtered := make([]*api.AudioMetadata, 0, len(metas))
+	filtered := make([]*fusionpb.AudioMetadata, 0, len(metas))
 	for _, m := range metas {
 		// Build a lowercase set of tags on the item
 		itemTags := make(map[string]struct{}, len(m.Tags))
@@ -255,13 +255,13 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build metadata record
-	meta := &api.AudioMetadata{
+	meta := &fusionpb.AudioMetadata{
 		Id:          id,
 		OrigName:    origName,
 		DisplayName: displayName,
 		Filename:    onDiskName,
 		MimeType:    mimeType,
-		Uploaded:    time.Now().UTC(),
+		Uploaded:    timestamppb.New(time.Now().UTC()),
 		SizeBytes:   totalSize,
 		Tags:        normalized,
 		Checksum:    checksum,
@@ -492,7 +492,7 @@ func writePAVAProtoJSONWithStatus(w http.ResponseWriter, status int, msg proto.M
 	return err
 }
 
-func audioMetadataToProto(meta *api.AudioMetadata) *fusionpb.AudioMetadata {
+func audioMetadataToProto(meta *fusionpb.AudioMetadata) *fusionpb.AudioMetadata {
 	if meta == nil {
 		return nil
 	}
@@ -503,7 +503,7 @@ func audioMetadataToProto(meta *api.AudioMetadata) *fusionpb.AudioMetadata {
 		DisplayName: meta.DisplayName,
 		Filename:    meta.Filename,
 		MimeType:    meta.MimeType,
-		Uploaded:    timestamppb.New(meta.Uploaded),
+		Uploaded:    meta.Uploaded,
 		Duration:    int64(meta.Duration),
 		SizeBytes:   meta.SizeBytes,
 		Tags:        append([]string(nil), meta.Tags...),
@@ -511,7 +511,7 @@ func audioMetadataToProto(meta *api.AudioMetadata) *fusionpb.AudioMetadata {
 	}
 }
 
-func audioMetadataListToProto(metas []*api.AudioMetadata) []*fusionpb.AudioMetadata {
+func audioMetadataListToProto(metas []*fusionpb.AudioMetadata) []*fusionpb.AudioMetadata {
 	out := make([]*fusionpb.AudioMetadata, 0, len(metas))
 	for _, meta := range metas {
 		out = append(out, audioMetadataToProto(meta))

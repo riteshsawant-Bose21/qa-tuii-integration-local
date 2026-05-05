@@ -627,7 +627,11 @@ func TestNotifyMsgVersionUpdateIgnoresSameHash(t *testing.T) {
 		api.NotifyOpVersionUpdate,
 		"peer-node",
 		api.WithVersionUpdate(&api.VersionUpdate{
-			Version: meta.Version,
+			Version: api.Version{
+				Epoch:   meta.GetVersion().GetEpoch(),
+				Counter: meta.GetVersion().GetCounter(),
+				NodeID:  meta.GetVersion().GetNodeId(),
+			},
 			Hash:    meta.Hash,
 			NodeID:  "peer-node",
 		}),

@@ -27,6 +27,18 @@ const (
 	defaultMaxPriority = 100
 )
 
+type scheduledMessage struct {
+	ID          string               `json:"id"`
+	Description string               `json:"description"`
+	CronExpr    string               `json:"cron_expr"`
+	StartAt     time.Time            `json:"start_at"`
+	EndAt       time.Time            `json:"end_at"`
+	Recurrence  *api.RecurringWindow `json:"recurrence,omitempty"`
+	MessageID   string               `json:"message_id"`
+	Priority    int64                `json:"priority"`
+	Zones       []string             `json:"zones"`
+}
+
 // HandleTriggerMessage handles triggering the playback of an audio message
 func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 
@@ -100,7 +112,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 	logger := logging.GetLogger()
 
 	tasks := tm.ListTasks()
-	messages := make([]api.TaskMessage, 0, len(tasks))
+	messages := make([]scheduledMessage, 0, len(tasks))
 
 	for _, t := range tasks {
 		if t.Type != api.TaskTypeMessage {
@@ -156,7 +168,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 
-		m := api.TaskMessage{
+		m := scheduledMessage{
 			ID:          t.ID,
 			MessageID:   msgID,
 			Description: t.Description,
@@ -191,7 +203,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		return
 	}
 
-	taskMessage := api.TaskMessage{
+	taskMessage := scheduledMessage{
 		ID:          request.Id,
 		Description: request.Description,
 		CronExpr:    request.CronExpr,

@@ -20,7 +20,7 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var info api.SwUpdateInfo
+	var info fusionpb.SwUpdateInfo
 	data, err := os.ReadFile(api.SwUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
@@ -28,24 +28,8 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
 	}
 
-	if err := writeProtoJSON(w, swUpdateInfoToProto(info)); err != nil {
+	if err := writeProtoJSON(w, &info); err != nil {
 		logging.GetLogger().Error("Error encoding sw update info: %v", err)
-	}
-}
-
-func swUpdateInfoToProto(info api.SwUpdateInfo) *fusionpb.SwUpdateInfo {
-	return &fusionpb.SwUpdateInfo{
-		SerialNumber:          info.SerialNumber,
-		CurrentBundleVersion:  info.CurrentBundleVersion,
-		PreviousBundleVersion: info.PreviousBundleVersion,
-		Mount:                 info.Mount,
-		PreviousMount:         info.PreviousMount,
-		Status:                info.Status,
-		CurrentState:          info.CurrentState,
-		BootPartition:         info.BootPartition,
-		PreviousBootPartition: info.PreviousBootPartition,
-		Error:                 info.Error,
-		UpdatedAt:             info.UpdatedAt,
 	}
 }
 

@@ -207,39 +207,6 @@ func decodeTypedJSON(input any, target proto.Message) error {
 	return serverProtoJSONUnmarshalOptions.Unmarshal(data, target)
 }
 
-func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
-	return &fusionpb.DeviceInfo{
-		Address:                  info.Address,
-		Id:                       info.Id,
-		Location:                 info.Location,
-		Name:                     info.Name,
-		ModelName:                info.ModelName,
-		MacAddress:               info.MacAddress,
-		SerialNumber:             info.SerialNumber,
-		IsPrimary:                info.IsPrimaryNode,
-		FirmwareVersion:          info.SoftwareVersion,
-		IsDeviceCertificateValid: info.IsDeviceCertificateValid,
-	}
-}
-
-func devicePatchFromProto(patch *fusionpb.DevicePatch) api.DevicePatch {
-	if patch == nil {
-		return api.DevicePatch{}
-	}
-
-	var out api.DevicePatch
-	if patch.Id != nil {
-		out.Id = patch.Id
-	}
-	if patch.Location != nil {
-		out.Location = patch.Location
-	}
-	if patch.Name != nil {
-		out.Name = patch.Name
-	}
-	return out
-}
-
 func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
@@ -250,7 +217,8 @@ func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 		Devices: make([]*fusionpb.DeviceInfo, 0, len(info)),
 	}
 	for _, device := range info {
-		response.Devices = append(response.Devices, deviceInfoToProto(device))
+		deviceCopy := device
+		response.Devices = append(response.Devices, &deviceCopy)
 	}
 
 	if err := writeProtoJSON(w, response); err != nil {
@@ -265,7 +233,7 @@ func (s *FusionServer) GetDeviceInfoLocal(w http.ResponseWriter, r *http.Request
 
 	info := s.handler.HandleGetDeviceInfo()
 
-	if err := writeProtoJSON(w, deviceInfoToProto(info)); err != nil {
+	if err := writeProtoJSON(w, &info); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding device info: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -294,8 +262,7 @@ func (c *FusionServer) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	patch := devicePatchFromProto(&patchProto)
-	if err := c.handler.HandleUpdateDeviceInfo(deviceId, patch); err != nil {
+	if err := c.handler.HandleUpdateDeviceInfo(deviceId, patchProto); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -321,8 +288,7 @@ func (c *FusionServer) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	patch := devicePatchFromProto(&patchProto)
-	if err := c.handler.HandleUpdateDeviceInfoLocal(patch); err != nil {
+	if err := c.handler.HandleUpdateDeviceInfoLocal(patchProto); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

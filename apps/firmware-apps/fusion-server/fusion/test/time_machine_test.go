@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net"
@@ -527,13 +528,7 @@ func TestTimeMachineRejectOldEpochUpdatesAfterActivation(t *testing.T) {
 	setStateValue(t, "foo", 111)
 
 	// Send a stale update with older epoch
-	staleUpdate := `{"foo":123}`
-
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer([]byte(staleUpdate)))
-	if err != nil {
-		t.Fatalf("Failed sending stale update: %v", err)
-	}
-	resp.Body.Close()
+	patchConfigViaWebSocket(t, snapServerAddr, map[string]any{"foo": 123})
 
 	// Verify value is unchanged
 	val := getStateValue(t, "foo")
@@ -573,7 +568,7 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	// Immediate local GET to ensure the write succeeded locally
 	localVal := getStateValue(t, "foo_new")
 	if asInt(localVal) != 999 {
-		t.Fatalf("Local value write failed: expected 999, got %v (endpoint /value may not be applying writes)",
+		t.Fatalf("Local value write failed: expected 999, got %v",
 			localVal)
 	}
 
@@ -640,24 +635,15 @@ func getClusterEpochs(t *testing.T) []int64 {
 			t.Fatalf("Metadata returned %d: %s", resp.StatusCode, string(body))
 		}
 
-		var metaResp struct {
-			Metadata struct {
-				Version struct {
-					Epoch   int64  `json:"epoch"`
-					Counter int64  `json:"counter"`
-					NodeID  string `json:"node_id"`
-				} `json:"version"`
-				ActiveSnapshot string `json:"active_snapshot"`
-				Hash           string `json:"hash"`
-				Valid          bool   `json:"valid"`
-			} `json:"metadata"`
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&metaResp); err != nil {
+		var metaResp fusionpb.DatabaseMetadataResponse
+		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
 			t.Fatalf("Failed to decode metadata JSON: %v", err)
 		}
+		if metaResp.GetMetadata() == nil || metaResp.GetMetadata().GetVersion() == nil {
+			t.Fatalf("Metadata response missing version payload from %s", url)
+		}
 
-		epochs = append(epochs, metaResp.Metadata.Version.Epoch)
+		epochs = append(epochs, int64(metaResp.GetMetadata().GetVersion().GetEpoch()))
 	}
 
 	return epochs
@@ -1019,17 +1005,12 @@ func getClusterActiveSnapshots(t *testing.T) []string {
 		}
 		defer resp.Body.Close()
 
-		var metaResp struct {
-			Metadata struct {
-				ActiveSnapshot string `json:"active_snapshot"`
-			} `json:"metadata"`
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&metaResp); err != nil {
+		var metaResp fusionpb.DatabaseMetadataResponse
+		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
 			t.Fatalf("Decode metadata: %v", err)
 		}
 
-		out = append(out, metaResp.Metadata.ActiveSnapshot)
+		out = append(out, metaResp.GetMetadata().GetActiveSnapshot())
 	}
 
 	return out
@@ -1225,7 +1206,7 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 	//
 	// This is realistic because memberlist gossip does not guarantee ordering.
 	//
-	patchStateValue(t, "ooom_key", 123)
+	patchConfigViaWebSocket(t, snapServerAddr, map[string]any{"ooom_key": 123})
 
 	// Activate snapshot
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)

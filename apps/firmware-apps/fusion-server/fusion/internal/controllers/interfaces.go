@@ -1,14 +1,14 @@
 package controllers
 
 import (
-	"fusion/internal/api"
+	fusionpb "fusion/internal/gen/proto/fusion"
 )
 
 // For Handler to use
 type ControllerManagerInterface interface {
 	// HTTP API support
-	GetActiveControllers() []*api.ControllerInfo
-	GetControllerByID(id string) (*api.ControllerInfo, error)
+	GetActiveControllers() []*fusionpb.ControllerInfo
+	GetControllerByID(id string) (*fusionpb.ControllerInfo, error)
 
 	// Wink command execution - TODO
 	StartWinkCommand(controllerID string) error

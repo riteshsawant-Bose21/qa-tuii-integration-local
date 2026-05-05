@@ -307,7 +307,7 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 			Version: &fusionpb.VersionInfo{
 				Epoch:   metadata.Version.Epoch,
 				Counter: metadata.Version.Counter,
-				NodeId:  metadata.Version.NodeID,
+				NodeId:  metadata.Version.NodeId,
 			},
 			ActiveSnapshot: metadata.ActiveSnapshot,
 			Hash:           metadata.Hash,
@@ -585,7 +585,7 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, controller := range result {
 		response.Controllers = append(response.Controllers, &fusionpb.ControllerInfo{
-			Id:      controller.ID,
+			Id:      controller.Id,
 			Name:    controller.Name,
 			Address: controller.Address,
 			Version: controller.Version,
@@ -625,7 +625,7 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	response := &fusionpb.ControllerInfo{
-		Id:      ctrl.ID,
+		Id:      ctrl.Id,
 		Name:    ctrl.Name,
 		Address: ctrl.Address,
 		Version: ctrl.Version,
