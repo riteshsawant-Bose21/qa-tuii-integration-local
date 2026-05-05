@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 
@@ -92,30 +91,12 @@ class SystemPage extends StatelessWidget {
               allowUndock: false,
               dockItemWidget: SchematicProperties(),
             ),
-            DockItemConfig(
+            const DockItemConfig(
               id: "6",
               title: "COST CALCULATOR",
               side: "right",
               allowUndock: true,
-              dockItemWidget: CostCalculatorScreen(
-                speakers: serviceLocator<ProjectViewModel>().speakers,
-                sources: serviceLocator<ProjectViewModel>().sources,
-                controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                racks:
-                    serviceLocator<ProjectViewModel>().genericHardwareComponents
-                        .where(
-                          (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                        )
-                        .toList(),
-                amplifiers: <Amplifier>[],
-                fusionDevices: <FusionDsp>[],
-                others:
-                    serviceLocator<ProjectViewModel>().genericHardwareComponents
-                        .where(
-                          (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                        )
-                        .toList(),
-              ),
+              dockItemWidget: CostCalculatorScreen(),
             ),
             // DockItemConfig(
             //   id: "8",

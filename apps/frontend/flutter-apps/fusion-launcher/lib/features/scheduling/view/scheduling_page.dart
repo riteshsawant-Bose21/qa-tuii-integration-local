@@ -10,6 +10,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/utils/fusion_utils.dart';
+import '../../../core/widgets/fusion_app_table.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/scheduler_state.dart';
 import '../state/timeline_state.dart';
