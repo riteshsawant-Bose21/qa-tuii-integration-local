@@ -44,6 +44,7 @@ class FusionCanvasPainter extends CustomPainter {
   }
   @override
   void paint(Canvas canvas, Size size) {
+    print("Selected IDs in painter: ${toolState is SelectToolState ? (toolState as SelectToolState).selectedLayerIds : "N/A"}");
     context.read<FusionCanvasStateViewModel>().setCanvasSize(size);
     final DateTime start = DateTime.now();
     // print("*" * 100);

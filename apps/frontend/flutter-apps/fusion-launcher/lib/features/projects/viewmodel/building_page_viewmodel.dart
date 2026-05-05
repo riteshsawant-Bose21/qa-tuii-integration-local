@@ -260,6 +260,30 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
 
     projectVM.setCurrentSelectedHardware(hardware.id);
   }
+
+  List<String> transformLayerIdForSelection({required String layerId, required List<HardwareComponent>? hardwareInFloorWithPosition}) {
+    // return <String>[layerId];
+    if (state.toolbarMode == ToolbarMode.system) {
+      final HardwareComponent? hardware = hardwareInFloorWithPosition?.firstWhereOrNull(
+        (HardwareComponent e) => e.id == layerId,
+      );
+      if (hardware != null) {
+        final String? circuitHardwareIds =
+            serviceLocator<ProjectViewModel>()
+                .getCircuitForHardware(
+                  hardwareId: hardware.id,
+                )
+                ?.id;
+
+        print("Retunning layer ids for selection. hardware id: ${hardware.id}, circuit id: $circuitHardwareIds");
+        return <String>[
+          ...serviceLocator<ProjectViewModel>().getHardwareForCircuit(circuitId: circuitHardwareIds!).map((HardwareComponent e) => e.id),
+          // circuitHardwareIds,
+        ];
+      }
+    }
+    return <String>[layerId];
+  }
 }
 
 class SpeakerPlacementCursorState {

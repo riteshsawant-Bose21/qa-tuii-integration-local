@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/selection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
@@ -22,6 +23,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
+import '../../../fusion_canvas/state/fusion_tool_state.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
@@ -31,6 +33,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/wall_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
 import '../../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
+import '../../../fusion_canvas/viewmodel/tools/fusion_canvas_tool.dart';
 import '../../presentation/project_work_area.dart';
 import '../../viewmodel/building_page_viewmodel.dart';
 
@@ -120,19 +123,44 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                           return AnimatedBuilder(
                             animation: animationController,
                             builder: (BuildContext context, Widget? child) {
+                              final Set<String> selectedIds = <String>{
+                                if (buildingPageViewModel.state.selectedListeningAreaId != null) buildingPageViewModel.state.selectedListeningAreaId!,
+                                if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
+                                if (buildingPageViewModel.state.selectedWallId != null) buildingPageViewModel.state.selectedWallId!,
+                                if (buildingPageViewModel.state.selectedCircuitId != null) //buildingPageViewModel.state.selectedCircuitId!,
+                                  ...serviceLocator<ProjectViewModel>()
+                                          .getHardwareForCircuit(circuitId: buildingPageViewModel.state.selectedCircuitId!)
+                                          .map((HardwareComponent e) => e.id)
+                                          .toList() ??
+                                      <String>[],
+                              };
                               return FusionCanvas(
-                                selectedIds: <String>{
-                                  if (buildingPageViewModel.state.selectedListeningAreaId != null) buildingPageViewModel.state.selectedListeningAreaId!,
-                                  if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
-                                  if (buildingPageViewModel.state.selectedWallId != null) buildingPageViewModel.state.selectedWallId!,
-                                  if (buildingPageViewModel.state.selectedCircuitId != null)
-                                    ...serviceLocator<ProjectViewModel>()
-                                            .getHardwareForCircuit(circuitId: buildingPageViewModel.state.selectedCircuitId!)
-                                            .map((HardwareComponent e) => e.id)
-                                            .toList() ??
-                                        <String>[],
-                                },
-
+                                selectedIds: selectedIds,
+                                tools: <FusionCanvasTool<FusionToolState>>[
+                                  FusionCanvasTool.measureTool,
+                                  FusionCanvasTool.penTool,
+                                  FusionCanvasTool.customDragTool(
+                                    transformSelectedLayerIds: (String layerId) {
+                                      return buildingPageViewModel.transformLayerIdForSelection(
+                                        layerId: layerId,
+                                        hardwareInFloorWithPosition: hardwareInFloorWithPosition,
+                                      );
+                                    },
+                                  ),
+                                  FusionCanvasTool.customSingleSelectionTool(
+                                    SelectionToolParams(
+                                      enableSelect: true,
+                                      enableMultiSelect: false,
+                                      enableMarqueeSelection: false,
+                                      transformSelectedLayerIds: (String layerId) {
+                                        return buildingPageViewModel.transformLayerIdForSelection(
+                                          layerId: layerId,
+                                          hardwareInFloorWithPosition: hardwareInFloorWithPosition,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                                 elements: <FusionBasePainter>[
                                   FusionDottedBgPainter(
                                     color: Colors.grey.shade300,
