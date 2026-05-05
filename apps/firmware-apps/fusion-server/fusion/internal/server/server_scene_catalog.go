@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 )
@@ -24,7 +24,7 @@ func (s *FusionServer) CreateSnapshotDefinition(w http.ResponseWriter, r *http.R
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.SnapshotDefinition
+	var req model.SnapshotDefinition
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -71,7 +71,7 @@ func (s *FusionServer) UpsertSnapshotDefinition(w http.ResponseWriter, r *http.R
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.SnapshotDefinition
+	var req model.SnapshotDefinition
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -130,7 +130,7 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	resp := &fusionpb.SnapshotDefinitionListResponse{
+	resp := &model.SnapshotDefinitionListResponse{
 		Snapshots: snapshots,
 	}
 
@@ -192,12 +192,12 @@ func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scenes := make([]*fusionpb.Scene, 0)
+	scenes := make([]*model.Scene, 0)
 	for _, set := range sceneSets {
 		scenes = append(scenes, set.GetScenes()...)
 	}
 
-	resp := &fusionpb.SceneListResponse{
+	resp := &model.SceneListResponse{
 		Scenes: scenes,
 	}
 
@@ -221,7 +221,7 @@ func (s *FusionServer) ActivateSceneSet(w http.ResponseWriter, r *http.Request) 
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.ActivateSceneSetRequest
+	var req model.ActivateSceneSetRequest
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -261,7 +261,7 @@ func (s *FusionServer) CreateSceneSet(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.SceneSet
+	var req model.SceneSet
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -303,7 +303,7 @@ func (s *FusionServer) UpsertSceneSet(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.SceneSet
+	var req model.SceneSet
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -337,7 +337,7 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.CurrentSceneRequest
+	var req model.CurrentSceneRequest
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -366,9 +366,9 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := &fusionpb.CurrentSceneResponse{
+	resp := &model.CurrentSceneResponse{
 		SetId: set.GetSetId(),
-		CurrentScene: &fusionpb.CurrentSceneMetadata{
+		CurrentScene: &model.CurrentSceneMetadata{
 			SceneId: set.GetCurrentSceneId(),
 			Name:    currentSceneName,
 		},
@@ -392,7 +392,7 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &fusionpb.SceneSetListResponse{
+	resp := &model.SceneSetListResponse{
 		SceneSets: sceneSets,
 	}
 
@@ -485,7 +485,7 @@ func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	resp := &fusionpb.SceneCatalogListResponse{
+	resp := &model.SceneCatalogListResponse{
 		Snapshots: snapshots,
 		SceneSets: sceneSets,
 	}

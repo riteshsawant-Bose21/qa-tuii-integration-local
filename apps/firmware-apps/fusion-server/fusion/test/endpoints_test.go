@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func TestEndpointsEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /endpoints")
 
-	var endpointsResp fusionpb.EndpointListResponse
+	var endpointsResp model.EndpointListResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &endpointsResp), "Expected valid protobuf JSON from GET /endpoints")
 
 	assert.NotEmpty(t, endpointsResp.Routes, "endpoints.routes should be populated")

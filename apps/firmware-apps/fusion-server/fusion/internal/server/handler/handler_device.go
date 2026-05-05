@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -13,19 +13,19 @@ import (
 	"os"
 )
 
-func (h *Handler) HandleGetDevicesInfo() []fusionpb.DeviceInfo {
+func (h *Handler) HandleGetDevicesInfo() []model.DeviceInfo {
 	return h.clusterTransport.GetAllDevicesInfo()
 }
 
-func (h *Handler) HandleGetDeviceInfo() fusionpb.DeviceInfo {
+func (h *Handler) HandleGetDeviceInfo() model.DeviceInfo {
 	return h.clusterTransport.GetDeviceInfoLocal()
 }
 
-func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch fusionpb.DevicePatch) error {
+func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch model.DevicePatch) error {
 	return h.clusterTransport.UpdateDeviceInfo(deviceID, &patch)
 }
 
-func (h *Handler) HandleUpdateDeviceInfoLocal(patch fusionpb.DevicePatch) error {
+func (h *Handler) HandleUpdateDeviceInfoLocal(patch model.DevicePatch) error {
 	return h.clusterTransport.UpdateDeviceInfoLocal(&patch)
 }
 

@@ -7,7 +7,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,7 +24,7 @@ const (
 
 // safeWriteJSON safely marshals with go-json and writes a text frame using the
 // per-connection mutex. This avoids gorilla/websocket's stdlib JSON path.
-func (s *FusionServer) safeWriteProto(conn *websocket.Conn, msg *fusionpb.WebSocketResponse) error {
+func (s *FusionServer) safeWriteProto(conn *websocket.Conn, msg *model.WebSocketResponse) error {
 	data, err := marshalWebSocketProto(msg)
 	if err != nil {
 		return err
@@ -319,10 +319,10 @@ func wsConfigUpdatePayloadData(update *api.ConfigUpdate) (map[string]any, bool, 
 	return cloneObserverDiff(update.Data), true, update.Clear
 }
 
-func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *fusionpb.WebSocketConfigUpdateEvent {
+func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *model.WebSocketConfigUpdateEvent {
 	if snapshot {
 		state, _ := websocketStructFromMap(data)
-		return &fusionpb.WebSocketConfigUpdateEvent{
+		return &model.WebSocketConfigUpdateEvent{
 			Mode:  "snapshot",
 			State: state,
 			Clear: clear,
@@ -330,7 +330,7 @@ func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *fusi
 	}
 
 	updates, _ := websocketStructFromMap(data)
-	return &fusionpb.WebSocketConfigUpdateEvent{
+	return &model.WebSocketConfigUpdateEvent{
 		Mode:    "patch",
 		Updates: updates,
 	}
@@ -413,7 +413,7 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 }
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
-func (s *FusionServer) BroadcastToTopic(topic string, message *fusionpb.WebSocketResponse) error {
+func (s *FusionServer) BroadcastToTopic(topic string, message *model.WebSocketResponse) error {
 	data, err := marshalWebSocketProto(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
@@ -477,7 +477,7 @@ func (s *FusionServer) broadcastGenericNotification(message *api.NotifyMessage) 
 
 // broadcastToAllClients sends a WebSocket response to every connected client,
 // cleaning up any connections that fail during the send.
-func (s *FusionServer) broadcastToAllClients(message *fusionpb.WebSocketResponse) error {
+func (s *FusionServer) broadcastToAllClients(message *model.WebSocketResponse) error {
 	s.wsLock.RLock()
 	clients := make([]*websocket.Conn, 0, len(s.wsClients))
 	for conn := range s.wsClients {

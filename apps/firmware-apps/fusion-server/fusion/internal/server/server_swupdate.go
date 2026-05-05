@@ -8,7 +8,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
@@ -20,7 +20,7 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var info fusionpb.SwUpdateInfo
+	var info model.SwUpdateInfo
 	data, err := os.ReadFile(api.SwUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)

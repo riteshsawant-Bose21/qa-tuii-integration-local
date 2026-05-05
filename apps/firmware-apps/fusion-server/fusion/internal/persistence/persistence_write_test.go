@@ -12,7 +12,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -161,7 +161,7 @@ func TestSaveAudioMetaNoOpDoesNotRewriteDatabase(t *testing.T) {
 	p := newTestPersistence(t, dbPath)
 	defer p.Close()
 
-	meta := &fusionpb.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio 1",
 		Filename:    "audio-1.wav",
@@ -188,7 +188,7 @@ func TestSetDeviceInfoNoOpDoesNotRewriteDatabase(t *testing.T) {
 	defer p.Close()
 
 	name := "Fusion"
-	info := &fusionpb.DevicePatch{Name: &name}
+	info := &model.DevicePatch{Name: &name}
 	require.NoError(t, p.SetDeviceInfo(info))
 	before := stableDBSnapshot(t, p, dbPath)
 

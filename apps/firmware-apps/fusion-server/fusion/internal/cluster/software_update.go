@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"os"
@@ -15,7 +15,7 @@ import (
 )
 
 // GetAllSwUpdateInfo fetches /etc/swupdate from every cluster node.
-func (c *Cluster) GetAllSwUpdateInfo() []*fusionpb.SwUpdateInfo {
+func (c *Cluster) GetAllSwUpdateInfo() []*model.SwUpdateInfo {
 	return fetchFromAdmin(
 		c,
 		c.getSwUpdateInfoLocal,
@@ -24,23 +24,23 @@ func (c *Cluster) GetAllSwUpdateInfo() []*fusionpb.SwUpdateInfo {
 }
 
 // getSwUpdateInfoLocal reads /etc/swupdate on the local node.
-func (c *Cluster) getSwUpdateInfoLocal() *fusionpb.SwUpdateInfo {
+func (c *Cluster) getSwUpdateInfoLocal() *model.SwUpdateInfo {
 	data, err := os.ReadFile(api.SwUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
-		return &fusionpb.SwUpdateInfo{}
+		return &model.SwUpdateInfo{}
 	}
-	var info fusionpb.SwUpdateInfo
+	var info model.SwUpdateInfo
 	if err := json.Unmarshal(data, &info); err != nil {
 		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
-		return &fusionpb.SwUpdateInfo{}
+		return &model.SwUpdateInfo{}
 	}
 	return &info
 }
 
 // GetAllSoftwareUpdateList fetches /mnt/ota bundle list from every cluster node
-func (c *Cluster) GetAllSoftwareUpdateList() []*fusionpb.SoftwareUpdateBundle {
-	var all []*fusionpb.SoftwareUpdateBundle
+func (c *Cluster) GetAllSoftwareUpdateList() []*model.SoftwareUpdateBundle {
+	var all []*model.SoftwareUpdateBundle
 	logger := logging.GetLogger()
 
 	for _, addr := range c.getNodeAdminAddresses() {
@@ -56,7 +56,7 @@ func (c *Cluster) GetAllSoftwareUpdateList() []*fusionpb.SoftwareUpdateBundle {
 			continue
 		}
 
-		var list fusionpb.SoftwareUpdateListResponse
+		var list model.SoftwareUpdateListResponse
 		if err := decodeSlice(resp.Body, &list); err != nil {
 			logger.Error("Decode %s failed: %v", url, err)
 			continue
@@ -68,20 +68,20 @@ func (c *Cluster) GetAllSoftwareUpdateList() []*fusionpb.SoftwareUpdateBundle {
 }
 
 // getSoftwareUpdateListLocal reads the local /mnt/ota directory and returns all
-func (c *Cluster) getSoftwareUpdateListLocal() []*fusionpb.SoftwareUpdateBundle {
+func (c *Cluster) getSoftwareUpdateListLocal() []*model.SoftwareUpdateBundle {
 	logger := logging.GetLogger()
 	sourceIP := c.memberlist.LocalNode().Addr.String()
 
 	entries, err := os.ReadDir(api.SoftwareUpdateOTAPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []*fusionpb.SoftwareUpdateBundle{}
+			return []*model.SoftwareUpdateBundle{}
 		}
 		logger.Error("SoftwareUpdate list (local): readdir %s: %v", api.SoftwareUpdateOTAPath, err)
-		return []*fusionpb.SoftwareUpdateBundle{}
+		return []*model.SoftwareUpdateBundle{}
 	}
 
-	var bundles []*fusionpb.SoftwareUpdateBundle
+	var bundles []*model.SoftwareUpdateBundle
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -104,7 +104,7 @@ func (c *Cluster) getSoftwareUpdateListLocal() []*fusionpb.SoftwareUpdateBundle 
 			continue
 		}
 
-		bundles = append(bundles, &fusionpb.SoftwareUpdateBundle{
+		bundles = append(bundles, &model.SoftwareUpdateBundle{
 			Filename:  name,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),

@@ -63,24 +63,46 @@ if [ -z "$instances" ]; then
     exit 0
 fi
 
-log "Deleting config data in instances with prefix: $PREFIX"
+log "Clearing config data in instances with prefix: $PREFIX"
 
+log "Phase 1/3: stopping fusion-server on all matching instances"
+for instance in $instances; do
+    log "Stopping fusion-server on instance: $instance"
+
+    if $SILENT; then
+        multipass exec "$instance" -- sudo systemctl stop fusion-server >/dev/null 2>&1
+    else
+        multipass exec "$instance" -- sudo systemctl stop fusion-server
+    fi
+done
+
+log "Phase 2/3: deleting local BoltDB state on all matching instances"
 for instance in $instances; do
     log "Deleting config data on instance: $instance"
-    
+
     if $SILENT; then
-        # silence all internal output
         multipass exec "$instance" -- sudo bash -c '
-            systemctl stop fusion-server
             rm -f /persist/fusion/fusion.db
-            systemctl set-environment FUSION_PROFILE=true
+        ' >/dev/null 2>&1
+    else
+        multipass exec "$instance" -- sudo bash -c '
+            rm -f /persist/fusion/fusion.db
+        '
+    fi
+done
+
+log "Phase 3/3: starting fusion-server on all matching instances"
+for instance in $instances; do
+    log "Starting fusion-server on instance: $instance"
+
+    if $SILENT; then
+        multipass exec "$instance" -- sudo bash -c '
+            systemctl unset-environment FUSION_PROFILE
             systemctl start fusion-server
         ' >/dev/null 2>&1
     else
         multipass exec "$instance" -- sudo bash -c '
-            systemctl stop fusion-server
-            rm -f /persist/fusion/fusion.db
-            systemctl set-environment FUSION_PROFILE=true
+            systemctl unset-environment FUSION_PROFILE
             systemctl start fusion-server
             systemctl status fusion-server --no-pager
         '

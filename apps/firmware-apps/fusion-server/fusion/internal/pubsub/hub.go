@@ -7,7 +7,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"sync"
 	"time"
@@ -431,12 +431,12 @@ func cloneNotifyMessageForBroadcast(message *api.NotifyMessage) *api.NotifyMessa
 		cloned.ConfigValue = &cfg
 	}
 	if message.DeviceInfo != nil {
-		cloned.DeviceInfo = proto.Clone(message.DeviceInfo).(*fusionpb.DeviceInfo)
+		cloned.DeviceInfo = proto.Clone(message.DeviceInfo).(*model.DeviceInfo)
 	}
 	return &cloned
 }
 
-func (h *Hub) BroadcastVersionUpdate(node string, metadata *fusionpb.DatabaseMetadata) {
+func (h *Hub) BroadcastVersionUpdate(node string, metadata *model.DatabaseMetadata) {
 	if metadata == nil || h.transport == nil || h.transport.LocalNode() == nil {
 		return
 	}

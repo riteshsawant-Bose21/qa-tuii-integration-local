@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/pubsub"
 	"net"
 	"sync"
@@ -16,7 +16,7 @@ type ControllerConnection struct {
 	ConnectedAt  time.Time
 	LastActivity time.Time
 	IsIdentified bool
-	Info         *fusionpb.ControllerInfo
+	Info         *model.ControllerInfo
 }
 
 // ControllerManager manages connected wall controllers over TCP.

@@ -9,7 +9,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/controllers"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -94,7 +94,7 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	persistence.SetMetadataNotifier(func(metadata *fusionpb.DatabaseMetadata) {
+	persistence.SetMetadataNotifier(func(metadata *model.DatabaseMetadata) {
 		hub.BroadcastVersionUpdate(config.NodeName, metadata)
 	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
@@ -353,9 +353,6 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.TimeMachineActiveEndpoint, app.Server.GetActiveTimeMachineName)
 	app.registerPublicGET(routes.TimeMachineNameEndpoint, app.Server.GetTimeMachine)
 	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
-	app.registerPublicGET(routes.ValueEndpoint, app.Server.GetValue)
-	app.registerPublicPOST(routes.ValueEndpoint, app.Server.SetValue)
-	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.PatchValue)
 
 	// Snapshots
 	app.registerPublicPOST(routes.SnapshotsEndpoint, app.Server.CreateSnapshotDefinition)
@@ -445,6 +442,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
 
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
+	app.registerPrivatePATCH(routes.StateEndpoint, app.Server.PatchState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
 }
 

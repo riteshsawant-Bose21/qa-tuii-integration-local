@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func TestVersionEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /version")
 
-	var versionResp fusionpb.VersionResponse
+	var versionResp model.VersionResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &versionResp), "Expected valid protobuf JSON from GET /version")
 
 	assert.NotEmpty(t, versionResp.Name, "version.name should be populated")

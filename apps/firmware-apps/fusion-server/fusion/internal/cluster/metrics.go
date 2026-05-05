@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 
 	"github.com/hashicorp/memberlist"
@@ -184,7 +184,7 @@ func (mc *MetricsCollector) GetHealthCheck(w http.ResponseWriter, r *http.Reques
 		statusCode = http.StatusServiceUnavailable
 	}
 
-	resp := &fusionpb.HealthCheckResponse{
+	resp := &model.HealthCheckResponse{
 		Status:        status,
 		NodeHealth:    nodeHealthToProto(health),
 		ClusterHealth: clusterHealth,
@@ -268,12 +268,12 @@ func (mc *MetricsCollector) getCPUUsage() float64 {
 	return 0
 }
 
-func clusterInfoToProto(info ClusterInfo) *fusionpb.ClusterInfo {
-	resp := &fusionpb.ClusterInfo{
+func clusterInfoToProto(info ClusterInfo) *model.ClusterInfo {
+	resp := &model.ClusterInfo{
 		MemberCount:      uint32(info.MemberCount),
 		AliveCount:       uint32(info.AliveCount),
 		LocalNode:        info.LocalNode,
-		Members:          make([]*fusionpb.ClusterMember, 0, len(info.Members)),
+		Members:          make([]*model.ClusterMember, 0, len(info.Members)),
 		SuspectNodes:     uint32(info.SuspectNodes),
 		DeadNodes:        uint32(info.DeadNodes),
 		ClusterHealth:    info.ClusterHealth,
@@ -283,7 +283,7 @@ func clusterInfoToProto(info ClusterInfo) *fusionpb.ClusterInfo {
 		resp.LastUpdateTime = timestamppb.New(info.LastUpdateTime)
 	}
 	for _, member := range info.Members {
-		resp.Members = append(resp.Members, &fusionpb.ClusterMember{
+		resp.Members = append(resp.Members, &model.ClusterMember{
 			Name:    member.Name,
 			Address: member.Address,
 			Port:    uint32(member.Port),
@@ -293,8 +293,8 @@ func clusterInfoToProto(info ClusterInfo) *fusionpb.ClusterInfo {
 	return resp
 }
 
-func nodeHealthToProto(health NodeHealth) *fusionpb.NodeHealth {
-	resp := &fusionpb.NodeHealth{
+func nodeHealthToProto(health NodeHealth) *model.NodeHealth {
+	resp := &model.NodeHealth{
 		Status:           health.Status,
 		UptimeSeconds:    health.UptimeSeconds,
 		HealthCheckCount: health.HealthCheckCount,

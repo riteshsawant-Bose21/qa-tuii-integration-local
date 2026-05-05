@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -18,6 +18,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -40,7 +41,7 @@ type StateSummary struct {
 }
 
 type databaseMetadataEnvelope struct {
-	Metadata *fusionpb.DatabaseMetadata `json:"metadata"`
+	Metadata *model.DatabaseMetadata `json:"metadata"`
 }
 
 type dataRepairState struct {
@@ -896,21 +897,20 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			continue
 		}
 
-		var metadata fusionpb.DatabaseMetadata
-		if err := json.Unmarshal(body, &metadata); err != nil || (metadata.Version == nil && metadata.ActiveSnapshot == "" && metadata.Hash == "" && !metadata.Valid) {
-			var envelope databaseMetadataEnvelope
-			if envErr := json.Unmarshal(body, &envelope); envErr != nil || envelope.Metadata == nil {
-				if err != nil {
-					logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
-				} else {
-					logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
-				}
-				continue
-			}
+		var metadata model.DatabaseMetadata
+		var envelope model.DatabaseMetadataResponse
+		if err := protojson.Unmarshal(body, &envelope); err == nil && envelope.Metadata != nil {
 			metadata = *envelope.Metadata
+		} else if err := protojson.Unmarshal(body, &metadata); err != nil || (metadata.Version == nil && metadata.ActiveSnapshot == "" && metadata.Hash == "" && !metadata.Valid) {
+			if err != nil {
+				logger.Warn("Failed to decode metadata from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+			} else {
+				logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
+			}
+			continue
 		}
 		if metadata.Version == nil {
-			metadata.Version = &fusionpb.VersionInfo{NodeId: member.Name}
+			metadata.Version = &model.VersionInfo{NodeId: member.Name}
 		} else if metadata.Version.NodeId == "" {
 			metadata.Version.NodeId = member.Name
 		}

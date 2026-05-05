@@ -5,7 +5,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/scene_catalog"
@@ -212,7 +212,7 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 	return result.Diff, nil
 }
 
-func (h *Handler) persistFeatureDefinitions(snapshots []*fusionpb.SnapshotDefinition, sceneSets []*fusionpb.SceneSet) error {
+func (h *Handler) persistFeatureDefinitions(snapshots []*model.SnapshotDefinition, sceneSets []*model.SceneSet) error {
 	if len(snapshots) > 0 {
 		if err := h.persistence.UpsertSnapshotDefinitions(snapshots); err != nil {
 			return err
@@ -248,8 +248,8 @@ func (h *Handler) persistFeatureDefinitions(snapshots []*fusionpb.SnapshotDefini
 
 func (h *Handler) SplitFeaturePayload(update map[string]any) (
 	config map[string]any,
-	snapshots []*fusionpb.SnapshotDefinition,
-	sceneSets []*fusionpb.SceneSet,
+	snapshots []*model.SnapshotDefinition,
+	sceneSets []*model.SceneSet,
 	err error,
 ) {
 	config = make(map[string]any, len(update))
@@ -293,8 +293,8 @@ func (h *Handler) GetMembers() []*memberlist.Node {
 	return h.clusterTransport.MemberListMembers()
 }
 
-func (h *Handler) GetServerInfo() (*fusionpb.ServerInfoResponse, error) {
-	info := &fusionpb.ServerInfoResponse{
+func (h *Handler) GetServerInfo() (*model.ServerInfoResponse, error) {
+	info := &model.ServerInfoResponse{
 		Name:        "Fusion Server",
 		Version:     version.Version,
 		Commit:      version.Commit,

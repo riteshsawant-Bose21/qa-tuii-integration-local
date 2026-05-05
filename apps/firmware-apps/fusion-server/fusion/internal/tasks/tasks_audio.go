@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -54,7 +54,7 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 
 	logger := logging.GetLogger()
 
-	var req fusionpb.TriggerMessageRequest
+	var req model.TriggerMessageRequest
 	if r.Body != nil {
 		body, readErr := io.ReadAll(r.Body)
 		if readErr != nil {
@@ -197,7 +197,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var request fusionpb.MessageTaskCreateRequest
+	var request model.MessageTaskCreateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
@@ -263,7 +263,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
+	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.ID})
 }
 
 // UpdateScheduleMessageTask handles HTTP PATCH requests to update an existing message task.
@@ -292,7 +292,7 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 	defer r.Body.Close()
 
-	var patch fusionpb.MessageTaskUpdateRequest
+	var patch model.MessageTaskUpdateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return

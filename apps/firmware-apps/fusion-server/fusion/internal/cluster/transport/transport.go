@@ -1,7 +1,7 @@
 package transport
 
 import (
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -15,13 +15,13 @@ type ClusterInterface interface {
 	PostGenericToAdmin(endpoint string, localFn func() error) error
 	FetchGenericWithTargetDevice(deviceID string, endpointTemplate string, localFn func() ([]byte, error), remoteFn func(url string) ([]byte, error)) ([]byte, error)
 	DoGenericToTargetDevice(deviceID, endpointTemplate string, payload []byte, localFn func(payload []byte) error, remoteFn func(payload []byte, url string) error) error
-	GetAllDevicesInfo() []fusionpb.DeviceInfo
-	GetDeviceInfoLocal() fusionpb.DeviceInfo
-	GetAllSwUpdateInfo() []*fusionpb.SwUpdateInfo
-	GetAllSoftwareUpdateList() []*fusionpb.SoftwareUpdateBundle
+	GetAllDevicesInfo() []model.DeviceInfo
+	GetDeviceInfoLocal() model.DeviceInfo
+	GetAllSwUpdateInfo() []*model.SwUpdateInfo
+	GetAllSoftwareUpdateList() []*model.SoftwareUpdateBundle
 
 	//device_id is the id for which the patch needs to be applied.
 	//device_id is also a field in the patch and can be updated.
-	UpdateDeviceInfo(device_id string, patch *fusionpb.DevicePatch) error
-	UpdateDeviceInfoLocal(patch *fusionpb.DevicePatch) error
+	UpdateDeviceInfo(device_id string, patch *model.DevicePatch) error
+	UpdateDeviceInfoLocal(patch *model.DevicePatch) error
 }

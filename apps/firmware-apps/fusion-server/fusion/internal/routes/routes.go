@@ -2,7 +2,7 @@ package routes
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -137,8 +137,6 @@ const (
 	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
 	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
 
-	ValueEndpoint = "/value"
-
 	VersionEndpoint = "/version"
 
 	WebsocketEndpoint = "/ws"
@@ -208,7 +206,7 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
-	if err := writeProtoJSON(w, &fusionpb.EndpointListResponse{Routes: Endpoints}); err != nil {
+	if err := writeProtoJSON(w, &model.EndpointListResponse{Routes: Endpoints}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

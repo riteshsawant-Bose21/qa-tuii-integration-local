@@ -16,7 +16,7 @@ import (
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 
@@ -100,8 +100,8 @@ type VIPApplyStatus struct {
 	CompletedAt *time.Time    `json:"completed_at,omitempty"`
 }
 
-func vipNodeResultToProto(result VIPNodeResult) *fusionpb.VIPNodeResult {
-	resp := &fusionpb.VIPNodeResult{
+func vipNodeResultToProto(result VIPNodeResult) *model.VIPNodeResult {
+	resp := &model.VIPNodeResult{
 		Node:       result.Node,
 		Host:       result.Host,
 		Phase:      result.Phase,
@@ -118,11 +118,11 @@ func vipNodeResultToProto(result VIPNodeResult) *fusionpb.VIPNodeResult {
 	return resp
 }
 
-func vipOperationStatusToProto(status *VIPOperationStatus) *fusionpb.VIPOperationStatus {
+func vipOperationStatusToProto(status *VIPOperationStatus) *model.VIPOperationStatus {
 	if status == nil {
 		return nil
 	}
-	resp := &fusionpb.VIPOperationStatus{
+	resp := &model.VIPOperationStatus{
 		Id:             status.ID,
 		DesiredVip:     status.DesiredVIP,
 		StatusHost:     status.StatusHost,
@@ -130,7 +130,7 @@ func vipOperationStatusToProto(status *VIPOperationStatus) *fusionpb.VIPOperatio
 		ObservedHolder: status.ObservedHolder,
 		Phase:          string(status.Phase),
 		Message:        status.Message,
-		NodeResults:    make(map[string]*fusionpb.VIPNodeResult, len(status.NodeResults)),
+		NodeResults:    make(map[string]*model.VIPNodeResult, len(status.NodeResults)),
 	}
 	if !status.StartedAt.IsZero() {
 		resp.StartedAt = timestamppb.New(status.StartedAt)
@@ -144,8 +144,8 @@ func vipOperationStatusToProto(status *VIPOperationStatus) *fusionpb.VIPOperatio
 	return resp
 }
 
-func vipApplyStatusToProto(status VIPApplyStatus) *fusionpb.VIPApplyStatus {
-	resp := &fusionpb.VIPApplyStatus{
+func vipApplyStatusToProto(status VIPApplyStatus) *model.VIPApplyStatus {
+	resp := &model.VIPApplyStatus{
 		DesiredVip: status.DesiredVIP,
 		Phase:      string(status.Phase),
 		Message:    status.Message,
@@ -1544,7 +1544,7 @@ func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
 		return
 	}
 
-	_ = writeProtoJSON(w, &fusionpb.CurrentVIPResponse{
+	_ = writeProtoJSON(w, &model.CurrentVIPResponse{
 		Local: vipValue,
 		Vip:   vipValue,
 	})
@@ -1587,7 +1587,7 @@ func (m *VIPMonitor) HandleGetVIP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_ = writeProtoJSON(w, &fusionpb.CurrentVIPResponse{
+		_ = writeProtoJSON(w, &model.CurrentVIPResponse{
 			Local: local.String(),
 			Vip:   vipAddr.String(),
 		})

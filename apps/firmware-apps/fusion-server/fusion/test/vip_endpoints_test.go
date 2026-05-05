@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/url"
 	"testing"
@@ -23,7 +23,7 @@ func TestVIPStatusEndpoint(t *testing.T) {
 		t.Fatalf("expected 200 from /devices/vip/status, got %d", resp.StatusCode)
 	}
 
-	var payload fusionpb.VIPOperationStatus
+	var payload model.VIPOperationStatus
 	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode /devices/vip/status response: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestVIPReloadStatusEndpoint(t *testing.T) {
 		t.Fatalf("expected 200 from /device/reload/vip/status, got %d", resp.StatusCode)
 	}
 
-	var payload fusionpb.VIPApplyStatus
+	var payload model.VIPApplyStatus
 	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode reload status response: %v", err)
 	}
@@ -168,7 +168,7 @@ func waitForVIPReloadComplete(t *testing.T, adminHost string) {
 			continue
 		}
 
-		var payload fusionpb.VIPApplyStatus
+		var payload model.VIPApplyStatus
 		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil {

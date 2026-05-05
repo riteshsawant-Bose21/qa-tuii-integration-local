@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 	assert.Contains(t, []int{http.StatusOK, http.StatusServiceUnavailable}, resp.StatusCode, "Expected /health to return a valid health status code")
 
-	var healthResp fusionpb.HealthCheckResponse
+	var healthResp model.HealthCheckResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &healthResp), "Expected valid protobuf JSON from GET /health")
 	require.NotNil(t, healthResp.NodeHealth, "Expected node_health payload")
 
@@ -33,7 +33,7 @@ func TestClusterStatusEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /cluster/status")
 
-	var clusterResp fusionpb.ClusterInfo
+	var clusterResp model.ClusterInfo
 	require.NoError(t, decodeProtoBody(resp.Body, &clusterResp), "Expected valid protobuf JSON from GET /cluster/status")
 
 	assert.NotEmpty(t, clusterResp.LocalNode, "cluster.local_node should be populated")

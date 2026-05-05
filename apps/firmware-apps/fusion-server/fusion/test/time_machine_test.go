@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net"
@@ -44,7 +44,7 @@ var (
 	snapshotByNameURL   string
 	snapshotActivateURL string
 	snapshotUpdateURL   string
-	valueURL            string
+	stateAdminURL       string
 
 	// Scene catalog endpoints
 	snapshotDefsActivateURL string
@@ -90,7 +90,7 @@ func init() {
 	snapshotByNameURL = snapServerAddr + routes.TimeMachineNameEndpoint
 	snapshotActivateURL = snapServerAddr + routes.TimeMachineActivateEndpoint
 	snapshotUpdateURL = snapServerAddr + routes.TimeMachineUpdateEndpoint
-	valueURL = snapServerAddr + routes.ValueEndpoint
+	stateAdminURL = snapAdminServerAddr + routes.StateEndpoint
 
 	snapshotDefsActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
 	snapshotDefsListURL = snapServerAddr + routes.SnapshotsEndpoint
@@ -219,7 +219,14 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Create snapshot returned %d: %s", resp.StatusCode, string(body))
+	}
+	if !waitForSnapshotListed(t, snapshotName, 5*time.Second) {
+		t.Fatalf("Snapshot %s not visible after create", snapshotName)
+	}
 
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
@@ -245,6 +252,27 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Delete snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
+}
+
+func waitForSnapshotListed(t *testing.T, snapshotName string, timeout time.Duration) bool {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(snapshotsURL)
+		if err == nil {
+			var listResp struct {
+				Snapshots []string `json:"snapshots"`
+			}
+			decodeErr := json.NewDecoder(resp.Body).Decode(&listResp)
+			resp.Body.Close()
+			if decodeErr == nil && slices.Contains(listResp.Snapshots, snapshotName) {
+				return true
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false
 }
 
 func TestTimeMachineInvalidCreate(t *testing.T) {
@@ -635,7 +663,7 @@ func getClusterEpochs(t *testing.T) []int64 {
 			t.Fatalf("Metadata returned %d: %s", resp.StatusCode, string(body))
 		}
 
-		var metaResp fusionpb.DatabaseMetadataResponse
+		var metaResp model.DatabaseMetadataResponse
 		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
 			t.Fatalf("Failed to decode metadata JSON: %v", err)
 		}
@@ -677,7 +705,7 @@ func patchStateValue(t *testing.T, key string, value any) {
 		t.Fatalf("Failed to marshal patch payload: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, valueURL, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPatch, stateAdminURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for key %s: %v", key, err)
 	}
@@ -699,32 +727,13 @@ func patchStateValue(t *testing.T, key string, value any) {
 
 func setStateValue(t *testing.T, key string, value any) {
 	t.Helper()
-
-	payload := map[string]any{
-		key: value,
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("Failed to marshal setState payload: %v", err)
-	}
-
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
-	if err != nil {
-		t.Fatalf("Failed to set state key %s: %v", key, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("setStateValue: unexpected status %d: %s", resp.StatusCode, string(body))
-	}
+	patchStateValue(t, key, value)
 }
 
 func getStateValue(t *testing.T, key string) any {
 	t.Helper()
 
-	url := fmt.Sprintf("%s?key=%s", valueURL, key)
+	url := fmt.Sprintf("%s?key=%s", stateAdminURL, key)
 	resp, err := http.Get(url)
 	if err != nil {
 		t.Fatalf("Failed to get state key %s: %v", key, err)
@@ -1005,7 +1014,7 @@ func getClusterActiveSnapshots(t *testing.T) []string {
 		}
 		defer resp.Body.Close()
 
-		var metaResp fusionpb.DatabaseMetadataResponse
+		var metaResp model.DatabaseMetadataResponse
 		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
 			t.Fatalf("Decode metadata: %v", err)
 		}

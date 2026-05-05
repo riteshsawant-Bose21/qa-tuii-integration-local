@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"mime"
@@ -35,7 +35,7 @@ var (
 
 // writeSoftwareUpdateError writes a JSON error response for SoftwareUpdate endpoints.
 func writeSoftwareUpdateError(w http.ResponseWriter, statusCode int, errMsg, detail string) {
-	_ = writeProtoJSONWithStatus(w, statusCode, &fusionpb.SoftwareUpdateErrorResponse{
+	_ = writeProtoJSONWithStatus(w, statusCode, &model.SoftwareUpdateErrorResponse{
 		Error:   errMsg,
 		Message: detail,
 	})
@@ -271,7 +271,7 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	// Broadcast SoftwareUpdate availability to cluster so followers can initiate download
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	update := &fusionpb.SoftwareUpdateBundle{
+	update := &model.SoftwareUpdateBundle{
 		Filename:  origName,
 		Checksum:  actualChecksum,
 		SizeBytes: written,
@@ -408,7 +408,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No SoftwareUpdate directory yet — return empty list
-			if err := writeProtoJSON(w, &fusionpb.SoftwareUpdateListResponse{}); err != nil {
+			if err := writeProtoJSON(w, &model.SoftwareUpdateListResponse{}); err != nil {
 				logger.Error("SoftwareUpdate list (local): json encode empty list: %v", err)
 			}
 			return
@@ -420,7 +420,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	var bundles []*fusionpb.SoftwareUpdateBundle
+	var bundles []*model.SoftwareUpdateBundle
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -443,7 +443,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 			continue
 		}
 
-		bundles = append(bundles, &fusionpb.SoftwareUpdateBundle{
+		bundles = append(bundles, &model.SoftwareUpdateBundle{
 			Filename:  name,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),
@@ -453,7 +453,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 	}
 
 	if bundles == nil {
-		bundles = []*fusionpb.SoftwareUpdateBundle{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
 
 	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
@@ -465,15 +465,15 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []*fusionpb.SoftwareUpdateBundle{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
 	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
 		logging.GetLogger().Error("SoftwareUpdate list: json encode: %v", err)
 	}
 }
 
-func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes int64, uploaded time.Time) *fusionpb.SoftwareUpdateUploadResponse {
-	return &fusionpb.SoftwareUpdateUploadResponse{
+func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes int64, uploaded time.Time) *model.SoftwareUpdateUploadResponse {
+	return &model.SoftwareUpdateUploadResponse{
 		Filename:  filename,
 		Checksum:  checksum,
 		SizeBytes: sizeBytes,
@@ -481,9 +481,9 @@ func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes in
 	}
 }
 
-func softwareUpdateListToProto(bundles []*fusionpb.SoftwareUpdateBundle) *fusionpb.SoftwareUpdateListResponse {
-	resp := &fusionpb.SoftwareUpdateListResponse{
-		Bundles: make([]*fusionpb.SoftwareUpdateBundle, 0, len(bundles)),
+func softwareUpdateListToProto(bundles []*model.SoftwareUpdateBundle) *model.SoftwareUpdateListResponse {
+	resp := &model.SoftwareUpdateListResponse{
+		Bundles: make([]*model.SoftwareUpdateBundle, 0, len(bundles)),
 	}
 	resp.Bundles = append(resp.Bundles, bundles...)
 	return resp
@@ -554,16 +554,16 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 }
 
 // handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
-func (h *Handler) handleSwUpdateInfo(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleSwUpdateInfo(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	infos := h.clusterTransport.GetAllSwUpdateInfo()
 	return createSuccessResponse(&request.Id, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
 // handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
-func (h *Handler) handleListSoftwareUpdates(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleListSoftwareUpdates(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []*fusionpb.SoftwareUpdateBundle{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
 	return createSuccessResponse(&request.Id, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
 }
@@ -810,7 +810,7 @@ func (h *Handler) ensureSWUFilesOnFollowers(swuFilePaths []string) (int, error) 
 		h.StartSyncTracking(syncID, filename, checksum, followers, 5*time.Minute)
 
 		// Broadcast availability gossip so followers HTTP-pull if they don't have it yet
-		update := &fusionpb.SoftwareUpdateBundle{
+		update := &model.SoftwareUpdateBundle{
 			Filename:  filename,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),

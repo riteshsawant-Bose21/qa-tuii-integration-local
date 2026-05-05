@@ -13,7 +13,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
@@ -205,6 +205,20 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if key := r.URL.Query().Get("key"); key != "" {
+		response, err := s.handler.HandleHTTPGet(key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set(api.ContentType, api.JsonMIMEType)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			logging.GetLogger().Error("Export keyed state failed: %v", err)
+		}
+		return
+	}
+
 	// Retrieve the full state from the state manager.
 	state := s.handler.StateManager.GetFullState()
 
@@ -242,6 +256,46 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
+// PatchState handles private HTTP PATCH requests that apply a partial update to configuration state.
+func (s *FusionServer) PatchState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	patch, err := decodeValuePayload(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response, err := s.handler.HandleHTTPPatch(patch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.GetLogger().Error("Patch state failed: %v", err)
+	}
+}
+
+func decodeValuePayload(r *http.Request) (map[string]any, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	defer r.Body.Close()
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("invalid JSON format: %w", err)
+	}
+
+	return payload, nil
+}
+
 // HandleRoot handles requests to the root URL ("/") and returns server information.
 func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Only serve the root path.
@@ -269,7 +323,7 @@ func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &fusionpb.VersionResponse{
+	resp := &model.VersionResponse{
 		Name:      "Fusion Server",
 		Version:   version.Version,
 		Commit:    version.Commit,
@@ -302,9 +356,9 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	resp := &fusionpb.DatabaseMetadataResponse{
-		Metadata: &fusionpb.DatabaseMetadata{
-			Version: &fusionpb.VersionInfo{
+	resp := &model.DatabaseMetadataResponse{
+		Metadata: &model.DatabaseMetadata{
+			Version: &model.VersionInfo{
 				Epoch:   metadata.Version.Epoch,
 				Counter: metadata.Version.Counter,
 				NodeId:  metadata.Version.NodeId,
@@ -523,9 +577,9 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*fusionpb.SessionListResponse, error) {
-	out := &fusionpb.SessionListResponse{
-		Sessions: make(map[string]*fusionpb.SAPSession, len(sessions)),
+func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*model.SessionListResponse, error) {
+	out := &model.SessionListResponse{
+		Sessions: make(map[string]*model.SAPSession, len(sessions)),
 	}
 
 	for id, session := range sessions {
@@ -539,12 +593,12 @@ func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*fusionpb
 	return out, nil
 }
 
-func sapSessionToProto(session *handler.SAPSession) (*fusionpb.SAPSession, error) {
+func sapSessionToProto(session *handler.SAPSession) (*model.SAPSession, error) {
 	if session == nil {
 		return nil, nil
 	}
 
-	resp := &fusionpb.SAPSession{
+	resp := &model.SAPSession{
 		Id:        session.ID,
 		Origin:    session.OriginIP,
 		Timestamp: timestamppb.New(session.Timestamp),
@@ -580,11 +634,11 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := s.handler.HandleGetControllers()
-	response := &fusionpb.ControllerListResponse{
-		Controllers: make([]*fusionpb.ControllerInfo, 0, len(result)),
+	response := &model.ControllerListResponse{
+		Controllers: make([]*model.ControllerInfo, 0, len(result)),
 	}
 	for _, controller := range result {
-		response.Controllers = append(response.Controllers, &fusionpb.ControllerInfo{
+		response.Controllers = append(response.Controllers, &model.ControllerInfo{
 			Id:      controller.Id,
 			Name:    controller.Name,
 			Address: controller.Address,
@@ -624,7 +678,7 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response := &fusionpb.ControllerInfo{
+	response := &model.ControllerInfo{
 		Id:      ctrl.Id,
 		Name:    ctrl.Name,
 		Address: ctrl.Address,
@@ -657,7 +711,7 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return success response for wink command
-	response := &fusionpb.ControllerWinkResponse{
+	response := &model.ControllerWinkResponse{
 		Status:       "success",
 		Message:      "Wink command sent successfully",
 		ControllerId: id,

@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"slices"
@@ -31,19 +31,19 @@ func structPB(data map[string]any) *structpb.Struct {
 	return s
 }
 
-func snapshotDef(id, name string, data map[string]any) *fusionpb.SnapshotDefinition {
-	return &fusionpb.SnapshotDefinition{Id: id, Name: name, Data: structPB(data)}
+func snapshotDef(id, name string, data map[string]any) *model.SnapshotDefinition {
+	return &model.SnapshotDefinition{Id: id, Name: name, Data: structPB(data)}
 }
 
-func scene(id, name string, data map[string]any) *fusionpb.Scene {
-	return &fusionpb.Scene{Id: id, Name: name, Data: structPB(data)}
+func scene(id, name string, data map[string]any) *model.Scene {
+	return &model.Scene{Id: id, Name: name, Data: structPB(data)}
 }
 
-func sceneSet(setID, name string, scenes ...*fusionpb.Scene) *fusionpb.SceneSet {
-	return &fusionpb.SceneSet{SetId: setID, Name: name, Scenes: scenes}
+func sceneSet(setID, name string, scenes ...*model.Scene) *model.SceneSet {
+	return &model.SceneSet{SetId: setID, Name: name, Scenes: scenes}
 }
 
-func upsertSnapshotDefs(t *testing.T, defs []*fusionpb.SnapshotDefinition) {
+func upsertSnapshotDefs(t *testing.T, defs []*model.SnapshotDefinition) {
 	t.Helper()
 	for _, def := range defs {
 		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(def)
@@ -63,7 +63,7 @@ func upsertSnapshotDefs(t *testing.T, defs []*fusionpb.SnapshotDefinition) {
 	}
 }
 
-func upsertSceneSets(t *testing.T, sets []*fusionpb.SceneSet) {
+func upsertSceneSets(t *testing.T, sets []*model.SceneSet) {
 	t.Helper()
 	for _, set := range sets {
 		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(set)
@@ -95,7 +95,7 @@ func activateSnapshotDef(t *testing.T, id string) *http.Response {
 
 func activateScene(t *testing.T, setID, sceneID string) *http.Response {
 	t.Helper()
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.ActivateSceneSetRequest{
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.ActivateSceneSetRequest{
 		SetId:   setID,
 		SceneId: sceneID,
 	})
@@ -109,9 +109,9 @@ func activateScene(t *testing.T, setID, sceneID string) *http.Response {
 	return resp
 }
 
-func getCurrentScene(t *testing.T, setID string) *fusionpb.CurrentSceneResponse {
+func getCurrentScene(t *testing.T, setID string) *model.CurrentSceneResponse {
 	t.Helper()
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.CurrentSceneRequest{SetId: setID})
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.CurrentSceneRequest{SetId: setID})
 	if err != nil {
 		t.Fatalf("getCurrentScene: failed to marshal request: %v", err)
 	}
@@ -124,7 +124,7 @@ func getCurrentScene(t *testing.T, setID string) *fusionpb.CurrentSceneResponse 
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("getCurrentScene: unexpected status %d: %s", resp.StatusCode, string(body))
 	}
-	var out fusionpb.CurrentSceneResponse
+	var out model.CurrentSceneResponse
 	if err := decodeProtoResponse(resp.Body, &out); err != nil {
 		t.Fatalf("getCurrentScene: failed to decode response: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 	id := fmt.Sprintf("snap-def-post-%d", time.Now().UnixNano())
 	def := snapshotDef(id, "Test Snapshot (POST)", map[string]any{id + "_gain": -6.0})
 
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{def})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{def})
 
 	resp, err := http.Get(snapshotDefsListURL)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 		t.Fatalf("List snapshot defs returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestSceneCatalogActivateSnapshotDefPatchesState(t *testing.T) {
 	stateVal := -9.0
 
 	def := snapshotDef(id, "Activation test", map[string]any{stateKey: stateVal})
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{def})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{def})
 
 	resp := activateSnapshotDef(t, id)
 	defer resp.Body.Close()
@@ -285,8 +285,8 @@ func TestSceneCatalogSnapshotDefClobberOnDuplicateID(t *testing.T) {
 	id := fmt.Sprintf("snap-def-clobber-%d", time.Now().UnixNano())
 	stateKey := fmt.Sprintf("snap_def_clobber_%d_val", time.Now().UnixNano())
 
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{snapshotDef(id, "First", map[string]any{stateKey: 1.0})})
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{snapshotDef(id, "Second", map[string]any{stateKey: 2.0})})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(id, "First", map[string]any{stateKey: 1.0})})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(id, "Second", map[string]any{stateKey: 2.0})})
 
 	resp := activateSnapshotDef(t, id)
 	defer resp.Body.Close()
@@ -312,7 +312,7 @@ func TestSceneCatalogSceneSetUpsertViaPost(t *testing.T) {
 	sceneID := setID + "-scene-a"
 	set := sceneSet(setID, "Test Set (POST)", scene(sceneID, "Scene A", map[string]any{sceneID + "_gain": -3.0}))
 
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp, err := http.Get(sceneSetsListURL)
 	if err != nil {
@@ -324,7 +324,7 @@ func TestSceneCatalogSceneSetUpsertViaPost(t *testing.T) {
 		t.Fatalf("List scene sets returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SceneSetListResponse
+	var listResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestSceneCatalogActivateSceneNotMember(t *testing.T) {
 	setID := fmt.Sprintf("set-notmember-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-real"
 	set := sceneSet(setID, "", scene(sceneID, "", map[string]any{}))
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, "scene-not-in-this-set-ever")
 	defer resp.Body.Close()
@@ -395,7 +395,7 @@ func TestSceneCatalogActivateScenePatchesState(t *testing.T) {
 	stateVal := -12.0
 
 	set := sceneSet(setID, "Activation test set", scene(sceneID, "Scene B", map[string]any{stateKey: stateVal}))
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneID)
 	defer resp.Body.Close()
@@ -444,7 +444,7 @@ func TestSceneCatalogGetCurrentSceneBeforeActivation(t *testing.T) {
 	setID := fmt.Sprintf("set-current-before-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-a"
 	set := sceneSet(setID, "Current scene test (before)", scene(sceneID, "Scene A", map[string]any{}))
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	result := getCurrentScene(t, setID)
 	if result.GetCurrentScene().GetSceneId() != "" {
@@ -456,7 +456,7 @@ func TestSceneCatalogGetCurrentSceneAfterActivation(t *testing.T) {
 	setID := fmt.Sprintf("set-current-after-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-morning"
 	set := sceneSet(setID, "Current scene test (after)", scene(sceneID, "Morning", map[string]any{}))
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneID)
 	defer resp.Body.Close()
@@ -485,7 +485,7 @@ func TestSceneCatalogCurrentSceneUpdatesOnSubsequentActivation(t *testing.T) {
 		scene(sceneAID, "Scene A", map[string]any{}),
 		scene(sceneBID, "Scene B", map[string]any{}),
 	)
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneAID)
 	resp.Body.Close()
@@ -510,7 +510,7 @@ func TestSceneCatalogListScenes(t *testing.T) {
 	sceneAID := setID + "-a"
 	sceneBID := setID + "-b"
 	set := sceneSet(setID, "", scene(sceneAID, "A", map[string]any{}), scene(sceneBID, "B", map[string]any{}))
-	upsertSceneSets(t, []*fusionpb.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp, err := http.Get(scenesListURL)
 	if err != nil {
@@ -522,7 +522,7 @@ func TestSceneCatalogListScenes(t *testing.T) {
 		t.Fatalf("List scenes returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SceneListResponse
+	var listResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -543,7 +543,7 @@ func TestSceneCatalogListScenes(t *testing.T) {
 func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 	prefix := fmt.Sprintf("snap-list-%d", time.Now().UnixNano())
 	ids := []string{prefix + "-one", prefix + "-two", prefix + "-three"}
-	defs := make([]*fusionpb.SnapshotDefinition, len(ids))
+	defs := make([]*model.SnapshotDefinition, len(ids))
 	for i, id := range ids {
 		defs[i] = snapshotDef(id, "", map[string]any{})
 	}
@@ -555,7 +555,7 @@ func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -575,7 +575,7 @@ func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 func TestSceneCatalogListSceneSets(t *testing.T) {
 	prefix := fmt.Sprintf("set-list-%d", time.Now().UnixNano())
 	setIDs := []string{prefix + "-alpha", prefix + "-beta"}
-	sets := make([]*fusionpb.SceneSet, len(setIDs))
+	sets := make([]*model.SceneSet, len(setIDs))
 	for i, id := range setIDs {
 		sets[i] = sceneSet(id, "", scene(id+"-s1", "", map[string]any{}))
 	}
@@ -587,7 +587,7 @@ func TestSceneCatalogListSceneSets(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SceneSetListResponse
+	var listResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -609,8 +609,8 @@ func TestSceneCatalogListAll(t *testing.T) {
 	snapID := prefix + "-snap"
 	setID := prefix + "-set"
 
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{snapshotDef(snapID, "", map[string]any{})})
-	upsertSceneSets(t, []*fusionpb.SceneSet{sceneSet(setID, "", scene(setID+"-s1", "", map[string]any{}))})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(snapID, "", map[string]any{})})
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "", scene(setID+"-s1", "", map[string]any{}))})
 
 	resp, err := http.Get(sceneCatalogListURL)
 	if err != nil {
@@ -622,7 +622,7 @@ func TestSceneCatalogListAll(t *testing.T) {
 		t.Fatalf("Scene catalog list returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var catalog fusionpb.SceneCatalogListResponse
+	var catalog model.SceneCatalogListResponse
 	if err := decodeProtoResponse(resp.Body, &catalog); err != nil {
 		t.Fatalf("Failed to decode catalog response: %v", err)
 	}
@@ -646,7 +646,7 @@ func TestSceneCatalogListAll(t *testing.T) {
 
 func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 	prefix := fmt.Sprintf("snap-delete-all-%d", time.Now().UnixNano())
-	defs := []*fusionpb.SnapshotDefinition{
+	defs := []*model.SnapshotDefinition{
 		snapshotDef(prefix+"-a", "", map[string]any{}),
 		snapshotDef(prefix+"-b", "", map[string]any{}),
 	}
@@ -665,7 +665,7 @@ func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -683,7 +683,7 @@ func TestSceneCatalogDeleteSnapshotDefinitionByName(t *testing.T) {
 	prefix := fmt.Sprintf("snap-delete-one-%d", time.Now().UnixNano())
 	deleteID := prefix + "-delete"
 	keepID := prefix + "-keep"
-	upsertSnapshotDefs(t, []*fusionpb.SnapshotDefinition{
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{
 		snapshotDef(deleteID, "", map[string]any{}),
 		snapshotDef(keepID, "", map[string]any{}),
 	})
@@ -701,7 +701,7 @@ func TestSceneCatalogDeleteSnapshotDefinitionByName(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -738,7 +738,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	prefix := fmt.Sprintf("scene-sets-delete-all-%d", time.Now().UnixNano())
 	setID := prefix + "-set"
 	sceneID := prefix + "-scene"
-	upsertSceneSets(t, []*fusionpb.SceneSet{sceneSet(setID, "", scene(sceneID, "", map[string]any{}))})
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "", scene(sceneID, "", map[string]any{}))})
 
 	resp := deleteEndpoint(t, sceneSetsListURL)
 	defer resp.Body.Close()
@@ -753,7 +753,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var setsResp fusionpb.SceneSetListResponse
+	var setsResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &setsResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -770,7 +770,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -789,7 +789,7 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	keepSetID := prefix + "-set-keep"
 	keepSceneID := prefix + "-scene-keep"
 
-	upsertSceneSets(t, []*fusionpb.SceneSet{
+	upsertSceneSets(t, []*model.SceneSet{
 		sceneSet(deleteSetID, "", scene(deleteSceneID, "", map[string]any{})),
 		sceneSet(keepSetID, "", scene(keepSceneID, "", map[string]any{})),
 	})
@@ -807,7 +807,7 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var setsResp fusionpb.SceneSetListResponse
+	var setsResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &setsResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -835,7 +835,7 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -864,7 +864,7 @@ func TestSceneCatalogDeleteSceneByName(t *testing.T) {
 	deleteSceneID := prefix + "-scene-delete"
 	keepSceneID := prefix + "-scene-keep"
 
-	upsertSceneSets(t, []*fusionpb.SceneSet{sceneSet(setID, "",
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "",
 		scene(deleteSceneID, "Delete", map[string]any{}),
 		scene(keepSceneID, "Keep", map[string]any{}),
 	)})
@@ -888,7 +888,7 @@ func TestSceneCatalogDeleteSceneByName(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}

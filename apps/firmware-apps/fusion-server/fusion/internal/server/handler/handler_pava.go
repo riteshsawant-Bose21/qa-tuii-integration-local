@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -54,7 +54,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 
 	// If no tags provided, return everything
 	if len(normalizedTags) == 0 {
-		if err := writePAVAProtoJSON(w, &fusionpb.AudioMetadataListResponse{
+		if err := writePAVAProtoJSON(w, &model.AudioMetadataListResponse{
 			Messages: audioMetadataListToProto(metas),
 		}); err != nil {
 			logger.Error("Error encoding audio metadata list: %v", err)
@@ -63,7 +63,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Filter
-	filtered := make([]*fusionpb.AudioMetadata, 0, len(metas))
+	filtered := make([]*model.AudioMetadata, 0, len(metas))
 	for _, m := range metas {
 		// Build a lowercase set of tags on the item
 		itemTags := make(map[string]struct{}, len(m.Tags))
@@ -85,7 +85,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := writePAVAProtoJSON(w, &fusionpb.AudioMetadataListResponse{
+	if err := writePAVAProtoJSON(w, &model.AudioMetadataListResponse{
 		Messages: audioMetadataListToProto(filtered),
 	}); err != nil {
 		logger.Error("Error encoding filtered audio metadata list: %v", err)
@@ -255,7 +255,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build metadata record
-	meta := &fusionpb.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          id,
 		OrigName:    origName,
 		DisplayName: displayName,
@@ -461,7 +461,7 @@ func (h *Handler) HandleAudioTagList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := writePAVAProtoJSON(w, &fusionpb.AudioTagListResponse{Tags: tags}); err != nil {
+	if err := writePAVAProtoJSON(w, &model.AudioTagListResponse{Tags: tags}); err != nil {
 		logger.Error("Error encoding tag list: %v", err)
 	}
 }
@@ -492,12 +492,12 @@ func writePAVAProtoJSONWithStatus(w http.ResponseWriter, status int, msg proto.M
 	return err
 }
 
-func audioMetadataToProto(meta *fusionpb.AudioMetadata) *fusionpb.AudioMetadata {
+func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
 	if meta == nil {
 		return nil
 	}
 
-	return &fusionpb.AudioMetadata{
+	return &model.AudioMetadata{
 		Id:          meta.Id,
 		OrigName:    meta.OrigName,
 		DisplayName: meta.DisplayName,
@@ -511,8 +511,8 @@ func audioMetadataToProto(meta *fusionpb.AudioMetadata) *fusionpb.AudioMetadata 
 	}
 }
 
-func audioMetadataListToProto(metas []*fusionpb.AudioMetadata) []*fusionpb.AudioMetadata {
-	out := make([]*fusionpb.AudioMetadata, 0, len(metas))
+func audioMetadataListToProto(metas []*model.AudioMetadata) []*model.AudioMetadata {
+	out := make([]*model.AudioMetadata, 0, len(metas))
 	for _, meta := range metas {
 		out = append(out, audioMetadataToProto(meta))
 	}

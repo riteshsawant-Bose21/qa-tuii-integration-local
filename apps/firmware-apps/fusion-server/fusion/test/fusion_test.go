@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"os"
@@ -382,7 +382,7 @@ func TestRootEndpoint(t *testing.T) {
 			resp.StatusCode, http.StatusOK)
 	}
 
-	var response fusionpb.ServerInfoResponse
+	var response model.ServerInfoResponse
 	if err := decodeProtoBody(resp.Body, &response); err != nil {
 		t.Fatalf("Failed to decode root response: %v", err)
 	}
@@ -523,11 +523,38 @@ func TestStateConsistency(t *testing.T) {
 	logProgress(t, "Initial sync", initialSyncTime)
 
 	states := make([]map[string]any, len(testNodes))
-	for i, node := range testNodes {
-		var err error
-		states[i], err = getFullStateFromNode(node)
-		if err != nil {
-			t.Fatalf("Failed to get state from node %d: %v", i, err)
+	synced := waitForSync(initialSyncTime, func() bool {
+		for i, node := range testNodes {
+			var err error
+			states[i], err = getFullStateFromNode(node)
+			if err != nil {
+				return false
+			}
+		}
+
+		for _, td := range testData {
+			expected, ok := states[td.nodeIndex][td.key]
+			if !ok {
+				return false
+			}
+			for i := range testNodes {
+				value, ok := states[i][td.key]
+				if !ok || !valueEquals(expected, value) {
+					return false
+				}
+			}
+		}
+
+		return true
+	})
+
+	if !synced {
+		for i, node := range testNodes {
+			var err error
+			states[i], err = getFullStateFromNode(node)
+			if err != nil {
+				t.Fatalf("Failed to get state from node %d: %v", i, err)
+			}
 		}
 	}
 
@@ -698,14 +725,6 @@ func TestUDPPropagation(t *testing.T) {
 type UDPResult struct {
 	Data   map[string]any `json:"data"`
 	Status string         `json:"status"`
-}
-
-func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
-	t.Skip("legacy public /value write API removed")
-}
-
-func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
-	t.Skip("legacy public /value read API removed")
 }
 
 // verifyClusterHealth checks if the required number of nodes are running and healthy

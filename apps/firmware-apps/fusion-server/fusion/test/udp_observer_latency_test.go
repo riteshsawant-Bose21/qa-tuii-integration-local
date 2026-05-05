@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -418,7 +418,7 @@ func fetchUDPStatusSnapshot(t *testing.T, baseURL string) udpStatusSnapshot {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("GET udp status status=%d body=%s", resp.StatusCode, string(body))
 	}
-	var payload fusionpb.UDPDebugStats
+	var payload model.UDPDebugStats
 	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("decode udp status: %v", err)
 	}

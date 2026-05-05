@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -120,7 +120,7 @@ func candidateVIPs(t *testing.T, originalVIP string) []string {
 	return candidates
 }
 
-func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (*fusionpb.VIPOperationStatus, time.Duration) {
+func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (*model.VIPOperationStatus, time.Duration) {
 	t.Helper()
 
 	client := &http.Client{Timeout: setupVIPRequestTimeout}
@@ -136,7 +136,7 @@ func setVIPRequest(t *testing.T, nodeURL string, targetVIP string) (*fusionpb.VI
 		t.Fatalf("expected %d from VIP setup endpoint for %s, got %d", http.StatusAccepted, targetVIP, resp.StatusCode)
 	}
 
-	var payload fusionpb.VIPOperationStatus
+	var payload model.VIPOperationStatus
 	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("failed to decode VIP operation response for %s: %v", targetVIP, err)
 	}
@@ -190,7 +190,7 @@ func waitForVIPOperationComplete(t *testing.T, statusHost string, operationID st
 			continue
 		}
 
-		var payload fusionpb.VIPOperationStatus
+		var payload model.VIPOperationStatus
 		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil {
@@ -216,7 +216,7 @@ func waitForVIPOperationComplete(t *testing.T, statusHost string, operationID st
 	t.Fatalf("VIP operation %s did not complete within %v (last phase=%s message=%s)", operationID, setupVIPTimeout, lastPhase, lastMessage)
 }
 
-func waitForVIPState(t *testing.T, vipHost string) *fusionpb.CurrentVIPResponse {
+func waitForVIPState(t *testing.T, vipHost string) *model.CurrentVIPResponse {
 	t.Helper()
 
 	client := setupVIPPollClient()
@@ -226,7 +226,7 @@ func waitForVIPState(t *testing.T, vipHost string) *fusionpb.CurrentVIPResponse 
 	for time.Now().Before(deadline) {
 		getResp, err := client.Get(fmt.Sprintf("%s/devices/vip", vipURLForHost(vipHost)))
 		if err == nil {
-			var payload fusionpb.CurrentVIPResponse
+			var payload model.CurrentVIPResponse
 			decodeErr := decodeProtoBody(getResp.Body, &payload)
 			getResp.Body.Close()
 			if decodeErr == nil && getResp.StatusCode == http.StatusOK && payload.GetVip() == vipHost && payload.GetLocal() != "" {
@@ -263,7 +263,7 @@ func waitForOldVIPRetirement(t *testing.T, oldVIP string) {
 			return
 		}
 
-		var payload fusionpb.CurrentVIPResponse
+		var payload model.CurrentVIPResponse
 		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil || resp.StatusCode != http.StatusOK || payload.GetVip() != oldVIP {
@@ -294,7 +294,7 @@ func waitForExclusiveVIPState(t *testing.T, activeVIP string, candidateVIPs []st
 				continue
 			}
 
-			var payload fusionpb.CurrentVIPResponse
+			var payload model.CurrentVIPResponse
 			decodeErr := decodeProtoBody(resp.Body, &payload)
 			resp.Body.Close()
 			if decodeErr != nil || resp.StatusCode != http.StatusOK || payload.GetVip() != vip {
@@ -329,7 +329,7 @@ func detectActiveVIPCandidate(t *testing.T, candidateVIPs []string) string {
 			continue
 		}
 
-		var payload fusionpb.CurrentVIPResponse
+		var payload model.CurrentVIPResponse
 		decodeErr := decodeProtoBody(resp.Body, &payload)
 		resp.Body.Close()
 		if decodeErr != nil || resp.StatusCode != http.StatusOK {

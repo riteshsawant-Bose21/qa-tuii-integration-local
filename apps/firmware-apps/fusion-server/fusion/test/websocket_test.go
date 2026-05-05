@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -14,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -64,13 +65,16 @@ func wsValue(t *testing.T, data any) *structpb.Value {
 	if data == nil {
 		return nil
 	}
+	if reflect.TypeOf(data) == reflect.TypeOf(struct{}{}) {
+		return structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{}})
+	}
 	value, err := structpb.NewValue(data)
 	require.NoError(t, err, "Failed to encode websocket data value")
 	return value
 }
 
 func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *wsRequest) {
-	protoReq := &fusionpb.WebSocketRequest{
+	protoReq := &model.WebSocketRequest{
 		Id:      req.ID,
 		Version: int32(req.Version),
 		Type:    req.Type,
@@ -88,7 +92,7 @@ func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Dura
 	_, data, err := conn.ReadMessage()
 	require.NoError(t, err, "Failed to read WebSocket message")
 
-	var protoResp fusionpb.WebSocketResponse
+	var protoResp model.WebSocketResponse
 	err = protojson.Unmarshal(data, &protoResp)
 	require.NoError(t, err, "Failed to unmarshal WebSocket response")
 

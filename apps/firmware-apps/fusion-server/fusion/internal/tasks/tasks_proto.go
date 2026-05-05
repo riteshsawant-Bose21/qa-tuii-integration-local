@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -34,7 +34,7 @@ func writeProtoJSON(w http.ResponseWriter, msg proto.Message) error {
 	return err
 }
 
-func recurringWindowToProto(window *api.RecurringWindow) *fusionpb.RecurringWindow {
+func recurringWindowToProto(window *api.RecurringWindow) *model.RecurringWindow {
 	if window == nil {
 		return nil
 	}
@@ -44,14 +44,14 @@ func recurringWindowToProto(window *api.RecurringWindow) *fusionpb.RecurringWind
 		days[i] = int32(day)
 	}
 
-	return &fusionpb.RecurringWindow{
+	return &model.RecurringWindow{
 		StartTime: window.StartTime,
 		EndTime:   window.EndTime,
 		Days:      days,
 	}
 }
 
-func recurringWindowFromProto(window *fusionpb.RecurringWindow) *api.RecurringWindow {
+func recurringWindowFromProto(window *model.RecurringWindow) *api.RecurringWindow {
 	if window == nil {
 		return nil
 	}
@@ -82,7 +82,7 @@ func timeFromProto(ts *timestamppb.Timestamp) time.Time {
 	return ts.AsTime()
 }
 
-func snapshotCreateRequestToTask(req *fusionpb.SnapshotTaskCreateRequest) *api.Task {
+func snapshotCreateRequestToTask(req *model.SnapshotTaskCreateRequest) *api.Task {
 	return &api.Task{
 		ID:          req.Id,
 		Description: req.Description,
@@ -98,7 +98,7 @@ func snapshotCreateRequestToTask(req *fusionpb.SnapshotTaskCreateRequest) *api.T
 	}
 }
 
-func messageCreateRequestToTask(req *fusionpb.MessageTaskCreateRequest) *api.Task {
+func messageCreateRequestToTask(req *model.MessageTaskCreateRequest) *api.Task {
 	return &api.Task{
 		ID:          req.Id,
 		Description: req.Description,
@@ -165,12 +165,12 @@ func messageZonesToProto(value any) string {
 	return strings.Join(zones, ",")
 }
 
-func taskToProto(task *api.Task) (*fusionpb.Task, error) {
+func taskToProto(task *api.Task) (*model.Task, error) {
 	if task == nil {
 		return nil, fmt.Errorf("task is nil")
 	}
 
-	out := &fusionpb.Task{
+	out := &model.Task{
 		Id:          task.ID,
 		Description: task.Description,
 		CronExpr:    task.CronExpr,
@@ -183,18 +183,18 @@ func taskToProto(task *api.Task) (*fusionpb.Task, error) {
 
 	switch task.Type {
 	case api.TaskTypeSnapshot:
-		out.Type = fusionpb.TaskType_TASK_TYPE_SNAPSHOT
+		out.Type = model.TaskType_TASK_TYPE_SNAPSHOT
 		snapshotID, ok := task.Params[api.SnapshotIDKey]
 		if !ok {
 			return nil, fmt.Errorf("task %q missing snapshot_id", task.ID)
 		}
-		out.Details = &fusionpb.Task_Snapshot{
-			Snapshot: &fusionpb.SnapshotTaskDetails{
+		out.Details = &model.Task_Snapshot{
+			Snapshot: &model.SnapshotTaskDetails{
 				SnapshotId: fmt.Sprintf("%v", snapshotID),
 			},
 		}
 	case api.TaskTypeMessage:
-		out.Type = fusionpb.TaskType_TASK_TYPE_MESSAGE
+		out.Type = model.TaskType_TASK_TYPE_MESSAGE
 
 		messageID, ok := task.Params[api.MessageIDKey]
 		if !ok {
@@ -211,8 +211,8 @@ func taskToProto(task *api.Task) (*fusionpb.Task, error) {
 			return nil, fmt.Errorf("task %q missing zones", task.ID)
 		}
 
-		out.Details = &fusionpb.Task_Message{
-			Message: &fusionpb.MessageTaskDetails{
+		out.Details = &model.Task_Message{
+			Message: &model.MessageTaskDetails{
 				MessageId: fmt.Sprintf("%v", messageID),
 				Priority:  priority,
 				Zones:     messageZonesToProto(zones),
@@ -225,9 +225,9 @@ func taskToProto(task *api.Task) (*fusionpb.Task, error) {
 	return out, nil
 }
 
-func tasksToProto(tasks []api.Task) (*fusionpb.TaskListResponse, error) {
-	resp := &fusionpb.TaskListResponse{
-		Tasks: make([]*fusionpb.Task, 0, len(tasks)),
+func tasksToProto(tasks []api.Task) (*model.TaskListResponse, error) {
+	resp := &model.TaskListResponse{
+		Tasks: make([]*model.Task, 0, len(tasks)),
 	}
 
 	for i := range tasks {
@@ -241,13 +241,13 @@ func tasksToProto(tasks []api.Task) (*fusionpb.TaskListResponse, error) {
 	return resp, nil
 }
 
-func historyToProto(history []ExecutionRecord) *fusionpb.TaskHistoryResponse {
-	resp := &fusionpb.TaskHistoryResponse{
-		History: make([]*fusionpb.TaskExecutionRecord, 0, len(history)),
+func historyToProto(history []ExecutionRecord) *model.TaskHistoryResponse {
+	resp := &model.TaskHistoryResponse{
+		History: make([]*model.TaskExecutionRecord, 0, len(history)),
 	}
 
 	for _, entry := range history {
-		resp.History = append(resp.History, &fusionpb.TaskExecutionRecord{
+		resp.History = append(resp.History, &model.TaskExecutionRecord{
 			Description: entry.Description,
 			Status:      entry.Status,
 			TaskId:      entry.TaskID,

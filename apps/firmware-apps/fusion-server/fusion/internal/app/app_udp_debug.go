@@ -3,7 +3,7 @@ package app
 import (
 	"net/http"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 )
 
@@ -17,7 +17,7 @@ func (app *App) HandleUDPStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats := app.UDPServer.Stats()
-	resp := &fusionpb.UDPDebugStats{
+	resp := &model.UDPDebugStats{
 		QueueDepth:            uint32(stats.QueueDepth),
 		QueueCapacity:         uint32(stats.QueueCapacity),
 		MaxQueueDepth:         stats.MaxQueueDepth,

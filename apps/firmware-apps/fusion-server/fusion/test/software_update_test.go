@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
@@ -234,7 +234,7 @@ func TestSoftwareUpdateDownloadNotFound(t *testing.T) {
 		t.Fatalf("download returned %d, want 404; body=%s", resp.StatusCode, string(body))
 	}
 
-	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	var errorResp model.SoftwareUpdateErrorResponse
 	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestSoftwareUpdateDownloadNotFound(t *testing.T) {
 // Helper functions
 
 // uploadSoftwareUpdate uploads a software bundle and expects success.
-func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename string, data []byte, checksum string, expectedStatus int) *fusionpb.SoftwareUpdateUploadResponse {
+func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename string, data []byte, checksum string, expectedStatus int) *model.SoftwareUpdateUploadResponse {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -291,7 +291,7 @@ func uploadSoftwareUpdate(t *testing.T, ctx context.Context, base, filename stri
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var uploadResp fusionpb.SoftwareUpdateUploadResponse
+	var uploadResp model.SoftwareUpdateUploadResponse
 	if err := decodeProtoBody(resp.Body, &uploadResp); err != nil {
 		t.Fatalf("decoding upload response failed: %v", err)
 	}
@@ -343,7 +343,7 @@ func uploadSoftwareUpdateExpectError(t *testing.T, ctx context.Context, base, fi
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	var errorResp model.SoftwareUpdateErrorResponse
 	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
@@ -402,7 +402,7 @@ func uploadSoftwareUpdateMissingFields(t *testing.T, ctx context.Context, base, 
 			routes.SoftwareUpdateUploadEndpoint, resp.StatusCode, expectedStatus, string(body))
 	}
 
-	var errorResp fusionpb.SoftwareUpdateErrorResponse
+	var errorResp model.SoftwareUpdateErrorResponse
 	if err := decodeProtoBody(resp.Body, &errorResp); err != nil {
 		t.Fatalf("decoding error response failed: %v", err)
 	}
@@ -413,7 +413,7 @@ func uploadSoftwareUpdateMissingFields(t *testing.T, ctx context.Context, base, 
 }
 
 // listSoftwareUpdates gets the list of all software updates.
-func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []*fusionpb.SoftwareUpdateBundle {
+func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []*model.SoftwareUpdateBundle {
 	t.Helper()
 
 	req, err := http.NewRequestWithContext(ctx, "GET",
@@ -434,7 +434,7 @@ func listSoftwareUpdates(t *testing.T, ctx context.Context, base string) []*fusi
 			routes.SoftwareUpdateListEndpoint, resp.StatusCode, string(body))
 	}
 
-	var bundles fusionpb.SoftwareUpdateListResponse
+	var bundles model.SoftwareUpdateListResponse
 	if err := decodeProtoBody(resp.Body, &bundles); err != nil {
 		t.Fatalf("decoding list response failed: %v", err)
 	}
@@ -568,7 +568,7 @@ func hasSoftwareUpdateMetadata(_ *testing.T, baseURL, filename string) bool {
 		return false
 	}
 
-	var updates fusionpb.SoftwareUpdateListResponse
+	var updates model.SoftwareUpdateListResponse
 	if err := decodeProtoBody(resp.Body, &updates); err != nil {
 		return false
 	}
@@ -640,7 +640,7 @@ func getSoftwareUpdateClusterNodeURLs(t *testing.T, ctx context.Context, vipURL 
 		t.Fatalf("/devices returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var devicesResp fusionpb.DeviceListResponse
+	var devicesResp model.DeviceListResponse
 	if err := decodeProtoBody(resp.Body, &devicesResp); err != nil {
 		t.Fatalf("failed to decode /devices: %v", err)
 	}
@@ -813,9 +813,9 @@ func TestSwUpdateInfoViaWebSocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var infos []fusionpb.SwUpdateInfo
+	var infos []model.SwUpdateInfo
 	if err := json.Unmarshal(raw, &infos); err != nil {
-		t.Fatalf("response data is not a []fusionpb.SwUpdateInfo: %v — raw: %s", err, string(raw))
+		t.Fatalf("response data is not a []model.SwUpdateInfo: %v — raw: %s", err, string(raw))
 	}
 
 	// Each entry must have the expected fields present (even if empty strings on
@@ -866,9 +866,9 @@ func TestListSoftwareUpdatesViaWebSocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var bundles []fusionpb.SoftwareUpdateBundle
+	var bundles []model.SoftwareUpdateBundle
 	if err := json.Unmarshal(raw, &bundles); err != nil {
-		t.Fatalf("response data is not a []fusionpb.SoftwareUpdateBundle: %v — raw: %s", err, string(raw))
+		t.Fatalf("response data is not a []model.SoftwareUpdateBundle: %v — raw: %s", err, string(raw))
 	}
 
 	// If bundles are present, verify required fields are non-empty.
@@ -918,9 +918,9 @@ func TestListSoftwareUpdatesViaWebSocketAfterUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalling response data failed: %v", err)
 	}
-	var bundles []fusionpb.SoftwareUpdateBundle
+	var bundles []model.SoftwareUpdateBundle
 	if err := json.Unmarshal(raw, &bundles); err != nil {
-		t.Fatalf("response data is not a []fusionpb.SoftwareUpdateBundle: %v", err)
+		t.Fatalf("response data is not a []model.SoftwareUpdateBundle: %v", err)
 	}
 
 	// The uploaded bundle must appear in the list

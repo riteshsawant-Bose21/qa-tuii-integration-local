@@ -4,27 +4,27 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"time"
 )
 
 // HandleListSnapshotDefinitions returns all stored snapshot definitions.
-func (h *Handler) HandleListSnapshotDefinitions() ([]*fusionpb.SnapshotDefinition, error) {
+func (h *Handler) HandleListSnapshotDefinitions() ([]*model.SnapshotDefinition, error) {
 	return h.persistence.ListSnapshotDefinitions()
 }
 
 // HandleListSceneSets returns all stored scene sets.
-func (h *Handler) HandleListSceneSets() ([]*fusionpb.SceneSet, error) {
+func (h *Handler) HandleListSceneSets() ([]*model.SceneSet, error) {
 	return h.persistence.ListSceneSets()
 }
 
 // HandleGetSceneSet returns a single scene set by set_id.
-func (h *Handler) HandleGetSceneSet(setID string) (*fusionpb.SceneSet, error) {
+func (h *Handler) HandleGetSceneSet(setID string) (*model.SceneSet, error) {
 	return h.persistence.GetSceneSet(setID)
 }
 
 // HandleCreateSnapshotDefinition creates a snapshot definition if it does not already exist.
-func (h *Handler) HandleCreateSnapshotDefinition(item *fusionpb.SnapshotDefinition) error {
+func (h *Handler) HandleCreateSnapshotDefinition(item *model.SnapshotDefinition) error {
 	exists, err := h.persistence.SnapshotDefinitionExists(item.GetId())
 	if err != nil {
 		return err
@@ -32,16 +32,16 @@ func (h *Handler) HandleCreateSnapshotDefinition(item *fusionpb.SnapshotDefiniti
 	if exists {
 		return fmt.Errorf("snapshot definition %q already exists", item.GetId())
 	}
-	return h.persistFeatureDefinitions([]*fusionpb.SnapshotDefinition{item}, nil)
+	return h.persistFeatureDefinitions([]*model.SnapshotDefinition{item}, nil)
 }
 
 // HandleUpsertSnapshotDefinition creates or overwrites a snapshot definition by ID.
-func (h *Handler) HandleUpsertSnapshotDefinition(item *fusionpb.SnapshotDefinition) error {
-	return h.persistFeatureDefinitions([]*fusionpb.SnapshotDefinition{item}, nil)
+func (h *Handler) HandleUpsertSnapshotDefinition(item *model.SnapshotDefinition) error {
+	return h.persistFeatureDefinitions([]*model.SnapshotDefinition{item}, nil)
 }
 
 // HandleCreateSceneSet creates a scene set if it does not already exist.
-func (h *Handler) HandleCreateSceneSet(item *fusionpb.SceneSet) error {
+func (h *Handler) HandleCreateSceneSet(item *model.SceneSet) error {
 	exists, err := h.persistence.SceneSetExists(item.GetSetId())
 	if err != nil {
 		return err
@@ -49,12 +49,12 @@ func (h *Handler) HandleCreateSceneSet(item *fusionpb.SceneSet) error {
 	if exists {
 		return fmt.Errorf("scene set %q already exists", item.GetSetId())
 	}
-	return h.persistFeatureDefinitions(nil, []*fusionpb.SceneSet{item})
+	return h.persistFeatureDefinitions(nil, []*model.SceneSet{item})
 }
 
 // HandleUpsertSceneSet creates or overwrites a scene set by set_id.
-func (h *Handler) HandleUpsertSceneSet(item *fusionpb.SceneSet) error {
-	return h.persistFeatureDefinitions(nil, []*fusionpb.SceneSet{item})
+func (h *Handler) HandleUpsertSceneSet(item *model.SceneSet) error {
+	return h.persistFeatureDefinitions(nil, []*model.SceneSet{item})
 }
 
 // HandleActivateSnapshotByID patches the snapshot data onto DB State.
@@ -213,7 +213,7 @@ func (h *Handler) HandleSnapshotExists(snapshot string) (bool, error) {
 }
 
 // HandleGetDatabaseMetadata retrieves metadata for the fusion database.
-func (h *Handler) HandleGetDatabaseMetadata() (*fusionpb.DatabaseMetadata, error) {
+func (h *Handler) HandleGetDatabaseMetadata() (*model.DatabaseMetadata, error) {
 	return h.persistence.GetDatabaseMetadata()
 }
 

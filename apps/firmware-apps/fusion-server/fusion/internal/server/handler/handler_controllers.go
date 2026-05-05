@@ -3,10 +3,10 @@ package handler
 import (
 	"fmt"
 	"fusion-services-core/logging"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 )
 
-func (h *Handler) HandleGetControllers() []*fusionpb.ControllerInfo {
+func (h *Handler) HandleGetControllers() []*model.ControllerInfo {
 	logger := logging.GetLogger()
 
 	controllers := h.controllerManager.GetActiveControllers()
@@ -17,7 +17,7 @@ func (h *Handler) HandleGetControllers() []*fusionpb.ControllerInfo {
 	return controllers
 }
 
-func (h *Handler) HandleGetControllerByID(controllerID string) (*fusionpb.ControllerInfo, error) {
+func (h *Handler) HandleGetControllerByID(controllerID string) (*model.ControllerInfo, error) {
 	logger := logging.GetLogger()
 
 	if controllerID == "" {

@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"net/http"
 
@@ -51,7 +51,7 @@ func (s *FusionServer) GetActiveTimeMachineName(w http.ResponseWriter, r *http.R
 	}
 
 	snapshot := s.handler.HandleGetActiveSnapshotName()
-	if err := writeProtoJSON(w, &fusionpb.ActiveTimeMachineResponse{ActiveSnapshot: snapshot}); err != nil {
+	if err := writeProtoJSON(w, &model.ActiveTimeMachineResponse{ActiveSnapshot: snapshot}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing active snapshot: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -68,7 +68,7 @@ func (s *FusionServer) ListTimeMachines(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := writeProtoJSON(w, &fusionpb.TimeMachineListResponse{Snapshots: snapshots}); err != nil {
+	if err := writeProtoJSON(w, &model.TimeMachineListResponse{Snapshots: snapshots}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing snapshot list: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -101,7 +101,7 @@ func (s *FusionServer) ActivateTimeMachine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "activated"}); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &model.TimeMachineOperationStatus{Name: snapshotName, Status: "activated"}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing activation response: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -138,7 +138,7 @@ func (s *FusionServer) CreateTimeMachine(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := writeProtoJSONWithStatus(w, http.StatusCreated, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "created"}); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusCreated, &model.TimeMachineOperationStatus{Name: snapshotName, Status: "created"}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing creation response: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -165,7 +165,7 @@ func (s *FusionServer) DeleteTimeMachine(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "deleted"}); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &model.TimeMachineOperationStatus{Name: snapshotName, Status: "deleted"}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing delete response: %v", err), http.StatusInternalServerError)
 	}
 }
@@ -203,7 +203,7 @@ func (s *FusionServer) SaveTimeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := writeProtoJSONWithStatus(w, http.StatusOK, &fusionpb.TimeMachineOperationStatus{Name: snapshotName, Status: "saved"}); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, &model.TimeMachineOperationStatus{Name: snapshotName, Status: "saved"}); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing save response: %v", err), http.StatusInternalServerError)
 	}
 }

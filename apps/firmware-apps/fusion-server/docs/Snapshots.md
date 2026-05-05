@@ -178,69 +178,22 @@ This prevents stale gossip from corrupting restored snapshot state.
 
 ---
 
-## State Updates: POST vs PATCH
+## State Updates
 
-Fusion intentionally separates **full-state replacement** from **partial updates**.
+Fusion intentionally separates:
+- **authoritative full-state restore** via Time Machine activation
+- **partial runtime updates** via structured resource endpoints
 
-### POST /value — Replace Entire State
+Public clients should not use a generic state read/write endpoint.
 
-```
-POST /value
-{
-  "foo": 111,
-  "bar": 222
-}
-```
+Use these supported paths instead:
+- `POST /time-machine/activate/{name}` for full-state restore with epoch bump
+- `PATCH /settings/audio/...` for runtime audio parameter updates
+- `POST /snapshots`, `PUT /snapshots/{id}` for Snapshot Definition authoring
+- `POST /scene-sets`, `PUT /scene-sets/{id}` for Scene Set authoring
 
-Semantics:
-- Completely replace current state with provided map.
-- Equivalent to a full configuration push.
-- Used for:
-  - Snapshot restore
-  - Config imports
-  - Full-state updates
-
-### PATCH /value — Partial Update (Merge)
-
-```
-PATCH /value
-{
-  "foo": 999
-}
-```
-
-Semantics:
-- Modify only the provided keys.
-- Merge into existing state.
-- Server handles epoch + Lamport version assignment automatically.
-
-Use `PATCH` when updating individual state keys.
-
----
-
-## Querying State
-
-### Full state:
-```
-GET /value
-```
-
-### Single key:
-```
-GET /value?key=foo
-```
-
-Returns:
-
-```json
-{ "exists": true, "value": 999 }
-```
-
-If not present:
-
-```json
-{ "exists": false }
-```
+For internal tooling and tests, the private admin API exposes `/state` on port `9090`.
+That surface is not part of the public API contract described here.
 
 ---
 
@@ -276,10 +229,8 @@ DELETE /time-machine/<name>           (delete)
 
 ### State Management
 ```
-POST   /value      (FULL state replace)
-PATCH  /value      (partial merge update)
-GET    /value      (full map)
-GET    /value?key=foo (single key lookup)
+POST   /time-machine/activate/<name>      (authoritative full-state restore)
+PATCH  /settings/audio/...                (structured runtime patching)
 ```
 
 ### Administrative
@@ -313,42 +264,39 @@ A named collection of Scenes. One scene in the set can be active at a time. The 
 
 ### Creating / Updating Definitions
 
-Snapshot Definitions and Scene Sets are written via the existing `/value` endpoint using the `snapshots` and `scene_sets` root keys. The write is a **clobber upsert** — if a definition with the same ID already exists, it is overwritten.
+Snapshot Definitions and Scene Sets are written through dedicated endpoints. The write is a **clobber upsert** — if a definition with the same ID already exists, it is overwritten.
 
 ```sh
-# Store snapshot definitions alongside other config (or alone via PATCH)
-PATCH /value
+POST /snapshots
 {
-  "snapshots": [
+  "id": "snap-morning-01",
+  "name": "Morning Baseline",
+  "data": { "channels.1.gain_db": -6.0 }
+}
+```
+
+```sh
+POST /scene-sets
+{
+  "set_id": "set-dayparts-01",
+  "name": "Channel 1 Dayparts",
+  "default_scene": "scene-morning-01",
+  "scenes": [
     {
-      "id": "snap-morning-01",
-      "name": "Morning Baseline",
+      "id": "scene-morning-01",
+      "name": "Morning",
       "data": { "channels.1.gain_db": -6.0 }
-    }
-  ],
-  "scene_sets": [
+    },
     {
-      "set_id": "set-dayparts-01",
-      "name": "Channel 1 Dayparts",
-      "default_scene": "scene-morning-01",
-      "scenes": [
-        {
-          "id": "scene-morning-01",
-          "name": "Morning",
-          "data": { "channels.1.gain_db": -6.0 }
-        },
-        {
-          "id": "scene-evening-01",
-          "name": "Evening",
-          "data": { "channels.1.gain_db": -12.0 }
-        }
-      ]
+      "id": "scene-evening-01",
+      "name": "Evening",
+      "data": { "channels.1.gain_db": -12.0 }
     }
   ]
 }
 ```
 
-`snapshots` and `scene_sets` keys are **extracted before** normal config processing. Any other root keys in the same payload continue through the standard state update path.
+Use `PUT /snapshots/{id}` and `PUT /scene-sets/{id}` to overwrite an existing definition explicitly.
 
 ---
 

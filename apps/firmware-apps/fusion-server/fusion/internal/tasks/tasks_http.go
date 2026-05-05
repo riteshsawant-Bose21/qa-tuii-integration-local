@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -88,7 +88,7 @@ func (tm *TaskManager) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
+	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.ID})
 }
 
 func (tm *TaskManager) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -140,14 +140,14 @@ func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
 	}
 
 	if _, ok := raw["snapshot_id"]; ok {
-		var request fusionpb.SnapshotTaskCreateRequest
+		var request model.SnapshotTaskCreateRequest
 		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 			return nil, err
 		}
 		return snapshotCreateRequestToTask(&request), nil
 	}
 	if _, ok := raw["message_id"]; ok {
-		var request fusionpb.MessageTaskCreateRequest
+		var request model.MessageTaskCreateRequest
 		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 			return nil, err
 		}
@@ -158,7 +158,7 @@ func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
 		return task, nil
 	}
 	if _, ok := raw["priority"]; ok {
-		var request fusionpb.MessageTaskCreateRequest
+		var request model.MessageTaskCreateRequest
 		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 			return nil, err
 		}
@@ -169,7 +169,7 @@ func (tm *TaskManager) decodeCreateTaskBody(body []byte) (*api.Task, error) {
 		return task, nil
 	}
 	if _, ok := raw["zones"]; ok {
-		var request fusionpb.MessageTaskCreateRequest
+		var request model.MessageTaskCreateRequest
 		if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 			return nil, err
 		}
@@ -221,7 +221,7 @@ func normalizeTaskParams(task *api.Task) error {
 }
 
 func (tm *TaskManager) updateSnapshotTaskFromProto(w http.ResponseWriter, task *api.Task, body []byte) {
-	var patch fusionpb.SnapshotTaskUpdateRequest
+	var patch model.SnapshotTaskUpdateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
@@ -292,7 +292,7 @@ func (tm *TaskManager) updateSnapshotTaskFromProto(w http.ResponseWriter, task *
 }
 
 func (tm *TaskManager) updateMessageTaskFromProto(w http.ResponseWriter, task *api.Task, body []byte) {
-	var patch fusionpb.MessageTaskUpdateRequest
+	var patch model.MessageTaskUpdateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return

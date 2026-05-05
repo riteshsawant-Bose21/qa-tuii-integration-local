@@ -15,7 +15,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -229,7 +229,7 @@ func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testin
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := fusionpb.AudioMetadata{
+	meta := model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Test Audio",
 		Filename:    "sync-audio-existing.bin",
@@ -389,7 +389,7 @@ func TestSaveAudioMetaUpdatesDatabaseHash(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := &fusionpb.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -752,7 +752,7 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	require.NoError(t, err)
 	defer p1.Close()
 
-	audioMeta := &fusionpb.AudioMetadata{
+	audioMeta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -760,7 +760,7 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	}
 	require.NoError(t, p1.SaveAudioMeta(audioMeta))
 
-	deviceInfo := &fusionpb.DevicePatch{
+	deviceInfo := &model.DevicePatch{
 		Id:   stringPtr("dev-1"),
 		Name: stringPtr("Kitchen"),
 	}
@@ -874,7 +874,7 @@ func TestSetDeviceInfoReturnsErrNotFoundWhenDeviceBucketMissing(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = p.SetDeviceInfo(&fusionpb.DevicePatch{Name: stringPtr("Kitchen")})
+	err = p.SetDeviceInfo(&model.DevicePatch{Name: stringPtr("Kitchen")})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
@@ -1118,14 +1118,14 @@ func TestListAllTagsReturnsEmptyWithoutErrorWhenAudioBucketMissing(t *testing.T)
 	require.Empty(t, tags)
 }
 
-func readDatabaseMetadata(dbPath string) (*fusionpb.DatabaseMetadata, error) {
+func readDatabaseMetadata(dbPath string) (*model.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var metadata fusionpb.DatabaseMetadata
+	var metadata model.DatabaseMetadata
 	err = db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1144,8 +1144,8 @@ func readDatabaseMetadata(dbPath string) (*fusionpb.DatabaseMetadata, error) {
 	return &metadata, nil
 }
 
-func readDatabaseMetadataFromDB(db *bbolt.DB) (*fusionpb.DatabaseMetadata, error) {
-	var metadata fusionpb.DatabaseMetadata
+func readDatabaseMetadataFromDB(db *bbolt.DB) (*model.DatabaseMetadata, error) {
+	var metadata model.DatabaseMetadata
 	err := db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1225,11 +1225,12 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 			return value, nil
 		}
 
-		var metadata api.DatabaseMetadata
+		var metadata model.DatabaseMetadata
 		if err := json.Unmarshal(value, &metadata); err != nil {
 			return nil, err
 		}
 		metadata.Hash = ""
+		metadata.Version = nil
 		return json.Marshal(metadata)
 
 	case "snapshots", "active":
@@ -1237,6 +1238,7 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		if err := json.Unmarshal(value, &state); err != nil {
 			return nil, err
 		}
+		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
 		return json.Marshal(state)
 

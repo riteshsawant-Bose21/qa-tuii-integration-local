@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -55,8 +55,8 @@ type AudioRemoveUpdate struct {
 
 // AudioSyncUpdate represents an audio file to sync across nodes
 type AudioSyncUpdate struct {
-	Metadata fusionpb.AudioMetadata `json:"metadata"`
-	URL      string                 `json:"url"`
+	Metadata model.AudioMetadata `json:"metadata"`
+	URL      string              `json:"url"`
 }
 
 // SoftwareUpdateSyncAck carries acknowledgment information when a node
@@ -153,9 +153,9 @@ type ConfigValue struct {
 
 // DeviceRuntimeInfo extends the public device contract with internal build and
 // VRRP metadata. Public API and cluster notification paths should prefer
-// fusionpb.DeviceInfo directly.
+// model.DeviceInfo directly.
 type DeviceRuntimeInfo struct {
-	fusionpb.DeviceInfo
+	model.DeviceInfo
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
@@ -166,7 +166,7 @@ type DeviceRuntimeInfo struct {
 // MemberMetadata associates a member to its database metadata.
 type MemberMetadata struct {
 	Member   *memberlist.Node
-	Metadata fusionpb.DatabaseMetadata
+	Metadata model.DatabaseMetadata
 }
 
 // RecurringWindow contains info to manage recurring tasks

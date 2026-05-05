@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"os/exec"
 
 	"fusion-services-core/logging"
@@ -462,7 +462,7 @@ func (c *Cluster) FetchGenericWithTargetDevice(
 
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *fusionpb.DeviceInfo
+	var targetDevice *model.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -493,7 +493,7 @@ func (c *Cluster) DoGenericToTargetDevice(
 ) error {
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *fusionpb.DeviceInfo
+	var targetDevice *model.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]

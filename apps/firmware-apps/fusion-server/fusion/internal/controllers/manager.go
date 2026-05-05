@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"fusion-services-core/logging"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/pubsub"
 	"net"
 	"time"
@@ -166,7 +166,7 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 	cm.mutex.Lock()
 	controller, exists := cm.controllers[connectionID]
 	if exists {
-		controller.Info = &fusionpb.ControllerInfo{
+		controller.Info = &model.ControllerInfo{
 			Id:      payload.ID,
 			Name:    payload.DeviceType,
 			Version: payload.SoftwareVersion,
@@ -201,7 +201,7 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 func (cm *ControllerManager) handleWinkResponse(connectionID string, message TCPMessage) {
 	logger := logging.GetLogger()
 
-	var payload fusionpb.ControllerWinkResponse
+	var payload model.ControllerWinkResponse
 	if err := json.Unmarshal(message.Payload, &payload); err != nil {
 		logger.Error("Invalid winkResponse payload from controller %s", connectionID)
 		logger.Error("Message structure: %+v", message)
@@ -240,14 +240,14 @@ func (cm *ControllerManager) handleWinkResponse(connectionID string, message TCP
 // =================== HTTP API Implementation ===================
 
 // GetActiveControllers returns all identified controllers
-func (cm *ControllerManager) GetActiveControllers() []*fusionpb.ControllerInfo {
+func (cm *ControllerManager) GetActiveControllers() []*model.ControllerInfo {
 	logger := logging.GetLogger()
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
 
 	logger.Debug("GetControllers called - checking %d total connections", len(cm.controllers))
 
-	var controllers []*fusionpb.ControllerInfo
+	var controllers []*model.ControllerInfo
 	for connectionID, conn := range cm.controllers {
 		logger.Debug("Connection %s: IsIdentified=%t, Info=%v", connectionID, conn.IsIdentified, conn.Info != nil)
 		if conn.IsIdentified && conn.Info != nil {
@@ -261,7 +261,7 @@ func (cm *ControllerManager) GetActiveControllers() []*fusionpb.ControllerInfo {
 }
 
 // GetControllerByID returns a specific controller by ID
-func (cm *ControllerManager) GetControllerByID(id string) (*fusionpb.ControllerInfo, error) {
+func (cm *ControllerManager) GetControllerByID(id string) (*model.ControllerInfo, error) {
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
 

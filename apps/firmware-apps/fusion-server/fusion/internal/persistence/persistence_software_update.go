@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -36,7 +36,7 @@ var (
 //
 //  3. Atomic rename from .part file to final /mnt/ota/<filename>.
 //     Temp file is in the same directory as final path
-func (p *Persistence) SyncSoftwareUpdateFile(update *fusionpb.SoftwareUpdateBundle) error {
+func (p *Persistence) SyncSoftwareUpdateFile(update *model.SoftwareUpdateBundle) error {
 	logger := logging.GetLogger()
 
 	// Validate required fields

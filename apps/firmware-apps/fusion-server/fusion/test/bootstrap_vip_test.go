@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
+	model "fusion/internal/gen/proto/fusion"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -111,7 +111,7 @@ func verifyVIPStatusOnNode(t *testing.T, nodeHost string, expectedVIP string) {
 			continue
 		}
 
-		var status fusionpb.VIPOperationStatus
+		var status model.VIPOperationStatus
 		decErr := decodeProtoBody(resp.Body, &status)
 		resp.Body.Close()
 		if decErr != nil {
