@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
-
+import '../../../../../../../core/models/products_data.dart';
 import '../../../../../../../core/service_locator.dart';
+import '../../../../../../add_source_popup/view/widgets/add_source_dropdown_list.dart';
 import '../../../../../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
 import '../../../../../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
+import '../../../../../../add_source_popup/view_model/add_source_viewmodel.dart';
 import '../../../../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
 import '../../../../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
@@ -56,37 +58,27 @@ enum EndpointLocationType {
   };
 }
 
-enum SourceType {
-  mic,
-  line,
-  instrument;
-
-  String get displayName => switch (this) {
-    SourceType.mic => 'Mic',
-    SourceType.line => 'Line',
-    SourceType.instrument => 'Instrument',
-  };
-}
-
 // ─── Data model ───────────────────────────────────────────────
 
 class EndpointFormData {
   final String endpointName;
-  final EQLProduct product;
-  final EndpointLocationType locationType;
+  final dynamic product; // your actual type
+  final dynamic locationType; // your actual type
   final String locationId;
+  final String? floorId; // ← add
+  final Offset? position; // ← add (or whatever position type you use)
   final bool addConnectedSource;
-  final String? sourceName;
-  final SourceType? sourceType;
+  final List<SourceData> selectedSources;
 
   const EndpointFormData({
     required this.endpointName,
     required this.product,
     required this.locationType,
     required this.locationId,
+    this.floorId, // ← add
+    this.position, // ← add
     required this.addConnectedSource,
-    this.sourceName,
-    this.sourceType,
+    required this.selectedSources,
   });
 }
 
@@ -102,21 +94,19 @@ class _LocationItem {
 // Outer StatelessWidget
 // ─────────────────────────────────────────────────────────────
 
-// ── 2. _AddEndpointDialogWidget threads it through ────────────
-
 class _AddEndpointDialogWidget extends StatelessWidget {
   const _AddEndpointDialogWidget({
     required this.category,
     required this.saveEnabledNotifier,
     required this.formKey,
-    required this.fromBuildingPage, // ← added
+    required this.fromBuildingPage,
     required this.onSave,
   });
 
   final EndpointDeviceCategory category;
   final ValueNotifier<bool> saveEnabledNotifier;
   final GlobalKey<_EndpointFormState> formKey;
-  final bool fromBuildingPage; // ← added
+  final bool fromBuildingPage;
   final void Function(EndpointFormData data)? onSave;
 
   @override
@@ -147,8 +137,6 @@ class _AddEndpointDialogWidget extends StatelessWidget {
 // Inner StatefulWidget — form
 // ─────────────────────────────────────────────────────────────
 
-// ── 3. _EndpointForm — category becomes initialCategory ───────
-
 class _EndpointForm extends StatefulWidget {
   const _EndpointForm({
     super.key,
@@ -169,7 +157,6 @@ class _EndpointForm extends StatefulWidget {
 
 class _EndpointFormState extends State<_EndpointForm> {
   final TextEditingController _nameCtrl = TextEditingController();
-  final TextEditingController _sourceNameCtrl = TextEditingController();
   final GlobalKey _connectedSourceKey = GlobalKey();
 
   late EndpointDeviceCategory _category;
@@ -178,7 +165,11 @@ class _EndpointFormState extends State<_EndpointForm> {
   _LocationItem? _selectedLocation;
   bool _addConnectedSource = false;
   bool _wasAddConnectedSource = false;
-  SourceType? _sourceType;
+
+  // ── Source state ──────────────────────────────────────────
+  SourceSectionType _selectedSourceSectionType = SourceSectionType.values.first;
+  List<SourceData?> _selectedSources = <SourceData?>[null];
+  final TextEditingController _sourceNameCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -196,7 +187,6 @@ class _EndpointFormState extends State<_EndpointForm> {
     if (_selectedLocation == null) return false;
     if (_addConnectedSource) {
       if (_sourceNameCtrl.text.trim().isEmpty) return false;
-      if (_sourceType == null) return false;
     }
     return true;
   }
@@ -209,29 +199,146 @@ class _EndpointFormState extends State<_EndpointForm> {
     if (!_canSave || !mounted) return;
 
     final EqlProductsVm vm = BlocProvider.of<EqlProductsVm>(context);
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
+    // ── Equipment Location flow ──────────────────────────────────────
     if (_locationType == EndpointLocationType.equipmentLocation) {
       vm.addProductToLocation(
         equipLocationId: _selectedLocation!.id,
         product: _selectedProduct!,
       );
-    } else {
-      // Zone — TODO: wire to ProjectViewModel zone method when available --Anirudha
+
+      if (_addConnectedSource) {
+        _addSourceForEquipLocation(
+          projectViewModel: projectViewModel,
+          equipLocationId: _selectedLocation!.id,
+        );
+      }
+
+      widget.onSave?.call(
+        EndpointFormData(
+          endpointName: _nameCtrl.text.trim(),
+          product: _selectedProduct!,
+          locationType: _locationType!,
+          locationId: _selectedLocation!.id,
+          addConnectedSource: _addConnectedSource,
+          selectedSources: _addConnectedSource ? _selectedSources.whereType<SourceData>().toList() : const <SourceData>[],
+        ),
+      );
+
+      // ── Zone flow ────────────────────────────────────────────────────
+    } else if (_locationType == EndpointLocationType.zone) {
+      final List<ListeningArea> areasInZone = projectViewModel.getListeningAreasForZone(zoneId: _selectedLocation!.id);
+      final ListeningArea? selectedArea = areasInZone.firstOrNull;
+      if (selectedArea == null) {
+        FusionToast.error(context, message: "No listening area found in this zone");
+        return;
+      }
+
+      final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: selectedArea.id);
+
+      vm.addProductToZone(
+        listeningAreaId: selectedArea.id,
+        floorId: floorData?.id,
+        position: selectedArea.getCenterPositionOfVertices(),
+        product: _selectedProduct!,
+      );
+
+      if (_addConnectedSource) {
+        _addSourceForZone(
+          projectViewModel: projectViewModel,
+          listeningAreaId: selectedArea.id,
+          floorId: floorData?.id,
+          position: selectedArea.getCenterPositionOfVertices(),
+        );
+      }
+
+      widget.onSave?.call(
+        EndpointFormData(
+          endpointName: _nameCtrl.text.trim(),
+          product: _selectedProduct!,
+          locationType: _locationType!,
+          locationId: selectedArea.id,
+          floorId: floorData?.id,
+          position: selectedArea.getCenterPositionOfVertices(),
+          addConnectedSource: _addConnectedSource,
+          selectedSources: _addConnectedSource ? _selectedSources.whereType<SourceData>().toList() : const <SourceData>[],
+        ),
+      );
     }
 
-    widget.onSave?.call(
-      EndpointFormData(
-        endpointName: _nameCtrl.text.trim(),
-        product: _selectedProduct!,
-        locationType: _locationType!,
-        locationId: _selectedLocation!.id,
-        addConnectedSource: _addConnectedSource,
-        sourceName: _addConnectedSource ? _sourceNameCtrl.text.trim() : null,
-        sourceType: _addConnectedSource ? _sourceType : null,
+    Navigator.of(context).maybePop();
+  }
+
+  // ── Source helpers ────────────────────────────────────────────
+
+  void _addSourceForEquipLocation({
+    required ProjectViewModel projectViewModel,
+    required String equipLocationId,
+  }) {
+    final SourceData? sourceData = _selectedSources.whereType<SourceData>().firstOrNull;
+    if (sourceData == null) return;
+
+    final Source source = Source(
+      name: _sourceNameCtrl.text.trim(),
+      pos: null,
+      type: sourceData.type,
+      addedFromBuildingPage: false,
+      connectionType: SourceConnectionType.endpoint,
+      image: sourceData.assetPath,
+      locationEntity: LocationModel(),
+      sku: sourceData.id,
+      price: sourceData.price,
+      pagingSourceType: sourceData.pagingSourceType,
+      portData: HardwarePortData(
+        inputPorts: 0,
+        outputPorts: 1,
+        inputPortType: PortType.analogInput,
+        outputPortType: PortType.analogOutput,
+        portPosition: PortPosition.topLeft,
       ),
     );
 
-    Navigator.of(context).maybePop();
+    projectViewModel.addHardware(hardware: source);
+    projectViewModel.addHardwareToEquipLocation(
+      equipLocationId: equipLocationId,
+      hardwareId: source.id,
+    );
+  }
+
+  void _addSourceForZone({
+    required ProjectViewModel projectViewModel,
+    required String listeningAreaId,
+    required String? floorId,
+    required Offset? position,
+  }) {
+    final SourceData? sourceData = _selectedSources.whereType<SourceData>().firstOrNull;
+    if (sourceData == null) return;
+
+    final Source source = Source(
+      name: _sourceNameCtrl.text.trim(),
+      pos: position,
+      type: sourceData.type,
+      addedFromBuildingPage: false,
+      connectionType: SourceConnectionType.endpoint,
+      image: sourceData.assetPath,
+      locationEntity: LocationModel(
+        listeningAreaId: listeningAreaId,
+        floorId: floorId,
+      ),
+      sku: sourceData.id,
+      price: sourceData.price,
+      pagingSourceType: sourceData.pagingSourceType,
+      portData: HardwarePortData(
+        inputPorts: 0,
+        outputPorts: 1,
+        inputPortType: PortType.analogInput,
+        outputPortType: PortType.analogOutput,
+        portPosition: PortPosition.topLeft,
+      ),
+    );
+
+    projectViewModel.addHardware(hardware: source);
   }
 
   void _scrollToConnectedSource() {
@@ -251,8 +358,8 @@ class _EndpointFormState extends State<_EndpointForm> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _sourceNameCtrl.dispose();
     super.dispose();
+    _sourceNameCtrl.dispose();
   }
 
   @override
@@ -291,7 +398,6 @@ class _EndpointFormState extends State<_EndpointForm> {
           // ── Category chip selector (building page only) ────
           if (widget.fromBuildingPage) ...<Widget>[
             const SizedBox(height: 20),
-
             FusionOutlinedDropdown<EndpointDeviceCategory>(
               label: 'Device Type',
               hint: 'Select Device Type',
@@ -319,7 +425,9 @@ class _EndpointFormState extends State<_EndpointForm> {
             const SizedBox(height: 20),
           ],
 
-          // ── Type — from EqlProductsVm ──────────────────────
+          const SizedBox(height: 8),
+
+          // ── Product dropdown — from EqlProductsVm ──────────
           BlocBuilder<EqlProductsVm, EQLProductsState>(
             builder: (BuildContext context, EQLProductsState state) {
               return switch (state.data) {
@@ -331,7 +439,9 @@ class _EndpointFormState extends State<_EndpointForm> {
                 ),
                 EQLProductsError(:final String message) => FusionAppText(
                   text: 'Error loading types: $message',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.error),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.error,
+                  ),
                 ),
                 EQLProductsLoaded(:final List<EQLProduct> products) => FusionOutlinedDropdown<EQLProduct>(
                   label: _category.typeLabel,
@@ -413,6 +523,7 @@ class _EndpointFormState extends State<_EndpointForm> {
               };
             },
           ),
+
           const SizedBox(height: 20),
 
           // ── Location ──────────────────────────────────────
@@ -456,6 +567,7 @@ class _EndpointFormState extends State<_EndpointForm> {
               },
             ),
           ],
+
           // ── Add connected source toggle ────────────────────
           if (_locationType != null) ...<Widget>[
             const SizedBox(height: 20),
@@ -464,7 +576,10 @@ class _EndpointFormState extends State<_EndpointForm> {
                 FusionSwitch(
                   value: _addConnectedSource,
                   onChanged: (bool v) {
-                    setState(() => _addConnectedSource = v);
+                    setState(() {
+                      _addConnectedSource = v;
+                      if (v) _selectedSources = <SourceData?>[null];
+                    });
                     _revalidate();
                   },
                   width: 44,
@@ -480,32 +595,45 @@ class _EndpointFormState extends State<_EndpointForm> {
           ],
 
           // ── Connected source fields ────────────────────────
+          // ── Connected source fields ────────────────────────
           if (_addConnectedSource) ...<Widget>[
             const SizedBox(height: 20),
-            SizedBox(
-              key: _connectedSourceKey,
-              child: FusionLabeledField(
-                label: 'Source Name',
-                semanticId: 'source_name_label',
-                child: FusionBorderedTextField(
-                  controller: _sourceNameCtrl,
-                  semanticId: 'source_name_field',
-                  hintText: 'Enter source name',
-                  contentPadding: const EdgeInsets.all(16),
-                ),
+            FusionLabeledField(
+              label: 'Source Name',
+              semanticId: 'source_name_label',
+              child: FusionBorderedTextField(
+                controller: _sourceNameCtrl,
+                semanticId: 'source_name_field',
+                hintText: 'Enter source name',
+                contentPadding: const EdgeInsets.all(16),
               ),
             ),
             const SizedBox(height: 20),
-            FusionOutlinedDropdown<SourceType>(
+            FusionOutlinedDropdown<SourceSectionType>(
               label: 'Source Type',
               hint: 'Select Source Type',
-              value: _sourceType,
-              items: SourceType.values,
-              itemLabelBuilder: (SourceType t) => t.displayName,
-              onChanged: (SourceType v) {
-                setState(() => _sourceType = v);
-                _revalidate();
+              value: _selectedSourceSectionType,
+              items: SourceSectionType.values,
+              itemLabelBuilder: (SourceSectionType item) => item.displayName,
+              onChanged: (SourceSectionType value) {
+                setState(() {
+                  _selectedSourceSectionType = value;
+                  _selectedSources = <SourceData?>[null]; // reset with null entry
+                });
               },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              key: _connectedSourceKey,
+              child: SourceDropdownList(
+                selectedSources: _selectedSources,
+                items: _selectedSourceSectionType.items,
+                onChanged: (int index, SourceData value) {
+                  setState(() {
+                    _selectedSources[index] = value;
+                  });
+                },
+              ),
             ),
           ],
         ],
@@ -519,12 +647,10 @@ class _EndpointFormState extends State<_EndpointForm> {
 class AddEndpointDialog {
   AddEndpointDialog._();
 
-  // ── 1. show() gets fromBuildingPage param ─────────────────────
-
   static Future<void> show({
     required BuildContext context,
     required EndpointDeviceCategory category,
-    bool fromBuildingPage = false, // ← added
+    bool fromBuildingPage = false,
     void Function(EndpointFormData data)? onSave,
   }) {
     final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);

@@ -15,6 +15,8 @@ import '../../../add_source_popup/view/add_source_popup.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../configuration_control/widgets/controllers/add_controller/add_controller_dialog.dart';
 import '../../../create_zone_popup/view/create_zone_popup.dart';
+import '../../../projects/viewmodel/eql_products_vm.dart';
+import '../../../projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import '../../../projects/widget/building/side_panel_widgets/equipment_location/parts/endpointdialog.dart';
 import '../../state/device_listing_state.dart';
 import '../../viewmodel/endpoints_viewmodel.dart';
@@ -22,7 +24,7 @@ import '../../viewmodel/schematic_fusion_controller_viewmodel.dart';
 import '../../viewmodel/schematic_network_switch_viewmodel.dart';
 import '../../viewmodel/schematic_sources_viewmodel.dart';
 import '../../viewmodel/search_control_viewmodel.dart';
-import '../../views/widgets/filter_section.dart';
+// import '../../views/widgets/filter_section.dart';
 import '../../views/widgets/schematic_hardware_listing.dart';
 import '../../views/widgets/schematic_listing_section.dart';
 import '../../views/widgets/schematic_section.dart';
@@ -62,7 +64,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               spacing: 6,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const FilterSection(),
+                // const FilterSection(),
 
                 ///------------------------------------------------------------------------------------------------------------------------------------------
                 ///
@@ -125,12 +127,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       SchematicHardwareListing<FusionDsp, SchematicFusionDeviceViewModel>(
                         create: (BuildContext context) => SchematicFusionDeviceViewModel(),
                         title: "Fusion Devices",
-                        addAction: GestureDetector(
-                          onTap:
-                              () => AddEndpointDialog.show(
-                                context: context,
-                                category: EndpointDeviceCategory.processor,
-                              ),
+                        addAction: FusionArrowPopup(
+                          semanticId: 'add_fusion_device_popup',
+                          content: const EquipmentLocationDialog(
+                            currentFilter: EQLDeviceType.processor,
+                          ),
                           child: Icon(
                             LucideIcons.plus200,
                             size: FusionSizes.iconSize16,
@@ -146,12 +147,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           return SchematicAmplifiersViewModel();
                         },
                         title: "Amplifiers",
-                        addAction: GestureDetector(
-                          onTap:
-                              () => AddEndpointDialog.show(
-                                context: context,
-                                category: EndpointDeviceCategory.amplifier,
-                              ),
+                        addAction: FusionArrowPopup(
+                          semanticId: 'add_amplifier_popup',
+                          content: const EquipmentLocationDialog(
+                            currentFilter: EQLDeviceType.amplifier,
+                          ),
                           child: Icon(
                             LucideIcons.plus200,
                             size: FusionSizes.iconSize16,

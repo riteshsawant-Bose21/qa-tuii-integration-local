@@ -340,10 +340,8 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/create_zone_popup/view/widgets/add_output_device_drawer.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import '../view_model/create_zone_viewmodel_state.dart';
 import 'create_zone_content.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -368,29 +366,7 @@ class CreateZonePopup extends StatelessWidget {
       semanticId: 'create_zone',
       buttonLabel: 'Save Zone',
       onButtonPressed: () => vm.createZone(context),
-      header: FusionDrawerHeader(
-        semanticId: 'create_zone',
-        title: 'Create Zone',
-        trailing: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-          bloc: vm,
-          buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
-          builder: (BuildContext ctx, CreateZoneViewModelState state) {
-            return _AddOutputDeviceButton(
-              onTap:
-                  () => AddOutputDeviceDrawer.show(
-                    vm: vm,
-                    context: context,
-                    zoneColor: state.zoneColor,
-                    zoneName: state.zoneName,
-                    onBack: () => Navigator.of(context).maybePop(),
-                    onSave: (OutputDeviceFormData data) {
-                      // TODO: pass data to VM when implemented
-                    },
-                  ),
-            );
-          },
-        ),
-      ),
+      title: 'Create Zone',
       content: BlocProvider<CreateZoneViewModel>.value(
         value: vm,
         child: CreateZoneContent(isFromBuildingPage: isFromBuildingPage),
@@ -472,39 +448,6 @@ class _FusionDrawerHeaderState extends State<FusionDrawerHeader> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddOutputDeviceButton extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const _AddOutputDeviceButton({required this.onTap});
-
-  @override
-  State<_AddOutputDeviceButton> createState() => _AddOutputDeviceButtonState();
-}
-
-class _AddOutputDeviceButtonState extends State<_AddOutputDeviceButton> {
-  bool _hovered = false;
-  @override
-  Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "create_zone_add_output_device"),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: FusionAppText(
-            text: "Add Output Device",
-            style: context.textTheme.l1SemiBold.copyWith(
-              color: _hovered ? context.colorScheme.elevation6 : context.colorScheme.textPrimary,
-            ),
-          ),
         ),
       ),
     );
