@@ -762,7 +762,6 @@ private:
     bool ptp_anchor_allow_pre_gm_lock;
     bool ptp_anchor_have_armed_pps_seq;
     bool ptp_force_reanchor;
-    bool ptp_force_reanchor_have_armed_pps_seq;
     bool ptp_have_timing_pps_seq;
     bool ptp_have_gm_identity;
     bool ptp_have_pending_gm_identity;
@@ -770,7 +769,6 @@ private:
     std::string ptp_gm_identity;
     std::string ptp_pending_gm_identity;
     uint32_t ptp_anchor_armed_pps_seq;
-    uint32_t ptp_force_reanchor_armed_pps_seq;
     uint32_t ptp_last_timing_pps_seq;
     int ptp_good_streak;
     int ptp_bad_streak;
@@ -786,7 +784,7 @@ private:
     std::chrono::steady_clock::time_point mgr_last_start_attempt;
     int mgr_start_failures;
     enum class PtpState { RESET, WAIT_GM, WAIT_LOCK, SYNCED, HOLDOVER };
-    enum class TimingResetType { Session, Holdover };
+    enum class TimingResetType { Session, Holdover, SessionAlreadyReset };
     PtpState ptp_state;
     bool ptp_wait_lock_from_holdover;
 
@@ -820,11 +818,10 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
       audio_streams_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(false), ptp_anchor_armed(false),
       ptp_anchor_allow_pre_gm_lock(false), ptp_anchor_have_armed_pps_seq(false),
-      ptp_force_reanchor(false), ptp_force_reanchor_have_armed_pps_seq(false),
+      ptp_force_reanchor(false),
       ptp_have_timing_pps_seq(false), ptp_have_gm_identity(false),
       ptp_have_pending_gm_identity(false), ptp_pending_gm_lock_streak(0),
       ptp_gm_identity(""), ptp_pending_gm_identity(""), ptp_anchor_armed_pps_seq(0),
-      ptp_force_reanchor_armed_pps_seq(0),
       ptp_last_timing_pps_seq(0), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET), ptp_wait_lock_from_holdover(false) {
@@ -1369,8 +1366,6 @@ void FusionConnectClient::reset_timing_session(const char *reason)
     ptp_have_timing_pps_seq = false;
     ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
-    ptp_force_reanchor_have_armed_pps_seq = false;
-    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
     ptp_wait_lock_from_holdover = false;
 
@@ -1391,8 +1386,6 @@ void FusionConnectClient::reset_timing_holdover(const char *reason)
     ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
     ptp_force_reanchor = false;
-    ptp_force_reanchor_have_armed_pps_seq = false;
-    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
 
     SPDLOG_INFO("Timing holdover reset due to {}", reason);
@@ -1402,6 +1395,8 @@ void FusionConnectClient::start_timing_session(TimingResetType reset_type)
 {
     if (reset_type == TimingResetType::Holdover) {
         reset_timing_holdover("holdover reacquire");
+    } else if (reset_type == TimingResetType::SessionAlreadyReset) {
+        SPDLOG_INFO("Starting timing session after prior GPT reset");
     } else if (!nl_reset_timing_session(client)) {
         SPDLOG_WARN("Failed to reset GPT timing session before enabling PPS");
     }
@@ -1418,8 +1413,6 @@ void FusionConnectClient::start_timing_session(TimingResetType reset_type)
     ptp_have_timing_pps_seq = false;
     ptp_anchor_armed_pps_seq = 0;
     ptp_last_timing_pps_seq = 0;
-    ptp_force_reanchor_have_armed_pps_seq = false;
-    ptp_force_reanchor_armed_pps_seq = 0;
     gpt_discipline_continuity_logged = false;
     ptp_wait_lock_from_holdover = false;
 }
@@ -1436,6 +1429,7 @@ void FusionConnectClient::update_ptp_state()
     constexpr long long OFFSET_LOCK_NS = 1000; // 1 us lock window
     constexpr long long OFFSET_LOSS_NS = 10000; // 10 us loss threshold
     constexpr int LOCK_CONSEC = 3;
+    constexpr int GM_IDENTITY_CHANGE_CONSEC = 3;
     constexpr int LOSS_CONSEC = 3;
     const auto now = std::chrono::steady_clock::now();
     constexpr auto STATUS_POLL_PERIOD = std::chrono::seconds(1);
@@ -1475,8 +1469,6 @@ void FusionConnectClient::update_ptp_state()
         ptp_last_timing_pps_seq = 0;
         ptp_role_flag = -1;
         ptp_force_reanchor = false;
-        ptp_force_reanchor_have_armed_pps_seq = false;
-        ptp_force_reanchor_armed_pps_seq = 0;
         ptp_wait_lock_from_holdover = false;
         clear_ptp_gm_identity_tracking();
         reset_timing_session("reset state");
@@ -1502,8 +1494,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = false;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_LOCK;
@@ -1522,8 +1512,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::SYNCED;
                 ptp_state_since = now;
@@ -1546,8 +1534,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_last_timing_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_GM;
                 ptp_state_since = now;
@@ -1564,6 +1550,13 @@ void FusionConnectClient::update_ptp_state()
                 }
                 if (ptp_good_streak >= LOCK_CONSEC) {
                     const bool use_holdover_reset = ptp_wait_lock_from_holdover;
+                    const bool use_prior_session_reset =
+                        ptp_force_reanchor && !use_holdover_reset;
+                    const TimingResetType start_reset_type =
+                        use_holdover_reset ? TimingResetType::Holdover :
+                        (use_prior_session_reset ?
+                         TimingResetType::SessionAlreadyReset :
+                         TimingResetType::Session);
                     ptp_sync_good = true;
                     ptp_bad_streak = 0;
                     ptp_anchor_pending = false;
@@ -1572,13 +1565,9 @@ void FusionConnectClient::update_ptp_state()
                     ptp_have_timing_pps_seq = false;
                     ptp_anchor_armed_pps_seq = 0;
                     ptp_last_timing_pps_seq = 0;
-                    ptp_force_reanchor_have_armed_pps_seq = false;
-                    ptp_force_reanchor_armed_pps_seq = 0;
                     ptp_state = PtpState::SYNCED;
                     ptp_state_since = now;
-                    start_timing_session(use_holdover_reset ?
-                                         TimingResetType::Holdover :
-                                         TimingResetType::Session);
+                    start_timing_session(start_reset_type);
                     clear_pending_ptp_gm_identity();
                     if (gm_identity_valid) {
                         ptp_gm_identity = gm_identity;
@@ -1608,8 +1597,6 @@ void FusionConnectClient::update_ptp_state()
                     ptp_anchor_armed_pps_seq = 0;
                     ptp_last_timing_pps_seq = 0;
                     ptp_force_reanchor = true;
-                    ptp_force_reanchor_have_armed_pps_seq = false;
-                    ptp_force_reanchor_armed_pps_seq = 0;
                     ptp_wait_lock_from_holdover = false;
                     clear_ptp_gm_identity_tracking();
                     ptp_state = PtpState::WAIT_LOCK;
@@ -1630,8 +1617,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_have_armed_pps_seq = false;
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::HOLDOVER;
                 ptp_state_since = now;
@@ -1646,12 +1631,29 @@ void FusionConnectClient::update_ptp_state()
                     clear_pending_ptp_gm_identity();
                     SPDLOG_INFO("Tracking PTP GM identity {}", ptp_gm_identity);
                 } else if (gm_identity != ptp_gm_identity) {
-                    if (!ptp_have_pending_gm_identity ||
-                        ptp_pending_gm_identity != gm_identity) {
-                        const std::string previous_gm_identity = ptp_gm_identity;
+                    const bool pending_identity_changed =
+                        !ptp_have_pending_gm_identity ||
+                        ptp_pending_gm_identity != gm_identity;
+                    if (pending_identity_changed) {
                         ptp_pending_gm_identity = gm_identity;
                         ptp_have_pending_gm_identity = true;
                         ptp_pending_gm_lock_streak = 0;
+                        SPDLOG_WARN("PTP GM identity candidate changed from {} to {}; waiting for {} locked polls before re-anchor",
+                                    ptp_gm_identity, ptp_pending_gm_identity,
+                                    GM_IDENTITY_CHANGE_CONSEC);
+                    }
+
+                    if (master_offset_valid &&
+                        std::llabs(master_offset) <= OFFSET_LOCK_NS) {
+                        ptp_pending_gm_lock_streak++;
+                    } else {
+                        ptp_pending_gm_lock_streak = 0;
+                    }
+
+                    if (ptp_pending_gm_lock_streak >=
+                        GM_IDENTITY_CHANGE_CONSEC) {
+                        const std::string previous_gm_identity =
+                            ptp_gm_identity;
                         ptp_gm_identity = ptp_pending_gm_identity;
                         clear_pending_ptp_gm_identity();
                         ptp_sync_good = false;
@@ -1665,13 +1667,12 @@ void FusionConnectClient::update_ptp_state()
                         ptp_anchor_armed_pps_seq = 0;
                         ptp_last_timing_pps_seq = 0;
                         ptp_force_reanchor = true;
-                        ptp_force_reanchor_have_armed_pps_seq = false;
-                        ptp_force_reanchor_armed_pps_seq = 0;
                         ptp_wait_lock_from_holdover = false;
                         ptp_state = PtpState::WAIT_LOCK;
                         ptp_state_since = now;
-                        SPDLOG_WARN("PTP GM identity changed from {} to {}; resetting timing session and waiting for lock",
-                                    previous_gm_identity, ptp_gm_identity);
+                        SPDLOG_WARN("PTP GM identity changed from {} to {} after {} locked polls; resetting timing session and waiting for lock",
+                                    previous_gm_identity, ptp_gm_identity,
+                                    GM_IDENTITY_CHANGE_CONSEC);
                         reset_timing_session("PTP GM identity change");
                         break;
                     }
@@ -1720,8 +1721,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_have_armed_pps_seq = false;
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = true;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::WAIT_LOCK;
@@ -1740,8 +1739,6 @@ void FusionConnectClient::update_ptp_state()
                 ptp_anchor_have_armed_pps_seq = false;
                 ptp_anchor_armed_pps_seq = 0;
                 ptp_force_reanchor = false;
-                ptp_force_reanchor_have_armed_pps_seq = false;
-                ptp_force_reanchor_armed_pps_seq = 0;
                 ptp_wait_lock_from_holdover = false;
                 clear_ptp_gm_identity_tracking();
                 ptp_state = PtpState::SYNCED;
@@ -1827,8 +1824,6 @@ void FusionConnectClient::maybe_set_phc_anchor()
             SPDLOG_INFO("Forced PHC re-anchor settled on PPS seq {} after PTP GM change",
                         pps_seq);
             ptp_force_reanchor = false;
-            ptp_force_reanchor_have_armed_pps_seq = false;
-            ptp_force_reanchor_armed_pps_seq = 0;
         } else {
             SPDLOG_INFO("PHC anchor settled on PPS seq {}", pps_seq);
         }
@@ -1876,8 +1871,6 @@ void FusionConnectClient::maybe_set_phc_anchor()
         ptp_anchor_armed = false;
         ptp_anchor_have_armed_pps_seq = false;
         ptp_anchor_armed_pps_seq = 0;
-        ptp_force_reanchor_have_armed_pps_seq = false;
-        ptp_force_reanchor_armed_pps_seq = 0;
     }
 
     if (!ptp_anchor_pending) return;
@@ -1899,8 +1892,6 @@ void FusionConnectClient::maybe_set_phc_anchor()
         ptp_anchor_armed_pps_seq = pps_seq;
         ptp_last_anchor = now;
         if (ptp_force_reanchor) {
-            ptp_force_reanchor_have_armed_pps_seq = true;
-            ptp_force_reanchor_armed_pps_seq = pps_seq;
             SPDLOG_INFO("Armed forced PHC anchor for next PPS at {} ns after PTP GM change (lead {} ns, pps_seq={})",
                         next_pps_ns, delta, pps_seq);
         } else {
