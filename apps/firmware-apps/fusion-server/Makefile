@@ -12,7 +12,7 @@ DEBUG_FLAGS=-gcflags "all=-N -l"
 PROTOC ?= protoc
 PROTO_SRC_DIR=../../../libs/proto
 PROTO_GO_OUT=fusion/internal/gen/proto
-PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto
+PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto $(PROTO_SRC_DIR)/fusion/software_update.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -78,6 +78,7 @@ proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/pava.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/sessions.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/metadata.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/software_update.pb.go
 
 # Cross compilation
 build-linux-amd64: proto
