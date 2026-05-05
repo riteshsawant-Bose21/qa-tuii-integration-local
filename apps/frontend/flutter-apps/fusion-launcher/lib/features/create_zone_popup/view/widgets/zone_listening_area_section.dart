@@ -3,10 +3,12 @@ part of '../create_zone_content.dart';
 class _ZoneListeningAreaSection extends StatefulWidget {
   final int? subzoneIndex;
   final bool isFromBuildingPage;
+  final void Function(bool isAdding)? onAddingAreaChanged; // ← replace notifier with callback
 
   const _ZoneListeningAreaSection({
     required this.subzoneIndex,
     this.isFromBuildingPage = false,
+    this.onAddingAreaChanged,
   });
 
   @override
@@ -120,6 +122,7 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
       _isAddingArea = false;
       _isAddingNewFloor = false;
     });
+    widget.onAddingAreaChanged?.call(false);
   }
 
   // ── Build ─────────────────────────────────────────────────────
@@ -377,11 +380,13 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
       label: 'Add New Listening Area',
       semanticId: 'add_listening_area_btn_${widget.subzoneIndex ?? 'zone'}',
       iconSize: 16,
-      onTap:
-          () => setState(() {
-            _isAddingArea = true;
-            _isDropdownOpen = false;
-          }),
+      onTap: () {
+        setState(() {
+          _isAddingArea = true;
+          _isDropdownOpen = false;
+        });
+        widget.onAddingAreaChanged?.call(true);
+      },
       iconColor: context.colorScheme.iconWhite,
       style: context.textTheme.l1SemiBold.copyWith(color: context.colorScheme.onSurface),
     );

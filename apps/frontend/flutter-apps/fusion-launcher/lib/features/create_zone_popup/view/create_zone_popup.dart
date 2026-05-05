@@ -360,16 +360,20 @@ class CreateZonePopup extends StatelessWidget {
 
   static void show(BuildContext context, {bool isFromBuildingPage = false}) {
     final CreateZoneViewModel vm = CreateZoneViewModel()..init(isFromBuilding: isFromBuildingPage);
-
+    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
     FusionDrawer.show<void>(
       context: context,
       semanticId: 'create_zone',
       buttonLabel: 'Save Zone',
+      buttonEnabledNotifier: saveEnabled, // ← add
       onButtonPressed: () => vm.createZone(context),
       title: 'Create Zone',
       content: BlocProvider<CreateZoneViewModel>.value(
         value: vm,
-        child: CreateZoneContent(isFromBuildingPage: isFromBuildingPage),
+        child: CreateZoneContent(
+          isFromBuildingPage: isFromBuildingPage,
+          saveEnabledNotifier: saveEnabled, // ← add
+        ),
       ),
     );
   }
