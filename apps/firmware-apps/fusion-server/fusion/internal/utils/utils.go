@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -316,44 +315,19 @@ func CalculateDiff(before, after any) map[string]any {
 	barr, bIsArr := before.([]any)
 	aarr, aIsArr := after.([]any)
 	if bIsArr || aIsArr {
-
-		// before not array → treat as empty
-		if !bIsArr && aIsArr {
-			barr = []any{}
-		}
-
-		// after not array → primitive replace
+		// Arrays are treated as atomic values for diff output. This preserves
+		// observer/update semantics and avoids converting slices into
+		// string-keyed sparse maps like {"0":...,"1":...}.
 		if bIsArr && !aIsArr {
 			return map[string]any{"": after}
 		}
-
-		diff := map[string]any{}
-
-		max := min(len(aarr), len(barr))
-
-		for i := 0; i < max; i++ {
-			sub := CalculateDiff(barr[i], aarr[i])
-			if sub == nil {
-				continue
-			}
-
-			if val, ok := unwrapPrimitiveDiff(sub); ok {
-				diff[strconv.Itoa(i)] = val
-			} else {
-				diff[strconv.Itoa(i)] = sub
-			}
+		if !bIsArr && aIsArr {
+			return map[string]any{"": DeepCopy(aarr)}
 		}
-
-		if len(aarr) > len(barr) {
-			for i := len(barr); i < len(aarr); i++ {
-				diff[strconv.Itoa(i)] = aarr[i]
-			}
-		}
-
-		if len(diff) == 0 {
+		if reflect.DeepEqual(barr, aarr) {
 			return nil
 		}
-		return diff
+		return map[string]any{"": DeepCopy(aarr)}
 	}
 
 	// -----------------------------
@@ -434,9 +408,10 @@ func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 	if !ok {
 		return nil, false
 	}
-	// Only unwrap true primitives
+	// Unwrap atomic replacements. Nested map diffs must remain wrapped so
+	// callers can distinguish them from a direct replacement value.
 	switch v.(type) {
-	case map[string]any, []any:
+	case map[string]any:
 		return nil, false
 	default:
 		return v, true

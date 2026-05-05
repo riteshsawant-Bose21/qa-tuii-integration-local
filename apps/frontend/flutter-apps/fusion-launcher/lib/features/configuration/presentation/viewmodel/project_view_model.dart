@@ -30,6 +30,7 @@ export 'schedule/schedule_view_model.dart';
 export 'source_set/source_set_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
+export 'wall/wall_viewmodel.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
 
@@ -93,6 +94,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// Live drag offsets for hardware components (canvas pos delta during drag, not persisted).
   final ValueNotifier<Map<String, Offset>> liveDragOffsets = ValueNotifier<Map<String, Offset>>(<String, Offset>{});
+
+  // This notifier is used to indicate whether the devices are being registered or not,
+  // We want to hide close button when the devices are being registered to prevent
+  // user from closing the dialog while registration is in progress
+  ValueNotifier<bool> isDevicesRegisteringNotifier = ValueNotifier<bool>(false);
 
   ProjectData? _currentProject;
 
@@ -569,5 +575,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       emit(ProjectError(message: "Failed to import project: $e"));
       return ResponseCallback<bool>(success: false, message: e.toString());
     }
+  }
+
+  @override
+  Future<void> close() {
+    isDevicesRegisteringNotifier.dispose();
+    return super.close();
   }
 }

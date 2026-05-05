@@ -3,9 +3,11 @@
 /// -------------------
 enum RelationshipType {
   floorAreas,
+  floorWalls,
   zoneAreas,
   zoneSourceSet,
   zoneSources,
+  zoneEndpoints,
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,

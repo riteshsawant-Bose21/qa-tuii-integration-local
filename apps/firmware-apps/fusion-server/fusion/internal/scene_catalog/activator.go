@@ -37,13 +37,13 @@ func (a *Activator) ActivateSnapshotByID(id string) error {
 		return err
 	}
 
-	afterPtr, err := a.stateManager.Patch(def.Data)
+	result, err := a.stateManager.Patch(def.Data)
 	if err != nil {
 		return err
 	}
 
-	if afterPtr != nil {
-		if err := a.applyConfigUpdate(*afterPtr, false); err != nil {
+	if result != nil {
+		if err := a.applyConfigUpdate(result.ConfigUpdate, result.Diff); err != nil {
 			return err
 		}
 	}
@@ -66,7 +66,7 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 		return err
 	}
 
-	afterPtr, err := a.stateManager.Patch(scene.Data)
+	result, err := a.stateManager.Patch(scene.Data)
 	if err != nil {
 		return err
 	}
@@ -75,8 +75,8 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 		return err
 	}
 
-	if afterPtr != nil {
-		if err := a.applyConfigUpdate(*afterPtr, false); err != nil {
+	if result != nil {
+		if err := a.applyConfigUpdate(result.ConfigUpdate, result.Diff); err != nil {
 			return err
 		}
 	}
@@ -93,16 +93,11 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 	return nil
 }
 
-func (a *Activator) applyConfigUpdate(data map[string]any, clear bool) error {
-	configUpdate, err := a.stateManager.NewConfigUpdate(data)
-	if err != nil {
-		return err
+func (a *Activator) applyConfigUpdate(configUpdate *api.ConfigUpdate, diff map[string]any) error {
+	if configUpdate == nil {
+		return nil
 	}
-	configUpdate.Clear = clear
-
-	if _, err := a.stateManager.ApplyUpdate(*configUpdate); err != nil {
-		return fmt.Errorf("failed to apply local config update: %w", err)
-	}
+	configUpdate.ObserverData = diff
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,

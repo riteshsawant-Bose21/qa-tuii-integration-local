@@ -1,4 +1,6 @@
 info:
   name: WebSocket
   type: folder
-  seq: 17
+  seq: 16
+
+request: {}

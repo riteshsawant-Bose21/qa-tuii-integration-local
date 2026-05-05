@@ -25,6 +25,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
+import '../features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
+import '../features/configuration_events/viewModel/events_viewmodel/config_events_viewmodel.dart';
+import '../features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
+import '../features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -36,7 +40,7 @@ import '../features/dynamic_config/domain/usecases/initialize_panel_usecase.dart
 import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dart';
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
-import '../features/firmware_update/viewmodel/firmware_update_vm.dart';
+import '../features/devices/view_model/reboot/reboot_viewmodel.dart';
 import '../features/home/domain/usecases/create_project_usecase.dart';
 import '../features/home/domain/usecases/delete_project_usecase.dart';
 import '../features/home/domain/usecases/fetch_file_usecase.dart';
@@ -210,8 +214,8 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
-    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
+  serviceLocator.registerLazySingleton<RebootViewmodelCubit>(
+    () => RebootViewmodelCubit(fusionDeviceService: serviceLocator<FusionDeviceService>()),
   );
 
   serviceLocator.registerSingleton<FusionConfigSyncService>(
@@ -305,6 +309,33 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<SnapshotSyncViewModel>(
     () => SnapshotSyncViewModel(
       snapshotActivateService: serviceLocator<SnapshotActivateService>(),
+    ),
+  );
+
+  /// snapshot related viewmodel
+  serviceLocator.registerLazySingleton<ConfigSnapshotsViewmodel>(
+    () => ConfigSnapshotsViewmodel(
+      projectViewModel: serviceLocator<ProjectViewModel>(),
+      snapshotActivateService: serviceLocator<SnapshotActivateService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ConfigSnapshotActionsViewModel>(
+    () => ConfigSnapshotActionsViewModel(
+      projectViewModel: serviceLocator<ProjectViewModel>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ConfigEventsViewmodel>(
+    () => ConfigEventsViewmodel(
+      projectViewModel: serviceLocator<ProjectViewModel>(),
+      eventActivateService: serviceLocator<FusionEventService>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ConfigEventActionsViewmodel>(
+    () => ConfigEventActionsViewmodel(
+      projectViewModel: serviceLocator<ProjectViewModel>(),
     ),
   );
 

@@ -1,6 +1,7 @@
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
+import '../../models/touch_ui_zone_config/touch_ui_zone_config.dart';
 
 /// Extension on [ProjectService] providing FusionController-specific data access.
 ///
@@ -199,16 +200,22 @@ extension ControllerService on ProjectService {
 
     // Build WallZone list.
     final List<WallZone> wallZones = <WallZone>[];
-    for (final String assignedIds in orderedZoneIds) {
-      Zone? zone = zones.get(assignedIds);
+    final Set<String> addedZoneIds = <String>{};
+
+    for (final String assignedId in orderedZoneIds) {
+      Zone? zone = zones.get(assignedId);
+
       if (zone == null) {
-        /// assignedIds is a subzone id; fetch parent zone id and then fetch zone details
-        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedIds);
+        // assignedId is a sub-zone; resolve to its parent zone.
+        final String? parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, assignedId);
         if (parentZoneId != null) {
           zone = zones.get(parentZoneId);
         }
         if (zone == null) continue;
       }
+
+      // Skip if this zone was already added (e.g. another sub-zone of the same zone).
+      if (!addedZoneIds.add(zone.id)) continue;
 
       // Sources (direct + source-set sources).
       final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
@@ -245,40 +252,165 @@ extension ControllerService on ProjectService {
         );
       }
 
-      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedIds, includeUserBlocks: true);
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: assignedId, includeUserBlocks: true);
       ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
         (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
       );
 
-      final String? functionId = getZoneFunction(zoneOrSubZoneId: zone.id)?.id;
+      final ZoneFunctions? functionId = getZoneFunction(zoneOrSubZoneId: zone.id);
 
       wallZones.add(
         WallZone(
-          id: zone.id,
+          // id: zone.id,
+          id: functionId?.paramName ?? zone.id,
           name: zone.name,
           gain: WallGainConfig(gainID: processingBlockModel?.id ?? ""),
           ono: zoneOno,
-          functionId: functionId,
+          functionId: functionId?.id,
           sources: wallSources,
           subZones: wallSubZones,
         ),
       );
     }
 
-    // Build WallController list.
-    final List<WallController> wallControllers = allControllers
-        .map(
-          (FusionController c) => WallController(
-            id: c.id,
-            name: c.name,
-            zoneIds: getAssignedZoneIds(c.id).toList(),
-          ),
-        )
-        .toList();
+    // Build WallController list (with pages embedded per controller).
+    final List<WallController> wallControllers = allControllers.map(
+      (FusionController controller) {
+        /// Pages linked to this controller via controllerPages relationship.
+        final List<ControllerPageModel> pages = getControllerPages(controller.id);
+        final List<WallPages> controllerWallPages = <WallPages>[];
+        final List<WallMessagePlayer> controllerWallMessages = <WallMessagePlayer>[];
+        for (final ControllerPageModel page in pages) {
+          if (page.type == ControllerPageType.message) {
+            print('[WallMessagePlayer] id: ${page.id}, name: ${page.name}');
+
+            final List<WallMessage> wallMessages = getMessageIdsForPage(page.id).map((String id) {
+              final String? trigger = getMediaFileForMessage(id)?.triggerId;
+              final MessageModel? messageModel = messages.get(id);
+              return WallMessage(
+                id: messageModel?.id ?? id,
+                name: messageModel?.name ?? id,
+                trigger: trigger,
+              );
+            }).toList();
+
+            controllerWallMessages.add(
+              WallMessagePlayer(
+                id: page.id,
+                name: "Message Player",
+                messages: wallMessages,
+              ),
+            );
+            continue;
+          }
+
+          final bool isSnapshotPage = page.type == ControllerPageType.snapshotPage;
+
+          List<WallPageSnapshot> snapshotsList;
+          if (isSnapshotPage) {
+            final Set<String> snapshotIds = getSnapshotIdsForPage(page.id);
+            snapshotsList = snapshotIds.map((String id) {
+              final SnapshotsModel? snapshot = getSnapshotById(id);
+              return WallPageSnapshot(id: id, name: snapshot?.name ?? id);
+            }).toList();
+          } else {
+            final List<SnapshotsModel> sceneSnapshots = getSnapshotInSceneSet(page.id);
+            snapshotsList = sceneSnapshots.map((SnapshotsModel s) => WallPageSnapshot(id: s.id, name: s.name)).toList();
+          }
+
+          controllerWallPages.add(
+            WallPages(
+              pageId: page.id,
+              name: page.name,
+              isPage: isSnapshotPage,
+              snapshotsList: snapshotsList,
+            ),
+          );
+        }
+
+        String type = (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro')) ? 'pro' : 'lt';
+        Set<String> zoneId = getAssignedZoneIds(controller.id);
+        final ZoneFunctions? functionId = zoneId.isNotEmpty ? getZoneFunction(zoneOrSubZoneId: zoneId.first) : null;
+
+        final List<String> assignedZoneFunctionId =
+            getAssignedZoneIds(controller.id).toList().map((String id) => getZoneFunction(zoneOrSubZoneId: id)?.paramName).whereType<String>().toList() ?? [];
+
+        return WallController(
+          id: type == "lt" ? "CONTROLLER350958744" : controller.id,
+          name: controller.name,
+          type: type,
+          // zoneIds: getAssignedZoneIds(controller.id).toList(),
+          zoneIds: assignedZoneFunctionId,
+          pages: controllerWallPages,
+          messagePlayer: controllerWallMessages,
+          schedule: (controller.sku.toLowerCase().contains('pro') || controller.name.toLowerCase().contains('pro'))
+              ? WallSchedule(
+                  showUpcoming: controller.showUpcoming,
+                  selectedScheduleData: () {
+                    // schedule list based on the display mode.
+                    final List<ScheduleConfig> scheduleData;
+                    switch (controller.scheduleDisplayMode) {
+                      case 'none':
+                        scheduleData = <ScheduleConfig>[];
+                      case 'all':
+                        scheduleData = getAllSchedules();
+                      case 'selected':
+                      default:
+                        scheduleData = getSelectedScheduleIds(controller.id).map((String id) => getScheduleById(id)).whereType<ScheduleConfig>().toList();
+                    }
+                    return scheduleData.map((ScheduleConfig scheduleData) {
+                      return WallScheduleItem(
+                        id: scheduleData.id,
+                        name: scheduleData.name,
+                        isDisabled: scheduleData.status,
+                        color: scheduleData.colorHex,
+                        date: scheduleData.startDate,
+                        time: scheduleData.time,
+                      );
+                    }).toList();
+                  }(),
+                )
+              : null,
+        );
+      },
+    ).toList();
 
     return WallControllerConfig(
       controllers: wallControllers,
       zones: wallZones,
     );
+  }
+
+  /// Returns all zone data for Touch UI in the required format, including all zones in the project.
+  TouchUIZoneConfig getTouchUIZoneConfig() {
+    resetOnoCounter();
+    final List<Zone> allZones = zones.getAll();
+    final List<TouchUIZone> zonesList = <TouchUIZone>[];
+    for (final Zone zone in allZones) {
+      final List<Source> sources = getSourcesAndSourceSetSourcesInZone(zoneId: zone.id);
+      final List<TouchUIZoneSource> sourcesList = sources.asMap().entries.map((e) => TouchUIZoneSource(index: e.key + 1, name: e.value.name)).toList();
+      final List<ProcessingBlockModel> processingBlocks = getProcessingBlockFor(parentId: zone.id, includeUserBlocks: true);
+      final ProcessingBlockModel? processingBlockModel = processingBlocks.firstWhereOrNull(
+        (ProcessingBlockModel block) => block.algorithmId == "gain" && block.isforUser,
+      );
+      final ZoneFunctions? functionId = getZoneFunction(zoneOrSubZoneId: zone.id);
+
+      zonesList.add(
+        TouchUIZone(
+          // zoneId: zone.id,
+          zoneId: functionId?.paramName ?? zone.id,
+          zoneName: zone.name,
+          gain: TouchUIGainConfig(
+            id: processingBlockModel?.id ?? '',
+            min: -60,
+            max: 12,
+            defGain: 0,
+            defMute: false,
+          ),
+          sources: sourcesList,
+        ),
+      );
+    }
+    return TouchUIZoneConfig(zones: zonesList);
   }
 }

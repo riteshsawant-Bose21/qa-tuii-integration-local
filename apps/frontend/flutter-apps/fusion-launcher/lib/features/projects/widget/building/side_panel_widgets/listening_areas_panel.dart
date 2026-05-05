@@ -200,7 +200,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                           ),
                         ),
 
-                        if (!area.isDrawn) ...<Widget>[
+                        if (!area.isDrawn && context.read<ProjectViewModel>().currentFloor.floorPlan.imagePath.isNotEmpty) ...<Widget>[
                           SemanticHelper.button(
                             testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_draw_$index"),
                             child: InkWell(

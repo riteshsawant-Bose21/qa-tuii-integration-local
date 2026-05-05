@@ -265,7 +265,7 @@ class _RecentProjects extends StatelessWidget {
                               child: ProjectCard(
                                 index: index,
                                 projectData: project,
-                                onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
+                                onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
                               ),
                             );
                           },
