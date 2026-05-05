@@ -105,12 +105,14 @@ class PBNumberTextField extends StatelessWidget {
   final num? max;
   @override
   Widget build(BuildContext context) {
+    final bool isDisabled = DisabledWidgetWrapper.maybeOf(context)?.isDisabled ?? false;
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.textInput,
         'pb_number_textfield$semanticId',
       ),
       label: value?.toString(),
+      enabled: !isDisabled,
       child: PBTextField(
         value: value?.toString(),
         inputFormatters: <TextInputFormatter>[

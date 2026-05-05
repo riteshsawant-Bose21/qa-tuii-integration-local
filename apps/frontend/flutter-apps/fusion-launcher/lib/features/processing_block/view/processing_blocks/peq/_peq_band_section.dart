@@ -120,8 +120,8 @@ class _PeqBandSection extends StatelessWidget {
                               BuildContext context,
                               _BandType option,
                             ) {
-                              return Text(
-                                option.label,
+                              return FusionAppText(
+                                text: option.label,
                                 style: context.textTheme.bodySmall,
                               );
                             },
@@ -178,8 +178,8 @@ class _PeqBandSection extends StatelessWidget {
                                         BuildContext context,
                                         _CutType option,
                                       ) {
-                                        return Text(
-                                          option.label,
+                                        return FusionAppText(
+                                          text: option.label,
                                           style: context.textTheme.bodySmall,
                                         );
                                       },

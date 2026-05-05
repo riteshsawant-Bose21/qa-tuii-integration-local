@@ -1132,9 +1132,8 @@ class FusionSidebarSectionHeader extends StatelessWidget {
               Expanded(
                 child: FusionAppText(
                   text: title,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    color: context.colorScheme.textPrimary,
+                  style: context.textTheme.l1Medium.copyWith(
+                    color: context.colorScheme.textBody,
                   ),
                 ),
               ),

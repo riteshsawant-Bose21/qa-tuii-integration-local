@@ -203,9 +203,8 @@ class _BuildingPlanState extends State<BuildingPlan> {
             children: <Widget>[
               FusionAppText(
                 text: "FLOORS",
-                style: context.textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  color: context.colorScheme.textPrimary,
+                style: context.textTheme.l1Medium.copyWith(
+                  color: context.colorScheme.textBody,
                 ),
               ),
               SemanticHelper.button(
@@ -305,19 +304,20 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           width: 20,
                                           height: 20,
                                           alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: context.colorScheme.primaryWhite,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: FusionAppText(
-                                            text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.w600,
-                                              color: context.colorScheme.primaryBlack,
-                                            ),
-                                          ),
+                                          // decoration: BoxDecoration(
+                                          //   color: context.colorScheme.primaryWhite,
+                                          //   borderRadius: BorderRadius.circular(4),
+                                          // ),
+                                          child: const Icon(LucideIcons.layoutDashboard200),
+                                          // FusionAppText(
+                                          //   text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
+                                          //   textAlign: TextAlign.center,
+                                          //   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          //     fontSize: 8,
+                                          //     fontWeight: FontWeight.w600,
+                                          //     color: context.colorScheme.primaryBlack,
+                                          //   ),
+                                          // ),
                                         ),
                                         const SizedBox(width: 8),
                                         // Floor name - editable or display
@@ -366,11 +366,12 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                 return FusionAppText(
                                                   text: floor.name,
                                                   maxLine: 2,
-                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                    fontSize: 12,
-                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                    color: Theme.of(context).colorScheme.textPrimary,
-                                                  ),
+                                                  style: isSelected ? context.textTheme.l1Bold : context.textTheme.l1Medium,
+                                                  // Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  //   fontSize: 12,
+                                                  //   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                  //   color: Theme.of(context).colorScheme.textPrimary,
+                                                  // ),
                                                 );
                                               }
                                             },
