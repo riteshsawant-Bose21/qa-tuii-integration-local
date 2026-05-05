@@ -1,5 +1,9 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+FUSION_SERVER_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+FUSION_TEST_DIR="$FUSION_SERVER_ROOT/fusion/test"
+
 function show_help() {
     echo "Usage: ./run_tests.sh [--all|--cluster|--fusion|--convergence|--vip-api] [--vip IP:PORT] [--test-name NAME] [--list] [--list-all]"
     echo "Options:"
@@ -384,7 +388,7 @@ function run_logger_tests() {
     return "$status"
 }
 
-cd fusion/test || exit 1
+cd "$FUSION_TEST_DIR" || exit 1
 
 case "$test_type" in
     "all")
@@ -421,13 +425,15 @@ case "$test_type" in
         ;;
     time-machine)       run_package_tests "$(regex_for_test_file ./time_machine_test.go)" ;;
     udp)
-        unset FUSION_UDP_LOCAL
-        udp_ip="$(first_multipass_instance_ip "fusion")"
-        if [[ -z "$udp_ip" ]]; then
-            echo "Unable to determine UDP target IP from multipass instances" >&2
-            exit 1
+        if [[ -z "${FUSION_UDP_ADDR:-}" ]]; then
+            unset FUSION_UDP_LOCAL
+            udp_ip="$(first_multipass_instance_ip "fusion")"
+            if [[ -z "$udp_ip" ]]; then
+                echo "Unable to determine UDP target IP from multipass instances" >&2
+                exit 1
+            fi
+            export FUSION_UDP_ADDR="${udp_ip}:7947"
         fi
-        export FUSION_UDP_ADDR="${udp_ip}:7947"
         run_package_tests "$(regex_for_test_file ./udp_test.go)"
         ;;
 
@@ -474,4 +480,4 @@ case "$test_type" in
         ;;
 esac
 
-cd ../../ || exit 1
+cd "$FUSION_SERVER_ROOT" || exit 1

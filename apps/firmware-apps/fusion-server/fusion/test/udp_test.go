@@ -120,7 +120,15 @@ func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse broadcast: %v", err)
 	}
-	if _, ok := msg["udp_broadcast_test"]; !ok {
+	payload, ok := msg["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected broadcast payload shape: %s", string(buf[:n]))
+	}
+	updates, ok := payload["updates"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected broadcast updates shape: %s", string(buf[:n]))
+	}
+	if _, ok := updates["udp_broadcast_test"]; !ok {
 		t.Fatalf("unexpected broadcast payload: %s", string(buf[:n]))
 	}
 }
