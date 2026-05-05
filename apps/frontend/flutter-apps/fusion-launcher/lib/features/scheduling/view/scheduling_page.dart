@@ -16,7 +16,7 @@ import '../state/scheduler_state.dart';
 import '../state/timeline_state.dart';
 import '../viewmodel/scheduler_viewmodel.dart';
 import '../viewmodel/timeline_viewmodel.dart';
-import 'sections/scheduler_form.dart';
+import 'sections/scheduler/scheduler_form.dart';
 
 part 'sections/scheduler_section.dart';
 part 'sections/timeline_section.dart';
