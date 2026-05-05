@@ -72,20 +72,20 @@ var ErrNotMember = errors.New("not a member of scene set")
 
 // Persistence handles state persistence and metadata management.
 type Persistence struct {
-	dbPath       string
-	stateManager *StateManager
-	db           *bbolt.DB
-	dbOptions    *bbolt.Options
-	mutex        sync.RWMutex
-	notifierMu   sync.RWMutex
+	dbPath           string
+	stateManager     *StateManager
+	db               *bbolt.DB
+	dbOptions        *bbolt.Options
+	mutex            sync.RWMutex
+	notifierMu       sync.RWMutex
 	metadataNotifier func(*api.DatabaseMetadata)
-	lastSave     time.Time
-	saveDebounce time.Duration
-	minSaveGap   time.Duration
-	saveCh       chan struct{}
-	shutdownCh   chan struct{}
-	workerDone   chan struct{}
-	closeOnce    sync.Once
+	lastSave         time.Time
+	saveDebounce     time.Duration
+	minSaveGap       time.Duration
+	saveCh           chan struct{}
+	shutdownCh       chan struct{}
+	workerDone       chan struct{}
+	closeOnce        sync.Once
 }
 
 // NewPersistence opens the database and returns a new persistence instance.
@@ -803,35 +803,54 @@ func computeHashTx(tx *bbolt.Tx) (string, error) {
 }
 
 func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
-	if bucketName != bucketFusion || key != keyMetadata {
+	switch bucketName {
+	case bucketFusion:
+		if key != keyMetadata {
+			return value, nil
+		}
+		var metadata api.DatabaseMetadata
+		if err := json.Unmarshal(value, &metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
+		}
+		metadata.Hash = ""
+		normalized, err := json.Marshal(metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal normalized metadata for hashing: %w", err)
+		}
+		return normalized, nil
+
+	case bucketSnapshots, bucketActive:
+		// Strip the Timestamp field so that nodes with logically identical
+		// state but different save times produce the same hash. This must
+		// match the normalization applied in normalizeAntiEntropyValue;
+		// without it, the hash and the diff diverge, causing perpetual
+		// anti-entropy repair loops.
+		var state PersistentState
+		if err := json.Unmarshal(value, &state); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal persistent state for hashing (bucket=%s key=%s): %w", bucketName, key, err)
+		}
+		state.Timestamp = time.Time{}
+		normalized, err := json.Marshal(state)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal normalized persistent state for hashing (bucket=%s key=%s): %w", bucketName, key, err)
+		}
+		return normalized, nil
+
+	default:
 		return value, nil
 	}
-
-	var metadata api.DatabaseMetadata
-	if err := json.Unmarshal(value, &metadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
-	}
-
-	metadata.Hash = ""
-
-	normalized, err := json.Marshal(metadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal normalized metadata for hashing: %w", err)
-	}
-
-	return normalized, nil
 }
 
 func normalizeAntiEntropyValue(bucketName string, value any) (any, error) {
 	switch bucketName {
-	case bucketSnapshots:
+	case bucketSnapshots, bucketActive:
 		raw, err := json.Marshal(value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal snapshot for normalization: %w", err)
+			return nil, fmt.Errorf("failed to marshal persistent state for normalization (bucket=%s): %w", bucketName, err)
 		}
 		var state PersistentState
 		if err := json.Unmarshal(raw, &state); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal snapshot for normalization: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal persistent state for normalization (bucket=%s): %w", bucketName, err)
 		}
 		state.Timestamp = time.Time{}
 		return state, nil
