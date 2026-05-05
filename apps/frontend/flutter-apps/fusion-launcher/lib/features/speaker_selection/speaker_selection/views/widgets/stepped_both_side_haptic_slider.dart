@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-/// A highly customizable stepped horizontal slider with haptic feedback at each stop.
+import 'stepped_haptic_slider.dart';
+
+/// A highly customizable stepped horizontal range slider with haptic feedback at each stop.
 ///
-/// - Thumb drags **smoothly** — no jumping between stops while dragging.
-/// - Haptic feedback fires the instant the thumb's center crosses a stop line.
-/// - Thumb is fully contained inside the track with configurable inner padding.
-/// - Drag is continuous; haptic triggers when crossing each step line.
+/// - Left and right thumbs drag **smoothly**.
+/// - Haptic feedback fires when the active thumb crosses a stop line.
+/// - Both thumbs stay fully contained inside the track.
+/// - Active fill is rendered between selected min and max values.
 ///
 /// Example:
 /// ```dart
-/// SteppedHapticSlider(
+/// SteppedBothSideHapticSlider(
 ///   min: 50,
 ///   max: 100,
 ///   interval: 10,
-///   initialValue: 70,
-///   onChanged: (val) => print(val),
+///   initialStartValue: 60,
+///   initialEndValue: 90,
+///   onRangeChanged: (values) => print(values),
 /// )
 /// ```
-class SteppedHapticSlider extends StatefulWidget {
+class SteppedBothSideHapticSlider extends StatefulWidget {
   /// Minimum value of the slider.
   final double min;
 
@@ -28,14 +32,17 @@ class SteppedHapticSlider extends StatefulWidget {
   /// Interval between each stop/tick mark. Must divide (max - min) evenly.
   final double interval;
 
-  /// Initial value of the slider.
-  final double initialValue;
+  /// Initial start value of the range.
+  final double initialStartValue;
 
-  /// Callback fired whenever the value changes during drag (continuous).
-  final ValueChanged<double>? onChanged;
+  /// Initial end value of the range.
+  final double initialEndValue;
 
-  /// Callback fired when the user lifts their finger (continuous value).
-  final ValueChanged<double>? onChangeEnd;
+  /// Callback fired whenever the selected range changes.
+  final ValueChanged<RangeValues>? onRangeChanged;
+
+  /// Callback fired when the user lifts their finger.
+  final ValueChanged<RangeValues>? onRangeChangeEnd;
 
   // ── Track ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +59,7 @@ class SteppedHapticSlider extends StatefulWidget {
   final double? trackBorderRadius;
 
   /// Horizontal padding inside the track so the thumb never touches the edges.
-  /// Defaults to [thumbDiameter] / 2 + 2 (matches the screenshot aesthetic).
+  /// Defaults to [thumbDiameter] / 2 + 6 for a cleaner edge gap at min/max.
   final double? trackInnerPadding;
 
   /// Magnetic snap window around each step, expressed as a fraction of [interval].
@@ -92,6 +99,15 @@ class SteppedHapticSlider extends StatefulWidget {
 
   // ── Labels ─────────────────────────────────────────────────────────────────
 
+  /// Optional classification bands shown above the track.
+  final List<SliderTopBand> topBands;
+
+  /// Text style for top band labels.
+  final TextStyle? topBandLabelStyle;
+
+  /// Spacing between top band labels and the slider track.
+  final double topBandSpacing;
+
   /// Whether to show numeric labels below the slider.
   final bool showLabels;
 
@@ -129,14 +145,15 @@ class SteppedHapticSlider extends StatefulWidget {
   /// Whether haptic feedback is enabled.
   final bool hapticEnabled;
 
-  const SteppedHapticSlider({
+  const SteppedBothSideHapticSlider({
     super.key,
     required this.min,
     required this.max,
     required this.interval,
-    this.initialValue = 0,
-    this.onChanged,
-    this.onChangeEnd,
+    required this.initialStartValue,
+    required this.initialEndValue,
+    this.onRangeChanged,
+    this.onRangeChangeEnd,
     // Track
     this.trackHeight = 36,
     this.trackBackgroundColor = const Color(0xFF2A2A2A),
@@ -155,6 +172,9 @@ class SteppedHapticSlider extends StatefulWidget {
     this.tickColorActive = Colors.white24,
     this.tickColorInactive = Colors.white24,
     this.showEdgeTicks = false,
+    this.topBands = const <SliderTopBand>[],
+    this.topBandLabelStyle,
+    this.topBandSpacing = 10,
     // Labels
     this.showLabels = true,
     this.labelStyle,
@@ -172,30 +192,44 @@ class SteppedHapticSlider extends StatefulWidget {
   }) : assert(
          interval > 0 && (max - min) % interval == 0,
          'interval must be > 0 and divide (max - min) evenly',
+       ),
+       assert(
+         initialStartValue <= initialEndValue,
+         'initialStartValue must be <= initialEndValue',
        );
 
   @override
-  State<SteppedHapticSlider> createState() => _SteppedHapticSliderState();
+  State<SteppedBothSideHapticSlider> createState() => _SteppedBothSideHapticSliderState();
 }
 
-class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
-  /// Raw (unsnapped) 0→1 ratio that drives smooth thumb movement while dragging.
-  late double _rawRatio;
+class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlider> {
+  /// Raw (unsnapped) 0→1 ratios that drive smooth thumb movement while dragging.
+  late double _startRawRatio;
+  late double _endRawRatio;
 
-  /// Whether user is actively dragging the thumb.
+  /// Whether user is actively dragging a thumb.
   bool _isDragging = false;
 
-  /// Last interval index crossed by thumb center (used for haptic trigger).
-  late int _lastCrossedStepIndex;
+  _ActiveThumb _activeThumb = _ActiveThumb.start;
 
-  double get _effectivePadding => widget.trackInnerPadding ?? (widget.thumbDiameter / 2 + 2);
+  /// Last interval index crossed by each thumb center (used for haptic trigger).
+  late int _lastCrossedStartStepIndex;
+  late int _lastCrossedEndStepIndex;
+
+  double get _effectivePadding => widget.trackInnerPadding ?? (widget.thumbDiameter / 2 + 6);
 
   @override
   void initState() {
     super.initState();
-    final double clamped = widget.initialValue.clamp(widget.min, widget.max);
-    _rawRatio = ((clamped - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
-    _lastCrossedStepIndex = _stepIndexForValue(clamped);
+    final double clampedStart = widget.initialStartValue.clamp(widget.min, widget.max);
+    final double clampedEnd = widget.initialEndValue.clamp(widget.min, widget.max);
+    final double normalizedStart = clampedStart <= clampedEnd ? clampedStart : clampedEnd;
+    final double normalizedEnd = clampedEnd >= clampedStart ? clampedEnd : clampedStart;
+
+    _startRawRatio = ((normalizedStart - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+    _endRawRatio = ((normalizedEnd - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+    _lastCrossedStartStepIndex = _stepIndexForValue(normalizedStart);
+    _lastCrossedEndStepIndex = _stepIndexForValue(normalizedEnd);
   }
 
   List<double> get _stops {
@@ -234,33 +268,83 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
     return ((localDx - _effectivePadding) / usable).clamp(0.0, 1.0);
   }
 
-  void _onDrag(double localDx, double totalWidth) {
-    final double rawRatio = _dxToRatio(localDx, totalWidth);
-    final double rawValue = widget.min + rawRatio * (widget.max - widget.min);
-
+  double _snapValueToStepWindow(double rawValue) {
     final double nearestStop = _nearestStop(rawValue);
     final double snapWindow = widget.interval * widget.stepSnapWindowFactor;
     final bool shouldSnapToStep = (rawValue - nearestStop).abs() <= snapWindow;
 
-    final double effectiveValue = shouldSnapToStep ? nearestStop : rawValue;
-    final double effectiveRatio = ((effectiveValue - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+    return shouldSnapToStep ? nearestStop : rawValue;
+  }
 
-    final int crossedStepIndex = _stepIndexForValue(effectiveValue);
+  _ActiveThumb _thumbForDx(double localDx, double totalWidth) {
+    final double usable = totalWidth - _effectivePadding * 2;
+    final double startCx = _effectivePadding + _startRawRatio * usable;
+    final double endCx = _effectivePadding + _endRawRatio * usable;
+    final double distToStart = (localDx - startCx).abs();
+    final double distToEnd = (localDx - endCx).abs();
 
-    setState(() => _rawRatio = effectiveRatio);
-    widget.onChanged?.call(effectiveValue);
-
-    // Fire haptic only when thumb crosses a step line.
-    if (crossedStepIndex != _lastCrossedStepIndex) {
-      _lastCrossedStepIndex = crossedStepIndex;
-      _triggerHaptic();
+    if (distToStart == distToEnd) {
+      final double mid = (startCx + endCx) / 2;
+      return localDx <= mid ? _ActiveThumb.start : _ActiveThumb.end;
     }
+    return distToStart < distToEnd ? _ActiveThumb.start : _ActiveThumb.end;
+  }
+
+  void _onDragStart(double localDx, double totalWidth) {
+    setState(() {
+      _isDragging = true;
+      _activeThumb = _thumbForDx(localDx, totalWidth);
+    });
+    _onDrag(localDx, totalWidth);
+  }
+
+  void _onDrag(double localDx, double totalWidth) {
+    final double rawRatio = _dxToRatio(localDx, totalWidth);
+    final double rawValue = widget.min + rawRatio * (widget.max - widget.min);
+    final double snappedValue = _snapValueToStepWindow(rawValue);
+
+    if (_activeThumb == _ActiveThumb.start) {
+      final double endValue = widget.min + _endRawRatio * (widget.max - widget.min);
+      final double clampedStartValue = snappedValue.clamp(widget.min, endValue);
+      final double startRatio = ((clampedStartValue - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+      final int crossedStepIndex = _stepIndexForValue(clampedStartValue);
+
+      setState(() => _startRawRatio = startRatio);
+
+      if (crossedStepIndex != _lastCrossedStartStepIndex) {
+        _lastCrossedStartStepIndex = crossedStepIndex;
+        _triggerHaptic();
+      }
+    } else {
+      final double startValue = widget.min + _startRawRatio * (widget.max - widget.min);
+      final double clampedEndValue = snappedValue.clamp(startValue, widget.max);
+      final double endRatio = ((clampedEndValue - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+      final int crossedStepIndex = _stepIndexForValue(clampedEndValue);
+
+      setState(() => _endRawRatio = endRatio);
+
+      if (crossedStepIndex != _lastCrossedEndStepIndex) {
+        _lastCrossedEndStepIndex = crossedStepIndex;
+        _triggerHaptic();
+      }
+    }
+
+    widget.onRangeChanged?.call(
+      RangeValues(
+        widget.min + _startRawRatio * (widget.max - widget.min),
+        widget.min + _endRawRatio * (widget.max - widget.min),
+      ),
+    );
   }
 
   void _onDragEnd() {
-    final double rawValue = widget.min + _rawRatio * (widget.max - widget.min);
     setState(() => _isDragging = false);
-    widget.onChangeEnd?.call(rawValue);
+    widget.onRangeChangeEnd?.call(
+      RangeValues(
+        widget.min + _startRawRatio * (widget.max - widget.min),
+        widget.min + _endRawRatio * (widget.max - widget.min),
+      ),
+    );
   }
 
   void _triggerHaptic() {
@@ -281,6 +365,9 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle effectiveTopBandStyle =
+        widget.topBandLabelStyle ?? context.textTheme.l3Caps.copyWith(color: context.colorScheme.textBody, fontSize: 6, letterSpacing: 0);
+
     final TextStyle effectiveLabelStyle =
         widget.labelStyle ??
         TextStyle(
@@ -302,9 +389,14 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
       builder: (BuildContext context, BoxConstraints constraints) {
         final double totalWidth = constraints.maxWidth;
         final double usable = totalWidth - _effectivePadding * 2;
-        final double thumbCX = _effectivePadding + _rawRatio * usable;
-        final double currentValue = widget.min + _rawRatio * (widget.max - widget.min);
-        final String valueText = widget.labelFormatter != null ? widget.labelFormatter!(currentValue) : currentValue.toStringAsFixed(0);
+        final double startThumbCx = _effectivePadding + _startRawRatio * usable;
+        final double endThumbCx = _effectivePadding + _endRawRatio * usable;
+        final double activeValue =
+            _activeThumb == _ActiveThumb.start
+                ? widget.min + _startRawRatio * (widget.max - widget.min)
+                : widget.min + _endRawRatio * (widget.max - widget.min);
+        final double activeThumbCx = _activeThumb == _ActiveThumb.start ? startThumbCx : endThumbCx;
+        final String valueText = widget.labelFormatter != null ? widget.labelFormatter!(activeValue) : activeValue.toStringAsFixed(0);
         final bool showIndicator = widget.showValueIndicatorOnDrag && _isDragging;
         final double indicatorHeight = showIndicator ? 28 : 0;
         final double indicatorAreaHeight = showIndicator ? (indicatorHeight + widget.valueIndicatorBottomSpacing) : 0;
@@ -312,6 +404,19 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
+            if (widget.topBands.isNotEmpty) ...<Widget>[
+              SizedBox(
+                width: totalWidth,
+                child: _TopBandsRow(
+                  min: widget.min,
+                  max: widget.max,
+                  bands: widget.topBands,
+                  innerPadding: _effectivePadding,
+                  labelStyle: effectiveTopBandStyle,
+                ),
+              ),
+              SizedBox(height: widget.topBandSpacing),
+            ],
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
@@ -321,13 +426,11 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onHorizontalDragStart: (DragStartDetails d) {
-                    setState(() => _isDragging = true);
-                    _onDrag(d.localPosition.dx, totalWidth);
-                  },
+                  onHorizontalDragStart: (DragStartDetails d) => _onDragStart(d.localPosition.dx, totalWidth),
                   onHorizontalDragUpdate: (DragUpdateDetails d) => _onDrag(d.localPosition.dx, totalWidth),
                   onHorizontalDragEnd: (_) => _onDragEnd(),
                   onTapDown: (TapDownDetails d) {
+                    _activeThumb = _thumbForDx(d.localPosition.dx, totalWidth);
                     _onDrag(d.localPosition.dx, totalWidth);
                     _onDragEnd();
                   },
@@ -343,7 +446,8 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
                           painter: _SliderPainter(
                             min: widget.min,
                             max: widget.max,
-                            rawRatio: _rawRatio,
+                            startRawRatio: _startRawRatio,
+                            endRawRatio: _endRawRatio,
                             stops: _stops,
                             trackHeight: widget.trackHeight,
                             trackBorderRadius: widget.trackBorderRadius ?? widget.trackHeight / 2,
@@ -364,7 +468,7 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
                       ),
                       if (showIndicator)
                         Positioned(
-                          left: thumbCX,
+                          left: activeThumbCx,
                           bottom: widget.trackHeight + widget.valueIndicatorBottomSpacing,
                           child: FractionalTranslation(
                             translation: const Offset(-0.5, 0),
@@ -416,8 +520,9 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
 class _SliderPainter extends CustomPainter {
   final double min, max;
 
-  /// Continuous 0→1 ratio — drives smooth thumb X (not snapped).
-  final double rawRatio;
+  /// Continuous 0→1 ratios — drive smooth thumb X positions.
+  final double startRawRatio;
+  final double endRawRatio;
 
   final List<double> stops;
   final double trackHeight, trackBorderRadius;
@@ -435,7 +540,8 @@ class _SliderPainter extends CustomPainter {
   _SliderPainter({
     required this.min,
     required this.max,
-    required this.rawRatio,
+    required this.startRawRatio,
+    required this.endRawRatio,
     required this.stops,
     required this.trackHeight,
     required this.trackBorderRadius,
@@ -472,34 +578,39 @@ class _SliderPainter extends CustomPainter {
     // Usable travel range for thumb center
     final double usable = size.width - innerPadding * 2;
 
-    // Thumb center follows rawRatio continuously
-    final double thumbCX = innerPadding + rawRatio * usable;
+    // Thumb centers follow raw ratios continuously
+    final double startThumbCX = innerPadding + startRawRatio * usable;
+    final double endThumbCX = innerPadding + endRawRatio * usable;
 
-    // Filled region extends slightly beyond the thumb edge so the knob feels
-    // visually embedded inside the green segment.
     final double thumbR = thumbDiameter / 2;
     final double activeCapRadius = thumbR + 4;
-    final double fillRight = (thumbCX + activeCapRadius).clamp(0.0, size.width);
+    final double fillLeft = (startThumbCX - activeCapRadius).clamp(0.0, size.width);
+    final double fillRight = (endThumbCX + activeCapRadius).clamp(0.0, size.width);
     canvas.save();
     canvas.clipRRect(RRect.fromRectAndRadius(bgRect, rr));
     canvas.drawRRect(
       RRect.fromRectAndCorners(
-        Rect.fromLTRB(0, trackTop, fillRight, trackBottom),
-        topLeft: rr,
-        bottomLeft: rr,
+        Rect.fromLTRB(fillLeft, trackTop, fillRight, trackBottom),
         topRight: rr,
         bottomRight: rr,
+        topLeft: rr,
+        bottomLeft: rr,
       ),
       Paint()..color = trackFillColor,
     );
-    canvas.restore();
 
-    // Extra cap keeps the thumb fully inside green, not touching/exceeding the edge.
+    // Keep cap extensions clipped to the track so edge curvature stays clean.
     canvas.drawCircle(
-      Offset(thumbCX, trackCY),
+      Offset(startThumbCX, trackCY),
       activeCapRadius,
       Paint()..color = trackFillColor,
     );
+    canvas.drawCircle(
+      Offset(endThumbCX, trackCY),
+      activeCapRadius,
+      Paint()..color = trackFillColor,
+    );
+    canvas.restore();
 
     // ── Tick marks ──────────────────────────────────────────────────────────
     final Paint tickPaint = Paint()..strokeWidth = tickWidth;
@@ -508,8 +619,8 @@ class _SliderPainter extends CustomPainter {
       if (isEdge && !showEdgeTicks) continue;
 
       final double tx = innerPadding + _stopRatio(stop) * usable;
-      // A tick is "active" when the thumb center has passed it
-      tickPaint.color = (tx <= thumbCX + 0.5) ? tickColorActive : tickColorInactive;
+      final bool isActiveTick = tx >= fillLeft - 0.5 && tx <= fillRight + 0.5;
+      tickPaint.color = isActiveTick ? tickColorActive : tickColorInactive;
 
       canvas.drawLine(
         Offset(tx, trackCY - tickHeight / 2),
@@ -521,7 +632,13 @@ class _SliderPainter extends CustomPainter {
     // ── Thumb shadow ────────────────────────────────────────────────────────
     if (thumbElevation > 0) {
       canvas.drawShadow(
-        Path()..addOval(Rect.fromCircle(center: Offset(thumbCX, trackCY), radius: thumbR)),
+        Path()..addOval(Rect.fromCircle(center: Offset(startThumbCX, trackCY), radius: thumbR)),
+        thumbShadowColor,
+        thumbElevation,
+        false,
+      );
+      canvas.drawShadow(
+        Path()..addOval(Rect.fromCircle(center: Offset(endThumbCX, trackCY), radius: thumbR)),
         thumbShadowColor,
         thumbElevation,
         false,
@@ -530,7 +647,12 @@ class _SliderPainter extends CustomPainter {
 
     // ── Thumb ───────────────────────────────────────────────────────────────
     canvas.drawCircle(
-      Offset(thumbCX, trackCY),
+      Offset(startThumbCX, trackCY),
+      thumbR,
+      Paint()..color = thumbColor,
+    );
+    canvas.drawCircle(
+      Offset(endThumbCX, trackCY),
       thumbR,
       Paint()..color = thumbColor,
     );
@@ -538,7 +660,115 @@ class _SliderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SliderPainter old) =>
-      old.rawRatio != rawRatio || old.trackFillColor != trackFillColor || old.trackBackgroundColor != trackBackgroundColor;
+      old.startRawRatio != startRawRatio ||
+      old.endRawRatio != endRawRatio ||
+      old.trackFillColor != trackFillColor ||
+      old.trackBackgroundColor != trackBackgroundColor;
+}
+
+enum _ActiveThumb {
+  start,
+  end,
+}
+
+class SliderTopBand {
+  final String label;
+  final double start;
+  final double end;
+  final String? description;
+
+  const SliderTopBand({
+    required this.label,
+    required this.start,
+    required this.end,
+    this.description,
+  }) : assert(start <= end, 'start must be <= end');
+}
+
+class _TopBandsRow extends StatelessWidget {
+  final double min;
+  final double max;
+  final List<SliderTopBand> bands;
+  final double innerPadding;
+  final TextStyle labelStyle;
+
+  const _TopBandsRow({
+    required this.min,
+    required this.max,
+    required this.bands,
+    required this.innerPadding,
+    required this.labelStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (_, BoxConstraints constraints) {
+        final double totalWidth = constraints.maxWidth;
+        final double usable = totalWidth - innerPadding * 2;
+        final double rowHeight = ((labelStyle.fontSize ?? 9) * 1.9).clamp(16.0, 26.0);
+
+        double xForValue(double value) {
+          final double ratio = ((value - min) / (max - min)).clamp(0.0, 1.0);
+          return innerPadding + ratio * usable;
+        }
+
+        return SizedBox(
+          height: rowHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              for (int i = 0; i < bands.length; i++) ...<Widget>[
+                Builder(
+                  builder: (BuildContext context) {
+                    final SliderTopBand band = bands[i];
+                    final double start = band.start.clamp(min, max);
+                    final double end = band.end.clamp(min, max);
+                    if (end <= start) return const SizedBox.shrink();
+                    final double cx = xForValue((start + end) / 2);
+
+                    return Positioned(
+                      left: cx,
+                      top: 0,
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, 0),
+                        child: Tooltip(
+                          waitDuration: const Duration(milliseconds: 250),
+                          message: band.description ?? '${band.label}: ${start.toInt()}-${end.toInt()} dB SPL',
+                          child: Text(
+                            band.label.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.visible,
+                            style: labelStyle,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (i < bands.length - 1)
+                  Builder(
+                    builder: (BuildContext context) {
+                      final double boundary = bands[i].end.clamp(min, max);
+                      final double x = xForValue(boundary);
+                      return Positioned(
+                        left: x,
+                        bottom: 0,
+                        child: Container(
+                          width: 1,
+                          height: 9,
+                          color: Colors.white.withOpacity(0.28),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -590,25 +820,4 @@ class _LabelsRow extends StatelessWidget {
       },
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Haptic feedback type enum
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum HapticFeedbackType {
-  /// Light tap — best for dense sliders with many stops.
-  light,
-
-  /// Medium impact.
-  medium,
-
-  /// Heavy bump.
-  heavy,
-
-  /// Selection click — mimics a mechanical detent. Recommended default.
-  selection,
-
-  /// Full device vibration.
-  vibrate,
 }

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -152,7 +152,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     return args.copyWith(mountingTypes: () => current);
   });
 
-  void setMaxSplRange(SpeakerMaxSplRange range) => updatedSelectModeArgs((SelectModeArgs args) => args.copyWith(maxSplRange: () => range));
+  void setMaxSplRange(SpeakerMaxSplRange? range) => updatedSelectModeArgs((SelectModeArgs args) => args.copyWith(maxSplRange: () => range));
   void setAudioChannel(AudioChannel option) => updatedSelectModeArgs((SelectModeArgs args) => args.copyWith(audioChannel: () => option));
   void setSpeakerColor(SpeakerColorOption option) => updatedSelectModeArgs((SelectModeArgs args) => args.copyWith(speakerColorOption: () => option));
   void setWiringType(WiringType option) => updatedSelectModeArgs((SelectModeArgs args) => args.copyWith(wiringType: () => option));
@@ -182,6 +182,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
       expanded.add(productId);
     }
     emit(state.copyWith(expandSpeakerSpecs: () => expanded));
+  }
+
+  // RELATED TO SPEAKER SELECTION - SUGGEST
+  void updateSuggestModeArgs(Function(SuggestModeArgs args) updates) {
+    final SuggestModeArgs updatedArgs = updates(state.suggestModeArgs);
+    emit(state.copyWith(suggestModeArgs: () => updatedArgs));
   }
 
   void addSpeaker({required SpeakerProduct speaker}) {
@@ -336,30 +342,26 @@ class SelectModeArgs extends Equatable {
 
 class SuggestModeArgs extends Equatable {
   final MountingType mountingType;
-  final double splRangeMin;
-  final double splRangeMax;
+  final RangeValues splRange;
   final LowFrequency lowFrequency;
 
   const SuggestModeArgs({
     this.mountingType = MountingType.surface,
-    this.splRangeMin = 60.0,
-    this.splRangeMax = 70.0,
+    this.splRange = const RangeValues(60.0, 70.0),
     this.lowFrequency = LowFrequency.fullRange,
   });
 
   @override
-  List<Object?> get props => <Object?>[mountingType, splRangeMin, splRangeMax, lowFrequency];
+  List<Object?> get props => <Object?>[mountingType, splRange, lowFrequency];
 
   SuggestModeArgs copyWith({
     ValueGetter<MountingType>? mountingType,
-    ValueGetter<double>? splRangeMin,
-    ValueGetter<double>? splRangeMax,
+    ValueGetter<RangeValues>? splRange,
     ValueGetter<LowFrequency>? lowFrequency,
   }) {
     return SuggestModeArgs(
       mountingType: mountingType != null ? mountingType() : this.mountingType,
-      splRangeMin: splRangeMin != null ? splRangeMin() : this.splRangeMin,
-      splRangeMax: splRangeMax != null ? splRangeMax() : this.splRangeMax,
+      splRange: splRange != null ? splRange() : this.splRange,
       lowFrequency: lowFrequency != null ? lowFrequency() : this.lowFrequency,
     );
   }

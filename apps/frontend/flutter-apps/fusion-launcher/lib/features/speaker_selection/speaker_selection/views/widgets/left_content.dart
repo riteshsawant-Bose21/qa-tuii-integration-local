@@ -113,77 +113,87 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
               ),
             ),
 
-            /// ======== Mounting Type Selection =======
-            const SizedBox(height: 20),
-            const _MountingTypeSelection(),
+            if (speakerSelection.state.speakerSelectionMode == SpeakerSelectionMode.select) ...<Widget>[
+              /// ======== Mounting Type Selection =======
+              const SizedBox(height: 20),
+              const _MountingTypeSelection(),
 
-            /// ======== Maximum SPL Selection =======
-            const SizedBox(height: 20),
-            const _MaxSplSelection(),
+              /// ======== Maximum SPL Selection =======
+              const SizedBox(height: 20),
+              const _MaxSplSelection(),
 
-            const SizedBox(height: 20),
-            const _LowFrequencySelection(),
+              const SizedBox(height: 20),
+              const _LowFrequencySelection(),
 
-            const SizedBox(height: 20),
-            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-              builder: (BuildContext context, SpeakerSelectionVmState state) {
-                return Row(
-                  children: <Widget>[
-                    FusionSwitch(
-                      height: 24,
-                      width: 44,
-                      semanticId: "use_subwoofer",
-                      value: state.selectModeArgs.useSubwoofer,
-                      onChanged: context.read<SpeakerSelectionViewModel>().setUseSubwoofer,
-                    ),
-                    const SizedBox(width: 8),
-                    FusionAppText(
-                      text: 'Use Subwoofer',
-                      style: context.textTheme.b3Regular.copyWith(
-                        color: context.colorScheme.textPrimary,
+              const SizedBox(height: 20),
+              BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+                builder: (BuildContext context, SpeakerSelectionVmState state) {
+                  return Row(
+                    children: <Widget>[
+                      FusionSwitch(
+                        height: 24,
+                        width: 44,
+                        semanticId: "use_subwoofer",
+                        value: state.selectModeArgs.useSubwoofer,
+                        onChanged: context.read<SpeakerSelectionViewModel>().setUseSubwoofer,
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-
-            /// ======== Colour Selection =======
-            const SizedBox(height: 20),
-            const _ColourSelection(),
-
-            /// ======== Wiring Selection =======
-            const SizedBox(height: 20),
-            const _WiringSelection(),
-
-            /// ======== Audio Channel Selection =======
-            const SizedBox(height: 20),
-            const _ChannelsSelection(),
-            const SizedBox(height: 20),
-            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-              builder: (BuildContext context, SpeakerSelectionVmState state) {
-                if (state.selectModeArgs.useSubwoofer == false) return const SizedBox.shrink();
-
-                return Row(
-                  children: <Widget>[
-                    FusionSwitch(
-                      height: 24,
-                      width: 44,
-                      semanticId: "mono_subwoofer",
-                      value: state.selectModeArgs.monoSubwoofer,
-                      onChanged: context.read<SpeakerSelectionViewModel>().setMonoSubwoofer,
-                    ),
-                    const SizedBox(width: 8),
-                    FusionAppText(
-                      text: 'Mono Subwoofer',
-                      style: context.textTheme.b3Regular.copyWith(
-                        color: context.colorScheme.textPrimary,
+                      const SizedBox(width: 8),
+                      FusionAppText(
+                        text: 'Use Subwoofer',
+                        style: context.textTheme.b3Regular.copyWith(
+                          color: context.colorScheme.textPrimary,
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                    ],
+                  );
+                },
+              ),
+
+              /// ======== Colour Selection =======
+              const SizedBox(height: 20),
+              const _ColourSelection(),
+
+              /// ======== Wiring Selection =======
+              const SizedBox(height: 20),
+              const _WiringSelection(),
+
+              /// ======== Audio Channel Selection =======
+              const SizedBox(height: 20),
+              const _ChannelsSelection(),
+              const SizedBox(height: 20),
+              BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+                builder: (BuildContext context, SpeakerSelectionVmState state) {
+                  if (state.selectModeArgs.useSubwoofer == false) return const SizedBox.shrink();
+
+                  return Row(
+                    children: <Widget>[
+                      FusionSwitch(
+                        height: 24,
+                        width: 44,
+                        semanticId: "mono_subwoofer",
+                        value: state.selectModeArgs.monoSubwoofer,
+                        onChanged: context.read<SpeakerSelectionViewModel>().setMonoSubwoofer,
+                      ),
+                      const SizedBox(width: 8),
+                      FusionAppText(
+                        text: 'Mono Subwoofer',
+                        style: context.textTheme.b3Regular.copyWith(
+                          color: context.colorScheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ] else if (speakerSelection.state.speakerSelectionMode == SpeakerSelectionMode.suggest) ...<Widget>[
+              const SizedBox(height: 20),
+              const _SuggestModeMountingTypeSelection(),
+              const SizedBox(height: 20),
+              const _SuggestModeTargetSplySelection(),
+              const SizedBox(height: 20),
+              const _SuggestLowFrequencySelection(),
+              const SizedBox(height: 20),
+            ],
 
             const SizedBox(height: 20),
           ] else ...<Widget>[
@@ -196,6 +206,187 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestModeMountingTypeSelection extends StatelessWidget {
+  const _SuggestModeMountingTypeSelection();
+
+  @override
+  Widget build(BuildContext context) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'speaker_mounting_selection'),
+      child: Column(
+        children: <Widget>[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: _SectionTitle(title: "Mounting"),
+          ),
+          const SizedBox(height: 8),
+
+          BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+            builder: (BuildContext context, SpeakerSelectionVmState state) {
+              return Row(
+                spacing: 10,
+                children: <Widget>[
+                  ...MountingType.values.map(
+                    (MountingType option) {
+                      final bool isSelected = state.suggestModeArgs.mountingType == option;
+
+                      return Expanded(
+                        child: Column(
+                          spacing: 8,
+                          children: <Widget>[
+                            GestureDetector(
+                              onTap: () {
+                                final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+                                vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(mountingType: () => option));
+                              },
+                              child: Container(
+                                height: 52,
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: isSelected ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
+                                  border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                                ),
+                                child: FusionIcon.svg(
+                                  option.icon,
+                                  size: 24,
+                                  color: isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
+                                ),
+                              ),
+                            ),
+
+                            FusionAppText(
+                              text: option.displayName,
+                              maxLine: 1,
+                              style: context.textTheme.l1Regular.copyWith(
+                                color: context.colorScheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestModeTargetSplySelection extends StatelessWidget {
+  const _SuggestModeTargetSplySelection();
+
+  static const List<SliderTopBand> _splBands = <SliderTopBand>[
+    SliderTopBand(label: 'Background', start: 60, end: 70),
+    SliderTopBand(label: 'Paging', start: 70, end: 80),
+    SliderTopBand(label: 'Foreground', start: 80, end: 90),
+    SliderTopBand(label: 'Moderate Live', start: 90, end: 100),
+    SliderTopBand(label: 'High SPL Live', start: 100, end: 120),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final RangeValues splRange = context.select((SpeakerSelectionViewModel vm) => vm.state.suggestModeArgs.splRange);
+
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'speaker_target_spl_selection'),
+      child: Column(
+        children: <Widget>[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: _SectionTitle(title: "Target SPL (dB)"),
+          ),
+          const SizedBox(height: 8),
+
+          SteppedBothSideHapticSlider(
+            min: 60,
+            max: 120,
+            interval: 10,
+            initialStartValue: splRange.start,
+            initialEndValue: splRange.end,
+            topBands: _splBands,
+            onRangeChanged: (RangeValues values) {
+              final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+              vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(splRange: () => values));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestLowFrequencySelection extends StatelessWidget {
+  const _SuggestLowFrequencySelection();
+
+  @override
+  Widget build(BuildContext context) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'speaker_low_frequency_selection'),
+      child: Column(
+        children: <Widget>[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: _SectionTitle(title: "Low Frequency"),
+          ),
+          const SizedBox(height: 8),
+
+          BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+            builder: (BuildContext context, SpeakerSelectionVmState state) {
+              return Row(
+                spacing: 10,
+                children: <Widget>[
+                  ...LowFrequency.values.map(
+                    (LowFrequency option) {
+                      final bool isSelected = state.suggestModeArgs.lowFrequency == option;
+
+                      return Expanded(
+                        child: Column(
+                          spacing: 8,
+                          children: <Widget>[
+                            GestureDetector(
+                              onTap: () {
+                                final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+                                vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(lowFrequency: () => option));
+                              },
+                              child: Container(
+                                height: 52,
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: isSelected ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
+                                  border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                                ),
+                                child: FusionAppText(
+                                  text: option.displayName,
+                                  style: context.textTheme.l1Regular.copyWith(
+                                    color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textBody,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -378,7 +569,10 @@ class _MaxSplSelection extends StatelessWidget {
                 selected: state.selectModeArgs.maxSplRange,
                 options: SpeakerMaxSplRange.values,
                 labelBuilder: (SpeakerMaxSplRange option) => option.displayName,
-                onChanged: context.read<SpeakerSelectionViewModel>().setMaxSplRange,
+                onChanged: (SpeakerMaxSplRange? value) {
+                  final bool isSame = state.selectModeArgs.maxSplRange == value;
+                  context.read<SpeakerSelectionViewModel>().setMaxSplRange(isSame ? null : value);
+                },
               );
             },
           ),
