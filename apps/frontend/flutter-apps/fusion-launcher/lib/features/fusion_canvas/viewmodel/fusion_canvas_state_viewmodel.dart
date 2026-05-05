@@ -8,7 +8,7 @@ import '../view/painters/fusion_canvas_painter.dart';
 class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   FusionCanvasStateViewModel() : super(IdleFusionCanvasState(offset: Offset.zero, scale: 1.0));
 
-  double get minScale => 0.05;
+  double get minScale => 0.02;
   double get maxScale => 2.0;
 
   Size? _canvasSize;

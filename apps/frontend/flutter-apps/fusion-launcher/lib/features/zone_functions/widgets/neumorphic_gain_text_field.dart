@@ -51,6 +51,10 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
       setState(() {
         isFocused = _focusNode.hasFocus;
       });
+      // When focus is lost, submit the value
+      if (!_focusNode.hasFocus) {
+        submit(controller.text);
+      }
     });
 
     controller.addListener(() {

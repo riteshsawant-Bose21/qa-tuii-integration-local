@@ -431,53 +431,39 @@ From the `fusion/` directory:
 
 ```bash
 # Run all software update tests
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdate
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdate --vip 192.168.2.100:8080
 ```
 
 ### Individual Test Scenarios
 
 **Upload and List Functionality**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadAndListSuccess
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadAndListSuccess --vip 192.168.2.100:8080
 ```
 
 **Checksum Validation**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadChecksumMismatch
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadChecksumMismatch --vip 192.168.2.100:8080
 ```
 
 **Duplicate Detection (409 Conflict)**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadDuplicate
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadDuplicate --vip 192.168.2.100:8080
 ```
 
 **File Size Limits (413 Request Entity Too Large)**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadOversized
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadOversized --vip 192.168.2.100:8080
 ```
 
 **Field Validation (400 Bad Request)**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadMissingFields
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadMissingFields --vip 192.168.2.100:8080
 ```
 
 **Download Functionality**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateDownload
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateDownload --vip 192.168.2.100:8080
 ```
 
 ### WebSocket Software Update Tests
@@ -486,28 +472,24 @@ WebSocket-based software update tests (trigger and progress) are also available:
 
 **Trigger via WebSocket (expects code `3005`)**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateTriggerViaWebSocket
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateTriggerViaWebSocket --vip 192.168.2.100:8080
 ```
 
 **Invalid type error handling (expects code `4002`)**:
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateTriggerUnknownType
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateTriggerUnknownType --vip 192.168.2.100:8080
 ```
 
 **Progress push after trigger** (requires `/tmp/swupdateprog` socket — real device only):
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
 FUSION_SWUPDATE_TEST=1 \
-go test -v ./test -run TestSoftwareUpdateProgressReceivedAfterTrigger
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateProgressReceivedAfterTrigger --vip 192.168.2.100:8080
 ```
 
 **Progress message format validation** (requires `/tmp/swupdateprog` socket — real device only):
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
 FUSION_SWUPDATE_TEST=1 \
-go test -v ./test -run TestSoftwareUpdateProgressMessageFormat
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateProgressMessageFormat --vip 192.168.2.100:8080
 ```
 
 > **Note**: Tests that read the swupdate progress socket (`/tmp/swupdateprog`) check for the
@@ -542,10 +524,8 @@ For local development testing:
 
 2. **Run tests against localhost**:
    ```bash
-   FUSION_TEST_VIP=127.0.0.1:8080 \
-   FUSION_TEST_NODES=127.0.0.1:8080 \
    FUSION_TEST_LOCAL=1 \
-   go test -v ./test -run TestSoftwareUpdate
+   ./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdate --vip 127.0.0.1:8080
    ```
 
 ### Manual Testing Examples

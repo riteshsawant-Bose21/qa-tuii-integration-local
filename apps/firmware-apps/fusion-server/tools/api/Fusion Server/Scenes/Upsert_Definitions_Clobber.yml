@@ -1,0 +1,36 @@
+info:
+  name: Upsert Definitions Clobber
+  type: http
+  seq: 10
+
+http:
+  method: PATCH
+  url: "{{api_url}}/value"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "snapshots": [
+          {
+            "id": "snapshot-test-01",
+            "name": "Snapshot Test v2",
+            "data": {
+              "feature_probe": {
+                "mode": "snapshot-v2",
+                "level": 99
+              }
+            }
+          }
+        ]
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Reuses an existing snapshot id to verify overwrite (clobber) behavior.

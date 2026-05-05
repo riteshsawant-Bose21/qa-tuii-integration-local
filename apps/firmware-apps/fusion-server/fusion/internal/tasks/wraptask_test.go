@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 )
 
 type mockTM struct {
@@ -22,7 +22,7 @@ func runWrapped(tm *mockTM, task *api.Task, now time.Time) (called bool) {
 
 	wrapped := tm.wrapTask(task, fn)
 
-	// Inject a fake time using time.Now mocking pattern:
+	// Inject a mock time using time.Now mocking pattern:
 	nowFunction = func() time.Time { return now }
 	defer func() { nowFunction = time.Now }()
 

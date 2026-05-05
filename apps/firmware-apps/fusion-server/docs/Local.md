@@ -151,7 +151,7 @@ curl --request POST   --url http://localhost:8080/pava/messages   --header 'cont
 Uploaded files are stored in:
 
 ```
-/var/lib/fusion/audio
+/persist/fusion/audio
 ```
 
 Files placed manually in this folder are not automatically detected; they must be uploaded via REST or added to the internal DB with a maintenance tool.
@@ -166,7 +166,7 @@ curl http://localhost:8080/pava/messages
 
 ```bash
 curl --request PUT   --url http://localhost:8080/pava/messages/:id/trigger   --header 'content-type: application/json'   --data '{
-    "zones": "all",
+    "zones": ["lobby"],
     "priority": 100
   }'
 ```
@@ -174,7 +174,7 @@ curl --request PUT   --url http://localhost:8080/pava/messages/:id/trigger   --h
 Example console output from `fusion-server`:
 
 ```
-Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
+Triggered message "01K8TYPMWW9HSK2QS5Y5W10ABS" at path "/persist/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav" (priority 100)
 ```
 
 ## Monitoring Trigger Broadcasts
@@ -190,9 +190,9 @@ Triggered messages display a JSON structure:
 ```json
 {
   "id": "01K8TYPMWW9HSK2QS5Y5W10ABS",
-  "path": "/var/lib/fusion/audio/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
+  "path": "/persist/01K8TYPMWW9HSK2QS5Y5W10ABS.wav",
   "priority": 100,
-  "zones": "all",
+  "zones": ["lobby"],
   "timestamp": 1761844571
 }
 ```
@@ -255,34 +255,23 @@ Downloads the specified bundle file. Returns 404 if the file doesn't exist.
 
 ### Testing Software Update Functionality
 
-Run comprehensive integration tests for software update endpoints:
+Run comprehensive integration tests for software update endpoints with the supported runner:
 
 ```bash
-# From fusion/ directory
-cd fusion
-
 # Test against remote cluster
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdate
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdate --vip 192.168.2.100:8080
 
 # Test specific scenarios
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadAndListSuccess
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadAndListSuccess --vip 192.168.2.100:8080
 
 # Test cluster sync across nodes (requires multi-node setup)
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080,192.168.2.101:8080,192.168.2.102:8080 \
-go test -v ./test -run TestSoftwareUpdateSyncAcrossNodes
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateSyncAcrossNodes --vip 192.168.2.100:8080
 
 # Test validation and error handling
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.100:8080 \
-go test -v ./test -run TestSoftwareUpdateUploadMissingFields
+./scripts/multipass/run-tests --software-update --test-name TestSoftwareUpdateUploadMissingFields --vip 192.168.2.100:8080
 ```
 
-**Using multipass script** (for multipass environments):
+Supported examples:
 ```bash
 # Run all software update tests
 ./scripts/multipass/run-tests --software-update

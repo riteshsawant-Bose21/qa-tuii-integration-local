@@ -19,6 +19,7 @@ const (
 	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionClear     = "_fusion_clear"
 	FusionSentAtNS  = "_fusion_sent_at_ns"
 
 	HTTPTimeout       = 5 * time.Second
@@ -123,8 +124,8 @@ const (
 )
 
 var (
-	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
-	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/persist/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/persist/pki/")
 	DefaultCAFileName       = "AmazonRootCA1.pem"
 	DefaultCSRFileName      = "device.csr"
 	DefaultCertFileName     = "device.x509.cert"

@@ -68,37 +68,7 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
         return tool.transformer.transform(inputState: inputState, context: context, currentState: currentState);
       }
     }
-    // if (currentState is MeasureToolState) {
-    //   return _measureToolHelper.transform(
-    //     inputState: inputState,
-    //     context: context,
-    //     currentState: currentState,
-    //   );
-    // }
-
-    // if (currentState is PenToolState) {
-    //   return _penToolHelper.transform(
-    //     inputState: inputState,
-    //     context: context,
-    //     currentState: currentState,
-    //   );
-    // }
-
-    // if (currentState is DragToolState) {
-    //   return _dragToolHelper.transform(
-    //     inputState: inputState,
-    //     context: context,
-    //     currentState: currentState,
-    //   );
-    // }
-
-    // if (currentState is SelectToolState) {
-    //   return _selectionToolHelper.transform(
-    //     inputState: inputState,
-    //     context: context,
-    //     currentState: currentState,
-    //   );
-    // }
+    
 
     return null;
   }
