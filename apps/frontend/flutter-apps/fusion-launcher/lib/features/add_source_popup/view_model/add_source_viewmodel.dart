@@ -31,6 +31,30 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     }
   }
 
+  void clearSelectedListeningArea() {
+    emit(
+      AddSourceViewModelState(
+        selectedSourceSectionType: state.selectedSourceSectionType,
+        selectedSourceOption: state.selectedSourceOption,
+        selectedSignalType: state.selectedSignalType,
+        selectedSources: state.selectedSources,
+        selectedConnectionType: state.selectedConnectionType,
+        selectedSourceName: state.selectedSourceName,
+        selectedListeningArea: null,
+        selectedStream: state.selectedStream,
+        availableStreams: state.availableStreams,
+        selectedMonoChannel: state.selectedMonoChannel,
+        selectedLeftChannel: state.selectedLeftChannel,
+        selectedRightChannel: state.selectedRightChannel,
+        assignedStreamChannels: state.assignedStreamChannels,
+      ),
+    );
+  }
+
+  void setSelectedEquipmentLocation(String id) {
+    emit(state.copyWith(selectedEquipmentLocationId: id));
+  }
+
   void setSelectedStream(Aes67Config stream) {
     emit(state.copyWith(selectedStream: stream));
   }

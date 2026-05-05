@@ -12,7 +12,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
+import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup, AddSourceDrawer;
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../create_zone_popup/view/create_zone_popup.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
@@ -78,7 +78,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           return SchematicSourcesViewModel();
                         },
                         title: "Sources",
-                        addAction: AddSourcePopup(
+                        addAction: AddSourceDrawer(
                           isFromBuildingPage: false,
                           child: Icon(
                             LucideIcons.plus200,
