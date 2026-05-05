@@ -35,10 +35,10 @@ class _ProductListSection extends StatelessWidget {
 
                     semanticId: '',
                   ),
-                  const SizedBox(width: 8),
-                  _iconBtn(context, Icons.sort),
-                  const SizedBox(width: 4),
-                  _iconBtn(context, Icons.filter_alt_outlined),
+                  // const SizedBox(width: 8),
+                  // _iconBtn(context, Icons.sort),
+                  // const SizedBox(width: 4),
+                  // _iconBtn(context, Icons.filter_alt_outlined),
                 ],
               ),
               Expanded(
