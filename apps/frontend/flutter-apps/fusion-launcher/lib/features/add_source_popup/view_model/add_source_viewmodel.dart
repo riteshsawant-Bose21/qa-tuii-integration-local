@@ -263,21 +263,6 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       );
     }
 
-    // if this is a building page, add the source to the circuit
-    // if (isFromBuildingPage) {
-    //   // Set device type index first
-    //   serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
-    //
-    //   // Create product and set for addition
-    //   final ProductQueryModel product = ProductQueryModel(
-    //     name: selectedItem.name,
-    //     price: 0.0,
-    //     image: selectedItem.assetPath,
-    //     type: ProductType.sources,
-    //     sku: selectedItem.id,
-    //   );
-    //   serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-    // }
 
     // place this source in the selected listening area
     onSaved?.call();

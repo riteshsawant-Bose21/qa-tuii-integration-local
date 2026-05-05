@@ -458,7 +458,7 @@ import 'dart:ui' as painting;
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/properties/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
