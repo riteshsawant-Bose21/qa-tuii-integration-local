@@ -8,6 +8,7 @@ import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_da
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
+export 'aes67/aes67_view_model.dart';
 export 'circuit/circuit_viewmodel.dart';
 export 'controller/controller_view_model.dart';
 export 'equip_location/equip_location_view_model.dart';
@@ -29,9 +30,9 @@ export 'schedule/schedule_view_model.dart';
 export 'source_set/source_set_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
+export 'wall/wall_viewmodel.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
-export 'aes67/aes67_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -90,6 +91,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ProjectViewModel(this.projectManager) : super(ProjectViewModelInitial());
 
   List<ProjectData> allProjects = <ProjectData>[];
+
+  /// Live drag offsets for hardware components (canvas pos delta during drag, not persisted).
+  final ValueNotifier<Map<String, Offset>> liveDragOffsets = ValueNotifier<Map<String, Offset>>(<String, Offset>{});
 
   ProjectData? _currentProject;
 
@@ -350,6 +354,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       emit(ProjectUpdated(projectId: _currentProject!.id));
     }
   }
+
   void updateFloorPlan() {
     if (_currentProject != null) {
       emit(FloorsUpdated(projectId: _currentProject!.id));
@@ -363,8 +368,6 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void emitTabChanged(int tabIndex) {
     emit(TabChanged(tab: tabIndex));
   }
-
-
 
   void throwError(String message) {
     FusionLogger.log(tag: LogTag.project, message: message);

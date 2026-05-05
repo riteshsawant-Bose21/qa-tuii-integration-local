@@ -18,34 +18,28 @@ native `fusion-server` binary (macOS included) without multipass.
 
 ## Run UDP Tests Locally
 
-From the module root (`fusion/`):
+From the repo root:
 
 ```
 FUSION_TEST_LOCAL=1 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-FUSION_TEST_VIP=127.0.0.1:8080 \
 FUSION_UDP_ADDR=127.0.0.1:7947 \
-go test -v --race ./test -run UDP
+./scripts/multipass/run-tests --udp --vip 127.0.0.1:8080
 ```
 
 ### ACK/Retry Tests (Opt-in)
 
 ```
 FUSION_TEST_LOCAL=1 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-FUSION_TEST_VIP=127.0.0.1:8080 \
 FUSION_UDP_ADDR=127.0.0.1:7947 \
 FUSION_UDP_ACK_TEST=1 \
-go test -v --race ./test -run BroadcastAckStopsRetries
+./scripts/multipass/run-tests --udp --test-name BroadcastAckStopsRetries --vip 127.0.0.1:8080
 ```
 
 ```
 FUSION_TEST_LOCAL=1 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-FUSION_TEST_VIP=127.0.0.1:8080 \
 FUSION_UDP_ADDR=127.0.0.1:7947 \
 FUSION_UDP_RETRY_TEST=1 \
-go test -v --race ./test -run BroadcastRetriesWithoutAck
+./scripts/multipass/run-tests --udp --test-name BroadcastRetriesWithoutAck --vip 127.0.0.1:8080
 ```
 
 ### Stale Client Test (Opt-in)
@@ -55,12 +49,36 @@ asserts the client is pruned (no broadcast received).
 
 ```
 FUSION_TEST_LOCAL=1 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-FUSION_TEST_VIP=127.0.0.1:8080 \
 FUSION_UDP_ADDR=127.0.0.1:7947 \
 FUSION_UDP_STALE_TEST=1 \
-go test -v --race ./test -run StaleClientPruned
+./scripts/multipass/run-tests --udp --test-name StaleClientPruned --vip 127.0.0.1:8080
 ```
+
+### UDP Observer Latency Diagnostic (Opt-in, Local)
+
+This diagnostic is useful on macOS, where Multipass cannot return UDP observer
+traffic from the VM back to the host test process.
+
+1. From the repo root, build and start a local server with UDP diagnostics enabled:
+
+```bash
+./build-fusion-server --target darwin
+FUSION_UDP_DIAGNOSTICS=1 ./build/fusion-server --local
+```
+
+2. From the repo root, run the latency diagnostic against the local server:
+
+```bash
+FUSION_TEST_LOCAL=1 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+FUSION_UDP_OBSERVER_LATENCY_TEST=1 \
+./scripts/multipass/run-tests --udp-latency --vip 127.0.0.1:8080
+```
+
+Notes:
+- `FUSION_UDP_DIAGNOSTICS=1` enables `/cluster/udp/status`, which the test samples while load is running.
+- `FUSION_UDP_ADDR=127.0.0.1:7947` disables the macOS Multipass skip path and forces the test to target the local UDP server.
+- This validates the single-node local observer path. It does not reproduce full multi-node Multipass network behavior.
 
 ### Multi-Node UDP Chaos Test (Opt-in, Multipass)
 
@@ -71,16 +89,15 @@ This test simulates many virtual UDP devices over a 3+ node cluster and injects:
 - jitter/burst traffic
 - occasional malformed payloads
 
-From module root (`fusion/`), run:
+From the repo root, run:
 
 ```bash
 FUSION_UDP_CHAOS_TEST=1 \
-FUSION_TEST_NODES=http://192.168.2.2:8080,http://192.168.2.3:8080,http://192.168.2.4:8080 \
 FUSION_UDP_VIRTUAL_DEVICES=120 \
 FUSION_UDP_TEST_DURATION=30s \
 FUSION_UDP_PACKET_LOSS=0.25 \
 FUSION_UDP_DISCONNECT_RATE=0.05 \
-go test -v --race ./test -run ChaosMesh
+./scripts/multipass/run-tests --udp-chaos --vip 192.168.2.100:8080
 ```
 
 Key knobs:
@@ -97,7 +114,7 @@ Key knobs:
 ## Run Snapshot + Scene Catalog Tests
 
 The integration tests are now split across:
-- `snapshot_test.go` for **Time Machine** tests
+- `time_machine_test.go` for **Time Machine** tests
 - `scene_catalog_test.go` for **Scene Catalog** tests
 
 They validate both:
@@ -133,14 +150,12 @@ make build-darwin-arm64
 curl -s http://127.0.0.1:8080/metadata | head
 ```
 
-4) Run tests from module root (`fusion/`) with both env vars set
+4) Run tests from the repo root
 
 **Only Run Time-Machine Tests**
 
 ```bash
-FUSION_TEST_VIP=127.0.0.1:8080 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-go test -v --race ./test -run TimeMachine
+./scripts/multipass/run-tests --time-machine --vip 127.0.0.1:8080
 ```
 
 *Footnote:* The three Time Machine epoch-convergence tests (`TestTimeMachineActivationBumpsEpoch`, `TestTimeMachineRejectOldEpochUpdatesAfterActivation`, `TestTimeMachineNewEpochUpdatesApply`) are cluster-only and auto-skip in local single-node runs.
@@ -148,9 +163,7 @@ go test -v --race ./test -run TimeMachine
 **Only Run Scene Catalog Tests**
 
 ```bash
-FUSION_TEST_VIP=127.0.0.1:8080 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
-go test -v --race ./test -run SceneCatalog
+./scripts/multipass/run-tests --test-name TestSceneCatalog --vip 127.0.0.1:8080
 ```
 
 ### Test All Three (Without Cluster)
@@ -159,16 +172,14 @@ This includes UDP + Time Machine + Scene Catalog tests in `./test`:
 
 ```bash
 FUSION_TEST_LOCAL=1 \
-FUSION_TEST_VIP=127.0.0.1:8080 \
-FUSION_TEST_NODES=127.0.0.1:8080 \
 FUSION_UDP_ADDR=127.0.0.1:7947 \
-go test -v --race ./test
+./scripts/multipass/run-tests --vip 127.0.0.1:8080
 ```
 
 Run a single test while debugging:
 
 ```bash
-go test -v --race ./test -run TestSceneCatalogListAll
+./scripts/multipass/run-tests --test-name TestSceneCatalogListAll --vip 127.0.0.1:8080
 ```
 
 ### Requirements / Caveats
@@ -210,13 +221,11 @@ Verify VIP and membership:
 curl -s http://192.168.2.100:8080/cluster/members | jq
 ```
 
-From module root (`fusion/`), run cluster-wide Time Machine tests:
+From the repo root, run cluster-wide Time Machine tests:
 
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.104:8080,192.168.2.105:8080,192.168.2.106:8080 \
 FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
-go test -count=1 -v --race ./test -run TimeMachine
+./scripts/multipass/run-tests --time-machine --vip 192.168.2.100:8080
 ```
 
 ### Test Everything Including Cluster Tests
@@ -224,14 +233,10 @@ go test -count=1 -v --race ./test -run TimeMachine
 With a running 2+ node cluster and restart script available, run:
 
 ```bash
-FUSION_TEST_VIP=192.168.2.100:8080 \
-FUSION_TEST_NODES=192.168.2.2:8080,192.168.2.3:8080,192.168.2.4:8080 \
 FUSION_RESTART_SCRIPT=../scripts/multipass/restart-fusion.sh \
 FUSION_UDP_ADDR=192.168.2.100:7947 \
-go test -count=1 -v --race ./test
+./scripts/multipass/run-tests --vip 192.168.2.100:8080
 ```
-
-(The `-count=1` is for when you change the environment variables - my multipass will increment the IPs every time I run it. Without this flag, you'll get cached test results).
 
 That is the full-coverage path (UDP + Time Machine + Scene Catalog + cluster/restart cases).
 

@@ -1,9 +1,11 @@
 package persistence
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"fusion/internal/api"
+	"fusion-services-core/logging"
 	"sort"
 	"strings"
 
@@ -14,17 +16,30 @@ import (
 
 // SaveAudioMeta saves the audio metadata in the database bucket.
 func (p *Persistence) SaveAudioMeta(meta *api.AudioMetadata) error {
-	return p.db.Update(func(tx *bbolt.Tx) error {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	existing, err := p.getValue(bucketAudio, meta.Id)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(existing, data) {
+		logging.GetLogger().Debug("Audio metadata write skipped: id=%s unchanged", meta.Id)
+		return nil
+	}
+
+	err = p.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
 		if b == nil {
 			return ErrNotFound
 		}
-		data, err := json.Marshal(meta)
-		if err != nil {
-			return err
-		}
 		return b.Put([]byte(meta.Id), data)
 	})
+	if err != nil {
+		return err
+	}
+	return p.updateHash(false)
 }
 
 // GetAudioMetadata fetches metadata by ID.
@@ -60,7 +75,7 @@ func (p *Persistence) ListAudioMetadata() ([]*api.AudioMetadata, error) {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
 		if b == nil {
-			return ErrNotFound
+			return nil
 		}
 
 		return b.ForEach(func(_, v []byte) error {
@@ -78,13 +93,28 @@ func (p *Persistence) ListAudioMetadata() ([]*api.AudioMetadata, error) {
 
 // DeleteAudioMetadata removed the audio metadata from the database.
 func (p *Persistence) DeleteAudioMetadata(id string) error {
-	return p.db.Update(func(tx *bbolt.Tx) error {
+	exists, err := p.keyExists(bucketAudio, id)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("%w: audio metadata %q not found", ErrNotFound, id)
+	}
+
+	err = p.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
 		if b == nil {
 			return ErrNotFound
 		}
+		if b.Get([]byte(id)) == nil {
+			return ErrNotFound
+		}
 		return b.Delete([]byte(id))
 	})
+	if err != nil {
+		return err
+	}
+	return p.updateHash(false)
 }
 
 func (p *Persistence) ListAllTags(ctx context.Context) ([]string, error) {
@@ -94,7 +124,7 @@ func (p *Persistence) ListAllTags(ctx context.Context) ([]string, error) {
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
 		if b == nil {
-			return ErrNotFound
+			return nil
 		}
 		return b.ForEach(func(_, v []byte) error {
 			var meta api.AudioMetadata
@@ -139,7 +169,7 @@ func (p *Persistence) GetAudioByDisplayName(name string) (*api.AudioMetadata, er
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("audio"))
 		if b == nil {
-			return fmt.Errorf("bucket not found")
+			return ErrNotFound
 		}
 
 		c := b.Cursor()
@@ -153,7 +183,7 @@ func (p *Persistence) GetAudioByDisplayName(name string) (*api.AudioMetadata, er
 				return nil
 			}
 		}
-		return nil
+		return ErrNotFound
 	})
 
 	if err != nil {

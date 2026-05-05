@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/devices/presentation/widgets/device_mapping_screen.dart';
+import 'package:fusion_launcher/features/device_registration/views/device_registraion_page.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -85,9 +85,9 @@ class NetworkHardwarePanel extends StatelessWidget {
         ),
         Builder(
           builder: (BuildContext context) {
-            final List<FusionNetworkDevice> unregisteredDevices = context.watch<FusionNetworkDeviceViewModel>().getUnregisteredDevicesForCurrentProject();
+            final bool hasUnRegisteredDevices = context.watch<FusionNetworkDeviceViewModel>().hasUnRegisteredDevices;
 
-            if (unregisteredDevices.isEmpty) return const SizedBox();
+            if (!hasUnRegisteredDevices) return const SizedBox();
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +97,16 @@ class NetworkHardwarePanel extends StatelessWidget {
                   semanticId: "register_devices_btn",
                   text: "Register devices",
                   height: 48,
-                  onTap: () => showUnregisteredDevicesClaimDialog(context, unregisteredDevices),
+                  onTap: () {
+                    showUnregisteredDevicesClaimDialog(context).then(
+                      (void value) {
+                        if (!context.mounted) return;
+                        // After the dialog is closed, refresh the device list to reflect any changes in registration status.
+                        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+                        if (vip != null) context.read<FusionNetworkDeviceViewModel>().getFusionNetworkDevice(vip: vip);
+                      },
+                    );
+                  },
                 ),
               ],
             );

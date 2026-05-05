@@ -13,7 +13,7 @@ import (
 	"fusion/internal/utils"
 )
 
-// ActivateSnapshot handles POST /snapshots/activate.
+// ActivateSnapshot handles POST /snapshots/activate/{id}.
 // Patches the snapshot data onto DB State (fire-and-forget).
 // Returns 404 if the snapshot ID does not exist.
 func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -21,27 +21,15 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	id, err := utils.ExtractId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
 
-	var req api.ActivateSnapshotRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if req.ID == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.handler.HandleActivateSnapshotByID(req.ID); err != nil {
+	if err := s.handler.HandleActivateSnapshotByID(id); err != nil {
 		if errors.Is(err, persistence.ErrNotFound) {
-			http.Error(w, fmt.Sprintf("Error: %s", req.ID), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -51,7 +39,7 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListSnapshotDefinitions handles GET /snapshots/list.
+// ListSnapshotDefinitions handles GET /snapshots.
 // Returns the list of all stored snapshot definitions.
 func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -68,7 +56,47 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(api.SnapshotListResponse{Snapshots: snapshots})
 }
 
-// ListScenes handles GET /scenes/list.
+// DeleteSnapshotDefinitions handles DELETE /snapshots.
+// Removes all stored snapshot definitions.
+func (s *FusionServer) DeleteSnapshotDefinitions(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	if err := s.handler.HandleDeleteAllSnapshotDefinitions(); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting snapshots: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteSnapshotDefinition handles DELETE /snapshots/{id}.
+// Removes one stored snapshot definition by ID.
+func (s *FusionServer) DeleteSnapshotDefinition(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteSnapshotDefinition(id); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting snapshot %s: %v", id, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListScenes handles GET /scenes.
 // Returns a flat list of all scenes across all scene sets.
 func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -190,7 +218,7 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-// ListSceneSets handles GET /scene-sets/list.
+// ListSceneSets handles GET /scene-sets.
 // Returns all stored scene sets.
 func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -207,7 +235,72 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(api.SceneSetListResponse{SceneSets: sceneSets})
 }
 
-// ListSceneCatalog handles GET /scene-catalog-list.
+// DeleteSceneSets handles DELETE /scene-sets.
+// Removes all stored scene sets (and therefore all scenes contained in those sets).
+func (s *FusionServer) DeleteSceneSets(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	if err := s.handler.HandleDeleteAllSceneSets(); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting scene sets: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteSceneSet handles DELETE /scene-sets/{id}.
+// Removes one stored scene set by set ID.
+func (s *FusionServer) DeleteSceneSet(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteSceneSet(id); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting scene set %s: %v", id, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteScene handles DELETE /scenes/{id}.
+// Removes one stored scene by ID from any scene set containing it.
+func (s *FusionServer) DeleteScene(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.handler.HandleDeleteScene(id); err != nil {
+		if errors.Is(err, persistence.ErrNotFound) {
+			http.Error(w, fmt.Sprintf("Error: %s", id), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Error deleting scene %s: %v", id, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListSceneCatalog handles GET /scene-catalog.
 // Returns all stored snapshots and scene sets in a single response.
 func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
