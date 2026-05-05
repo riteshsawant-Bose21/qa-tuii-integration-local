@@ -12,6 +12,9 @@ DEBUG_FLAGS=-gcflags "all=-N -l"
 PROTOC ?= protoc
 PROTO_SRC_DIR=../../../libs/proto
 PROTO_GO_OUT=fusion/internal/gen/proto
+GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin
+PROTOC_GEN_GO := $(GO_BIN_DIR)/protoc-gen-go
+PROTOC_GEN_GO_VERSION ?= v1.36.6
 PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto
 
 # Versioning
@@ -60,13 +63,20 @@ deps:
 tidy:
 	cd fusion && $(GOMOD) tidy
 
-proto:
+proto: proto-tools
 	mkdir -p $(PROTO_GO_OUT)
 	$(PROTOC) \
 		-I $(PROTO_SRC_DIR) \
+		--plugin=protoc-gen-go=$(PROTOC_GEN_GO) \
 		--go_out=$(PROTO_GO_OUT) \
 		--go_opt=paths=source_relative \
 		$(PROTO_FILES)
+
+proto-tools:
+	@if [ ! -x "$(PROTOC_GEN_GO)" ]; then \
+		echo "Installing protoc-gen-go $(PROTOC_GEN_GO_VERSION) to $(GO_BIN_DIR)"; \
+		GOBIN="$(GO_BIN_DIR)" $(GOCMD) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION); \
+	fi
 
 proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/device_config.pb.go
@@ -151,4 +161,4 @@ help:
 	@echo " release-linux-arm64 - Build optimized release binary for Linux ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build debug release clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
+.PHONY: all build debug release clean run deps tidy proto proto-tools proto-clean fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
