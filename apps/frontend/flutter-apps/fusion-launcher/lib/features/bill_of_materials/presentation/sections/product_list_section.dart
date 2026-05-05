@@ -74,7 +74,7 @@ class _ProductListSection extends StatelessWidget {
                             FusionTableHeader(title: 'UNIT PRICE', flex: 2, aligment: Alignment.center),
                             FusionTableHeader(title: 'QUANTITY', flex: 2, aligment: Alignment.center),
                             FusionTableHeader(title: 'AMOUNT', flex: 2, aligment: Alignment.center),
-                            FusionTableHeader(title: 'AVAILABILITY', flex: 2, aligment: Alignment.center),
+                            // FusionTableHeader(title: 'AVAILABILITY', flex: 2, aligment: Alignment.center),
                           ],
                           itemCount: items.length,
                           itemBuilder: (BuildContext context, int index) {
@@ -149,29 +149,29 @@ class _ProductListSection extends StatelessWidget {
                                 style: context.textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
                               ),
 
-                              // Availability
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  // container with green or red dot based on availability
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: available ? context.colorScheme.primary : context.colorScheme.elevation4,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  FusionAppText(
-                                    semanticId: 'bom_item_avail_$index',
-                                    text: available ? 'Available' : 'Out of stock',
-                                    style: context.textTheme.b3Regular.withColor(
-                                      context.colorScheme.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              // // Availability
+                              // Row(
+                              //   mainAxisSize: MainAxisSize.min,
+                              //   children: <Widget>[
+                              //     // container with green or red dot based on availability
+                              //     Container(
+                              //       width: 16,
+                              //       height: 16,
+                              //       decoration: BoxDecoration(
+                              //         color: available ? context.colorScheme.primary : context.colorScheme.elevation4,
+                              //         borderRadius: BorderRadius.circular(4),
+                              //       ),
+                              //     ),
+                              //     const SizedBox(width: 8),
+                              //     FusionAppText(
+                              //       semanticId: 'bom_item_avail_$index',
+                              //       text: available ? 'Available' : 'Out of stock',
+                              //       style: context.textTheme.b3Regular.withColor(
+                              //         context.colorScheme.textPrimary,
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
                             ];
                           },
                         ),
