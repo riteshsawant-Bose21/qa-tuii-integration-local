@@ -1,7 +1,6 @@
 package server
 
 import (
-	stdjson "encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +21,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // FusionServer handles networks connections to manage Fusion state.
@@ -278,10 +279,6 @@ func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 
 // GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
 func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
-	type databaseMetadataResponse struct {
-		Metadata *api.DatabaseMetadata `json:"metadata"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -293,9 +290,21 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Write the JSON response with metadata.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
+	resp := &fusionpb.DatabaseMetadataResponse{
+		Metadata: &fusionpb.DatabaseMetadata{
+			Version: &fusionpb.VersionInfo{
+				Epoch:   metadata.Version.Epoch,
+				Counter: metadata.Version.Counter,
+				NodeId:  metadata.Version.NodeID,
+			},
+			ActiveSnapshot: metadata.ActiveSnapshot,
+			Hash:           metadata.Hash,
+			Valid:          metadata.Valid,
+		},
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // ExportData handles HTTP GET requests to export all data.
@@ -454,22 +463,21 @@ func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 
 // GetSessions handles HTTP GET requests to get SAP sessions
 func (s *FusionServer) GetSessions(w http.ResponseWriter, r *http.Request) {
-	type sessionsResponse struct {
-		Sessions map[string]*handler.SAPSession `json:"sessions"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	sessions := s.handler.HandleListSessions()
-
-	err := json.NewEncoder(w).Encode(sessionsResponse{Sessions: sessions})
+	resp, err := sessionsResponseToProto(sessions)
 	if err != nil {
+		logging.GetLogger().Error("Failed to marshal sessions response: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
 // GetSession handles HTTP GET requests to get a SAP session by identifier
@@ -490,12 +498,66 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(session); err != nil {
+	resp, err := sapSessionToProto(session)
+	if err != nil {
+		logging.GetLogger().Error("Failed to marshal session response: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
+func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*fusionpb.SessionListResponse, error) {
+	out := &fusionpb.SessionListResponse{
+		Sessions: make(map[string]*fusionpb.SAPSession, len(sessions)),
+	}
+
+	for id, session := range sessions {
+		converted, err := sapSessionToProto(session)
+		if err != nil {
+			return nil, err
+		}
+		out.Sessions[id] = converted
+	}
+
+	return out, nil
+}
+
+func sapSessionToProto(session *handler.SAPSession) (*fusionpb.SAPSession, error) {
+	if session == nil {
+		return nil, nil
+	}
+
+	resp := &fusionpb.SAPSession{
+		Id:        session.ID,
+		Origin:    session.OriginIP,
+		Timestamp: timestamppb.New(session.Timestamp),
+	}
+
+	if session.Description != nil {
+		payloadBytes, err := json.Marshal(session.Description)
+		if err != nil {
+			return nil, err
+		}
+
+		var generic map[string]any
+		if err := json.Unmarshal(payloadBytes, &generic); err != nil {
+			return nil, err
+		}
+
+		description, err := structpb.NewStruct(generic)
+		if err != nil {
+			return nil, err
+		}
+
+		resp.Description = description
+	}
+
+	return resp, nil
 }
 
 // GetControllers handles HTTP GET requests to list registered controllers.

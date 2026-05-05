@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	fusionpb "fusion/internal/gen/proto/fusion"
 	"net"
 	"net/http"
 	"strings"
@@ -9,23 +10,12 @@ import (
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
-
-	sdp "github.com/pion/sdp/v3"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
 	sapTestServerAddr = "http://192.168.2.100:8080"
 )
-
-type SessionWrapper struct {
-	Sessions map[string]struct {
-		ID          string                  `json:"id"`
-		Origin      string                  `json:"origin"`
-		Timestamp   string                  `json:"timestamp"` // or time.Time if parsed
-		Description *sdp.SessionDescription `json:"description"`
-	} `json:"sessions"`
-}
 
 func TestMultipassSAPPropagation(t *testing.T) {
 	// Build an 8-byte SAP header:
@@ -72,13 +62,13 @@ func TestMultipassSAPPropagation(t *testing.T) {
 		t.Fatalf("Failed to get SAP session: %v", err)
 	}
 
-	var wrapper SessionWrapper
-	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+	var wrapper fusionpb.SessionListResponse
+	if err := decodeProtoBody(resp.Body, &wrapper); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 	resp.Body.Close()
 
-	var descriptions []*sdp.SessionDescription
+	var descriptions []*structpb.Struct
 	for _, session := range wrapper.Sessions {
 		if session.Description != nil {
 			descriptions = append(descriptions, session.Description)
@@ -90,10 +80,10 @@ func TestMultipassSAPPropagation(t *testing.T) {
 	}
 
 	description := descriptions[0]
-
-	if description.SessionName != "HELLO_SAP_TEST" {
+	sessionName := description.GetFields()["session_name"].GetStringValue()
+	if sessionName != "HELLO_SAP_TEST" {
 		t.Fatalf("Expected session-name %q in logs, but got: %s",
-			"HELLO_SAP_TEST", description.SessionName)
+			"HELLO_SAP_TEST", sessionName)
 	}
 }
 
