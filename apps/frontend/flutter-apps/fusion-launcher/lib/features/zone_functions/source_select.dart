@@ -372,8 +372,8 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                           color: Colors.transparent,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_additional_settings_button"),
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "additional_settings_button"),
                               child: InkWell(
                                 onTap: () {
                                   SourceSelectAdditionalSettingsDialog.showDialog(

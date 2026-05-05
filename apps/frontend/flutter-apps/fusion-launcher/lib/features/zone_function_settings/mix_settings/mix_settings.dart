@@ -113,7 +113,7 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: FusionIcon.icon(
-                                semanticId: 'mix_settings_close_icon',
+                                semanticId: 'additional_settings_close_button',
                                 LucideIcons.x200,
                                 color: context.colorScheme.iconDefault,
                               ),
@@ -171,7 +171,7 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           child: SemanticHelper.container(
                                             testId: SemanticHelper.createTestId(
                                               SemanticTypes.container,
-                                              "sources_column",
+                                              "zone_control_sources",
                                             ),
 
                                             child: _SourcesSetting(
@@ -189,7 +189,7 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           child: SemanticHelper.container(
                                             testId: SemanticHelper.createTestId(
                                               SemanticTypes.container,
-                                              "mix_scenes_column",
+                                              "zone_control_mix_scenes",
                                             ),
                                             child: _MixSceneSetting(
                                               allowController: vm.isAssignToControllersEnabled,

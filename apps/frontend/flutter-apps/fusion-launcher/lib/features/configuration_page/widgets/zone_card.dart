@@ -413,7 +413,12 @@ class _ZoneCardState extends State<ZoneCard> {
 
     return Visibility(
       visible: existingFunction?.hasPriority ?? false,
-      child: Row(
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          "priority$priorityIndex",
+        ),
+        child: Row(
         children: <Widget>[
           Expanded(
             child: DragTarget<Source>(
@@ -676,6 +681,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     : null,
           ),
         ],
+      ),
       ),
     );
   }

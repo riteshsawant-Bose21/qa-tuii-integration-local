@@ -279,7 +279,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                               vertical: 12,
                             ),
                             child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_additional_settings_button"),
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "additional_settings_button"),
                               child: InkWell(
                                 onTap: () {
                                   SourceMixAdditionalSettingsDialog.showDialog(
