@@ -174,7 +174,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     if (!isSuggestMode) return;
     final ListeningArea? la = selectedListeningArea;
     if (la == null) return;
-    if (la.environmentType == null || la.splRange == null) return;
+    if (la.environmentType == null) return;
 
     try {
       final List<SpeakerProduct> speakers = serviceLocator<ProductQueryViewModel>().speakers;
@@ -184,8 +184,8 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         listenerHeight: la.listeningHeight,
         environment: la.environmentType!.name,
         targetSplRange: <double>[
-          la.splRange!.splRangeValues["min"]!,
-          la.splRange!.splRangeValues["max"]!,
+          la.splRange.splRangeValues["min"]!,
+          la.splRange.splRangeValues["max"]!,
         ],
       );
 
@@ -244,8 +244,8 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           listenerHeight: selectedListeningArea!.listeningHeight,
           environment: selectedListeningArea!.environmentType!.name,
           targetSplRange: <double>[
-            selectedListeningArea!.splRange!.splRangeValues["min"]!,
-            selectedListeningArea!.splRange!.splRangeValues["max"]!,
+            selectedListeningArea!.splRange.splRangeValues["min"]!,
+            selectedListeningArea!.splRange.splRangeValues["max"]!,
           ],
         );
 
@@ -345,7 +345,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   void setListenerHeight(ListeningHeightOption option) {
     if (selectedListeningArea == null) return;
-    final double heightValue = ListeningHeightOption.getValue(option) ?? selectedListeningArea?.customListeningAreaHeight ?? 1.1;
+    final double heightValue = ListeningHeightOption.getValue(option) ?? 1.1;
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(listeningHeight: heightValue);
     projectViewModel.updateListeningArea(area: updatedLA);
     _recalculateIfSuggestMode();
@@ -728,10 +728,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     }
     if (la.environmentType == null) {
       FusionToast.error(context, message: 'Please select an environment type for this area.');
-      return false;
-    }
-    if (la.splRange == null) {
-      FusionToast.error(context, message: 'Please select a target SPL range for this area.');
       return false;
     }
 

@@ -4,179 +4,198 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
   const SpeakerSelectionLeftContent({super.key});
   @override
   Widget build(BuildContext context) {
+    final SpeakerSelectionViewModel speakerSelection = context.watch<SpeakerSelectionViewModel>();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       physics: const ClampingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // FusionOutlinedDropdown<String>(
-          //   label: 'Listening Area',
-          //   hint: 'Select listening area',
-          //   value: _selectedArea,
-          //   items: _areaOptions,
-          //   itemLabelBuilder: (String v) => v,
-          //   onChanged: (String v) => setState(() => _selectedArea = v),
-          // ),
-
-          ///
-          /// ======== Listener Height Selection =======
-          ///
-          const SizedBox(height: 20),
-          const Row(
-            children: <Widget>[
-              Expanded(
-                child: FusionLabeledField(
-                  label: "Ceiling Height (M)",
-                  semanticId: 'ceiling_height_label',
-                  child: FusionBorderedTextField(
-                    semanticId: 'ceiling_height_textfield',
-                    hintText: 'Enter ceiling height',
-                    contentPadding: EdgeInsets.all(16),
-                    // onChanged: context.read<AddOutputDeviceViewModel>().updateOutputDeviceName,
-                  ),
-                ),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: FusionLabeledField(
-                  label: "Floor Height (M)",
-                  semanticId: 'floor_height_label',
-                  child: FusionBorderedTextField(
-                    semanticId: 'floor_height_textfield',
-                    hintText: 'Enter floor height',
-                    contentPadding: EdgeInsets.all(16),
-                    // onChanged: context.read<AddOutputDeviceViewModel>().updateOutputDeviceName,
-                  ),
-                ),
-              ),
-            ],
+          FusionOutlinedDropdown<String>(
+            label: 'Listening Area',
+            hint: 'Select listening area',
+            value: speakerSelection.state.listeningAreaId,
+            items: context.watch<ProjectViewModel>().listeningAreas.map((ListeningArea e) => e.id).toList(),
+            itemLabelBuilder: (String v) => v,
+            onChanged: (String areaId) => context.read<SpeakerSelectionViewModel>().setListeningArea(areaId),
           ),
 
           ///
           /// ======== Listener Height Selection =======
           ///
-          const SizedBox(height: 20),
-          const _ListenerHeightSelection(),
-
-          /// ======== Environment Selection =======
-          const SizedBox(height: 20),
-          const _EnvironmentSelection(),
-
-          const SizedBox(height: 20),
-          Divider(height: 1, color: context.colorScheme.strokeLight),
-          const SizedBox(height: 20),
-          Container(
-            height: 68,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: context.colorScheme.elevation2,
-              borderRadius: BorderRadius.circular(16),
+          if (speakerSelection.state.listeningAreaId != null) ...<Widget>[
+            const SizedBox(height: 20),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FusionLabeledField(
+                    label: "Ceiling Height (M)",
+                    semanticId: 'ceiling_height_label',
+                    child: FusionBorderedTextField(
+                      controller: speakerSelection.ceilingHeightController,
+                      semanticId: 'ceiling_height_textfield',
+                      hintText: 'Enter ceiling height',
+                      contentPadding: const EdgeInsets.all(16),
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))],
+                      onChanged: (String value) {
+                        final double height = double.tryParse(value) ?? 1.1;
+                        context.read<SpeakerSelectionViewModel>().setCeilingHeight(height);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FusionLabeledField(
+                    label: "Floor Height (M)",
+                    semanticId: 'floor_height_label',
+                    child: FusionBorderedTextField(
+                      controller: speakerSelection.floorHeightController,
+                      semanticId: 'floor_height_textfield',
+                      hintText: 'Enter floor height',
+                      contentPadding: const EdgeInsets.all(16),
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))],
+                      onChanged: (String value) {
+                        final double height = double.tryParse(value) ?? 1.1;
+                        context.read<SpeakerSelectionViewModel>().setFloorHeight(height);
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-              buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) => previous.speakerSelectionMode != current.speakerSelectionMode,
-              builder: (BuildContext context, SpeakerSelectionVmState state) {
-                final SpeakerSelectionMode selectionMode = state.speakerSelectionMode;
 
+            ///
+            /// ======== Listener Height Selection =======
+            ///
+            const SizedBox(height: 20),
+            const _ListenerHeightSelection(),
+
+            /// ======== Environment Selection =======
+            const SizedBox(height: 20),
+            const _EnvironmentSelection(),
+
+            const SizedBox(height: 20),
+            Divider(height: 1, color: context.colorScheme.strokeLight),
+            const SizedBox(height: 20),
+            Container(
+              height: 68,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation2,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+                builder: (BuildContext context, SpeakerSelectionVmState state) {
+                  final SpeakerSelectionMode selectionMode = state.speakerSelectionMode;
+
+                  return Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _ModeChip(
+                          label: 'Select Speaker',
+                          selected: selectionMode == SpeakerSelectionMode.select,
+                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerSelectionMode(SpeakerSelectionMode.select),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ModeChip(
+                          label: 'Suggest Speaker',
+                          selected: selectionMode == SpeakerSelectionMode.suggest,
+                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerSelectionMode(SpeakerSelectionMode.suggest),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            /// ======== Mounting Type Selection =======
+            const SizedBox(height: 20),
+            const _MountingTypeSelection(),
+
+            /// ======== Maximum SPL Selection =======
+            const SizedBox(height: 20),
+            const _MaxSplSelection(),
+
+            const SizedBox(height: 20),
+            const _LowFrequencySelection(),
+
+            const SizedBox(height: 20),
+            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+              builder: (BuildContext context, SpeakerSelectionVmState state) {
                 return Row(
                   children: <Widget>[
-                    Expanded(
-                      child: _ModeChip(
-                        label: 'Select Speaker',
-                        selected: selectionMode == SpeakerSelectionMode.select,
-                        onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerSelectionMode(SpeakerSelectionMode.select),
-                      ),
+                    FusionSwitch(
+                      height: 24,
+                      width: 44,
+                      semanticId: "use_subwoofer",
+                      value: state.selectModeArgs.useSubwoofer,
+                      onChanged: context.read<SpeakerSelectionViewModel>().setUseSubwoofer,
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: _ModeChip(
-                        label: 'Suggest Speaker',
-                        selected: selectionMode == SpeakerSelectionMode.suggest,
-                        onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerSelectionMode(SpeakerSelectionMode.suggest),
+                    FusionAppText(
+                      text: 'Use Subwoofer',
+                      style: context.textTheme.b3Regular.copyWith(
+                        color: context.colorScheme.textPrimary,
                       ),
                     ),
                   ],
                 );
               },
             ),
-          ),
 
-          /// ======== Mounting Type Selection =======
-          const SizedBox(height: 20),
-          const _MountingTypeSelection(),
+            /// ======== Colour Selection =======
+            const SizedBox(height: 20),
+            const _ColourSelection(),
 
-          /// ======== Maximum SPL Selection =======
-          const SizedBox(height: 20),
-          const _MaxSplSelection(),
+            /// ======== Wiring Selection =======
+            const SizedBox(height: 20),
+            const _WiringSelection(),
 
-          const SizedBox(height: 20),
-          const _LowFrequencySelection(),
+            /// ======== Audio Channel Selection =======
+            const SizedBox(height: 20),
+            const _ChannelsSelection(),
+            const SizedBox(height: 20),
+            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+              builder: (BuildContext context, SpeakerSelectionVmState state) {
+                if (state.selectModeArgs.useSubwoofer == false) return const SizedBox.shrink();
 
-          const SizedBox(height: 20),
-          BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.useSubwoofer != current.selectModeArgs.useSubwoofer;
-            },
-            builder: (BuildContext context, SpeakerSelectionVmState state) {
-              return Row(
-                children: <Widget>[
-                  FusionSwitch(
-                    height: 24,
-                    width: 44,
-                    semanticId: "use_subwoofer",
-                    value: state.selectModeArgs.useSubwoofer,
-                    onChanged: context.read<SpeakerSelectionViewModel>().setUseSubwoofer,
-                  ),
-                  const SizedBox(width: 8),
-                  FusionAppText(
-                    text: 'Use Subwoofer',
-                    style: context.textTheme.b3Regular.copyWith(
-                      color: context.colorScheme.textPrimary,
+                return Row(
+                  children: <Widget>[
+                    FusionSwitch(
+                      height: 24,
+                      width: 44,
+                      semanticId: "mono_subwoofer",
+                      value: state.selectModeArgs.monoSubwoofer,
+                      onChanged: context.read<SpeakerSelectionViewModel>().setMonoSubwoofer,
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
-
-          /// ======== Colour Selection =======
-          const SizedBox(height: 20),
-          const _ColourSelection(),
-
-          /// ======== Wiring Selection =======
-          const SizedBox(height: 20),
-          const _WiringSelection(),
-
-          /// ======== Audio Channel Selection =======
-          const SizedBox(height: 20),
-          const _ChannelsSelection(),
-          const SizedBox(height: 20),
-          BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            builder: (BuildContext context, SpeakerSelectionVmState state) {
-              if (state.selectModeArgs.useSubwoofer == false) return const SizedBox.shrink();
-
-              return Row(
-                children: <Widget>[
-                  FusionSwitch(
-                    height: 24,
-                    width: 44,
-                    semanticId: "mono_subwoofer",
-                    value: state.selectModeArgs.monoSubwoofer,
-                    onChanged: context.read<SpeakerSelectionViewModel>().setMonoSubwoofer,
-                  ),
-                  const SizedBox(width: 8),
-                  FusionAppText(
-                    text: 'Mono Subwoofer',
-                    style: context.textTheme.b3Regular.copyWith(
-                      color: context.colorScheme.textPrimary,
+                    const SizedBox(width: 8),
+                    FusionAppText(
+                      text: 'Mono Subwoofer',
+                      style: context.textTheme.b3Regular.copyWith(
+                        color: context.colorScheme.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
+                  ],
+                );
+              },
+            ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
+          ] else ...<Widget>[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 56.0),
+              child: Center(
+                child: FusionAppText(
+                  text: "Select listeing area",
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -188,6 +207,8 @@ class _EnvironmentSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ProjectViewModel>();
+
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, 'speaker_environment_selection'),
       child: Column(
@@ -201,14 +222,14 @@ class _EnvironmentSelection extends StatelessWidget {
           const SizedBox(height: 8),
 
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) => previous.environmentType != current.environmentType,
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return Row(
                 spacing: 10,
                 children: <Widget>[
                   ...SpeakerEnvironmentType.values.map(
                     (SpeakerEnvironmentType option) {
-                      final bool isSelected = state.environmentType == option;
+                      final SpeakerSelectionViewModel speakerSelection = context.watch<SpeakerSelectionViewModel>();
+                      final bool isSelected = speakerSelection.selectedListeningArea.environmentType == option;
 
                       return Expanded(
                         child: Column(
@@ -283,9 +304,6 @@ class _MountingTypeSelection extends StatelessWidget {
           const SizedBox(height: 8),
 
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.mountingTypes != current.selectModeArgs.mountingTypes;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return Row(
                 spacing: 10,
@@ -355,9 +373,6 @@ class _MaxSplSelection extends StatelessWidget {
           const SizedBox(height: 8),
 
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.maxSplRange != current.selectModeArgs.maxSplRange;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return FusionRadioChipSelector<SpeakerMaxSplRange>(
                 selected: state.selectModeArgs.maxSplRange,
@@ -389,9 +404,6 @@ class _LowFrequencySelection extends StatelessWidget {
           const SizedBox(height: 8),
 
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.lowFrequencyInHz != current.selectModeArgs.lowFrequencyInHz;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return SteppedHapticSlider(
                 min: 50,
@@ -422,9 +434,6 @@ class _ColourSelection extends StatelessWidget {
           const _SectionTitle(title: 'Colour'),
           const SizedBox(height: 8),
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.speakerColorOption != current.selectModeArgs.speakerColorOption;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return FusionRadioChipSelector<SpeakerColorOption>(
                 selected: state.selectModeArgs.speakerColorOption,
@@ -453,9 +462,6 @@ class _WiringSelection extends StatelessWidget {
           const _SectionTitle(title: 'Wiring'),
           const SizedBox(height: 8),
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.wiringType != current.selectModeArgs.wiringType;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return FusionRadioChipSelector<WiringType>(
                 selected: state.selectModeArgs.wiringType,
@@ -484,9 +490,6 @@ class _ChannelsSelection extends StatelessWidget {
           const _SectionTitle(title: 'Channels'),
           const SizedBox(height: 8),
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) {
-              return previous.selectModeArgs.audioChannel != current.selectModeArgs.audioChannel;
-            },
             builder: (BuildContext context, SpeakerSelectionVmState state) {
               return FusionRadioChipSelector<AudioChannel>(
                 selected: state.selectModeArgs.audioChannel,
@@ -507,6 +510,8 @@ class _ListenerHeightSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ProjectViewModel>();
+
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, 'add_output_device_audio_channel'),
       child: Column(
@@ -520,50 +525,72 @@ class _ListenerHeightSelection extends StatelessWidget {
           const SizedBox(height: 8),
 
           BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) => previous.listeningHeightOption != current.listeningHeightOption,
             builder: (BuildContext context, SpeakerSelectionVmState state) {
-              return Row(
-                spacing: 10,
+              final SpeakerSelectionViewModel speakerSelection = context.watch<SpeakerSelectionViewModel>();
+              final ListeningArea selectedListeningArea = speakerSelection.selectedListeningArea;
+
+              return Column(
                 children: <Widget>[
-                  ...ListeningHeightOption.values.map(
-                    (ListeningHeightOption option) {
-                      final bool isSelected = state.listeningHeightOption == option;
+                  Row(
+                    spacing: 10,
+                    children: <Widget>[
+                      ...ListeningHeightOption.values.map(
+                        (ListeningHeightOption option) {
+                          final bool isSelected = selectedListeningArea.listeningHeightOption == option;
 
-                      return Expanded(
-                        child: Column(
-                          spacing: 8,
-                          children: <Widget>[
-                            GestureDetector(
-                              onTap: () => context.read<SpeakerSelectionViewModel>().setListeningHeightOption(option),
-                              child: Container(
-                                height: 52,
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: isSelected ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
-                                  border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                          return Expanded(
+                            child: Column(
+                              spacing: 8,
+                              children: <Widget>[
+                                GestureDetector(
+                                  onTap: () => context.read<SpeakerSelectionViewModel>().setListeningHeightOption(option),
+                                  child: Container(
+                                    height: 52,
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: isSelected ? context.colorScheme.elevation2 : context.colorScheme.elevation1,
+                                      border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                                    ),
+                                    child: FusionIcon.svg(
+                                      option.icon,
+                                      size: 24,
+                                      color: isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
+                                    ),
+                                  ),
                                 ),
-                                child: FusionIcon.svg(
-                                  option.icon,
-                                  size: 24,
-                                  color: isSelected ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
-                                ),
-                              ),
-                            ),
 
-                            FusionAppText(
-                              text: option.displayName,
-                              maxLine: 1,
-                              style: context.textTheme.l1Regular.copyWith(
-                                color: context.colorScheme.textPrimary,
-                              ),
+                                FusionAppText(
+                                  text: option.displayName,
+                                  maxLine: 1,
+                                  style: context.textTheme.l1Regular.copyWith(
+                                    color: context.colorScheme.textPrimary,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ],
                   ),
+
+                  if (selectedListeningArea.listeningHeightOption == ListeningHeightOption.custom) ...<Widget>[
+                    const SizedBox(height: 24),
+
+                    FusionBorderedTextField(
+                      controller: speakerSelection.customListenerHeightController,
+                      semanticId: 'listener_height_textfield',
+                      hintText: 'Enter listener height',
+                      contentPadding: const EdgeInsets.all(16),
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))],
+                      onChanged: (String value) {
+                        final double height = double.tryParse(value) ?? 1.1;
+                        context.read<SpeakerSelectionViewModel>().setListeningHeight(height);
+                      },
+                    ),
+                  ],
                 ],
               );
             },

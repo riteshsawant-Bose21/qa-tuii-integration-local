@@ -363,12 +363,13 @@ class ListeningArea {
   final List<FusionCanvasPoint> vertices;
   SplData? splData;
   final String name;
-  final SpeakerEnvironmentType? environmentType;
+  final ListeningHeightOption listeningHeightOption;
+  final SpeakerEnvironmentType environmentType;
   final double listeningHeight;
+  final double floorHeight;
   final String ceilingHeight;
   final double minSPL;
   final double maxSPL;
-  final double customListeningAreaHeight;
   final bool isDrawn;
 
   final Color? preferredSpeakerColor;
@@ -390,12 +391,13 @@ class ListeningArea {
     required this.vertices,
     this.splData,
     this.name = '',
-    this.environmentType,
+    this.environmentType = SpeakerEnvironmentType.indoor,
+    this.listeningHeightOption = ListeningHeightOption.sitting,
     this.listeningHeight = 1.1, // Default to sitting height (1.1 m)
     this.ceilingHeight = '',
+    this.floorHeight = 0.0,
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
-    this.customListeningAreaHeight = 0.0,
     this.signalType = SignalType.mono,
     this.mountingType = MountingType.surface,
     this.lowFrequency = LowFrequency.fullRange,
@@ -498,9 +500,11 @@ class ListeningArea {
     String? name,
     List<String>? hardwareComponentIds,
     SpeakerEnvironmentType? environmentType,
+    ListeningHeightOption? listeningHeightOption,
     double? listeningHeight,
+    double? floorHeight,
     String? ceilingHeight,
-    double? customListeningAreaHeight,
+
     double? minSPL,
     double? maxSPL,
     SignalType? signalType,
@@ -523,10 +527,11 @@ class ListeningArea {
       name: name ?? this.name,
       environmentType: environmentType ?? this.environmentType,
       listeningHeight: listeningHeight ?? this.listeningHeight,
+      floorHeight: floorHeight ?? this.floorHeight,
+      listeningHeightOption: listeningHeightOption ?? this.listeningHeightOption,
       ceilingHeight: ceilingHeight ?? this.ceilingHeight,
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
-      customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
       signalType: signalType ?? this.signalType,
       mountingType: mountingType ?? this.mountingType,
       lowFrequency: lowFrequency ?? this.lowFrequency,
@@ -556,12 +561,11 @@ class ListeningArea {
     'name': name,
     'vertices': vertices.map((FusionCanvasPoint v) => v.toMap()).toList(),
     'splData': null,
-    'environmentType': environmentType?.name,
+    'environmentType': environmentType.name,
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
     'minSPL': minSPL,
     'maxSPL': maxSPL,
-    'customListeningAreaHeight': customListeningAreaHeight,
     'isDrawn': isDrawn,
     'preferredSpeakerColor': preferredSpeakerColor,
     'splRange': splRange.name,
@@ -591,10 +595,9 @@ class ListeningArea {
       vertices: verts,
       splData: null,
       name: json['name'] as String,
-      environmentType: SpeakerEnvironmentType.fromJson(json['environmentType']),
+      environmentType: SpeakerEnvironmentType.fromJson(json['environmentType']) ?? SpeakerEnvironmentType.indoor,
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'],
-      customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
@@ -799,4 +802,37 @@ class CeilingPlacementParams {
     required this.coverageAngle,
     this.customGeometry,
   });
+}
+
+enum ListeningHeightOption {
+  sitting("Seated (1.1m)"),
+  standing("Standing (1.7m)"),
+  custom("Custom");
+
+  const ListeningHeightOption(this.displayName);
+  final String displayName;
+
+  static double maxListeningHeight = 2.4; // in meters
+
+  static double? getValue(ListeningHeightOption option) {
+    switch (option) {
+      case ListeningHeightOption.sitting:
+        return 1.1;
+      case ListeningHeightOption.standing:
+        return 1.7;
+      case ListeningHeightOption.custom:
+        return null;
+    }
+  }
+
+  static ListeningHeightOption getOptionByValue(double height) {
+    switch (height) {
+      case 1.1:
+        return ListeningHeightOption.sitting;
+      case 1.7:
+        return ListeningHeightOption.standing;
+      default:
+        return ListeningHeightOption.custom;
+    }
+  }
 }

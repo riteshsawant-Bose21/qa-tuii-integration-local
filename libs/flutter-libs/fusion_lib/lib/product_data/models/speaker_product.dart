@@ -416,3 +416,52 @@ class SpeakerProduct {
   @override
   String toString() => 'SpeakerProduct(productId: $productId, modelName: $modelName)';
 }
+
+extension SpeakerProductExt on SpeakerProduct {
+  String get frequencyResponseText {
+    final FrequencyRange? f = frequencyRange;
+    if (f == null) return 'N/A';
+    if ((f.low == 0) && (f.high == 0)) return 'N/A';
+    return '${f.low}\u2013${f.high} ${f.unit}';
+  }
+
+  String get environmentText {
+    final String? environment = this.environment;
+    if ((environment ?? '').trim().isNotEmpty) return environment!.trim();
+    return isWeatherRated ? 'Weather rated' : 'N/A';
+  }
+
+  String get sensitivityText {
+    final Sensitivity? s = sensitivity;
+    if (s == null || s.at.isEmpty) return 'N/A';
+    return s.at.map((MeasurementValue e) => '${e.value} ${s.unit} @ ${e.key}').join(', ');
+  }
+
+  String get maxSplText {
+    final MaxSpl? m = maxSpl;
+    if (m == null || m.at.isEmpty) return 'N/A';
+    return m.at.map((MeasurementValue e) => '${e.value} ${m.unit} @ ${e.key}').join(', ');
+  }
+
+  String _formatPowerValue({num? value, String? unit}) {
+    if (value == null || value == 0 || (unit == null || unit.isEmpty)) return 'N/A';
+    return '${_trimTrailingZeros(value)} $unit';
+  }
+
+  String get peakPowerText => _formatPowerValue(value: powerHandling?.peak, unit: powerHandling?.unit);
+
+  String get longTermPowerText => _formatPowerValue(value: powerHandling?.longTermRms, unit: powerHandling?.unit);
+
+  String get powerHandlingSummaryText {
+    final String rms = _formatPowerValue(value: powerHandling?.longTermRms, unit: powerHandling?.unit);
+    final String pk = _formatPowerValue(value: powerHandling?.peak, unit: powerHandling?.unit);
+    if (rms == 'N/A' && pk == 'N/A') return 'N/A';
+    return 'RMS $rms, Peak $pk';
+  }
+
+  String _trimTrailingZeros(num value) {
+    final String s = value.toString();
+    if (!s.contains('.')) return s;
+    return s.replaceFirst(RegExp(r"\.0+"), '').replaceFirst(RegExp(r"(\.\d*[1-9])0+"), r"$1");
+  }
+}
