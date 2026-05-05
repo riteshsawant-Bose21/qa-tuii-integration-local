@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package fusion.metadata.v1;
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message VersionInfo {
+  uint64 epoch = 1;
+  uint64 counter = 2;
+  string node_id = 3;
+}
+
+message DatabaseMetadata {
+  VersionInfo version = 1;
+  string active_snapshot = 2;
+  string hash = 3;
+  bool valid = 4;
+}
+
+message DatabaseMetadataResponse {
+  DatabaseMetadata metadata = 1;
+}
