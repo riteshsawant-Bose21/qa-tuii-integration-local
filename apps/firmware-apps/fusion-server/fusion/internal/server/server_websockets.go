@@ -3,12 +3,10 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
@@ -268,50 +266,7 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 			return s.BroadcastToTopic(api.WSTopicDeviceUpdates, updateMessage)
 		}
 	case api.NotifyOpSoftwareUpdateProgress:
-		if message.SoftwareUpdateProgressAll == nil && message.SoftwareUpdateProgress == nil {
-			return nil
-		}
-		// Build a per-node map of formatted progress responses
-		nodesProgress := make(map[string]api.SoftwareUpdateProgressResponse)
-		if message.SoftwareUpdateProgressAll != nil {
-			for nodeName, p := range message.SoftwareUpdateProgressAll {
-				nodesProgress[nodeName] = api.SoftwareUpdateProgressResponse{
-					UpdateState:  p.Status.String(),
-					Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
-					CurrentTask:  p.CurImage,
-					Progress:     fmt.Sprintf("%d", p.CurPercent),
-					Node:         p.NodeName,
-					Handler:      p.HndName,
-					Timestamp:    p.Timestamp.Format(time.RFC3339),
-					SerialNumber: p.SerialNumber,
-				}
-			}
-		} else {
-			// Fallback: single node (e.g. local-only, no cluster)
-			p := message.SoftwareUpdateProgress
-			nodesProgress[p.NodeName] = api.SoftwareUpdateProgressResponse{
-				UpdateState:  p.Status.String(),
-				Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
-				CurrentTask:  p.CurImage,
-				Progress:     fmt.Sprintf("%d", p.CurPercent),
-				Node:         p.NodeName,
-				Handler:      p.HndName,
-				Timestamp:    p.Timestamp.Format(time.RFC3339),
-				SerialNumber: p.SerialNumber,
-			}
-		}
-		var progressData interface{} = nodesProgress
-		broadcastMessage := &api.WebSocketResponse{
-			ID:        nil,
-			Version:   api.WSCurrentVersion,
-			Type:      api.WSMsgTypeUpdateProgress,
-			Code:      api.WSCodeDeviceUpdated,
-			Status:    api.WSStatusEvent,
-			Message:   fmt.Sprintf("System notification: %s", message.Operation),
-			Data:      progressData,
-			Timestamp: time.Now(),
-		}
-		return s.broadcastToAllClients(broadcastMessage)
+		return s.broadcastSoftwareUpdateProgress(message)
 	}
 	return s.broadcastGenericNotification(message)
 }
@@ -370,7 +325,10 @@ func (s *FusionServer) flushConfigUpdateQueue() {
 		Timestamp: time.Now(),
 	}
 
-	if err := s.BroadcastToTopic(api.WSTopicConfigUpdates, message); err != nil {
+	payloadBytes, err := json.Marshal(message)
+	if err != nil {
+		logging.GetLogger().Error("Error marshaling coalesced config update: %v", err)
+	} else if err := s.BroadcastRawToTopic(api.WSTopicConfigUpdates, payloadBytes); err != nil {
 		logging.GetLogger().Error("Error broadcasting coalesced config update: %v", err)
 	}
 
@@ -515,6 +473,16 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
 func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
+	}
+	return s.BroadcastRawToTopic(topic, data)
+}
+
+// BroadcastRawToTopic sends a pre-serialized WebSocket text payload to all
+// clients subscribed to a specific topic.
+func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 	s.wsLock.RLock()
 	subscribers := s.subscriptions[topic]
 	if len(subscribers) == 0 {
@@ -529,11 +497,6 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 	}
 	s.wsLock.RUnlock()
 
-	// Pre-serialize once for all subscribers.
-	data, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
-	}
 	prepared, err := websocket.NewPreparedMessage(websocket.TextMessage, data)
 	if err != nil {
 		return fmt.Errorf("failed to prepare WebSocket message: %w", err)
@@ -701,24 +664,4 @@ func (s *FusionServer) removeConnectionLocked(conn *websocket.Conn) {
 	}
 	delete(s.wsClients, conn)
 	conn.Close()
-}
-
-// GetLocalSwUpdateInfo handles GET requests for the local /etc/swupdate contents.
-func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	var info api.SwUpdateInfo
-	data, err := os.ReadFile(api.SwUpdateInfoPath)
-	if err != nil {
-		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
-	} else if err := json.Unmarshal(data, &info); err != nil {
-		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(info); err != nil {
-		logging.GetLogger().Error("Error encoding sw update info: %v", err)
-	}
 }

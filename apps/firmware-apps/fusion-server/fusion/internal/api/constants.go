@@ -38,6 +38,7 @@ const (
 	FusionEpoch     = "_fusion_epoch"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionClear     = "_fusion_clear"
 	FusionSentAtNS  = "_fusion_sent_at_ns"
 	FusionVersion   = "_fusion_version"
 )

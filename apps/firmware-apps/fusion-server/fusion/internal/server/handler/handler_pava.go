@@ -138,9 +138,13 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	// Get the audio file using the display name
 	existing, err := h.persistence.GetAudioByDisplayName(displayName)
 	if err != nil {
-		logger.Error("Error getting audio with display name: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
+		if errors.Is(err, persistence.ErrNotFound) {
+			existing = nil
+		} else {
+			logger.Error("Error getting audio with display name: %v", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Check if display name already exists

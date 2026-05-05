@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -8,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestClusterRebootLocal exercises POST /cluster/reboot in local mode.
+// TestClusterReboot exercises POST /cluster/reboot on the public API.
 func TestClusterRebootLocal(t *testing.T) {
-	url := "http://127.0.0.1:8080/cluster/reboot"
+	url := fmt.Sprintf("%s/cluster/reboot", clusterConfig.vip)
 
 	resp, err := http.Post(url, "application/json", nil)
 	require.NoError(t, err, "POST /cluster/reboot should not error")
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusAccepted, resp.StatusCode, "Expected 204 No Content for reboot in local mode")
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content for public reboot request")
 }
