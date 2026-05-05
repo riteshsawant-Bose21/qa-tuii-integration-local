@@ -16,11 +16,7 @@ import '../../../../wiring_design/view/port_connection/port_connection_overlay.d
 import '../../../view_model/spl_viewmodel.dart';
 import '../../../viewmodel/building_page_viewmodel.dart';
 import '../../../widget/building/building_canvas.dart';
-import '../../../widget/building/side_panel_widgets/building_plan.dart';
-import '../../../widget/building/side_panel_widgets/equipment_location/equipment_location_section.dart';
-import '../../../widget/building/side_panel_widgets/listening_areas_panel.dart';
-import '../../../widget/building/side_panel_widgets/properties_panel.dart';
-import '../../../widget/building/side_panel_widgets/zone_and_listening_area.dart';
+import '../../../widget/building/side_panel_widgets/side_panel_widgets.dart';
 
 class BuildingPage extends StatelessWidget {
   const BuildingPage({super.key, required this.floorCanvasController, required this.appBarHeight});
@@ -57,7 +53,6 @@ class BuildingPage extends StatelessWidget {
                     //   splController.collapse();
                     // }
                   },
-                  floorCanvasController: floorCanvasController,
                   onCalculateSpl: () => viewModel.calculateSPL(),
                   splPanelData: state.panelData,
                   rightPanel: Builder(
@@ -108,8 +103,9 @@ class BuildingPage extends StatelessWidget {
                                   children: <Widget>[
                                     FusionSidebarSectionHeader(
                                       title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-                                      isExpanded: isExpanded,
-                                      onTap: toggleExpand,
+                                      isExpanded: true,
+                                      showChevron: false,
+                                      // onTap: toggleExpand,
                                       trailing: Builder(
                                         builder: (BuildContext context) {
                                           if (toolbarMode == ToolbarMode.acoustics) return const SizedBox();
