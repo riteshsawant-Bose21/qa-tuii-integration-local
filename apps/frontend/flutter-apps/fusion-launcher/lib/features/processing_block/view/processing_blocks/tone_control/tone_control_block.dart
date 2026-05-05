@@ -42,7 +42,7 @@ class ToneControlBlock extends StatelessWidget {
                     semanticId: 'low',
                     title: "LOW",
                     isDisabled: context.watch<ToneController>().isLowBypassed,
-                    value: context.watch<ToneController>().currentLowGain ?? 0,
+                    value: context.watch<ToneController>().currentLowGain,
                     onChanged: (num value) {
                       context.read<ToneController>().updateLowGain(value);
                     },
@@ -56,7 +56,7 @@ class ToneControlBlock extends StatelessWidget {
                     title: "MID",
                     isDisabled: context.watch<ToneController>().isMidBypassed,
 
-                    value: context.watch<ToneController>().currentMidGain ?? 0,
+                    value: context.watch<ToneController>().currentMidGain,
                     onChanged: (num value) {
                       context.read<ToneController>().updateMidGain(value);
                     },
@@ -70,7 +70,7 @@ class ToneControlBlock extends StatelessWidget {
                     title: "HIGH",
                     isDisabled: context.watch<ToneController>().isHighBypassed,
 
-                    value: context.watch<ToneController>().currentHighGain ?? 0,
+                    value: context.watch<ToneController>().currentHighGain,
                     onChanged: (num value) {
                       context.read<ToneController>().updateHighGain(value);
                     },
