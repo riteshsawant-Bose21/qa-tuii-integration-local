@@ -413,7 +413,6 @@ static DEFINE_MUTEX(gpt_singleton_lock);
 static struct fusion_gpt *fusion_gpt_get_locked(void);
 static void fusion_gpt_put_locked(struct fusion_gpt *g);
 static void gpt_init_dac_baseline_locked(struct fusion_gpt *g);
-static const char *gpt_dac_restore_reason_name(enum gpt_dac_restore_reason reason);
 static void gpt_capture_reset_runtime_ctx_locked(struct fusion_gpt *g,
 						 struct gpt_reset_runtime_ctx *ctx);
 static void gpt_reset_timing_session_domain_locked(struct fusion_gpt *g);
@@ -432,19 +431,6 @@ static void gpt_apply_reset_request_locked(struct fusion_gpt *g,
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
-
-static const char *gpt_dac_restore_reason_name(enum gpt_dac_restore_reason reason)
-{
-	switch (reason) {
-	case GPT_DAC_RESTORE_REASON_TIMING_RESET:
-		return "timing_reset";
-	case GPT_DAC_RESTORE_REASON_TIMING_SESSION_RESET:
-		return "timing_session_reset";
-	case GPT_DAC_RESTORE_REASON_NONE:
-	default:
-		return "none";
-	}
-}
 
 static void gpt_capture_reset_runtime_ctx_locked(struct fusion_gpt *g,
 						 struct gpt_reset_runtime_ctx *ctx)
@@ -555,9 +541,9 @@ static void gpt_log_holdover_reacquire_armed_locked(struct fusion_gpt *g)
 		return;
 
 	g->discipline_holdover_active = true;
-	pr_info("fusion_gpt: holdover_reacquire_armed pre_blackout_delta=%llu dac=%d model_valid=%u\n",
+	pr_info("fusion_gpt: holdover_reacquire status=armed pre_delta=%llu dac=%d model=%s\n",
 		g->discipline_pre_blackout_delta, g->dac_target,
-		g->discipline_model_valid ? 1U : 0U);
+		g->discipline_model_valid ? "valid" : "invalid");
 }
 
 static void gpt_arm_holdover_validation_locked(struct fusion_gpt *g,
@@ -905,9 +891,12 @@ static int fusion_gpt_apply_reset_request(const struct gpt_reset_request *reques
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset type=%s dac_restore=%s\n",
-		gpt_reset_type_name(request->type),
-		gpt_dac_restore_reason_name(request->dac_restore_reason));
+	if (request->queue_dac_restore_work)
+		pr_info("fusion_gpt: reset type=%s preserved_dac=%d dac_work=queued\n",
+			gpt_reset_type_name(request->type), ctx.preserved_dac);
+	else
+		pr_info("fusion_gpt: reset type=%s dac_work=none\n",
+			gpt_reset_type_name(request->type));
 	if (request->simulate_pps_gap)
 		pr_info("fusion_gpt: pps_gap_sim duration_ms=%u reset_type=%s\n",
 			READ_ONCE(timing_reset_sim_duration_ms_param),
@@ -1102,8 +1091,7 @@ static void gpt_record_valid_pps_interval_locked(struct fusion_gpt *g,
 	g->discipline_pre_blackout_delta = cap64 - prev_cap64;
 }
 
-static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64,
-					    const char *reason)
+static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64)
 {
 	if (!READ_ONCE(g->discipline_continuity_ready) ||
 	    !gpt_delta_is_valid_interval(g->discipline_pre_blackout_delta))
@@ -1117,8 +1105,8 @@ static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64,
 	g->discipline_model_jump_consumed = false;
 	g->discipline_lock_streak = 0;
 	WRITE_ONCE(g->discipline_gm_locked, false);
-	pr_info("fusion_gpt: reacquire_wait reason=%s pre_delta=%llu first_cap=%llu dac=%d\n",
-		reason, g->discipline_pre_blackout_delta, cap64, g->dac_target);
+	pr_info("fusion_gpt: holdover_reacquire status=waiting pre_delta=%llu first_cap=%llu dac=%d\n",
+		g->discipline_pre_blackout_delta, cap64, g->dac_target);
 
 	return true;
 }
@@ -1144,7 +1132,7 @@ static bool gpt_update_reacquire_state_locked(struct fusion_gpt *g, u64 cap64,
 		g->discipline_post_return_capture_count = 1;
 		WRITE_ONCE(g->discipline_gm_locked, false);
 		g->discipline_lock_streak = 0;
-		pr_info("fusion_gpt: reacquire_wait reason=first_post_return pre_delta=%llu first_cap=%llu dac=%d\n",
+		pr_info("fusion_gpt: holdover_reacquire status=waiting pre_delta=%llu first_cap=%llu dac=%d\n",
 			g->discipline_pre_blackout_delta, cap64, g->dac_target);
 		return true;
 	}
@@ -1603,8 +1591,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 									  valid_pps_interval);
 			} else if (had_prev && !valid_pps_interval) {
 				invalid_interval_armed_reacquire =
-					gpt_begin_reacquire_wait_locked(g, cap64,
-									"invalid_interval");
+					gpt_begin_reacquire_wait_locked(g, cap64);
 				wait_for_reacquire_interval =
 					invalid_interval_armed_reacquire;
 			}
@@ -1781,7 +1768,7 @@ static int gpt_start(struct fusion_gpt *g)
 	raw_spin_unlock(&g->ctrl_lock);
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
-	pr_info("fusion_gpt: reset type=%s dac_restore=none\n",
+	pr_info("fusion_gpt: reset type=%s dac_work=none\n",
 		gpt_reset_type_name(GPT_RESET_COLD_START));
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
