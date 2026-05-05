@@ -843,14 +843,14 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 
 func normalizeAntiEntropyValue(bucketName string, value any) (any, error) {
 	switch bucketName {
-	case bucketSnapshots:
+	case bucketSnapshots, bucketActive:
 		raw, err := json.Marshal(value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal snapshot for normalization: %w", err)
+			return nil, fmt.Errorf("failed to marshal persistent state for normalization (bucket=%s): %w", bucketName, err)
 		}
 		var state PersistentState
 		if err := json.Unmarshal(raw, &state); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal snapshot for normalization: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal persistent state for normalization (bucket=%s): %w", bucketName, err)
 		}
 		state.Timestamp = time.Time{}
 		return state, nil
