@@ -1169,16 +1169,30 @@ func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 }
 
 func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, error) {
-	if bucketName != "fusion" || key != "metadata" {
+	switch bucketName {
+	case "fusion":
+		if key != "metadata" {
+			return value, nil
+		}
+
+		var metadata api.DatabaseMetadata
+		if err := json.Unmarshal(value, &metadata); err != nil {
+			return nil, err
+		}
+		metadata.Hash = ""
+		return json.Marshal(metadata)
+
+	case "snapshots", "active":
+		var state persistence.PersistentState
+		if err := json.Unmarshal(value, &state); err != nil {
+			return nil, err
+		}
+		state.Timestamp = time.Time{}
+		return json.Marshal(state)
+
+	default:
 		return value, nil
 	}
-
-	var metadata api.DatabaseMetadata
-	if err := json.Unmarshal(value, &metadata); err != nil {
-		return nil, err
-	}
-	metadata.Hash = ""
-	return json.Marshal(metadata)
 }
 
 func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {
