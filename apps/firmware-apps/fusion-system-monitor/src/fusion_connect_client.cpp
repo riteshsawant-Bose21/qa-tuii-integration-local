@@ -23,6 +23,7 @@
 
 #include <arpa/inet.h>
 #include <curl/curl.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <json/json.h>
@@ -30,6 +31,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
+#include <sched.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -39,6 +41,7 @@ namespace {
 
 #define IFA_F_MCAUTOJOIN 0x400
 #define STREAM_RETRY_CNT 4
+#define FUSION_CN_RT_PRIO 80
 
 enum stream_state {
     STREAM_CREATED,
@@ -732,6 +735,92 @@ std::string query_device_ip(const std::string& device_uid, const std::string& sy
     return "";
 }
 
+static bool is_numeric_name(const char *name)
+{
+    if (!name || !*name) return false;
+    for (const char *p = name; *p; ++p) {
+        if (!std::isdigit(static_cast<unsigned char>(*p))) return false;
+    }
+    return true;
+}
+
+static bool read_task_comm(const char *pid, const char *tid, std::string *comm)
+{
+    char path[PATH_MAX];
+    char buf[64];
+
+    std::snprintf(path, sizeof(path), "/proc/%s/task/%s/comm", pid, tid);
+    FILE *fp = std::fopen(path, "r");
+    if (!fp) return false;
+
+    if (!std::fgets(buf, sizeof(buf), fp)) {
+        std::fclose(fp);
+        return false;
+    }
+    std::fclose(fp);
+
+    *comm = buf;
+    while (!comm->empty() && (comm->back() == '\n' || comm->back() == '\r')) {
+        comm->pop_back();
+    }
+    return true;
+}
+
+static bool set_kthread_rt_prio_by_comm(const char *target_comm, int prio)
+{
+    DIR *proc = opendir("/proc");
+    if (!proc) {
+        SPDLOG_ERROR("Failed to open /proc while setting {} RT prio: {}", target_comm, strerror(errno));
+        return false;
+    }
+
+    bool found = false;
+    bool success = false;
+    while (dirent *proc_entry = readdir(proc)) {
+        if (!is_numeric_name(proc_entry->d_name)) continue;
+
+        char task_path[PATH_MAX];
+        std::snprintf(task_path, sizeof(task_path), "/proc/%s/task", proc_entry->d_name);
+        DIR *task_dir = opendir(task_path);
+        if (!task_dir) continue;
+
+        while (dirent *task_entry = readdir(task_dir)) {
+            if (!is_numeric_name(task_entry->d_name)) continue;
+
+            std::string comm;
+            if (!read_task_comm(proc_entry->d_name, task_entry->d_name, &comm)) continue;
+            if (comm != target_comm) continue;
+
+            found = true;
+            errno = 0;
+            char *endp = nullptr;
+            long tid_long = std::strtol(task_entry->d_name, &endp, 10);
+            if (errno || !endp || *endp || tid_long <= 0) {
+                SPDLOG_ERROR("Invalid TID '{}' for {}", task_entry->d_name, target_comm);
+                continue;
+            }
+
+            struct sched_param param{};
+            param.sched_priority = prio;
+            if (sched_setscheduler(static_cast<pid_t>(tid_long), SCHED_FIFO, &param) == 0) {
+                SPDLOG_INFO("Set {} RT prio {} (FIFO) for tid {}", target_comm, prio, tid_long);
+                success = true;
+            } else {
+                SPDLOG_ERROR("Failed to set {} RT prio {} (FIFO) for tid {}: {}",
+                             target_comm, prio, tid_long, strerror(errno));
+            }
+        }
+
+        closedir(task_dir);
+    }
+
+    closedir(proc);
+    if (!found) {
+        SPDLOG_WARN("Could not find {} kthread to set RT prio {}", target_comm, prio);
+    }
+    return success;
+}
+
 class FusionConnectClient : public bosepro::Module {
 public:
     FusionConnectClient(const bosepro::BlockConfiguration &configuration);
@@ -1326,6 +1415,7 @@ void FusionConnectClient::maybe_start_manager()
 
     if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
         SPDLOG_INFO("FC manager started (err={})", reply.err);
+        set_kthread_rt_prio_by_comm("fusion-cn", FUSION_CN_RT_PRIO);
         mgr_started = true;
         mgr_start_failures = 0;
     } else {

@@ -405,6 +405,55 @@ func TestSaveAudioMetaUpdatesDatabaseHash(t *testing.T) {
 	require.Equal(t, actualHash, metadata.Hash)
 }
 
+func TestDatabaseHashIgnoresPersistentStateTimestampOnlyDifferences(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "persistent_state_timestamp_hash_test.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	require.NoError(t, sm.Set("mode", "baseline"))
+
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	require.NoError(t, p.SaveState())
+	require.NoError(t, p.CreateSnapshot("baseline"))
+
+	beforeHash, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	err = rawBoltDBForTest(t, p).Update(func(tx *bbolt.Tx) error {
+		for _, bucketName := range []string{"active", "snapshots"} {
+			bucket := tx.Bucket([]byte(bucketName))
+			if bucket == nil {
+				return errors.New("expected bucket to exist")
+			}
+
+			if err := bucket.ForEach(func(k, v []byte) error {
+				var state persistence.PersistentState
+				if err := json.Unmarshal(v, &state); err != nil {
+					return err
+				}
+				state.Timestamp = time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+				updated, err := json.Marshal(state)
+				if err != nil {
+					return err
+				}
+				return bucket.Put(k, updated)
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	afterHash, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	require.Equal(t, beforeHash, afterHash)
+}
+
 func TestImportDataRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "import_bad_snapshot_task.db")
@@ -1169,16 +1218,30 @@ func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 }
 
 func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, error) {
-	if bucketName != "fusion" || key != "metadata" {
+	switch bucketName {
+	case "fusion":
+		if key != "metadata" {
+			return value, nil
+		}
+
+		var metadata api.DatabaseMetadata
+		if err := json.Unmarshal(value, &metadata); err != nil {
+			return nil, err
+		}
+		metadata.Hash = ""
+		return json.Marshal(metadata)
+
+	case "snapshots", "active":
+		var state persistence.PersistentState
+		if err := json.Unmarshal(value, &state); err != nil {
+			return nil, err
+		}
+		state.Timestamp = time.Time{}
+		return json.Marshal(state)
+
+	default:
 		return value, nil
 	}
-
-	var metadata api.DatabaseMetadata
-	if err := json.Unmarshal(value, &metadata); err != nil {
-		return nil, err
-	}
-	metadata.Hash = ""
-	return json.Marshal(metadata)
 }
 
 func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {
