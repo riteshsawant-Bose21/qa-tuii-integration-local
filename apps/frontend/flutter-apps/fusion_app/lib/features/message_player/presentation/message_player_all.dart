@@ -35,7 +35,7 @@ class _MessagePlayerViewState extends State<MessagePlayerView> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: widget.showAppbar ? CommonAppBar(
+        appBar: widget.showAppbar ? CommonMobileAppBar(
           title: "Message Player"
         ):null,
         body: ListView.builder(

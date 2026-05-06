@@ -35,7 +35,7 @@ class _AccountCredentialScreenState extends State<AccountCredentialScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Account Credentials'),
+        appBar: CommonMobileAppBar(title: 'Account Credentials'),
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

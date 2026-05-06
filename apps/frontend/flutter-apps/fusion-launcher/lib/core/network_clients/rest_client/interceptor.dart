@@ -10,7 +10,7 @@ class AppInterceptors extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if (kDebugMode) log("---API [${options.method}] REQUEST CREATED---");
+    if (kDebugMode) log("---API [${options.method}] REQUEST CREATED ${options.path}---");
 
     // final String? token = serviceLocator<FusionConfig>().accessToken;
     // if (token != null) {

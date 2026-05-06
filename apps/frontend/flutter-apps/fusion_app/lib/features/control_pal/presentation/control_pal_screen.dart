@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_app/core/router/routes.dart';
 import 'package:fusion_app/features/events/presentation/events_screen.dart';
 import 'package:fusion_app/features/message_player/presentation/message_player_all.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/bottom_app_bar.dart';
+import 'package:fusion_app/features/snapshots/presentation/snapshot_group_screen.dart';
 import 'package:fusion_app/features/snapshots/presentation/snapshots_screen.dart';
 import 'package:fusion_app/features/zones/presentation/controller_zone.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -67,7 +69,7 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
           valueListenable: _selectedTab,
           builder: (_, current, __) {
           return Scaffold(
-            appBar: CommonAppBar( title: _selectedTab.value.title,leadingIcon: SizedBox.shrink()),
+            appBar: CommonMobileAppBar( title: _selectedTab.value.title,leadingIcon: SizedBox.shrink()),
             backgroundColor: context.colorScheme.primaryBlack,
               body: _buildTabContent(),
             bottomNavigationBar: CommonBottomNavigation(selectedTab: _selectedTab, bottomNavItems: bottomNavItems),
@@ -80,9 +82,15 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
   Widget _buildTabContent() {
     switch (_selectedTab.value) {
       case ControlPalTab.zones:
-        return  ControllerZones();
+        return  VirtualController(onSelected: (){
+
+          Navigator.pushNamed(
+            context,
+            Routes.zoneVolumeControlPage,
+          );
+        }, isDesignMode: false,);
       case ControlPalTab.snapshots:
-        return   SnapshotsScreen();
+        return SnapshotsGroupsScreen();
       case ControlPalTab.events:
         return  EventsScreen(showAppbar: false);
       case ControlPalTab.messages:

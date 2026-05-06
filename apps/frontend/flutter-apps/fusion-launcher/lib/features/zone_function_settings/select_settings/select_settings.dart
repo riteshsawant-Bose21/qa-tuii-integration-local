@@ -108,7 +108,8 @@ class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalS
                             customBorder: const CircleBorder(),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Icon(
+                              child: FusionIcon.icon(
+                                semanticId: 'additional_settings_close_button',
                                 LucideIcons.x200,
                                 color: context.colorScheme.iconDefault,
                               ),
@@ -167,7 +168,12 @@ class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalS
                                           // LEFT COLUMN (Reorderable List)
                                           Flexible(
                                             flex: 2,
-                                            child: Column(
+                                            child: SemanticHelper.container(
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.container,
+                                                "zone_control_sources",
+                                              ),
+                                              child: Column(
                                               children: <Widget>[
                                                 Container(
                                                   width: double.infinity,
@@ -362,6 +368,7 @@ class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalS
                                                 ),
                                               ],
                                             ),
+                                          ),
                                           ),
                                           VerticalDivider(
                                             width: 1,

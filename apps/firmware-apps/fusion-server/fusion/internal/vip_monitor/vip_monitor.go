@@ -20,13 +20,16 @@ import (
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
+	hashicorpMemberlist "github.com/hashicorp/memberlist"
 )
 
 const (
-	configPath   = "/etc/keepalived/" + vip.DefaultConfFile
-	baseBackoff  = 500 * time.Millisecond
-	maxBackoff   = 30 * time.Second
-	serverPrefix = "fusion"
+	configPath         = "/etc/keepalived/" + vip.DefaultConfFile
+	baseBackoff        = 500 * time.Millisecond
+	maxBackoff         = 30 * time.Second
+	reloadPhaseTimeout = 45 * time.Second
+	reloadPollInterval = 1 * time.Second
+	serverPrefix       = "fusion"
 )
 
 type masterPriorityMode string
@@ -574,12 +577,30 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 		return
 	}
 
-	// Ignore remote attempts to rewrite the configured VIP. Address changes are
-	// driven by config updates and watcher/local reconciliation, not VRRP.
+	// Stale-VIP self-heal: if the advertised VIP differs from our configured VIP,
+	// the configured VIP is not active locally, and on-disk still has the old VIP,
+	// this node missed a Set-VIP fan-out while offline — sync config from the peer.
+	// On-disk is checked first so we don't trigger self-heal mid-apply (fan-out
+	// writes disk before reload, so on-disk matching the new VIP means we are fine).
 	if configuredVIP != "" && newVIP != configuredVIP {
 		m.stateMu.Unlock()
-		logger.Debug("Ignoring VRRP VIP address update that differs from configured VIP: configured=%s advertised=%s srcIP=%s",
-			configuredVIP, newVIP, srcIP)
+		onDiskVIP, diskErr := m.readConfiguredVIP()
+		if diskErr == nil && onDiskVIP == newVIP {
+			// Fan-out already wrote the correct config; we are just mid-apply.
+			logger.Debug("Ignoring VRRP VIP address update: on-disk config already matches advertised VIP %s (mid-apply)", newVIP)
+			return
+		}
+		isLocalVIP, err := vip.IsIPPresentOnLocalInterface(configuredVIP)
+		if err == nil && !isLocalVIP {
+			m.selfHealOnce.Do(func() {
+				logger.Info("VRRP stale-VIP self-heal: configured VIP %s is not active locally but peer %s is advertising %s — attempting config sync",
+					configuredVIP, srcIP, newVIP)
+				go m.selfHealVIPFromPeer(srcIP)
+			})
+		} else {
+			logger.Debug("Ignoring VRRP VIP address update that differs from configured VIP: configured=%s advertised=%s srcIP=%s",
+				configuredVIP, newVIP, srcIP)
+		}
 		return
 	}
 
@@ -995,12 +1016,7 @@ func (m *VIPMonitor) launchVIPApply() error {
 	}
 
 	now := time.Now().UTC()
-	desiredVIP := m.GetCurrentVIP()
-	if !m.isLocal {
-		if v, _, err := vip.ReadFromKeepalivedConfig(m.configPath); err == nil {
-			desiredVIP = vip.Canonicalize(v)
-		}
-	}
+	desiredVIP := m.desiredVIPForApply()
 	m.setVIPApplyStatus(VIPApplyStatus{
 		DesiredVIP: desiredVIP,
 		Phase:      VIPApplyPhaseReloading,
@@ -1034,8 +1050,36 @@ func (m *VIPMonitor) launchVIPApply() error {
 	return nil
 }
 
-func (m *VIPMonitor) dispatchReloadPhase(operationID string) error {
-	targets := m.adminTargets()
+func (m *VIPMonitor) desiredVIPForApply() string {
+	if desiredVIP, err := m.getConfiguredVIP(); err == nil {
+		return desiredVIP
+	}
+
+	return m.GetCurrentVIP()
+}
+
+func (m *VIPMonitor) getConfiguredVIP() (string, error) {
+	return m.readConfiguredVIP()
+}
+
+func (m *VIPMonitor) readConfiguredVIP() (string, error) {
+	if m.isLocal {
+		v, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
+		if err == nil {
+			return vip.Canonicalize(v), nil
+		}
+		return "", err
+	}
+
+	v, _, err := vip.ReadFromKeepalivedConfig(m.configPath)
+	if err == nil {
+		return vip.Canonicalize(v), nil
+	}
+
+	return "", err
+}
+
+func (m *VIPMonitor) dispatchReloadPhase(operationID string, targets []vipAdminTarget) error {
 	var wg sync.WaitGroup
 	var firstErr error
 	var firstErrMu sync.Mutex
@@ -1100,12 +1144,14 @@ func (m *VIPMonitor) dispatchReloadPhase(operationID string) error {
 	return firstErr
 }
 
-func (m *VIPMonitor) waitForReloadPhase(operationID string) error {
-	targets := m.adminTargets()
+func (m *VIPMonitor) waitForReloadPhase(operationID string, targets []vipAdminTarget) error {
 	deadline := time.Now().Add(setupVIPTimeoutForMonitor())
 	for time.Now().Before(deadline) {
 		allDone := true
 		for _, target := range targets {
+			// TODO: Correlate VIPApplyStatus to a specific reload/apply operation ID.
+			// Today this polls node-local apply state only, so a future overlapping
+			// reload path could make completion ambiguous.
 			status, err := m.fetchVIPApplyStatus(target.Host)
 			if err != nil {
 				return err
@@ -1120,7 +1166,7 @@ func (m *VIPMonitor) waitForReloadPhase(operationID string) error {
 				m.setVIPOperationResult(operationID, result)
 				return fmt.Errorf("VIP apply failed on %s (%s): %s", target.Node, target.Host, status.Message)
 			}
-			if status.Phase != VIPApplyPhaseComplete && status.Phase != VIPApplyPhaseIdle {
+			if status.Phase != VIPApplyPhaseComplete {
 				allDone = false
 			} else {
 				result.Success = true
@@ -1130,13 +1176,13 @@ func (m *VIPMonitor) waitForReloadPhase(operationID string) error {
 		if allDone {
 			return nil
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(reloadPollInterval)
 	}
 	return fmt.Errorf("VIP reload phase did not complete before timeout")
 }
 
 func setupVIPTimeoutForMonitor() time.Duration {
-	return 45 * time.Second
+	return reloadPhaseTimeout
 }
 
 func (m *VIPMonitor) fetchVIPApplyStatus(host string) (VIPApplyStatus, error) {
@@ -1160,6 +1206,19 @@ func (m *VIPMonitor) fetchVIPApplyStatus(host string) (VIPApplyStatus, error) {
 	return status, nil
 }
 
+func memberlistStateString(state hashicorpMemberlist.NodeStateType) string {
+	switch state {
+	case hashicorpMemberlist.StateAlive:
+		return "ALIVE"
+	case hashicorpMemberlist.StateSuspect:
+		return "SUSPECT"
+	case hashicorpMemberlist.StateDead:
+		return "DEAD"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 func (m *VIPMonitor) adminTargets() []vipAdminTarget {
 	targets := make([]vipAdminTarget, 0)
 	seen := map[string]bool{}
@@ -1172,6 +1231,9 @@ func (m *VIPMonitor) adminTargets() []vipAdminTarget {
 	}
 
 	for _, member := range m.clusterInterface.MemberListMembers() {
+		if member.State != hashicorpMemberlist.StateAlive {
+			continue
+		}
 		host := member.Addr.String()
 		if seen[host] {
 			continue
@@ -1183,8 +1245,27 @@ func (m *VIPMonitor) adminTargets() []vipAdminTarget {
 	return targets
 }
 
-func (m *VIPMonitor) runAdminPhase(operationID string, phase VIPOperationPhase, endpoint string, localFn func() error) error {
-	targets := m.adminTargets()
+func (m *VIPMonitor) recordSkippedAdminTargets(operationID string, phase VIPOperationPhase) {
+	for _, member := range m.clusterInterface.MemberListMembers() {
+		if member.State == hashicorpMemberlist.StateAlive {
+			continue
+		}
+
+		completedAt := time.Now().UTC()
+		m.setVIPOperationResult(operationID, VIPNodeResult{
+			Node:        member.Name,
+			Host:        member.Addr.String(),
+			Phase:       string(phase),
+			Success:     false,
+			Error:       fmt.Sprintf("skipped non-alive member (state=%s)", memberlistStateString(member.State)),
+			StartedAt:   completedAt,
+			CompletedAt: &completedAt,
+		})
+	}
+}
+
+func (m *VIPMonitor) runAdminPhase(operationID string, targets []vipAdminTarget, phase VIPOperationPhase, endpoint string, localFn func() error) error {
+	m.recordSkippedAdminTargets(operationID, phase)
 	var wg sync.WaitGroup
 	var firstErr error
 	var firstErrMu sync.Mutex
@@ -1250,9 +1331,10 @@ func (m *VIPMonitor) runAdminPhase(operationID string, phase VIPOperationPhase, 
 
 func (m *VIPMonitor) runVIPOperation(operationID string, desiredVIP string) {
 	endpoint := strings.Replace(routes.DevicesSetVIPEndpoint, "{vip}", url.QueryEscape(desiredVIP), 1)
+	targets := m.adminTargets()
 
 	m.setVIPOperationPhase(operationID, VIPOperationPhaseWritingConfig, fmt.Sprintf("writing desired VIP %s to all nodes", desiredVIP))
-	if err := m.runAdminPhase(operationID, VIPOperationPhaseWritingConfig, endpoint, func() error {
+	if err := m.runAdminPhase(operationID, targets, VIPOperationPhaseWritingConfig, endpoint, func() error {
 		return m.writeVIPConfig(desiredVIP)
 	}); err != nil {
 		m.setVIPOperationPhase(operationID, VIPOperationPhaseFailed, err.Error())
@@ -1260,11 +1342,11 @@ func (m *VIPMonitor) runVIPOperation(operationID string, desiredVIP string) {
 	}
 
 	m.setVIPOperationPhase(operationID, VIPOperationPhaseReloading, fmt.Sprintf("reloading keepalived for desired VIP %s", desiredVIP))
-	if err := m.dispatchReloadPhase(operationID); err != nil {
+	if err := m.dispatchReloadPhase(operationID, targets); err != nil {
 		m.setVIPOperationPhase(operationID, VIPOperationPhaseFailed, err.Error())
 		return
 	}
-	if err := m.waitForReloadPhase(operationID); err != nil {
+	if err := m.waitForReloadPhase(operationID, targets); err != nil {
 		m.setVIPOperationPhase(operationID, VIPOperationPhaseFailed, err.Error())
 		return
 	}
@@ -1277,6 +1359,22 @@ func (m *VIPMonitor) runVIPOperation(operationID string, desiredVIP string) {
 	// "complete" immediately — late-joiner results are appended to NodeResults
 	// as they finish.
 	go m.propagateToLateJoiners(operationID, desiredVIP, endpoint)
+}
+
+func (m *VIPMonitor) runVIPReloadOperation(operationID string, desiredVIP string) {
+	targets := m.adminTargets()
+	m.setVIPOperationPhase(operationID, VIPOperationPhaseReloading, fmt.Sprintf("reloading keepalived for configured VIP %s", desiredVIP))
+	m.recordSkippedAdminTargets(operationID, VIPOperationPhaseReloading)
+	if err := m.dispatchReloadPhase(operationID, targets); err != nil {
+		m.setVIPOperationPhase(operationID, VIPOperationPhaseFailed, err.Error())
+		return
+	}
+	if err := m.waitForReloadPhase(operationID, targets); err != nil {
+		m.setVIPOperationPhase(operationID, VIPOperationPhaseFailed, err.Error())
+		return
+	}
+
+	m.setVIPOperationPhase(operationID, VIPOperationPhaseComplete, fmt.Sprintf("configured VIP %s reload requested on all nodes", desiredVIP))
 }
 
 // propagateToLateJoiners periodically checks for new memberlist nodes that
@@ -1598,13 +1696,29 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	if latest := m.getLatestVIPOperation(); latest != nil && !isVIPOperationTerminal(latest.Phase) {
+		http.Error(
+			w,
+			fmt.Sprintf("VIP operation %s is already in progress for desired VIP %s (phase=%s)", latest.ID, latest.DesiredVIP, latest.Phase),
+			http.StatusConflict,
+		)
+		return
+	}
+
+	desiredVIP, err := m.getConfiguredVIP()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to read configured VIP: %v", err), http.StatusInternalServerError)
+		return
+	}
+	op := m.createVIPOperation(desiredVIP)
+
 	go func() {
-		if err := m.clusterInterface.PostGenericToAdmin(routes.DeviceReloadVIPEndpoint, m.applyConfiguredVIP); err != nil {
-			logging.GetLogger().Error("Failed to reload VIP: %v", err)
-		}
+		m.runVIPReloadOperation(op.ID, desiredVIP)
 	}()
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(op)
 }
 
 // HandleSetMasterPriorityLocal handles POST /devices/{id}/vip/master-priority/{mode} on admin port.

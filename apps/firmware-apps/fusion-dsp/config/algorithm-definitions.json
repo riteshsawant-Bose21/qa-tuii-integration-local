@@ -2572,6 +2572,27 @@
                     "default_value": 1,
                     "minimum_value": 1,
                     "maximum_value": 64
+                },
+                {
+                    "name": "max_hpf_order",
+                    "value_type": "integer",
+                    "default_value": 8,
+                    "minimum_value": 0,
+                    "maximum_value": 8
+                },
+                {
+                    "name": "max_lpf_order",
+                    "value_type": "integer",
+                    "default_value": 8,
+                    "minimum_value": 0,
+                    "maximum_value": 8
+                },
+                {
+                    "name": "max_alignment_delay",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 480
                 }
             ],
             "terminals": [
@@ -2607,14 +2628,16 @@
                 {
                     "name": "hpf_order",
                     "value_type": "integer",
-                    "default_value": 4,
-                    "allowed_values": [1, 2, 3, 4, 6, 8]
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": "max_hpf_order"
                 },
                 {
                     "name": "lpf_order",
                     "value_type": "integer",
-                    "default_value": 4,
-                    "allowed_values": [1, 2, 3, 4, 6, 8]
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": "max_hpf_order"
                 },
                 {
                     "name": "hpf_type",
@@ -2627,6 +2650,18 @@
                     "value_type": "string",
                     "default_value": "linkwitz_riley",
                     "allowed_values": ["linkwitz_riley", "butterworth", "bessel"]
+                },
+                {
+                    "name": "alignment_delay",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": "max_alignment_delay"
+                },
+                {
+                    "name": "invert",
+                    "value_type": "bool",
+                    "default_value": false
                 },
                 {
                     "name": "bypass",

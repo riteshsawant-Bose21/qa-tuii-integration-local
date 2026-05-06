@@ -1,11 +1,10 @@
-import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Enum representing the section from which a snapshot is being dragged
 enum DragSection { snapshots, scenes }
 
 /// Base state class for the Snapshots feature
-sealed class ConfigSnapshotsState extends Equatable {
+sealed class ConfigSnapshotsState {
   const ConfigSnapshotsState();
 
   /// Get snapshots list (empty for non-loaded states)
@@ -22,6 +21,9 @@ sealed class ConfigSnapshotsState extends Equatable {
 
   /// Get sources height
   double get sourcesHeight => 200;
+
+  /// Get the snapshot ID currently being recalled (null if none)
+  String? get recallingSnapshotId => null;
 
   /// Check if currently dragging from snapshots section
   bool get isDraggingFromSnapshots => draggingFromSection == DragSection.snapshots;
@@ -41,9 +43,6 @@ sealed class ConfigSnapshotsState extends Equatable {
       return null;
     }
   }
-
-  @override
-  List<Object?> get props => <Object?>[];
 }
 
 /// Initial state - no data loaded yet
@@ -73,12 +72,16 @@ class SnapshotsLoaded extends ConfigSnapshotsState {
   @override
   final double sourcesHeight;
 
+  @override
+  final String? recallingSnapshotId;
+
   const SnapshotsLoaded({
     required this.snapshots,
     this.selectedSnapshotId,
     this.draggingSnapshotId,
     this.draggingFromSection,
     this.sourcesHeight = 200,
+    this.recallingSnapshotId,
   });
 
   /// Create a copy with updated values
@@ -91,6 +94,8 @@ class SnapshotsLoaded extends ConfigSnapshotsState {
     bool clearSelectedSnapshotId = false,
     bool clearDraggingSnapshotId = false,
     bool clearDraggingFromSection = false,
+    String? recallingSnapshotId,
+    bool clearRecallingSnapshotId = false,
   }) {
     return SnapshotsLoaded(
       snapshots: snapshots ?? this.snapshots,
@@ -98,17 +103,9 @@ class SnapshotsLoaded extends ConfigSnapshotsState {
       draggingSnapshotId: clearDraggingSnapshotId ? null : (draggingSnapshotId ?? this.draggingSnapshotId),
       draggingFromSection: clearDraggingFromSection ? null : (draggingFromSection ?? this.draggingFromSection),
       sourcesHeight: sourcesHeight ?? this.sourcesHeight,
+      recallingSnapshotId: clearRecallingSnapshotId ? null : (recallingSnapshotId ?? this.recallingSnapshotId),
     );
   }
-
-  @override
-  List<Object?> get props => <Object?>[
-    snapshots,
-    selectedSnapshotId,
-    draggingSnapshotId,
-    draggingFromSection,
-    sourcesHeight,
-  ];
 }
 
 /// Error state - failed to load snapshots
@@ -116,7 +113,4 @@ class SnapshotsError extends ConfigSnapshotsState {
   final String message;
 
   const SnapshotsError({required this.message});
-
-  @override
-  List<Object?> get props => <Object?>[message];
 }

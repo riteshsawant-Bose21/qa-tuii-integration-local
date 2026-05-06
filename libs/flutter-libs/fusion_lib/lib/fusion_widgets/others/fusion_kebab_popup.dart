@@ -9,11 +9,13 @@ class FusionKebabPopup extends StatefulWidget {
     this.onDuplicate,
     this.onDelete,
     this.iconSize = 18,
+    this.items,
     this.popupOffset = const Offset(0, 4),
     required this.semanticId,
   });
 
   final VoidCallback? onEdit;
+  final List<KebabMenuItem>? items;
   final String semanticId;
   final VoidCallback? onDuplicate;
   final VoidCallback? onDelete;
@@ -29,31 +31,35 @@ class _FusionKebabPopupState extends State<FusionKebabPopup> {
   bool _isMenuOpen = false;
   OverlayEntry? _overlayEntry;
 
-  List<_KebabMenuItem> get _menuItems {
-    final List<_KebabMenuItem> items = [];
+  List<KebabMenuItem> get _menuItems {
+    // Custom items take priority
+    if (widget.items != null) return widget.items!;
+
+    // Default Edit / Duplicate / Delete
+    final List<KebabMenuItem> items = [];
     if (widget.onEdit != null) {
       items.add(
-        _KebabMenuItem(
+        KebabMenuItem(
           label: 'Edit',
-          icon: "packages/fusion_lib/lib/assets/svgs/edit.svg",
+          icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
           onTap: widget.onEdit!,
         ),
       );
     }
     if (widget.onDuplicate != null) {
       items.add(
-        _KebabMenuItem(
+        KebabMenuItem(
           label: 'Duplicate',
-          icon: "packages/fusion_lib/lib/assets/svgs/copy.svg",
+          icon: 'packages/fusion_lib/lib/assets/svgs/copy.svg',
           onTap: widget.onDuplicate!,
         ),
       );
     }
     if (widget.onDelete != null) {
       items.add(
-        _KebabMenuItem(
+        KebabMenuItem(
           label: 'Delete',
-          icon: "packages/fusion_lib/lib/assets/svgs/trash.svg",
+          icon: 'packages/fusion_lib/lib/assets/svgs/trash.svg',
           onTap: widget.onDelete!,
         ),
       );
@@ -198,8 +204,8 @@ class _FusionKebabPopupState extends State<FusionKebabPopup> {
   }
 }
 
-class _KebabMenuItem {
-  const _KebabMenuItem({
+class KebabMenuItem {
+  const KebabMenuItem({
     required this.label,
     required this.icon,
     required this.onTap,
@@ -243,7 +249,7 @@ class _RawKebabPopupItemState<T> extends State<_RawKebabPopupItem<T>> {
 class _KebabMenuItemTile extends StatefulWidget {
   const _KebabMenuItemTile({required this.item});
 
-  final _KebabMenuItem item;
+  final KebabMenuItem item;
 
   @override
   State<_KebabMenuItemTile> createState() => _KebabMenuItemTileState();
@@ -258,7 +264,6 @@ class _KebabMenuItemTileState extends State<_KebabMenuItemTile> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: Container(
-        width: 93,
         height: 24,
         margin: const EdgeInsets.all(4),
         padding: const EdgeInsets.all(4),
@@ -273,7 +278,11 @@ class _KebabMenuItemTileState extends State<_KebabMenuItemTile> {
               widget.item.icon,
               color: context.colorScheme.textPrimary,
             ),
-            FusionAppText(text: widget.item.label, style: context.textTheme.l1Regular),
+            FusionAppText(
+              text: widget.item.label,
+              style: context.textTheme.l1Regular,
+              maxLine: 1,
+            ),
           ],
         ),
       ),

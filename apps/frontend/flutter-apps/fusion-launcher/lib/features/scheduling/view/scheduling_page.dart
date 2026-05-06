@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/scheduling/model/calendar_event.dart';
 import 'package:fusion_launcher/features/scheduling/view/widgets/calender_view.dart';
+import 'package:fusion_launcher/features/scheduling/view/widgets/event_card.dart';
+import 'package:fusion_launcher/features/scheduling/view/widgets/WeekDayHeader.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/utils/fusion_utils.dart';
+import '../../../core/widgets/fusion_app_table.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/scheduler_state.dart';
 import '../state/timeline_state.dart';
 import '../viewmodel/scheduler_viewmodel.dart';
 import '../viewmodel/timeline_viewmodel.dart';
-import 'sections/scheduler_form.dart';
+import 'sections/scheduler/scheduler_form.dart';
 
 part 'sections/scheduler_section.dart';
 part 'sections/timeline_section.dart';

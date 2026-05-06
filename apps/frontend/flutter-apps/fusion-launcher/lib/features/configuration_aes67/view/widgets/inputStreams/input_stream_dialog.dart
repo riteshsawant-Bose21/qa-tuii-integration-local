@@ -181,9 +181,14 @@ class _DialogContent extends StatelessWidget {
                           width: _dropW,
                           child: _DarkDropdown<String>(
                             semanticId: FusionTestKeys.instance.aes67_input_dialog_assigned_to_dropdown,
-                            value: cubit.assignedTo,
+                            value: state.stream.device == '-' || state.stream.device.isEmpty ? null : state.stream.device,
                             hint: '—',
-                            items: cubit.danteAssignableOptions,
+                            // Always include the saved device name so it shows in design mode too
+                            items:
+                                <String>{
+                                  ...state.sessions.map((Aes67SessionEntry s) => s.sessionId),
+                                  if (state.stream.device.isNotEmpty && state.stream.device != '-') state.stream.device,
+                                }.toList(),
                             labelBuilder: (String v) => v,
                             onChanged: cubit.updateAssignedTo,
                           ),
@@ -229,7 +234,7 @@ class _DialogContent extends StatelessWidget {
                   labelW: _labelW,
                   gapNum: _gapNum,
                   gapCols: _gapCols,
-                  assignOptions: cubit.selectedSessionChannelOptions,
+                  assignOptions: state.sessions.where((Aes67SessionEntry s) => s.id == state.stream.selectedSessionId).firstOrNull?.channelLabels ?? <String>[],
                 ),
 
                 const SizedBox(height: 24),
@@ -372,10 +377,14 @@ class _ChannelGrid extends StatelessWidget {
                         width: dropW,
                         child: _DarkDropdown<String>(
                           semanticId: FusionTestKeys.instance.aes67_input_dialog_channel_dropdown,
-                          // Only use the value if it exists in the current options, otherwise null
                           value: channel.assignedTo,
                           hint: 'Assign',
-                          items: assignOptions,
+                          // Always include the currently assigned value so it shows in both modes
+                          items:
+                              <String>{
+                                ...assignOptions,
+                                if (channel.assignedTo != null) channel.assignedTo!,
+                              }.toList(),
                           labelBuilder: (String v) => v,
                           onChanged: (String? v) {
                             if (v != null) cubit.updateChannelAssignment(channel.channelNumber, v);
@@ -470,13 +479,31 @@ class _SessionTable extends StatelessWidget {
           const _SessionTableHeader(),
           Divider(height: 1, color: context.colorScheme.strokeLight),
           // Data rows
-          ...cubit.apiSessions.map(
-            (Aes67SessionEntry session) => _SessionTableRow(
-              session: session,
-              isSelected: state.stream.selectedSessionId == session.id,
-              onSelect: () => cubit.selectSession(session.id),
+          if (state.isLoadingSessions)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (state.sessions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: FusionAppText(
+                  text: 'No sessions found',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            )
+          else
+            ...state.sessions.map(
+              (Aes67SessionEntry session) => _SessionTableRow(
+                session: session,
+                isSelected: state.stream.selectedSessionId == session.id,
+                onSelect: () => cubit.selectSession(session.id),
+              ),
             ),
-          ),
         ],
       ),
     );

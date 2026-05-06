@@ -15,51 +15,48 @@ abstract class DeviceComponent {
   });
 }
 
-class SpeakerData extends DeviceComponent {
-  final String sku;
-  final OutputType type;
-
-  const SpeakerData({
-    required this.sku,
-    required this.type,
-    required super.assetPath,
-    required super.name,
-    required super.price,
-  }) : super(id: sku);
-
-  static const List<SpeakerData> demoSpeakers = <SpeakerData>[
-    SpeakerData(
-      assetPath: 'assets/images/speakers/MSA12X.png',
-      name: 'MSA12X',
-      sku: 'MSA12X',
-      type: OutputType.analogOutput,
-      price: 500.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/array1.png',
-      name: 'ArenaMatch AM40',
-      sku: 'CO-12 H120',
-      type: OutputType.analogOutput,
-      price: 600.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/images/speakers/DM_pendant.png',
-      name: 'DesignMax DM6PE',
-      sku: 'MSA12XOHS',
-      type: OutputType.analogOutput,
-      price: 700.0,
-    ),
-    SpeakerData(
-      assetPath: 'assets/icons/aes67.png',
-      name: 'AES67 Output',
-      sku: 'AES67OUT',
-      type: OutputType.aes67output,
-      price: 100.0,
-    ),
-  ];
-
-  static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
-}
+// class SpeakerData extends DeviceComponent {
+//   final String sku;
+//   final OutputType type;
+//   const SpeakerData({
+//     required this.sku,
+//     required this.type,
+//     required super.assetPath,
+//     required super.name,
+//     required super.price,
+//   }) : super(id: sku);
+//   static const List<SpeakerData> demoSpeakers = <SpeakerData>[
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/MSA12X.png',
+//       name: 'MSA12X',
+//       sku: 'MSA12X',
+//       type: OutputType.analogOutput,
+//       price: 500.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/array1.png',
+//       name: 'ArenaMatch AM40',
+//       sku: 'CO-12 H120',
+//       type: OutputType.analogOutput,
+//       price: 600.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/images/speakers/DM_pendant.png',
+//       name: 'DesignMax DM6PE',
+//       sku: 'MSA12XOHS',
+//       type: OutputType.analogOutput,
+//       price: 700.0,
+//     ),
+//     SpeakerData(
+//       assetPath: 'assets/icons/aes67.png',
+//       name: 'AES67 Output',
+//       sku: 'AES67OUT',
+//       type: OutputType.aes67output,
+//       price: 100.0,
+//     ),
+//   ];
+//   static const List<String> speakerTypes = <String>['Surface', 'Ceiling', 'Pendant', 'Sub'];
+// }
 
 class SourceData extends DeviceComponent {
   final SourceType type;

@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -204,6 +203,15 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<Speaker> getListeningAreaSpeakers({required String areaId}) {
+    try {
+      return projectManager.getHardwareForListeningArea(areaId).whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for listening area: $e");
+      return <Speaker>[];
+    }
+  }
+
   List<HardwareComponent> getHardwareForFloor({required String floorId}) {
     try {
       return projectManager.getHardwareForFloor(floorId);
@@ -330,7 +338,7 @@ extension HardwareViewModel on ProjectViewModel {
         catalogSpeakers: catalogSpeakers,
         targetSpeakers: targetSpeakers,
         autoPlacementResult: autoPlacementResult,
-        );
+      );
 
       final List<Offset> candidatePoints = autoPlacedDetails.positions;
 
@@ -484,14 +492,12 @@ extension HardwareViewModel on ProjectViewModel {
         speakerSpec: SpeakerSpec(
           coverageAngle: coverageAngle,
           type: speakerType,
-          // TODO: SHARATH - need to verify if zAxis is the right dimension to use for pendant height in the algorithm, and if the algorithm expects it to be in mm or meters (we may need to convert from our internal cm representation)
-          pendantHeight: 2.1,
+          pendantHeight: double.tryParse(listeningArea.ceilingHeight),
         ),
         coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
       );
 
-      log("Total speakers placed by algorithm: ${result.speakerPositions.length}");
       final List<Offset> positions = result.speakerPositions.map((Point2D p) => Offset((p.x * 100) + bounds.minX, (p.y * 100) + bounds.minY)).toList();
 
       return (
@@ -502,7 +508,7 @@ extension HardwareViewModel on ProjectViewModel {
           room: room,
           coverageAngle: coverageAngle,
           selectedLayoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-          boundaryOverlapThreshold: 0.7,
+          boundaryOverlapThreshold: 0.2,
           selectedCoveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
           selectedSpeakerType: speakerType,
           selectedRoomType: room.roomType,
@@ -806,6 +812,7 @@ extension HardwareViewModel on ProjectViewModel {
       price: 0,
       mountingType: mountingType,
       pitch: pitch,
+      color: "black",
       yaw: yaw,
       inputPortsData: <PortData>[
         PortData(

@@ -6,81 +6,160 @@ import (
 )
 
 const (
-	SoftwareUpdateVersionUnknown = "Unknown"
-	BranchNameUnknown            = "Unknown"
-	CommitHashUnknown            = "Unknown"
-	JenkinsBuildNumberUnknown    = "Unknown"
-	PreReleaseTagUnknown         = "Unknown"
-	SoftwareUpdateOTAPath        = "/mnt/ota"
-	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
-	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
+	ContentType  = "Content-Type"
+	JsonMIMEType = "application/json"
+	TextMIMEType = "text/plain"
+)
 
+const (
+	AdminPort               = "9090"
+	ControllerPort          = "7950"
+	HTTPPort                = "8080"
+	MessageTriggerPort      = 7949
+	SAPPort                 = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
+	UDPPort                 = "7947"
+	TelemetryCoreZMQPort    = "5678" // ZMQ PUB port on each device's telemetry core
+	TelemetryCoreFilterPort = "9999" // UDP port for update_filter_req on each device's telemetry core
+)
+
+var (
+	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/persist/fusion/audio")
+	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/persist/pki/")
+	DefaultCAFileName       = "AmazonRootCA1.pem"
+	DefaultCSRFileName      = "device.csr"
+	DefaultCertFileName     = "device.x509.cert"
+	DefaultKeyFileName      = "device.key"
+	SoftwareUpdateInfoPath  = "/etc/buildinfo"
+	SwUpdateInfoPath        = "/etc/swupdate-status"
+	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
+)
+
+const (
 	FusionEpoch     = "_fusion_epoch"
-	FusionVersion   = "_fusion_version"
 	FusionMessageID = "_fusion_msg_id"
 	FusionOperation = "_fusion_op"
+	FusionClear     = "_fusion_clear"
 	FusionSentAtNS  = "_fusion_sent_at_ns"
+	FusionVersion   = "_fusion_version"
+)
 
+const (
 	HTTPTimeout       = 5 * time.Second
 	HTTPUploadTimeout = 30 * time.Second
+)
 
-	MacUnknown = "Unknown"
-
+const (
 	MessageIDKey        = "id"
 	MessagePriorityKey  = "priority"
 	MessageTimestampKey = "timestamp"
 	MessageZonesKey     = "zones"
-	ModelUnknown        = "Unknown"
+)
 
-	Protocol = "http://"
+const (
+	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
+	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
+	ModelUnknown                 = "Unknown"
+	Protocol                     = "http://"
+	SoftwareUpdateOTAPath        = "/mnt/ota"
+	Unknown                      = "Unknown"
+)
 
-	SerialUnknown = "Unknown"
-
+const (
+	SceneIDKey              = "scene_id"
+	SceneSetIDKey           = "set_id"
 	SnapshotIDKey           = "snapshot_id"
 	SnapshotDefinitionIDKey = "snapshot_definition_id"
-	SceneSetIDKey           = "set_id"
-	SceneIDKey              = "scene_id"
+)
 
+// RECOVERY_STATUS enum values from SWUpdate
+const (
+	SWUpdateStatusIdle       SWUpdateStatus = 0
+	SWUpdateStatusStart      SWUpdateStatus = 1
+	SWUpdateStatusRun        SWUpdateStatus = 2
+	SWUpdateStatusSuccess    SWUpdateStatus = 3
+	SWUpdateStatusFailure    SWUpdateStatus = 4
+	SWUpdateStatusDownload   SWUpdateStatus = 5
+	SWUpdateStatusDone       SWUpdateStatus = 6
+	SWUpdateStatusSubprocess SWUpdateStatus = 7
+	SWUpdateStatusProgress   SWUpdateStatus = 8
+)
+
+// SWUpdate progress socket constants
+const (
+	SWUpdateConnectAckSize   = 8
+	SWUpdateExpectedAckMagic = "ACK"
+	SWUpdateMsgSizeV200      = 2408
+	SWUpdateMsgSizeV210      = 2416
+	SWUpdateProgressAPIV200  = uint32(0x00020000)
+	SWUpdateProgressAPIV210  = uint32(0x00020100)
+	SWUpdateSocketPath       = "/tmp/swupdateprog"
+)
+
+// SWUpdate progress message byte offsets
+const (
+	SWUpdateOffAPIVersion   = 0
+	SWUpdateOffStatus       = 4
+	SWUpdateOffDwlPercent   = 8
+	SWUpdateOffDwlBytes     = 12
+	SWUpdateOffNSteps       = 20
+	SWUpdateOffCurStep      = 24
+	SWUpdateOffCurPercent   = 28
+	SWUpdateOffCurImage     = 32
+	SWUpdateOffHndName      = 288
+	SWUpdateOffSource       = 352
+	SWUpdateOffInfoLen      = 356
+	SWUpdateOffInfo         = 360
+	SWUpdateOffSerialNumber = 2408
+)
+
+const (
 	VIPHighPriority        = "high"
 	VIPvrrpHighPriority    = 120
 	VIPDefaultPriority     = "default"
 	VIPvrrpDefaultPriority = 100
 	VIPLowPriority         = "low"
 	VIPvrrpLowPriority     = 90
+)
 
+const (
 	// WS Request types (client -> server)
-	WSMsgTypeDevices             = "devices"
-	WSMsgTypeDeviceByID          = "device_by_id"
-	WSMsgTypeUpdateDeviceInfo    = "update_device_info"
-	WSMsgTypeConfiguration       = "config"
-	WSMsgTypePatchConfiguration  = "patch_config"
-	WSMsgTypeUnsubscribeConfig   = "unsubscribe_config"
-	WSMsgTypeUnsubscribeDevices  = "unsubscribe_devices"
-	WSMsgTypePing                = "ping"
-	WSMsgTypePong                = "pong"
-	WSMsgTypeError               = "error"
-	WSMsgTypeStartUpdate         = "start_update"
-	WSMsgTypeUpdateProgress      = "update_progress"
-	WSMsgTypeSwUpdateInfo        = "sw_update_info"
-	WSMsgTypeListSoftwareUpdates = "list_sw_update_files"
+	WSMsgTypeConfiguration         = "config"
+	WSMsgTypeDeviceByID            = "device_by_id"
+	WSMsgTypeDevices               = "devices"
+	WSMsgTypeError                 = "error"
+	WSMsgTypeListSoftwareUpdates   = "list_sw_update_files"
+	WSMsgTypeMeterData             = "meter_data"
+	WSMsgTypePatchConfiguration    = "patch_config"
+	WSMsgTypePing                  = "ping"
+	WSMsgTypePong                  = "pong"
+	WSMsgTypeStartUpdate           = "start_update"
+	WSMsgTypeSubscribeMeterData    = "subscribe_meter_data"
+	WSMsgTypeSwUpdateInfo          = "sw_update_info"
+	WSMsgTypeUnsubscribeConfig     = "unsubscribe_config"
+	WSMsgTypeUnsubscribeDevices    = "unsubscribe_devices"
+	WSMsgTypeUnsubscribeMeterData  = "unsubscribe_meter_data"
+	WSMsgTypeUpdateDeviceInfo      = "update_device_info"
+	WSMsgTypeUpdateMeterDataFilter = "update_meter_data_filter"
+	WSMsgTypeUpdateProgress        = "update_progress"
 
 	// WS event types (server -> client)
-	WSMsgTypeDeviceUpdate = "device_update"
 	WSMsgTypeConfigUpdate = "config_update"
+	WSMsgTypeDeviceUpdate = "device_update"
 
 	// WS topic names
 	WSTopicConfigUpdates = "config_updates"
 	WSTopicDeviceUpdates = "device_updates"
+	WSTopicMeterData     = "meter_data"
 
 	// WebSocket response data field keys
-	WSDataFieldDeviceID   = "device_id"
 	WSDataFieldDeviceData = "device_data"
+	WSDataFieldDeviceID   = "device_id"
 
 	WSCurrentVersion = 1
 
-	WSStatusSuccess = "success"
-	WSStatusError   = "error"
 	WSStatusEvent   = "event"
+	WSStatusError   = "error"
+	WSStatusSuccess = "success"
 
 	// Standard WebSocket close codes (1xxx)
 	WSCodeNormalClosure = 1000 // Normal closure (for connection close only)
@@ -104,34 +183,6 @@ const (
 	WSCodeDeviceNotFound   = 4005 // Device not found
 	WSCodeUpdateFailed     = 4006 // Update operation failed
 	WSCodeApplicationError = 4500 // General application error
-
-)
-
-const (
-	ContentType  = "Content-Type"
-	JsonMIMEType = "application/json"
-	TextMIMEType = "text/plain"
-)
-
-const (
-	AdminPort          = "9090"
-	ControllerPort     = "7950"
-	HTTPPort           = "8080"
-	MessageTriggerPort = 7949
-	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
-	UDPPort            = "7947"
-)
-
-var (
-	AudioFilesLocation      = getenvDefault("FUSION_AUDIO_DIR", "/var/lib/fusion/audio")
-	DefaultIdentityFilePath = getenvDefault("FUSION_IDENTITY_DIR", "/var/lib/device-identity/")
-	DefaultCAFileName       = "AmazonRootCA1.pem"
-	DefaultCSRFileName      = "device.csr"
-	DefaultCertFileName     = "device.x509.cert"
-	DefaultKeyFileName      = "device.key"
-	SoftwareUpdateInfoPath  = "/etc/buildinfo"
-	SwUpdateInfoPath        = "/etc/swupdate-status"
-	SerialPath              = "/sys/firmware/devicetree/base/serial-number"
 )
 
 func getenvDefault(key string, fallback string) string {
@@ -140,44 +191,3 @@ func getenvDefault(key string, fallback string) string {
 	}
 	return fallback
 }
-
-// RECOVERY_STATUS enum values from SWUpdate
-const (
-	SWUpdateStatusIdle       SWUpdateStatus = 0
-	SWUpdateStatusStart      SWUpdateStatus = 1
-	SWUpdateStatusRun        SWUpdateStatus = 2
-	SWUpdateStatusSuccess    SWUpdateStatus = 3
-	SWUpdateStatusFailure    SWUpdateStatus = 4
-	SWUpdateStatusDownload   SWUpdateStatus = 5
-	SWUpdateStatusDone       SWUpdateStatus = 6
-	SWUpdateStatusSubprocess SWUpdateStatus = 7
-	SWUpdateStatusProgress   SWUpdateStatus = 8
-)
-
-// SWUpdate progress socket constants
-const (
-	SWUpdateSocketPath       = "/tmp/swupdateprog"
-	SWUpdateConnectAckSize   = 8
-	SWUpdateMsgSizeV200      = 2408
-	SWUpdateMsgSizeV210      = 2416
-	SWUpdateExpectedAckMagic = "ACK"
-	SWUpdateProgressAPIV200  = uint32(0x00020000)
-	SWUpdateProgressAPIV210  = uint32(0x00020100)
-)
-
-// SWUpdate progress message byte offsets
-const (
-	SWUpdateOffAPIVersion   = 0
-	SWUpdateOffStatus       = 4
-	SWUpdateOffDwlPercent   = 8
-	SWUpdateOffDwlBytes     = 12
-	SWUpdateOffNSteps       = 20
-	SWUpdateOffCurStep      = 24
-	SWUpdateOffCurPercent   = 28
-	SWUpdateOffCurImage     = 32
-	SWUpdateOffHndName      = 288
-	SWUpdateOffSource       = 352
-	SWUpdateOffInfoLen      = 356
-	SWUpdateOffInfo         = 360
-	SWUpdateOffSerialNumber = 2408
-)

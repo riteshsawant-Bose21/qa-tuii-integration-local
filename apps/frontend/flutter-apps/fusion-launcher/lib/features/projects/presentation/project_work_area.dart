@@ -11,6 +11,7 @@ import 'package:nested/nested.dart';
 
 import '../../../core/service_locator.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
+import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_aes67/view/configuration_aes67.dart';
@@ -44,9 +45,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'System'),
+    Tab(text: 'Devices'),
     Tab(text: 'Connections'),
-    // Tab(text: 'Cost'),
+    Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     // Tab(text: 'Cloud'),
   ];
@@ -54,7 +55,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   final List<Widget> _controlTabs = const <Widget>[
     Tab(text: 'Dashboard'),
     Tab(text: 'Devices'),
-    Tab(text: 'Building'),
+    // Tab(text: 'Building'),
     Tab(text: 'Configuration'),
   ];
 
@@ -186,17 +187,19 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       const WorkSafeAreaContent(child: SystemPage()),
       const WiringPage(),
 
+      /// add your cost page here
+      const WorkSafeAreaContent(child: BillOfMaterialsPage()),
       WorkSafeAreaContent(child: configurationPage),
     ];
 
     _controlWidgets = <Widget>[
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage()),
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage()),
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const WorkSafeAreaContent(
-            child: NetworkConfigTrigger(),
-          )
-          : buildingPage,
+      // serviceLocator<ProjectViewModel>().virtualIP == null
+      //     ? const WorkSafeAreaContent(
+      //       child: NetworkConfigTrigger(),
+      //     )
+      //     : buildingPage,
       WorkSafeAreaContent(child: serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage),
     ];
   }

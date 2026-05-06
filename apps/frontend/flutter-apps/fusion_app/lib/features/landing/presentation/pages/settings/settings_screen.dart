@@ -31,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: const CommonAppBar(title: 'Settings'),
+        appBar: const CommonMobileAppBar(title: 'Settings'),
         body:  Column(
           children: [
             SizedBox(height: 20,),

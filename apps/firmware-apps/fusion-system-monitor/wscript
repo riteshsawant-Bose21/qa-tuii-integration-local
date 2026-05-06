@@ -101,6 +101,8 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
     conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-framework/build'])
     conf.check_cfg(package='dbus-1', uselib_store='DBUS', args='--cflags --libs', mandatory=True)
+    if not conf.env['IS_MACOS']:
+        conf.check_cfg(package='jsoncpp', uselib_store='JSONCPP', args='--cflags --libs', mandatory=True)
 
 def build(bld):
     bld(export_includes=['../fusion-server/tools', '../../../libs/firmware-libs/fusion-embedded-interface/include', '../../../libs/firmware-libs/fusion-embedded-framework/include', './external/doctest', './include'], name='common-include')
@@ -112,9 +114,11 @@ def build(bld):
         excludes.extend([
             'src/fusion_connect_client.cpp',
             'src/bdif_client.cpp',
+            'src/bt_control.cpp',
+            'src/hw_control.cpp',
         ])
 
     bld.program(target='fusion_system_monitor',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'], excl=excludes),
-                use=['common-include', 'DBUS'],
+                use=['common-include', 'DBUS', 'JSONCPP'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl', 'fusion_embedded_interface', 'fusion_embedded_framework'])

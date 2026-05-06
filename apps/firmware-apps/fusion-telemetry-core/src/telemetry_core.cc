@@ -135,6 +135,18 @@ int register_message_handlers(bosepro::telemetryManager& telm_mgr)
     ret_val = telm_mgr.register_message_handler("report_period",
                                        process_update_report_period_req,
                                        NULL);
+
+
+    ret_val = telm_mgr.register_message_handler("update_filter_req", 
+                                       process_update_filter_req,
+                                       NULL);
+
+     if (ret_val != 0)
+    {
+        return ret_val;
+    }
+
+     // Device ID update message from fusion-server
     return ret_val;
 
 

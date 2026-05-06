@@ -27,13 +27,25 @@ class MeterBlock {
       }
       final double? n = double.tryParse(value);
       if (n != null) return <double>[n];
+      // Handle string booleans: "true" / "false"
+      final String lower = value.trim().toLowerCase();
+      if (lower == 'true') return <double>[1.0];
+      if (lower == 'false') return <double>[0.0];
       return <double>[];
     }
     if (value is List) {
       return value.map((dynamic e) {
         if (e is num) return e.toDouble();
         if (e is bool) return e ? 1.0 : 0.0;
-        if (e is String) return double.tryParse(e) ?? 0.0;
+        if (e is String) {
+          final double? n = double.tryParse(e);
+          if (n != null) return n;
+          // Handle string booleans inside lists
+          final String lower = e.trim().toLowerCase();
+          if (lower == 'true') return 1.0;
+          if (lower == 'false') return 0.0;
+          return 0.0;
+        }
         return 0.0;
       }).toList();
     } else if (value is num) {

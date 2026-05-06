@@ -24,83 +24,108 @@ func (h *Handler) HandleGetSceneSet(setID string) (*api.SceneSet, error) {
 
 // HandleActivateSnapshotByID patches the snapshot data onto DB State.
 func (h *Handler) HandleActivateSnapshotByID(id string) error {
-	def, err := h.persistence.GetSnapshotDefinition(id)
-	if err != nil {
-		return err
-	}
+	return h.sceneCatalog.ActivateSnapshotByID(id)
+}
 
-	afterPtr, err := h.StateManager.Patch(def.Data)
-	if err != nil {
-		return err
-	}
+// HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
+func (h *Handler) HandleActivateScene(setID, sceneID string) error {
+	return h.sceneCatalog.ActivateScene(setID, sceneID)
+}
 
-	if afterPtr == nil {
-		msg := api.NewNotifyMessage(
-			api.NotifyOpSnapshotV2Activate,
-			h.appConfig.NodeName,
-			api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
-		)
-		if err := h.hub.BroadcastToNodes(msg); err != nil {
-			return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
-		}
-		return nil
-	}
-
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+// HandleDeleteAllSnapshotDefinitions removes all stored snapshot definitions and notifies the cluster.
+func (h *Handler) HandleDeleteAllSnapshotDefinitions() error {
+	if err := h.persistence.DeleteAllSnapshotDefinitions(); err != nil {
 		return err
 	}
 
 	msg := api.NewNotifyMessage(
-		api.NotifyOpSnapshotV2Activate,
+		api.NotifyOpSnapshotDefsDeleteAll,
 		h.appConfig.NodeName,
-		api.WithSnapshotActivation(&api.ActivateSnapshotRequest{ID: id}),
+		func(m *api.NotifyMessage) {},
 	)
 	if err := h.hub.BroadcastToNodes(msg); err != nil {
-		return fmt.Errorf("failed to broadcast snapshot activation: %w", err)
+		return fmt.Errorf("failed to broadcast snapshot definitions delete: %w", err)
 	}
 
 	return nil
 }
 
-// HandleActivateScene activates a scene within a scene set and patches its data onto DB State.
-func (h *Handler) HandleActivateScene(setID, sceneID string) error {
-	scene, err := h.persistence.GetSceneInSet(setID, sceneID)
-	if err != nil {
-		return err
-	}
-
-	afterPtr, err := h.StateManager.Patch(scene.Data)
-	if err != nil {
-		return err
-	}
-
-	if err := h.persistence.SetCurrentScene(setID, sceneID); err != nil {
-		return err
-	}
-
-	if afterPtr == nil {
-		msg := api.NewNotifyMessage(
-			api.NotifyOpSceneActivate,
-			h.appConfig.NodeName,
-			api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
-		)
-		if err := h.hub.BroadcastToNodes(msg); err != nil {
-			return fmt.Errorf("failed to broadcast scene activation: %w", err)
-		}
-		return nil
-	}
-
-	if err := h.handleConfigUpdate(*afterPtr, false); err != nil {
+// HandleDeleteSnapshotDefinition removes one snapshot definition and notifies the cluster.
+func (h *Handler) HandleDeleteSnapshotDefinition(id string) error {
+	if err := h.persistence.DeleteSnapshotDefinition(id); err != nil {
 		return err
 	}
 
 	msg := api.NewNotifyMessage(
-		api.NotifyOpSceneActivate,
+		api.NotifyOpSnapshotDefDelete,
 		h.appConfig.NodeName,
-		api.WithSceneActivation(&api.ActivateSceneSetRequest{SetID: setID, SceneID: sceneID}),
+		api.WithSnapshotOperation(&api.SnapshotOperation{
+			Name:      id,
+			Timestamp: time.Now().UTC(),
+		}),
 	)
 	if err := h.hub.BroadcastToNodes(msg); err != nil {
-		return fmt.Errorf("failed to broadcast scene activation: %w", err)
+		return fmt.Errorf("failed to broadcast snapshot definition delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteAllSceneSets removes all stored scene sets and notifies the cluster.
+func (h *Handler) HandleDeleteAllSceneSets() error {
+	if err := h.persistence.DeleteAllSceneSets(); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneSetsDeleteAll,
+		h.appConfig.NodeName,
+		func(m *api.NotifyMessage) {},
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene sets delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteSceneSet removes one scene set and notifies the cluster.
+func (h *Handler) HandleDeleteSceneSet(setID string) error {
+	if err := h.persistence.DeleteSceneSet(setID); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneSetDelete,
+		h.appConfig.NodeName,
+		api.WithSceneSetOperation(&api.SceneSetOperation{
+			SetID:     setID,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene set delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleDeleteScene removes one scene from scene sets and notifies the cluster.
+func (h *Handler) HandleDeleteScene(sceneID string) error {
+	if err := h.persistence.DeleteScene(sceneID); err != nil {
+		return err
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpSceneDelete,
+		h.appConfig.NodeName,
+		api.WithSceneOperation(&api.SceneOperation{
+			SceneID:   sceneID,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	if err := h.hub.BroadcastToNodes(msg); err != nil {
+		return fmt.Errorf("failed to broadcast scene delete: %w", err)
 	}
 
 	return nil

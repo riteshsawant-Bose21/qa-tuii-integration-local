@@ -10,7 +10,6 @@ import '../widgets/pb_block_layout.dart';
 import '../widgets/pb_content_section.dart';
 
 part '_compressor_controller.dart';
-
 part '_compressor_graph.dart';
 
 class CompressorBlock extends StatelessWidget {
@@ -52,6 +51,7 @@ class CompressorBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                              semanticId: "compressor_threshold",
                               value: controller.threshold ?? 0,
                               max: 0.0,
                               min: -40,
@@ -74,7 +74,8 @@ class CompressorBlock extends StatelessWidget {
                         value: controller.threshold ?? 0,
                         max: 0.0,
                         min: -40,
-                        intervalGap: 12,
+
+                        intervalGap: 10,
                         onChanged: (num value) {
                           controller.updateThreshold(value);
                         },
@@ -98,9 +99,10 @@ class CompressorBlock extends StatelessWidget {
                           spacing: 10,
                           children: <Widget>[
                             PBNumberTextField(
+                              semanticId: "compressor_ratio",
                               value: controller.ratio ?? 0,
-                              max: 1.0,
-                              min: 20,
+                              min: 1.0,
+                              max: 20,
                               onChanged: (num value) {
                                 controller.updateRatio(value);
                               },
@@ -189,51 +191,51 @@ class CompressorBlock extends StatelessWidget {
                 ),
 
                 /// Releaser Section
-                PBSection(
-                  type: PBSectionType.middle,
-                  child: SizedBox(
-                    width: 120,
+                // PBSection(
+                //   type: PBSectionType.middle,
+                //   child: SizedBox(
+                //     width: 120,
 
-                    child: PbContentSection(
-                      title: "Reduction",
-                      semanticId: 'compressor_reduction',
-                      footer: SizedBox(
-                        width: 100,
-                        child: Column(
-                          spacing: 10,
-                          children: <Widget>[
-                            PBNumberTextField(
-                              semanticId: 'compressor_reduction',
-                              value: controller.reduction ?? 0,
-                              max: 0.0,
-                              min: -42,
-                              onChanged: (num value) {
-                                controller.updateReduction(value);
-                              },
-                            ),
-                            FusionAppText(
-                              capitalize: false,
-                              text: "dB",
-                              style: context.textTheme.labelMedium?.copyWith(
-                                color: context.colorScheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      child: VerticalSlider(
-                        semanticId: 'Reduction_dB',
-                        value: controller.reduction ?? 0,
-                        max: 0.0,
-                        min: -42,
-                        intervalGap: 6,
-                        onChanged: (num value) {
-                          controller.updateReduction(value);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                //     child: PbContentSection(
+                //       title: "Reduction",
+                //       semanticId: 'compressor_reduction',
+                //       footer: SizedBox(
+                //         width: 100,
+                //         child: Column(
+                //           spacing: 10,
+                //           children: <Widget>[
+                //             PBNumberTextField(
+                //               semanticId: 'compressor_reduction',
+                //               value: controller.reduction ?? 0,
+                //               max: 0.0,
+                //               min: -42,
+                //               onChanged: (num value) {
+                //                 controller.updateReduction(value);
+                //               },
+                //             ),
+                //             FusionAppText(
+                //               capitalize: false,
+                //               text: "dB",
+                //               style: context.textTheme.labelMedium?.copyWith(
+                //                 color: context.colorScheme.textSecondary,
+                //               ),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //       child: VerticalSlider(
+                //         semanticId: 'Reduction_dB',
+                //         value: controller.reduction ?? 0,
+                //         max: 0.0,
+                //         min: -42,
+                //         intervalGap: 6,
+                //         onChanged: (num value) {
+                //           controller.updateReduction(value);
+                //         },
+                //       ),
+                //     ),
+                //   ),
+                // ),
 
                 /// Output Meter Section
                 PBSection(
@@ -301,6 +303,7 @@ class _GateTextField extends StatelessWidget {
           ),
           Expanded(
             child: PBNumberTextField(
+              semanticId: "$semanticId",
               onChanged: onChanged,
               value: value,
               min: min,

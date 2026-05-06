@@ -228,6 +228,9 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	logger.Info("SoftwareUpdate upload: bundle finalized at %s (%.1f MB, sha256=%s, duration=%v)",
 		finalPath, float64(written)/(1<<20), actualChecksum, time.Since(start))
 
+	// Remove stale .swu bundles on the VIP node now that the new file is in place.
+	utils.CleanupStaleSwuFiles(api.SoftwareUpdateOTAPath, actualChecksum, logger)
+
 	uploadRate := float64(written) / (1024 * 1024) / time.Since(start).Seconds()
 	logger.Info("SoftwareUpdate upload: upload rate: %.1f MB/s", uploadRate)
 
