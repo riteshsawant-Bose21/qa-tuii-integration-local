@@ -21,5 +21,13 @@ class AssetSvg {
   static const String autoplaceSquare = '$_path/autoplace_square.svg';
   static const String autoplaceHexagonal = '$_path/autoplace_hexagonal.svg';
   static const String sadFace = '$_path/sad_face.svg';
+  static const String surfaceSpeaker = '$_path/surface_speaker.svg';
+  static const String pendantSpeaker = '$_path/pendant_speaker.svg';
+  static const String ceilingSpeaker = '$_path/ceiling_speaker.svg';
+  static const String customHeight = '$_path/custom_height.svg';
+  static const String seated = '$_path/seated.svg';
+  static const String standing = '$_path/standing.svg';
+  static const String indoorEnv = '$_path/indoor_env.svg';
+  static const String outdoorEnv = '$_path/outdoor_env.svg';
   static const String smilyFace = '$_path/smily_face.svg';
 }
