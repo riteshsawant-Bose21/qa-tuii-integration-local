@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:ui';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/hardware/product_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -190,6 +192,34 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       equipLocationId: equipLocationId,
       hardwareId: hardware.id,
     );
+  }
+
+  void addProductToZone({
+    required String listeningAreaId,
+    required String? floorId,
+    required Offset? position,
+    required EQLProduct product,
+  }) {
+    // Create hardware with correct location entity (not empty LocationModel)
+    final HardwareComponent baseHardware = projectViewModel.fromProductQueryModel(
+      _createPQMFor(product),
+      locationEntity: LocationModel(
+        listeningAreaId: listeningAreaId,
+        floorId: floorId,
+      ),
+      isFromBuildingPage: true,
+    );
+
+    final HardwareComponent hardware = projectViewModel.assignPortData(
+      hardware: baseHardware,
+      type: _getProductType(product.deviceType),
+      portData: product.portData,
+      modelFamily: product.modelFamily,
+    );
+
+    projectViewModel.addHardware(hardware: hardware);
+    projectViewModel.setCurrentSelectedHardware(hardware.id);
+    // No addHardwareToEquipLocation — zone placement uses position/listeningArea
   }
 
   HardwareComponent _createHardwareFor(EQLProduct product) {

@@ -534,10 +534,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                         child: ProjectCard(
                                           index: index,
                                           projectData: project,
-                                          onDelete:
-                                              () => serviceLocator<ProjectSyncViewModel>().deleteProject(
-                                                projectId: project.id,
-                                              ),
+                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
                                         ),
                                       ),
                                     );

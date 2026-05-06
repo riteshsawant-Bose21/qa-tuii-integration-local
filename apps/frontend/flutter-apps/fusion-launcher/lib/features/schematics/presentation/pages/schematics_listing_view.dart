@@ -4,7 +4,6 @@ import 'package:fusion_launcher/features/schematics/viewmodel/schematic_amplifie
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_fusion_dsp_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_hardware_rack_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_zone_viewmodel.dart';
-import 'package:fusion_launcher/features/schematics/views/widgets/forms/schematic_add_device_form.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -12,18 +11,20 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
+import '../../../add_source_popup/view/add_source_popup.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../configuration_control/widgets/controllers/add_controller/add_controller_dialog.dart';
 import '../../../create_zone_popup/view/create_zone_popup.dart';
-import '../../../product_query/presentation/pages/product_query.dart';
 import '../../../projects/viewmodel/eql_products_vm.dart';
 import '../../../projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
+import '../../../projects/widget/building/side_panel_widgets/equipment_location/parts/endpointdialog.dart';
 import '../../state/device_listing_state.dart';
 import '../../viewmodel/endpoints_viewmodel.dart';
 import '../../viewmodel/schematic_fusion_controller_viewmodel.dart';
 import '../../viewmodel/schematic_network_switch_viewmodel.dart';
 import '../../viewmodel/schematic_sources_viewmodel.dart';
 import '../../viewmodel/search_control_viewmodel.dart';
+// import '../../views/widgets/filter_section.dart';
 import '../../views/widgets/schematic_hardware_listing.dart';
 import '../../views/widgets/schematic_listing_section.dart';
 import '../../views/widgets/schematic_section.dart';
@@ -78,7 +79,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           return SchematicSourcesViewModel();
                         },
                         title: "Sources",
-                        addAction: AddSourcePopup(
+                        addAction: AddSourceDrawer(
                           isFromBuildingPage: false,
                           child: Icon(
                             LucideIcons.plus200,
@@ -87,19 +88,18 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
                       SchematicHardwareListing<FusionEndpoints, SchematicEndpointsViewModel>(
                         create: (BuildContext context) {
                           return SchematicEndpointsViewModel();
                         },
                         title: "Endpoints",
-                        addAction: FusionArrowPopup(
-                          semanticId: "add_endpoint_popup",
-                          content: const EquipmentLocationDialog(
-                            currentFilter: EQLDeviceType.endpoint,
-                          ),
+                        addAction: GestureDetector(
+                          onTap:
+                              () => AddEndpointDialog.show(
+                                context: context,
+                                category: EndpointDeviceCategory.endpoint,
+                              ),
                           child: Icon(
                             LucideIcons.plus200,
                             size: FusionSizes.iconSize16,
@@ -278,48 +278,17 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   flex: 2,
                   child: SchematicListingSection(
                     sectionTitle: "Controllers",
-                    action: FusionArrowPopup(
-                      semanticId: "add_controller_popup",
-                      content: SchematicAddDeviceForm<ProductQueryModel>(
-                        semanticsId: "controllers",
-                        products: ProductAPI.getControllers(),
-                        itemLabel: (ProductQueryModel value) => value.name,
-                        itemImage: (ProductQueryModel value) => value.image,
-                        onSubmit: (
-                          String areaId,
-                          String floorId,
-                          ProductQueryModel device,
-                        ) {
-                          final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                            device,
-                            locationEntity: LocationModel(
-                              listeningAreaId: areaId,
-                              floorId: floorId,
-                            ),
-                            isFromBuildingPage: false,
-                          );
-
-                          serviceLocator<ProjectViewModel>().addHardware(
-                            hardware: hardware,
-                          );
-                          FusionToast.success(
+                    action: GestureDetector(
+                      onTap:
+                          () => AddControllerDialog.show(
                             context,
-                            message: "Controller \"${device.name}\" added",
-                          );
-                          Navigator.of(context).pop();
-                          return true;
-                        },
-                      ),
+                            onControllerAdded: (String controllerId) {
+                              FusionToast.success(context, message: 'Controller added');
+                            },
+                          ),
                       child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(
-                          SemanticTypes.button,
-                          "add_controller",
-                        ),
-                        child: Icon(
-                          LucideIcons.plus200,
-                          size: FusionSizes.iconSize16,
-                          color: context.colorScheme.primaryWhite,
-                        ),
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_controller"),
+                        child: Icon(LucideIcons.plus200, size: FusionSizes.iconSize16, color: context.colorScheme.primaryWhite),
                       ),
                     ),
                     sections: <Widget>[
