@@ -58,6 +58,7 @@ const (
 const (
 	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
 	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
+	ModelUnknown                 = "Unknown"
 	Protocol                     = "http://"
 	SoftwareUpdateOTAPath        = "/mnt/ota"
 	Unknown                      = "Unknown"
