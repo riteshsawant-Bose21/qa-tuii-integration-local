@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -14,13 +15,21 @@ class DroConfigService {
     required String droServerUrl,
   }) async {
     try {
-      // final ResponseCallback<DroResponseData> response = await _fusionNetworkClient.post(
-      //   api: FusionApiEndpoint.process,
-      //   data: droInput.toJson(),
-      //   baseUrlToOverride: droServerUrl,
-      //   isSecure: false,
-      //   fromJson: (val) => DroResponseData.fromJson(val),
-      // );
+      if (Platform.isWindows) {
+        final ResponseCallback<DroResponseData> response = await _fusionNetworkClient.post(
+          api: FusionApiEndpoint.process,
+          data: droInput.toJson(),
+          baseUrlToOverride: droServerUrl,
+          isSecure: false,
+          fromJson: (val) => DroResponseData.fromJson(val),
+        );
+
+        if (response.success && response.data?.error == null) {
+          return ResponseCallback.success(response.data);
+        } else {
+          return ResponseCallback.failure(response.data?.error ?? response.message, data: response.data);
+        }
+      }
 
       final FusionDro dro = FusionDro();
 
