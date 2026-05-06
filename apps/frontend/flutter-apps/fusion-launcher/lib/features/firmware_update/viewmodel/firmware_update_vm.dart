@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as path;
@@ -21,19 +22,26 @@ const String _firmwareUpdateSnapshotKey = 'firmware_update.snapshot.v1';
 
 class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   final FusionDeviceService fusionDeviceService;
+  final FusionDeviceDiscoveryService fusionDeviceDiscoveryService;
 
   StreamSubscription<FileTransferState>? _downloadSubscription;
   StreamSubscription<FileTransferState>? _uploadSubscription;
-  StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>? _firmwareInstallSocketSubscription;
+  StreamSubscription<ResponseCallback<FirmwareUpdateProgressEvent>>?
+  _firmwareInstallSocketSubscription;
 
-  final TransferManagerCubit downloadManager = serviceLocator<TransferManagerCubit>();
+  final TransferManagerCubit downloadManager =
+      serviceLocator<TransferManagerCubit>();
   String? _persistedBundleId;
   String? _activeUploadTaskId;
 
-  FirmwareUpdateViewModel(this.fusionDeviceService) : super(const FirmwareUpdateViewModelState());
+  FirmwareUpdateViewModel(
+    this.fusionDeviceService,
+    this.fusionDeviceDiscoveryService,
+  ) : super(const FirmwareUpdateViewModelState());
 
   String? get vip => serviceLocator<ProjectViewModel>().virtualIP;
-  String? get bundleId => state.updateCheckResult?.bundleId ?? _persistedBundleId;
+  String? get bundleId =>
+      state.updateCheckResult?.bundleId ?? _persistedBundleId;
 
   void initialize() => unawaited(_initializeInternal());
 
@@ -57,8 +65,15 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   Future<void> getFusionNetworkDevice() async {
     try {
-      final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip!);
-      emit(state.copyWith(networkDevices: response.data ?? <FusionNetworkDevice>[]));
+      final ResponseCallback<List<FusionNetworkDevice>> response =
+          await fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(
+            ip: vip!,
+          );
+      emit(
+        state.copyWith(
+          networkDevices: response.data ?? <FusionNetworkDevice>[],
+        ),
+      );
     } catch (e) {
       emit(state.copyWith(networkDevices: <FusionNetworkDevice>[]));
     }
@@ -66,28 +81,46 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   Future<void> checkNewFirmwareUpdates() async {
     final FirmwareUpdateUiState current = state.uiState;
-    if (current == FirmwareUpdateUiState.downloading || current == FirmwareUpdateUiState.installing) return;
+    if (current == FirmwareUpdateUiState.downloading ||
+        current == FirmwareUpdateUiState.installing)
+      return;
 
-    _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, errorShortText: '', errorText: ''));
+    _emitIfOpen(
+      state.copyWith(
+        uiState: FirmwareUpdateUiState.checking,
+        errorShortText: '',
+        errorText: '',
+      ),
+    );
 
     if (!HAS_CLOUD_ACCESS) {
       _emitIfOpen(
         state.copyWith(
           uiState: FirmwareUpdateUiState.noUpdate,
           errorShortText: 'Cloud access is not available.',
-          errorText: 'Cloud access is not available. Please ensure you are signed in.',
+          errorText:
+              'Cloud access is not available. Please ensure you are signed in.',
         ),
       );
       return;
     }
 
     try {
-      final FirmwareUpdateCheckResult updateCheckResult = await checkForUpdates();
-      _persistedBundleId = (updateCheckResult.bundleId ?? '').trim().isEmpty ? null : (updateCheckResult.bundleId ?? '').trim();
+      final FirmwareUpdateCheckResult updateCheckResult =
+          await checkForUpdates();
+      _persistedBundleId =
+          (updateCheckResult.bundleId ?? '').trim().isEmpty
+              ? null
+              : (updateCheckResult.bundleId ?? '').trim();
 
-      final String updateAvailableVersion = _normalizedSemver(updateCheckResult.version ?? '');
-      final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
-      final String downloadedBundlePath = await _cachedBundlePathFromSnapshot(snapshot);
+      final String updateAvailableVersion = _normalizedSemver(
+        updateCheckResult.version ?? '',
+      );
+      final _PersistedFirmwareUpdateSnapshot snapshot =
+          await _loadFirmwareSnapshot();
+      final String downloadedBundlePath = await _cachedBundlePathFromSnapshot(
+        snapshot,
+      );
       final String downloadedBundleVersion = snapshot.availableVersion;
 
       bool hasValidDownloadedBundle = false;
@@ -105,7 +138,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       String nextDownloadedPath = downloadedBundlePath;
       double nextProgress = 0;
 
-      if (!updateCheckResult.updateAvailable || updateAvailableVersion == '0.0.0') {
+      if (!updateCheckResult.updateAvailable ||
+          updateAvailableVersion == '0.0.0') {
         if (hasValidDownloadedBundle) {
           await _deleteCachedBundleIfExists(downloadedBundlePath);
           await _clearDownloadedBundlePath();
@@ -114,7 +148,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         nextDownloadedPath = '';
       } else if (updateCheckResult.appUpdateRequired) {
         nextUiState = FirmwareUpdateUiState.appUpdateRequired;
-        nextErrorText = 'Launcher update required (min ${updateCheckResult.minDesktopAppVersion ?? 'unknown'}).';
+        nextErrorText =
+            'Launcher update required (min ${updateCheckResult.minDesktopAppVersion ?? 'unknown'}).';
       } else if (primaryFusionDeviceVersion == updateAvailableVersion) {
         // Already on the latest version — no need to keep a downloaded bundle.
         if (hasValidDownloadedBundle) {
@@ -126,7 +161,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         nextProgress = 1;
       } else if (hasValidDownloadedBundle) {
         // Use the persisted version tag (reliable) rather than filename parsing.
-        final bool cachedVersionMatches = downloadedBundleVersion.isNotEmpty && _normalizedSemver(downloadedBundleVersion) == updateAvailableVersion;
+        final bool cachedVersionMatches =
+            downloadedBundleVersion.isNotEmpty &&
+            _normalizedSemver(downloadedBundleVersion) ==
+                updateAvailableVersion;
 
         if (cachedVersionMatches) {
           nextUiState = FirmwareUpdateUiState.downloaded;
@@ -149,7 +187,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           availableVersion: updateAvailableVersion,
           downloadedFilePath: nextDownloadedPath,
           progress: nextProgress,
-          installTrackingCompleted: nextUiState == FirmwareUpdateUiState.installed,
+          installTrackingCompleted:
+              nextUiState == FirmwareUpdateUiState.installed,
         ),
       );
     } catch (e) {
@@ -166,39 +205,59 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   String _normalizedSemver(String version) {
     final String trimmed = version.trim();
     if (trimmed.isEmpty) return '0.0.0';
-    final String withoutPrefix = trimmed.startsWith('v') || trimmed.startsWith('V') ? trimmed.substring(1) : trimmed;
+    final String withoutPrefix =
+        trimmed.startsWith('v') || trimmed.startsWith('V')
+            ? trimmed.substring(1)
+            : trimmed;
     return withoutPrefix.isEmpty ? '0.0.0' : withoutPrefix;
   }
 
   Future<FirmwareUpdateCheckResult> checkForUpdates() async {
-    final ResponseCallback<FirmwareUpdateCheckResult> response = await fusionDeviceService.checkForFirmwareUpdates(
-      currentFirmwareVersion: primaryFusionDeviceVersion,
-      currentDesktopAppVersion: (await PackageInfo.fromPlatform()).version,
-      jenkinsBuildNumber: primaryFusionDevicejenkinsBuildNumber,
-    );
+    final ResponseCallback<FirmwareUpdateCheckResult> response =
+        await fusionDeviceService.checkForFirmwareUpdates(
+          currentFirmwareVersion: primaryFusionDeviceVersion,
+          currentDesktopAppVersion: (await PackageInfo.fromPlatform()).version,
+          jenkinsBuildNumber: primaryFusionDevicejenkinsBuildNumber,
+        );
 
     if (!response.success || response.data == null) {
-      throw Exception(response.message.isEmpty ? 'Firmware update check failed.' : response.message);
+      throw Exception(
+        response.message.isEmpty
+            ? 'Firmware update check failed.'
+            : response.message,
+      );
     }
     return response.data!;
   }
 
   Future<Directory> _getFirmwareUpdateDirectory() async {
     final Directory supportDir = await getApplicationSupportDirectory();
-    final Directory updatesDir = Directory(path.join(supportDir.path, _firmwareUpdateFolderName));
+    final Directory updatesDir = Directory(
+      path.join(supportDir.path, _firmwareUpdateFolderName),
+    );
     if (!await updatesDir.exists()) await updatesDir.create(recursive: true);
     return updatesDir;
   }
 
   Future<String> getFirmwareBundleDownloadSavePath(String fileName) async {
-    final Directory firmwareUpdateDirectory = await _getFirmwareUpdateDirectory();
+    final Directory firmwareUpdateDirectory =
+        await _getFirmwareUpdateDirectory();
     return path.join(firmwareUpdateDirectory.path, fileName);
   }
 
-  Future<BundleDownloadUrlResult> getDownloadUrl({required String version}) async {
-    final ResponseCallback<BundleDownloadUrlResult> response = await fusionDeviceService.requestFirmwareBundleDownloadUrl(version: version);
+  Future<BundleDownloadUrlResult> getDownloadUrl({
+    required String version,
+  }) async {
+    final ResponseCallback<BundleDownloadUrlResult> response =
+        await fusionDeviceService.requestFirmwareBundleDownloadUrl(
+          version: version,
+        );
     if (!response.success || response.data == null) {
-      throw Exception(response.message.isEmpty ? 'Failed to fetch firmware download URL.' : response.message);
+      throw Exception(
+        response.message.isEmpty
+            ? 'Failed to fetch firmware download URL.'
+            : response.message,
+      );
     }
     return response.data!;
   }
@@ -225,13 +284,19 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     );
   }
 
-  void _setDownloadProgress(double progress) => _emitIfOpen(state.copyWith(progress: progress.clamp(0, 1)));
+  void _setDownloadProgress(double progress) =>
+      _emitIfOpen(state.copyWith(progress: progress.clamp(0, 1)));
 
-  void _setInstallProgress(double progress) => _emitIfOpen(state.copyWith(progress: progress.clamp(0, 1)));
+  void _setInstallProgress(double progress) =>
+      _emitIfOpen(state.copyWith(progress: progress.clamp(0, 1)));
 
-  void _markInstallUploadCompleted() => _emitIfOpen(state.copyWith(isUploadInProgress: false));
+  void _markInstallUploadCompleted() =>
+      _emitIfOpen(state.copyWith(isUploadInProgress: false));
 
-  Future<void> _setDownloaded({required BundleDownloadUrlResult metadata, required String filePath}) async {
+  Future<void> _setDownloaded({
+    required BundleDownloadUrlResult metadata,
+    required String filePath,
+  }) async {
     await _persistDownloadedBundleMetadata(metadata);
     _emitIfOpen(
       state.copyWith(
@@ -260,7 +325,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   Future<void> onDownloadTap() async {
     final String? currentBundleId = bundleId;
     if (currentBundleId == null || currentBundleId.trim().isEmpty) {
-      _setDownloadFailed('Invalid bundle ID. Cannot download update.', "Bundle ID is missing or empty.");
+      _setDownloadFailed(
+        'Invalid bundle ID. Cannot download update.',
+        "Bundle ID is missing or empty.",
+      );
       return;
     }
 
@@ -269,9 +337,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
       final String version = state.updateCheckResult?.version?.trim() ?? '';
 
-      final BundleDownloadUrlResult bundleDownloadUrlResult = await getDownloadUrl(version: version);
+      final BundleDownloadUrlResult bundleDownloadUrlResult =
+          await getDownloadUrl(version: version);
       await _persistDownloadedBundleMetadata(bundleDownloadUrlResult);
-      final String savePath = await getFirmwareBundleDownloadSavePath(bundleDownloadUrlResult.downloadFileName);
+      final String savePath = await getFirmwareBundleDownloadSavePath(
+        bundleDownloadUrlResult.downloadFileName,
+      );
 
       await _deleteCachedBundleIfExists(savePath);
 
@@ -304,29 +375,46 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           }
 
           if (fileDownloadState.status == TransferStatus.completed) {
-            unawaited(_setDownloaded(metadata: bundleDownloadUrlResult, filePath: savePath));
+            unawaited(
+              _setDownloaded(
+                metadata: bundleDownloadUrlResult,
+                filePath: savePath,
+              ),
+            );
             return;
           }
 
           if (fileDownloadState.status == TransferStatus.failed) {
-            _setDownloadFailed('Download failed', "The firmware bundle download failed. Please try again.");
+            _setDownloadFailed(
+              'Download failed',
+              "The firmware bundle download failed. Please try again.",
+            );
           }
         },
-        onError: (Object error) => _setDownloadFailed('Download failed', "The firmware bundle download failed with error: $error"),
+        onError:
+            (Object error) => _setDownloadFailed(
+              'Download failed',
+              "The firmware bundle download failed with error: $error",
+            ),
       );
     } catch (e) {
-      _setDownloadFailed('Download could not be started', "The firmware bundle download could not be started due to an error: $e");
+      _setDownloadFailed(
+        'Download could not be started',
+        "The firmware bundle download could not be started due to an error: $e",
+      );
     }
   }
 
   Future<void> cancelDownload() async {
     final BundleDownloadUrlResult? metadata = state.bundleDownloadUrlResult;
-    final _PersistedBundleMetadata? persistedMetadata = await _loadDownloadedBundleMetadata();
+    final _PersistedBundleMetadata? persistedMetadata =
+        await _loadDownloadedBundleMetadata();
 
     await _downloadSubscription?.cancel();
     _downloadSubscription = null;
 
-    final String downloadTaskId = (metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim();
+    final String downloadTaskId =
+        (metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim();
     if (downloadTaskId.isNotEmpty) {
       downloadManager.cancel(downloadTaskId);
     }
@@ -352,35 +440,63 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       await _clearDownloadedBundlePath();
     }
 
-    _emitIfOpen(state.copyWith(uiState: FirmwareUpdateUiState.checking, downloadedFilePath: '', progress: 0, errorShortText: '', errorText: ''));
+    _emitIfOpen(
+      state.copyWith(
+        uiState: FirmwareUpdateUiState.checking,
+        downloadedFilePath: '',
+        progress: 0,
+        errorShortText: '',
+        errorText: '',
+      ),
+    );
     checkNewFirmwareUpdates();
   }
 
   Future<void> installNow() async {
     final String targetVip = (vip ?? '').trim();
     if (targetVip.isEmpty) {
-      _setInstallFailed('Virtual IP is not configured.', "Please configure the target device's Virtual IP before attempting installation.");
+      _setInstallFailed(
+        'Virtual IP is not configured.',
+        "Please configure the target device's Virtual IP before attempting installation.",
+      );
       return;
     }
 
     final BundleDownloadUrlResult? metadata = state.bundleDownloadUrlResult;
-    final _PersistedBundleMetadata? persistedMetadata = await _loadDownloadedBundleMetadata();
+    final _PersistedBundleMetadata? persistedMetadata =
+        await _loadDownloadedBundleMetadata();
 
-    final String resolvedDownloadUrl = (metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim();
-    final String resolvedDownloadFileName = (metadata?.downloadFileName ?? persistedMetadata?.downloadFileName ?? '').trim();
-    final String resolvedChecksum = (metadata?.checksum ?? persistedMetadata?.checksum ?? '').trim();
+    final String resolvedDownloadUrl =
+        (metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim();
+    final String resolvedDownloadFileName =
+        (metadata?.downloadFileName ??
+                persistedMetadata?.downloadFileName ??
+                '')
+            .trim();
+    final String resolvedChecksum =
+        (metadata?.checksum ?? persistedMetadata?.checksum ?? '').trim();
 
-    if (resolvedDownloadUrl.isEmpty || resolvedDownloadFileName.isEmpty || resolvedChecksum.isEmpty) {
-      _setInstallFailed('No firmware metadata available.', "Re-download and try again.");
+    if (resolvedDownloadUrl.isEmpty ||
+        resolvedDownloadFileName.isEmpty ||
+        resolvedChecksum.isEmpty) {
+      _setInstallFailed(
+        'No firmware metadata available.',
+        "Re-download and try again.",
+      );
       return;
     }
 
     final String bundleFilePath =
-        state.downloadedFilePath.trim().isNotEmpty ? state.downloadedFilePath.trim() : await getFirmwareBundleDownloadSavePath(resolvedDownloadFileName);
+        state.downloadedFilePath.trim().isNotEmpty
+            ? state.downloadedFilePath.trim()
+            : await getFirmwareBundleDownloadSavePath(resolvedDownloadFileName);
 
     if (!await File(bundleFilePath).exists()) {
       await _clearDownloadedBundlePath();
-      _setInstallFailed('No downloaded bundle available for installation.', "Please download the firmware bundle before attempting installation.");
+      _setInstallFailed(
+        'No downloaded bundle available for installation.',
+        "Please download the firmware bundle before attempting installation.",
+      );
       return;
     }
 
@@ -421,7 +537,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     );
 
     try {
-      final String uploadTaskId = '${_uploadTaskId(resolvedDownloadUrl)}-${DateTime.now().microsecondsSinceEpoch}';
+      final String uploadTaskId =
+          '${_uploadTaskId(resolvedDownloadUrl)}-${DateTime.now().microsecondsSinceEpoch}';
       _activeUploadTaskId = uploadTaskId;
 
       final FileUploadCubit task = downloadManager.enqueueUpload(
@@ -440,7 +557,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
       _uploadSubscription = task.stream.listen(
         (FileTransferState fileUploadState) {
-          log("FileTransferState == ${fileUploadState.status.name}, progress: ${fileUploadState.progress}");
+          log(
+            "FileTransferState == ${fileUploadState.status.name}, progress: ${fileUploadState.progress}",
+          );
 
           if (fileUploadState.status == TransferStatus.inProgress) {
             _setInstallProgress(fileUploadState.progress);
@@ -455,13 +574,17 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
           }
 
           if (fileUploadState.status == TransferStatus.failed) {
-            if (fileUploadState.error != null) log("FILE UPLOAD ERROR ========== : ${fileUploadState.error}");
+            if (fileUploadState.error != null)
+              log("FILE UPLOAD ERROR ========== : ${fileUploadState.error}");
             if (fileUploadState.error == "already_exists") {
               _markInstallUploadCompleted();
               _emitIfOpen(state.copyWith(isWaitingForSocketResponse: true));
               _listenToSoftwareInstallationProgress();
             } else {
-              _setInstallFailed('Upload failed.', fileUploadState.errorMessage ?? "Unknown error");
+              _setInstallFailed(
+                'Upload failed.',
+                fileUploadState.errorMessage ?? "Unknown error",
+              );
             }
           }
         },
@@ -471,7 +594,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         },
       );
     } on DioException catch (e) {
-      _setInstallFailed('Upload request failed', "Error details: ${e.message ?? e.toString()}");
+      _setInstallFailed(
+        'Upload request failed',
+        "Error details: ${e.message ?? e.toString()}",
+      );
     } catch (e) {
       _setInstallFailed('Unexpected error during upload', "Error details: $e");
     }
@@ -483,21 +609,28 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     await cancelSoftwareUpdateProgressListening();
 
     final BundleDownloadUrlResult? metadata = state.bundleDownloadUrlResult;
-    final _PersistedBundleMetadata? persistedMetadata = await _loadDownloadedBundleMetadata();
+    final _PersistedBundleMetadata? persistedMetadata =
+        await _loadDownloadedBundleMetadata();
     await _uploadSubscription?.cancel();
     _uploadSubscription = null;
     await _cancelActiveUploadTask();
-    final String uploadTaskId = _uploadTaskId((metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim());
+    final String uploadTaskId = _uploadTaskId(
+      (metadata?.downloadUrl ?? persistedMetadata?.downloadUrl ?? '').trim(),
+    );
     if (uploadTaskId.isNotEmpty) {
       downloadManager.cancel(uploadTaskId);
     }
 
     final String downloadedPath = state.downloadedFilePath.trim();
-    final bool hasDownloadedBundle = downloadedPath.isNotEmpty && await File(downloadedPath).exists();
+    final bool hasDownloadedBundle =
+        downloadedPath.isNotEmpty && await File(downloadedPath).exists();
 
     _emitIfOpen(
       state.copyWith(
-        uiState: hasDownloadedBundle ? FirmwareUpdateUiState.downloaded : FirmwareUpdateUiState.updateAvailable,
+        uiState:
+            hasDownloadedBundle
+                ? FirmwareUpdateUiState.downloaded
+                : FirmwareUpdateUiState.updateAvailable,
         progress: hasDownloadedBundle ? 1 : 0,
         errorShortText: '',
         errorText: '',
@@ -514,14 +647,18 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   String get primaryFusionDeviceVersion {
-    final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
-    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    final List<FusionNetworkDevice> fustionNetworkDevices =
+        state.networkDevices;
+    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices
+        .firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
     return primaryDevice?.primaryDeviceVersion ?? '';
   }
 
   String get primaryFusionDevicejenkinsBuildNumber {
-    final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
-    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    final List<FusionNetworkDevice> fustionNetworkDevices =
+        state.networkDevices;
+    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices
+        .firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
     return primaryDevice?.jenkinsBuildNumber ?? '';
   }
 
@@ -542,7 +679,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     final String targetBundleId = (bundleId ?? '').trim();
 
     if (targetVip.isEmpty || targetBundleId.isEmpty) {
-      _setInstallFailed('Missing device IP or bundle ID', "Please ensure the device IP and bundle ID are correctly configured.");
+      _setInstallFailed(
+        'Missing device IP or bundle ID',
+        "Please ensure the device IP and bundle ID are correctly configured.",
+      );
       return;
     }
 
@@ -551,95 +691,143 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     final Completer<void> completer = Completer<void>();
 
     try {
-      final ResponseCallback<void> connectResponse = await fusionDeviceService.connectFirmwareUpdateWebSocket(vip: targetVip);
+      final ResponseCallback<void> connectResponse = await fusionDeviceService
+          .connectFirmwareUpdateWebSocket(vip: targetVip);
       if (!connectResponse.success) {
-        throw Exception(connectResponse.message.isEmpty ? 'Unable to connect firmware update websocket.' : connectResponse.message);
+        throw Exception(
+          connectResponse.message.isEmpty
+              ? 'Unable to connect firmware update websocket.'
+              : connectResponse.message,
+        );
       }
 
-      final ResponseCallback<void> startResponse = await fusionDeviceService.sendStartFirmwareUpdateEvent(bundleId: targetBundleId);
-      if (!startResponse.success) throw Exception(startResponse.message.isEmpty ? 'Failed to send start firmware update event.' : startResponse.message);
+      final ResponseCallback<void> startResponse = await fusionDeviceService
+          .sendStartFirmwareUpdateEvent(bundleId: targetBundleId);
+      if (!startResponse.success)
+        throw Exception(
+          startResponse.message.isEmpty
+              ? 'Failed to send start firmware update event.'
+              : startResponse.message,
+        );
 
       await _firmwareInstallSocketSubscription?.cancel();
-      _firmwareInstallSocketSubscription = fusionDeviceService.listenFirmwareUpdateProgressEvents().listen(
-        (ResponseCallback<FirmwareUpdateProgressEvent> response) {
-          if (state.isWaitingForSocketResponse) _emitIfOpen(state.copyWith(isWaitingForSocketResponse: false));
+      _firmwareInstallSocketSubscription = fusionDeviceService
+          .listenFirmwareUpdateProgressEvents()
+          .listen(
+            (ResponseCallback<FirmwareUpdateProgressEvent> response) {
+              if (state.isWaitingForSocketResponse)
+                _emitIfOpen(state.copyWith(isWaitingForSocketResponse: false));
 
-          if (!response.success || response.data == null) return;
+              if (!response.success || response.data == null) return;
 
-          final FirmwareUpdateProgressEvent event = response.data!;
-          if (event.devicesBySerial.isEmpty) return;
+              final FirmwareUpdateProgressEvent event = response.data!;
+              if (event.devicesBySerial.isEmpty) return;
 
-          final Map<String, FirmwareInstallDeviceProgress> mergedBySerial = <String, FirmwareInstallDeviceProgress>{
-            for (final FirmwareInstallDeviceProgress item in state.deviceInstallProgress) item.serialNumber: item,
-          };
+              final Map<String, FirmwareInstallDeviceProgress> mergedBySerial =
+                  <String, FirmwareInstallDeviceProgress>{
+                    for (final FirmwareInstallDeviceProgress item
+                        in state.deviceInstallProgress)
+                      item.serialNumber: item,
+                  };
 
-          for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry in event.devicesBySerial.entries) {
-            final FirmwareUpdateDeviceProgress device = entry.value;
-            final String serial = device.serialNumber.trim().isNotEmpty ? device.serialNumber.trim() : entry.key;
-            final ({int current, int total}) step = _parseStep(device.step);
+              for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry
+                  in event.devicesBySerial.entries) {
+                final FirmwareUpdateDeviceProgress device = entry.value;
+                final String serial =
+                    device.serialNumber.trim().isNotEmpty
+                        ? device.serialNumber.trim()
+                        : entry.key;
+                final ({int current, int total}) step = _parseStep(device.step);
 
-            mergedBySerial[serial] = FirmwareInstallDeviceProgress(
-              serialNumber: serial,
-              node: device.node,
-              updateState: device.updateState,
-              currentStep: step.current,
-              totalSteps: step.total,
-              currentTask: device.currentTask,
-              stepProgress: device.progress.clamp(0, 100),
-              timestamp: device.timestamp,
-            );
-          }
+                mergedBySerial[serial] = FirmwareInstallDeviceProgress(
+                  serialNumber: serial,
+                  node: device.node,
+                  updateState: device.updateState,
+                  currentStep: step.current,
+                  totalSteps: step.total,
+                  currentTask: device.currentTask,
+                  stepProgress: device.progress.clamp(0, 100),
+                  timestamp: device.timestamp,
+                );
+              }
 
-          final List<FirmwareInstallDeviceProgress> mergedProgress =
-              mergedBySerial.values.toList()
-                ..sort((FirmwareInstallDeviceProgress a, FirmwareInstallDeviceProgress b) => a.serialNumber.compareTo(b.serialNumber));
+              final List<FirmwareInstallDeviceProgress> mergedProgress =
+                  mergedBySerial.values.toList()..sort(
+                    (
+                      FirmwareInstallDeviceProgress a,
+                      FirmwareInstallDeviceProgress b,
+                    ) => a.serialNumber.compareTo(b.serialNumber),
+                  );
 
-          final bool failed = mergedProgress.any((FirmwareInstallDeviceProgress item) {
-            final String normalized = item.updateState.toUpperCase();
-            return normalized.contains('FAIL') || normalized.contains('ERROR') || normalized == 'CANCELLED';
-          });
+              final bool failed = mergedProgress.any((
+                FirmwareInstallDeviceProgress item,
+              ) {
+                final String normalized = item.updateState.toUpperCase();
+                return normalized.contains('FAIL') ||
+                    normalized.contains('ERROR') ||
+                    normalized == 'CANCELLED';
+              });
 
-          final bool completed = mergedProgress.isNotEmpty && mergedProgress.every((FirmwareInstallDeviceProgress item) => item.isCompleted);
+              final bool completed =
+                  mergedProgress.isNotEmpty &&
+                  mergedProgress.every(
+                    (FirmwareInstallDeviceProgress item) => item.isCompleted,
+                  );
 
-          _emitIfOpen(
-            state.copyWith(
-              deviceInstallProgress: mergedProgress,
-              progress: completed ? 1 : _computeOverallInstallProgress(mergedProgress),
-              installTrackingCompleted: completed,
-            ),
+              _emitIfOpen(
+                state.copyWith(
+                  deviceInstallProgress: mergedProgress,
+                  progress:
+                      completed
+                          ? 1
+                          : _computeOverallInstallProgress(mergedProgress),
+                  installTrackingCompleted: completed,
+                ),
+              );
+
+              if (failed && !completer.isCompleted) {
+                completer.completeError(
+                  Exception('Device reported installation failure.'),
+                );
+                return;
+              }
+
+              if (completed && !completer.isCompleted) completer.complete();
+            },
+            onError: (Object error) {
+              if (!completer.isCompleted) {
+                // Check if installation was actually completed before treating as error
+                final bool wasCompleted = state.installTrackingCompleted;
+                if (wasCompleted) {
+                  completer
+                      .complete(); // Devices completed, socket error is expected during reboot
+                } else {
+                  completer.completeError(
+                    Exception('Firmware install websocket error: $error'),
+                  );
+                }
+              }
+            },
+            onDone: () {
+              if (!completer.isCompleted) {
+                // Check if installation was completed before socket closed
+                final bool wasCompleted = state.installTrackingCompleted;
+                if (wasCompleted) {
+                  log(
+                    'Socket closed after installation completed - devices starting reboot',
+                  );
+                  completer
+                      .complete(); // Expected: devices going offline to reboot
+                } else {
+                  completer.completeError(
+                    Exception(
+                      'Firmware install websocket closed before completion.',
+                    ),
+                  );
+                }
+              }
+            },
           );
-
-          if (failed && !completer.isCompleted) {
-            completer.completeError(Exception('Device reported installation failure.'));
-            return;
-          }
-
-          if (completed && !completer.isCompleted) completer.complete();
-        },
-        onError: (Object error) {
-          if (!completer.isCompleted) {
-            // Check if installation was actually completed before treating as error
-            final bool wasCompleted = state.installTrackingCompleted;
-            if (wasCompleted) {
-              completer.complete(); // Devices completed, socket error is expected during reboot
-            } else {
-              completer.completeError(Exception('Firmware install websocket error: $error'));
-            }
-          }
-        },
-        onDone: () {
-          if (!completer.isCompleted) {
-            // Check if installation was completed before socket closed
-            final bool wasCompleted = state.installTrackingCompleted;
-            if (wasCompleted) {
-              log('Socket closed after installation completed - devices starting reboot');
-              completer.complete(); // Expected: devices going offline to reboot
-            } else {
-              completer.completeError(Exception('Firmware install websocket closed before completion.'));
-            }
-          }
-        },
-      );
 
       await completer.future;
 
@@ -650,7 +838,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       // Only fail if devices didn't complete installation
       final bool wasCompleted = state.installTrackingCompleted;
       if (wasCompleted) {
-        log('Installation completed despite error: $e - proceeding to reboot tracking');
+        log(
+          'Installation completed despite error: $e - proceeding to reboot tracking',
+        );
         await listenToDeviceRebootEvents();
       } else {
         _setInstallFailed('Installation failed', "Error details: $e");
@@ -671,7 +861,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
     try {
       final List<FusionNetworkDevice> expectedDevices = state.networkDevices;
-      final Set<String> expectedSerials = expectedDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
+      final Set<String> expectedSerials =
+          expectedDevices
+              .map((FusionNetworkDevice d) => d.serialNumber)
+              .toSet();
 
       const int maxAttempts = 60; // 10 minutes max (60 attempts * 10 seconds)
       int attempts = 0;
@@ -682,24 +875,39 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
         log("REBOOTING:::: Polling devices... attempt $attempts/$maxAttempts");
 
         try {
-          final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip!);
+          final ResponseCallback<List<FusionNetworkDevice>> response =
+              await fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(
+                ip: vip!,
+              );
 
           if (response.success && response.data != null) {
             final List<FusionNetworkDevice> currentDevices = response.data!;
-            final Set<String> currentSerials = currentDevices.map((FusionNetworkDevice d) => d.serialNumber).toSet();
+            final Set<String> currentSerials =
+                currentDevices
+                    .map((FusionNetworkDevice d) => d.serialNumber)
+                    .toSet();
 
             // Update reboot status for tracking
             final List<FirmwareDeviceRebootStatus> rebootStatuses =
                 expectedDevices.map((FusionNetworkDevice device) {
-                  final bool isOnline = currentSerials.contains(device.serialNumber);
+                  final bool isOnline = currentSerials.contains(
+                    device.serialNumber,
+                  );
 
                   // Use fresh device data from API if online, otherwise use expected device data
                   final FusionNetworkDevice? currentDevice =
-                      isOnline ? currentDevices.firstWhereOrNull((FusionNetworkDevice d) => d.serialNumber == device.serialNumber) : null;
+                      isOnline
+                          ? currentDevices.firstWhereOrNull(
+                            (FusionNetworkDevice d) =>
+                                d.serialNumber == device.serialNumber,
+                          )
+                          : null;
 
                   return FirmwareDeviceRebootStatus(
                     serialNumber: device.serialNumber,
-                    currentBundleVersion: currentDevice?.softwareUpdateVersion ?? device.softwareUpdateVersion,
+                    currentBundleVersion:
+                        currentDevice?.softwareUpdateVersion ??
+                        device.softwareUpdateVersion,
                     status: isOnline ? 'SUCCESS' : 'REBOOTING',
                     currentState: isOnline ? 'ONLINE' : 'OFFLINE',
                   );
@@ -708,13 +916,21 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
             _emitIfOpen(state.copyWith(devicesRebootStatus: rebootStatuses));
 
             // Check if all expected devices are back online
-            allDevicesOnline = expectedSerials.every((String serial) => currentSerials.contains(serial)) && currentDevices.length >= expectedDevices.length;
+            allDevicesOnline =
+                expectedSerials.every(
+                  (String serial) => currentSerials.contains(serial),
+                ) &&
+                currentDevices.length >= expectedDevices.length;
 
             if (allDevicesOnline) {
-              log("REBOOTING:::: All devices are back online! (${currentDevices.length}/${expectedDevices.length})");
+              log(
+                "REBOOTING:::: All devices are back online! (${currentDevices.length}/${expectedDevices.length})",
+              );
               break;
             } else {
-              log("REBOOTING:::: Devices online: ${currentDevices.length}/${expectedDevices.length}");
+              log(
+                "REBOOTING:::: Devices online: ${currentDevices.length}/${expectedDevices.length}",
+              );
             }
           }
         } catch (e) {
@@ -727,7 +943,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       }
 
       if (!allDevicesOnline) {
-        throw Exception('Device reboot timeout: Not all devices came back online within 10 minutes');
+        throw Exception(
+          'Device reboot timeout: Not all devices came back online within 10 minutes',
+        );
       }
 
       // Delete the bundle file after successful completion
@@ -752,7 +970,12 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       _setInstallFailed('Installation failed', "Error details: $e");
     } finally {
       await cancelSoftwareUpdateProgressListening();
-      _emitIfOpen(state.copyWith(isSocketTrackingInProgress: false, isRebootTrackingInProgress: false));
+      _emitIfOpen(
+        state.copyWith(
+          isSocketTrackingInProgress: false,
+          isRebootTrackingInProgress: false,
+        ),
+      );
     }
   }
 
@@ -765,7 +988,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return (current: current, total: total);
   }
 
-  double _computeOverallInstallProgress(List<FirmwareInstallDeviceProgress> devices) {
+  double _computeOverallInstallProgress(
+    List<FirmwareInstallDeviceProgress> devices,
+  ) {
     if (devices.isEmpty) return 0;
 
     double total = 0;
@@ -774,7 +999,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       final int safeTotal = device.totalSteps.clamp(1, 1000);
       final double stepPart = device.stepProgress.clamp(0, 100) / 100;
 
-      final double completedSteps = safeCurrent > 0 ? (safeCurrent - 1).toDouble() : 0;
+      final double completedSteps =
+          safeCurrent > 0 ? (safeCurrent - 1).toDouble() : 0;
       total += ((completedSteps + stepPart) / safeTotal).clamp(0, 1);
     }
 
@@ -811,7 +1037,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   Future<void> _restoreStateFromSnapshot() async {
-    final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
+    final _PersistedFirmwareUpdateSnapshot snapshot =
+        await _loadFirmwareSnapshot();
 
     _persistedBundleId = snapshot.bundleId.isEmpty ? null : snapshot.bundleId;
 
@@ -820,8 +1047,10 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   }
 
   Future<bool> _restoreInstallableStateFromSnapshot() async {
-    final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
-    final _PersistedBundleMetadata? metadata = await _loadDownloadedBundleMetadata();
+    final _PersistedFirmwareUpdateSnapshot snapshot =
+        await _loadFirmwareSnapshot();
+    final _PersistedBundleMetadata? metadata =
+        await _loadDownloadedBundleMetadata();
     if (metadata == null) return false;
 
     final String bundlePath = await _cachedBundlePathFromSnapshot(snapshot);
@@ -847,24 +1076,32 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     return true;
   }
 
-  Future<void> _persistUiStateSnapshot(FirmwareUpdateViewModelState nextState) async {
-    final _PersistedFirmwareUpdateSnapshot currentSnapshot = await _loadFirmwareSnapshot();
+  Future<void> _persistUiStateSnapshot(
+    FirmwareUpdateViewModelState nextState,
+  ) async {
+    final _PersistedFirmwareUpdateSnapshot currentSnapshot =
+        await _loadFirmwareSnapshot();
     final BundleDownloadUrlResult? metadata = nextState.bundleDownloadUrlResult;
 
-    final _PersistedFirmwareUpdateSnapshot updatedSnapshot = currentSnapshot.copyWith(
-      availableVersion: nextState.availableVersion.isNotEmpty ? nextState.availableVersion : currentSnapshot.availableVersion,
-      bundleId: (bundleId ?? currentSnapshot.bundleId).trim(),
-      downloadUrl: metadata?.downloadUrl,
-      downloadFileName: metadata?.downloadFileName,
-      checksum: metadata?.checksum,
-    );
+    final _PersistedFirmwareUpdateSnapshot updatedSnapshot = currentSnapshot
+        .copyWith(
+          availableVersion:
+              nextState.availableVersion.isNotEmpty
+                  ? nextState.availableVersion
+                  : currentSnapshot.availableVersion,
+          bundleId: (bundleId ?? currentSnapshot.bundleId).trim(),
+          downloadUrl: metadata?.downloadUrl,
+          downloadFileName: metadata?.downloadFileName,
+          checksum: metadata?.checksum,
+        );
 
     await _saveFirmwareSnapshot(updatedSnapshot);
   }
 
   Future<_PersistedFirmwareUpdateSnapshot> _loadFirmwareSnapshot() async {
     final SharedPreferences prefs = await _getPrefs();
-    final String rawJson = (prefs.getString(_firmwareUpdateSnapshotKey) ?? '').trim();
+    final String rawJson =
+        (prefs.getString(_firmwareUpdateSnapshotKey) ?? '').trim();
     if (rawJson.isEmpty) return const _PersistedFirmwareUpdateSnapshot();
 
     try {
@@ -886,13 +1123,19 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     }
   }
 
-  Future<void> _saveFirmwareSnapshot(_PersistedFirmwareUpdateSnapshot snapshot) async {
+  Future<void> _saveFirmwareSnapshot(
+    _PersistedFirmwareUpdateSnapshot snapshot,
+  ) async {
     final SharedPreferences prefs = await _getPrefs();
-    await prefs.setString(_firmwareUpdateSnapshotKey, jsonEncode(snapshot.toMap()));
+    await prefs.setString(
+      _firmwareUpdateSnapshotKey,
+      jsonEncode(snapshot.toMap()),
+    );
   }
 
   Future<void> _clearDownloadedBundlePath() async {
-    final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
+    final _PersistedFirmwareUpdateSnapshot snapshot =
+        await _loadFirmwareSnapshot();
     await _saveFirmwareSnapshot(
       snapshot.copyWith(
         downloadUrl: '',
@@ -902,12 +1145,18 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     );
   }
 
-  Future<void> _persistDownloadedBundleMetadata(BundleDownloadUrlResult metadata) async {
-    final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
+  Future<void> _persistDownloadedBundleMetadata(
+    BundleDownloadUrlResult metadata,
+  ) async {
+    final _PersistedFirmwareUpdateSnapshot snapshot =
+        await _loadFirmwareSnapshot();
     await _saveFirmwareSnapshot(
       snapshot.copyWith(
         bundleId: (bundleId ?? snapshot.bundleId).trim(),
-        availableVersion: state.availableVersion.isNotEmpty ? state.availableVersion : snapshot.availableVersion,
+        availableVersion:
+            state.availableVersion.isNotEmpty
+                ? state.availableVersion
+                : snapshot.availableVersion,
         downloadUrl: metadata.downloadUrl,
         downloadFileName: metadata.downloadFileName,
         checksum: metadata.checksum,
@@ -915,14 +1164,17 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     );
   }
 
-  Future<String> _cachedBundlePathFromSnapshot(_PersistedFirmwareUpdateSnapshot snapshot) async {
+  Future<String> _cachedBundlePathFromSnapshot(
+    _PersistedFirmwareUpdateSnapshot snapshot,
+  ) async {
     final String fileName = snapshot.downloadFileName.trim();
     if (fileName.isEmpty) return '';
     return getFirmwareBundleDownloadSavePath(fileName);
   }
 
   Future<_PersistedBundleMetadata?> _loadDownloadedBundleMetadata() async {
-    final _PersistedFirmwareUpdateSnapshot snapshot = await _loadFirmwareSnapshot();
+    final _PersistedFirmwareUpdateSnapshot snapshot =
+        await _loadFirmwareSnapshot();
     final String downloadUrl = snapshot.downloadUrl.trim();
     final String downloadFileName = snapshot.downloadFileName.trim();
     final String checksum = snapshot.checksum.trim();

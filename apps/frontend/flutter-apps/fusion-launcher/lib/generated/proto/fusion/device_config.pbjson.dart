@@ -132,6 +132,29 @@ final $typed_data.Uint8List deviceConfigurationPackageDescriptor = $convert.base
     'VzaW9uLmRldmljZWNvbmZpZy52MS5GdXNpb25Db25uZWN0QWRkaXRpb25zUhZmdXNpb25Db25u'
     'ZWN0QWRkaXRpb25z');
 
+@$core.Deprecated('Use deviceConfigurationPackagePutResponseDescriptor instead')
+const DeviceConfigurationPackagePutResponse$json = {
+  '1': 'DeviceConfigurationPackagePutResponse',
+  '2': [
+    {'1': 'status', '3': 1, '4': 1, '5': 9, '10': 'status'},
+    {
+      '1': 'updates',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Struct',
+      '10': 'updates'
+    },
+  ],
+};
+
+/// Descriptor for `DeviceConfigurationPackagePutResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deviceConfigurationPackagePutResponseDescriptor =
+    $convert.base64Decode(
+        'CiVEZXZpY2VDb25maWd1cmF0aW9uUGFja2FnZVB1dFJlc3BvbnNlEhYKBnN0YXR1cxgBIAEoCV'
+        'IGc3RhdHVzEjEKB3VwZGF0ZXMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ugd1cGRh'
+        'dGVz');
+
 @$core.Deprecated('Use fusionConnectAdditionsDescriptor instead')
 const FusionConnectAdditions$json = {
   '1': 'FusionConnectAdditions',

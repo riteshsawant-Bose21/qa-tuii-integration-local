@@ -14,6 +14,8 @@ import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_syn
 import 'package:fusion_launcher/features/projects/view_model/fusion_events_sync/fusion_events_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/snapshots_sync/snapshot_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/services/fusion_scene_catalog_sync_service.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -54,8 +56,11 @@ final GetIt serviceLocator = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
   final Map<String, dynamic> jsonMap = jsonDecode(algoMetadataJSON);
-  final FusionAlgorithmsConfig fusionAlgorithmsConfig = FusionAlgorithmsConfig.fromJson(jsonMap);
-  serviceLocator.registerSingleton<FusionAlgorithmsConfig>(fusionAlgorithmsConfig);
+  final FusionAlgorithmsConfig fusionAlgorithmsConfig =
+      FusionAlgorithmsConfig.fromJson(jsonMap);
+  serviceLocator.registerSingleton<FusionAlgorithmsConfig>(
+    fusionAlgorithmsConfig,
+  );
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
@@ -63,7 +68,9 @@ Future<void> setupServiceLocator() async {
   final AppCacheService appRootCacheService = await AppCacheService.root();
   serviceLocator.registerSingleton<AppCacheService>(appRootCacheService);
 
-  serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
+  serviceLocator.registerSingleton<SharedPreferencesHandler>(
+    SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()),
+  );
 
   serviceLocator.registerLazySingleton<FlutterSecureStorage>(
     () => const FlutterSecureStorage(
@@ -92,7 +99,10 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerSingleton<DioClient>(
-    DioClient(dioInstance: Dio(), interceptors: <Interceptor>[AppInterceptors()]),
+    DioClient(
+      dioInstance: Dio(),
+      interceptors: <Interceptor>[AppInterceptors()],
+    ),
   );
 
   //register Telemetry manager
@@ -152,27 +162,61 @@ Future<void> setupServiceLocator() async {
     measurementUnit: "",
     currency: "USD",
     language: "English (US)",
-    notifications: Notifications(productUpdates: false, projectActivity: false, trainingAndResources: false),
+    notifications: Notifications(
+      productUpdates: false,
+      projectActivity: false,
+      trainingAndResources: false,
+    ),
     location: '',
   );
-  serviceLocator.registerLazySingleton<PanelDataSource>(() => PanelDataSourceImpl());
+  serviceLocator.registerLazySingleton<PanelDataSource>(
+    () => PanelDataSourceImpl(),
+  );
 
-  serviceLocator.registerLazySingleton<PanelRepository>(() => PanelRepositoryImpl());
+  serviceLocator.registerLazySingleton<PanelRepository>(
+    () => PanelRepositoryImpl(),
+  );
   serviceLocator.registerLazySingleton<PanelBloc>(() => PanelBloc());
 
-  serviceLocator.registerLazySingleton<GetPanelDataUseCase>(() => GetPanelDataUseCase());
-  serviceLocator.registerLazySingleton<SendWidgetDataUseCase>(() => SendWidgetDataUseCase());
-  serviceLocator.registerLazySingleton<InitializePanelUseCase>(() => InitializePanelUseCase());
-  serviceLocator.registerLazySingleton<DisposePanelUseCase>(() => DisposePanelUseCase());
-  serviceLocator.registerLazySingleton<GetPanelStreamUseCase>(() => GetPanelStreamUseCase());
-  serviceLocator.registerLazySingleton<ClearAudioSettingsUseCase>(() => ClearAudioSettingsUseCase());
-  serviceLocator.registerLazySingleton<GetPanelEntityUseCase>(() => GetPanelEntityUseCase());
-  serviceLocator.registerLazySingleton<CreateProjectUseCase>(() => CreateProjectUseCase());
-  serviceLocator.registerLazySingleton<UploadFileUseCase>(() => UploadFileUseCase());
-  serviceLocator.registerLazySingleton<GetProjectsDataUseCase>(() => GetProjectsDataUseCase());
-  serviceLocator.registerLazySingleton<DeleteProjectUseCase>(() => DeleteProjectUseCase());
-  serviceLocator.registerLazySingleton<FetchFileUsecase>(() => FetchFileUsecase());
-  serviceLocator.registerLazySingleton<UpdateProjectUsecase>(() => UpdateProjectUsecase());
+  serviceLocator.registerLazySingleton<GetPanelDataUseCase>(
+    () => GetPanelDataUseCase(),
+  );
+  serviceLocator.registerLazySingleton<SendWidgetDataUseCase>(
+    () => SendWidgetDataUseCase(),
+  );
+  serviceLocator.registerLazySingleton<InitializePanelUseCase>(
+    () => InitializePanelUseCase(),
+  );
+  serviceLocator.registerLazySingleton<DisposePanelUseCase>(
+    () => DisposePanelUseCase(),
+  );
+  serviceLocator.registerLazySingleton<GetPanelStreamUseCase>(
+    () => GetPanelStreamUseCase(),
+  );
+  serviceLocator.registerLazySingleton<ClearAudioSettingsUseCase>(
+    () => ClearAudioSettingsUseCase(),
+  );
+  serviceLocator.registerLazySingleton<GetPanelEntityUseCase>(
+    () => GetPanelEntityUseCase(),
+  );
+  serviceLocator.registerLazySingleton<CreateProjectUseCase>(
+    () => CreateProjectUseCase(),
+  );
+  serviceLocator.registerLazySingleton<UploadFileUseCase>(
+    () => UploadFileUseCase(),
+  );
+  serviceLocator.registerLazySingleton<GetProjectsDataUseCase>(
+    () => GetProjectsDataUseCase(),
+  );
+  serviceLocator.registerLazySingleton<DeleteProjectUseCase>(
+    () => DeleteProjectUseCase(),
+  );
+  serviceLocator.registerLazySingleton<FetchFileUsecase>(
+    () => FetchFileUsecase(),
+  );
+  serviceLocator.registerLazySingleton<UpdateProjectUsecase>(
+    () => UpdateProjectUsecase(),
+  );
 
   /// Registering the ProjectListManager with the initial project
 
@@ -188,7 +232,11 @@ Future<void> setupServiceLocator() async {
   );
 
   //Register App Settings
-  serviceLocator.registerSingleton<FusionPreferences>(FusionPreferences(sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>()));
+  serviceLocator.registerSingleton<FusionPreferences>(
+    FusionPreferences(
+      sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>(),
+    ),
+  );
 
   ///Register Project Manager
   serviceLocator.registerLazySingleton<ProjectCloudSyncManager>(
@@ -209,9 +257,17 @@ Future<void> setupServiceLocator() async {
       networkClient: serviceLocator<FusionNetworkClient>(),
     ),
   );
+  serviceLocator.registerLazySingleton<FusionDeviceDiscoveryService>(
+    () => FusionDeviceDiscoveryService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<FirmwareUpdateViewModel>(
-    () => FirmwareUpdateViewModel(serviceLocator<FusionDeviceService>()),
+    () => FirmwareUpdateViewModel(
+      serviceLocator<FusionDeviceService>(),
+      serviceLocator<FusionDeviceDiscoveryService>(),
+    ),
   );
 
   serviceLocator.registerSingleton<FusionConfigSyncService>(
@@ -221,7 +277,9 @@ Future<void> setupServiceLocator() async {
   );
 
   // Download manager for handling file downloads across the app
-  serviceLocator.registerSingleton<TransferManagerCubit>(TransferManagerCubit());
+  serviceLocator.registerSingleton<TransferManagerCubit>(
+    TransferManagerCubit(),
+  );
 
   serviceLocator.registerSingleton<DroConfigService>(
     DroConfigService(
@@ -236,7 +294,9 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerSingleton<ProjectManager>(pm);
 
-  serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
+  serviceLocator.registerLazySingleton<ProjectViewModel>(
+    () => ProjectViewModel(serviceLocator<ProjectManager>()),
+  );
   serviceLocator.registerLazySingleton<SessionViewModel>(
     () => SessionViewModel(),
   );
@@ -248,7 +308,9 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  final AppCacheService productsCache = await appRootCacheService.scope('products');
+  final AppCacheService productsCache = await appRootCacheService.scope(
+    'products',
+  );
   serviceLocator.registerLazySingleton<ProductQueryViewModel>(
     () => ProductQueryViewModel(
       networkClient: serviceLocator<FusionNetworkClient>(),
@@ -268,20 +330,37 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
+  serviceLocator.registerLazySingleton<ProductQueryCubit>(
+    () => ProductQueryCubit(),
+  );
 
-  serviceLocator.registerLazySingleton<MeterDataViewModel>(() => MeterDataViewModel());
+  serviceLocator.registerLazySingleton<MeterDataViewModel>(
+    () => MeterDataViewModel(),
+  );
 
-  serviceLocator.registerLazySingleton<BlockDataViewmodel>(() => BlockDataViewmodel());
+  serviceLocator.registerLazySingleton<BlockDataViewmodel>(
+    () => BlockDataViewmodel(),
+  );
 
   serviceLocator.registerLazySingleton<MessageSyncService>(
-    () => MessageSyncService(networkClient: serviceLocator<FusionNetworkClient>()),
+    () => MessageSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
   );
   serviceLocator.registerLazySingleton<FusionEventService>(
-    () => FusionEventService(networkClient: serviceLocator<FusionNetworkClient>()),
+    () => FusionEventService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
   );
   serviceLocator.registerLazySingleton<SnapshotActivateService>(
-    () => SnapshotActivateService(networkClient: serviceLocator<FusionNetworkClient>()),
+    () => SnapshotActivateService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+  serviceLocator.registerLazySingleton<FusionSceneCatalogSyncService>(
+    () => FusionSceneCatalogSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
   );
 
   serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
@@ -304,11 +383,13 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<SnapshotSyncViewModel>(
     () => SnapshotSyncViewModel(
-      snapshotActivateService: serviceLocator<SnapshotActivateService>(),
+      sceneCatalogSyncService: serviceLocator<FusionSceneCatalogSyncService>(),
     ),
   );
 
-  serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));
+  serviceLocator.registerLazySingleton<GuideShowCaseController>(
+    () => GuideShowCaseController(globalNavigatorKey.currentContext!),
+  );
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
   await setupFusionLib(serviceLocator);
