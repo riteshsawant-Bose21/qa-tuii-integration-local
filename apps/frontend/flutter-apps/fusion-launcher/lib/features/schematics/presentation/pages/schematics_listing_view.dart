@@ -64,8 +64,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               spacing: 6,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                // const FilterSection(),
-
                 ///------------------------------------------------------------------------------------------------------------------------------------------
                 ///
                 /// 1. Sources & Endpoints
