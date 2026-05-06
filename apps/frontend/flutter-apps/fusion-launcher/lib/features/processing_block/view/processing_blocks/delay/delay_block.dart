@@ -69,8 +69,8 @@ class DelayBlock extends StatelessWidget {
                                 value: context.watch<DelayController>().currentUnits?.value,
 
                                 itemBuilder: (BuildContext context, _UnitsType option) {
-                                  return Text(
-                                    option.label,
+                                  return FusionAppText(
+                                   text: option.label,
                                     style: context.textTheme.bodySmall,
                                   );
                                 },

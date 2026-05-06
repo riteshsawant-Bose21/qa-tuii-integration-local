@@ -333,6 +333,5 @@ curl -i -sS -X POST "$NODE3/scene-sets/current-scene" \
 # Automated Integration Tests
 
 ```sh
-FUSION_TEST_VIP=192.168.2.100:8080 FUSION_TEST_NODES=192.168.2.150:8080,192.168.2.151:8080,192.168.2.152:8080 go test -v ./test -run '^TestSceneCatalog' -count=1
+./scripts/multipass/run-tests --test-name '^TestSceneCatalog' --vip 192.168.2.100:8080
 ```
-

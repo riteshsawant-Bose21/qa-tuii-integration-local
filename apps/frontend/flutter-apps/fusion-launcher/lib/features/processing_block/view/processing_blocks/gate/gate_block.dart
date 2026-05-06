@@ -56,7 +56,7 @@ class GateBlock extends StatelessWidget {
                             children: <Widget>[
                               PBNumberTextField(
                                 semanticId: 'gate_threshold_text_field',
-                                value: controller.threshold ?? 0,
+                                value: controller.threshold,
                                 max: 0,
                                 min: -60,
                                 onChanged: (num value) {
@@ -75,7 +75,7 @@ class GateBlock extends StatelessWidget {
                         ),
                         child: VerticalSlider(
                           semanticId: 'gate_threshold_slider',
-                          value: controller.threshold ?? 0,
+                          value: controller.threshold,
                           max: 0,
                           min: -60,
                           onChanged: (num value) {
@@ -100,7 +100,7 @@ class GateBlock extends StatelessWidget {
                             children: <Widget>[
                               PBNumberTextField(
                                 semanticId: 'gate_range_text_field',
-                                value: controller.range ?? 0,
+                                value: controller.range,
                                 max: 0.0,
                                 min: -70,
                                 onChanged: (num value) {
@@ -119,7 +119,7 @@ class GateBlock extends StatelessWidget {
                         ),
                         child: VerticalSlider(
                           semanticId: 'gate_range_slider',
-                          value: controller.range ?? 0,
+                          value: controller.range,
                           max: 0.0,
                           min: -70,
                           onChanged: (num value) {
@@ -144,7 +144,7 @@ class GateBlock extends StatelessWidget {
                             _GateTextField(
                               semanticId: 'gate_attack',
                               title: "ATTACK",
-                              value: controller.attack ?? 0.5,
+                              value: controller.attack,
                               min: 0.5,
                               max: 100.0,
                               onChanged: (num value) {

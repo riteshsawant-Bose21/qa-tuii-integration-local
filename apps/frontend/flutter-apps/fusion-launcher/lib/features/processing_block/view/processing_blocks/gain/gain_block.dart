@@ -65,7 +65,7 @@ class GainBlock extends StatelessWidget {
                                 width: 80,
                                 child: PBNumberTextField(
                                   semanticId: 'gain_text_field',
-                                  value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
+                                  value: context.watch<GainController>().currentGainValue,
                                   onChanged: (num value) {
                                     context.read<GainController>().updateGainValue(value);
                                   },
@@ -85,7 +85,7 @@ class GainBlock extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 12.0),
                             child: VerticalSlider(
                               semanticId: 'gain_slider',
-                              value: context.watch<GainController>().currentGainSliderValue ?? 0,
+                              value: context.watch<GainController>().currentGainValue,
                               min: -60.0,
                               max: 12.0,
                               showIntervals: true,
