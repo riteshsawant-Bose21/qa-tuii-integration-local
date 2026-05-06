@@ -8,7 +8,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
+import '../../../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
 // ignore: constant_identifier_names
 const int _MAX_SPEAKER_COUNT = 25;

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -109,7 +108,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
     final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
 
-    final bool isSpeakerExpanded = _expandedSpeakers.contains(area.id);
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_card_$index"),
@@ -123,7 +121,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
+                  color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
@@ -131,7 +129,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                   child: GestureDetector(
                     onTap: () {
                       serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                       if (!area.isDrawn) {
                         widget.floorCanvasController.setDraw(true);
                       } else if (area.isDrawn && widget.floorCanvasController.isDrawing.value) {
@@ -141,7 +138,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     child: Row(
                       children: <Widget>[
                         // Expand/Collapse icon
-                        GestureDetector(
+                        InkWell(
                           onTap: () => _toggleListeningAreaExpansion(area.id),
                           child: AnimatedRotation(
                             duration: const Duration(milliseconds: 200),
@@ -149,18 +146,19 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                             child: SemanticHelper.toggle(
                               testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
                               value: isListeningAreaExpanded,
-                              child: FusionIcon.svg(
-                                AssetSvg.expandUp,
-                                color: context.colorScheme.elevation5,
-                              ),
+                              child: const Icon(LucideIcons.chevronUp200, size: 12),
+                              // FusionIcon.svg(
+                              //   AssetSvg.expandUp,
+                              //   color: context.colorScheme.elevation5,
+                              // ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
                         Icon(
                           LucideIcons.maximize200,
-                          size: 12,
-                          color: context.colorScheme.onSurface,
+                          size: 16,
+                          color: context.colorScheme.iconDefault,
                         ),
                         const SizedBox(width: 4),
 
@@ -179,20 +177,23 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                               Expanded(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
-                                  child: TitleTextFieldSwitcher(
-                                    value: area.name,
-                                    hintText: "listening area name",
-                                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                      fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                                      color: (!area.isDrawn) ? context.colorScheme.error : null,
-                                    ),
-                                    save: (String value) {
-                                      if (value.trim().isNotEmpty) {
-                                        final ListeningArea updatedLA = area.copyWith(name: value.trim());
-                                        _projectViewModel.updateListeningArea(area: updatedLA);
-                                      }
+                                  child: InkWell(
+                                    onTap: () {
+                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
                                     },
+                                    child: TitleTextFieldSwitcher(
+                                      value: area.name,
+                                      hintText: "listening area name",
+                                      style: Theme.of(context).textTheme.l1Regular.copyWith(
+                                        color: (!area.isDrawn) ? context.colorScheme.error : null,
+                                      ),
+                                      save: (String value) {
+                                        if (value.trim().isNotEmpty) {
+                                          final ListeningArea updatedLA = area.copyWith(name: value.trim());
+                                          _projectViewModel.updateListeningArea(area: updatedLA);
+                                        }
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
@@ -289,67 +290,84 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               // borderRadius: BorderRadius.circular(4),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      spacing: 6,
-                      children: <Widget>[
-                        GestureDetector(
-                          onTap: () {
-                            if (isSelected) {
-                              _expandedSpeakers.remove(speakerList.first.id);
-                            } else {
-                              _expandedSpeakers.add(speakerList.first.id);
-                            }
-                            setState(() {});
-                          },
-                          child: Icon(
-                            isSelected ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
-                            size: 12,
-                            color: context.colorScheme.onSurface,
-                          ),
-                        ),
-                        FusionImageAuto(
-                          path: serviceLocator<ProductQueryViewModel>().getProductImage(speakerList.first.productId),
-                          width: 14,
-                          height: 14,
-                        ),
-
-                        Expanded(
-                          child: FusionAppText(
-                            text: "${speakerList.first.speakerSKU} (x${speakerList.length})",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                              color: context.colorScheme.textPrimary,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  decoration: BoxDecoration(border: Border.all(color: context.colorScheme.GreenThemeDisabled), borderRadius: BorderRadius.circular(6)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        spacing: 6,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          GestureDetector(
+                            onTap: () {
+                              if (isSelected) {
+                                _expandedSpeakers.remove(speakerList.first.id);
+                              } else {
+                                _expandedSpeakers.add(speakerList.first.id);
+                              }
+                              setState(() {});
+                            },
+                            child: Icon(
+                              isSelected ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
+                              size: 12,
+                              color: context.colorScheme.onSurface,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
+                          Icon(LucideIcons.gitFork200, size: 14, color: context.colorScheme.iconDefault),
 
-                    AnimatedCrossFade(
-                      duration: const Duration(milliseconds: 250),
-                      crossFadeState: isSelected ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                      firstChild: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          ...speakers.map(
-                            (Speaker speaker) {
-                              final int index = speakers.indexOf(speaker);
-                              return SemanticHelper.container(
-                                testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
-                                child: _buildSpeakerItem(speaker),
-                              );
-                            },
+                          // FusionImageAuto(
+                          //   path: serviceLocator<ProductQueryViewModel>().getProductImage(speakerList.first.productId),
+                          //   width: 14,
+                          //   height: 14,
+                          // ),
+                          Expanded(
+                            child: FusionAppText(
+                              text: speakerList.first.speakerSKU,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                                color: context.colorScheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.elevation3,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            child: Text(
+                              speakerList.length.toString(),
+                              style: Theme.of(context).textTheme.l1Medium,
+                            ),
                           ),
                         ],
                       ),
-                      secondChild: const SizedBox.shrink(),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+
+                      AnimatedCrossFade(
+                        duration: const Duration(milliseconds: 250),
+                        crossFadeState: isSelected ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                        firstChild: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            ...speakers.map(
+                              (Speaker speaker) {
+                                final int index = speakers.indexOf(speaker);
+                                return SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
+                                  child: _buildSpeakerItem(speaker),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        secondChild: const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -373,7 +391,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           child: GestureDetector(
             onTap: () {
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(speaker.id);
-              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+
             },
             // borderRadius: BorderRadius.circular(4),
             child: Container(
