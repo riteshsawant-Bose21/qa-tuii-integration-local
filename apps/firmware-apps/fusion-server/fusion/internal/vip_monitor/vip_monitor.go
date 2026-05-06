@@ -638,12 +638,30 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 		return
 	}
 
-	// Ignore remote attempts to rewrite the configured VIP. Address changes are
-	// driven by config updates and watcher/local reconciliation, not VRRP.
+	// Stale-VIP self-heal: if the advertised VIP differs from our configured VIP,
+	// the configured VIP is not active locally, and on-disk still has the old VIP,
+	// this node missed a Set-VIP fan-out while offline — sync config from the peer.
+	// On-disk is checked first so we don't trigger self-heal mid-apply (fan-out
+	// writes disk before reload, so on-disk matching the new VIP means we are fine).
 	if configuredVIP != "" && newVIP != configuredVIP {
 		m.stateMu.Unlock()
-		logger.Debug("Ignoring VRRP VIP address update that differs from configured VIP: configured=%s advertised=%s srcIP=%s",
-			configuredVIP, newVIP, srcIP)
+		onDiskVIP, diskErr := m.readConfiguredVIP()
+		if diskErr == nil && onDiskVIP == newVIP {
+			// Fan-out already wrote the correct config; we are just mid-apply.
+			logger.Debug("Ignoring VRRP VIP address update: on-disk config already matches advertised VIP %s (mid-apply)", newVIP)
+			return
+		}
+		isLocalVIP, err := vip.IsIPPresentOnLocalInterface(configuredVIP)
+		if err == nil && !isLocalVIP {
+			m.selfHealOnce.Do(func() {
+				logger.Info("VRRP stale-VIP self-heal: configured VIP %s is not active locally but peer %s is advertising %s — attempting config sync",
+					configuredVIP, srcIP, newVIP)
+				go m.selfHealVIPFromPeer(srcIP)
+			})
+		} else {
+			logger.Debug("Ignoring VRRP VIP address update that differs from configured VIP: configured=%s advertised=%s srcIP=%s",
+				configuredVIP, newVIP, srcIP)
+		}
 		return
 	}
 

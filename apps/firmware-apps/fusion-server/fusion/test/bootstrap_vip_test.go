@@ -325,3 +325,106 @@ func TestBootstrapVIPNodeConvergenceViaSelfHeal(t *testing.T) {
 
 	t.Log("Self-heal convergence test passed: all nodes converged from single-node config via VRRP")
 }
+
+// TestStaleVIPSelfHealAfterOfflineVIPChange verifies the split-brain fix for
+// the following real-world scenario:
+//
+//  1. Cluster has nodes x (leader/VIP holder), y, z.
+//  2. y and z are stopped (simulating them being offline).
+//  3. VIP is changed on x via Set VIP — fan-out only reaches x since y/z are down.
+//  4. y and z are restarted with their stale on-disk VIP config.
+//  5. Expected: y and z detect the mismatch via VRRP and self-heal by syncing
+//     config from x, then all three nodes converge to the new VIP.
+func TestStaleVIPSelfHealAfterOfflineVIPChange(t *testing.T) {
+	if len(clusterConfig.nodes) < 3 {
+		t.Skipf("test requires at least 3 nodes, got %d", len(clusterConfig.nodes))
+	}
+
+	_, originalVIP, _ := setupVIPTarget(t)
+	allCandidateVIPs := append([]string{originalVIP}, candidateVIPs(t, originalVIP)...)
+
+	// Restore original VIP at end of test regardless of outcome.
+	t.Cleanup(func() {
+		t.Log("Cleanup: restoring original VIP")
+		client := &http.Client{Timeout: setupVIPAdminTimeout}
+		firstHost := hostFromNodeURL(t, clusterConfig.nodes[0].address)
+		writeURL := fmt.Sprintf("http://%s:9090/devices/vip/%s", firstHost, url.PathEscape(originalVIP))
+		if resp, err := client.Post(writeURL, "", nil); err == nil {
+			resp.Body.Close()
+		}
+		reloadURL := fmt.Sprintf("http://%s:9090/device/reload/vip", firstHost)
+		if resp, err := client.Post(reloadURL, "", nil); err == nil {
+			resp.Body.Close()
+		}
+	})
+
+	leaderNode := clusterConfig.nodes[0]
+	offlineNodes := clusterConfig.nodes[1:]
+	leaderHost := hostFromNodeURL(t, leaderNode.address)
+
+	// ── Phase 1: Stop y and z ────────────────────────────────────────────
+	t.Logf("Phase 1: Stopping %d offline node(s)", len(offlineNodes))
+	for _, node := range offlineNodes {
+		t.Logf("Stopping fusion-server on node %s", node.name)
+		if _, err := runMultipassCommandOnInstance(t, node.name, "sudo systemctl stop fusion-server"); err != nil {
+			t.Fatalf("Failed to stop fusion-server on node %s: %v", node.name, err)
+		}
+	}
+	// Give memberlist time to mark them as dead on x.
+	time.Sleep(bootstrapSettleDelay)
+
+	// ── Phase 2: Change VIP on x while y and z are offline ───────────────
+	newVIP := candidateVIPs(t, originalVIP)[0]
+	t.Logf("Phase 2: Changing VIP from %s to %s on leader %s (%s)", originalVIP, newVIP, leaderNode.name, leaderHost)
+	client := &http.Client{Timeout: setupVIPAdminTimeout}
+	writeURL := fmt.Sprintf("http://%s:9090/devices/vip/%s", leaderHost, url.PathEscape(newVIP))
+	resp, err := client.Post(writeURL, "", nil)
+	if err != nil {
+		t.Fatalf("Failed to write new VIP to leader %s: %v", leaderHost, err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Expected 204 from admin VIP write on %s, got %d", leaderHost, resp.StatusCode)
+	}
+
+	reloadURL := fmt.Sprintf("http://%s:9090/device/reload/vip", leaderHost)
+	resp, err = client.Post(reloadURL, "", nil)
+	if err != nil {
+		t.Fatalf("Failed to reload VIP on leader %s: %v", leaderHost, err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("Expected 202 from admin VIP reload on %s, got %d", leaderHost, resp.StatusCode)
+	}
+	waitForVIPReloadComplete(t, leaderHost)
+	t.Logf("Leader %s now has new VIP %s configured", leaderNode.name, newVIP)
+
+	// ── Phase 3: Bring y and z back online ───────────────────────────────
+	t.Logf("Phase 3: Restarting %d offline node(s) with stale VIP config", len(offlineNodes))
+	for _, node := range offlineNodes {
+		t.Logf("Starting fusion-server on node %s (stale VIP %s on disk)", node.name, originalVIP)
+		if _, err := runMultipassCommandOnInstance(t, node.name, "sudo systemctl start fusion-server"); err != nil {
+			t.Fatalf("Failed to start fusion-server on node %s: %v", node.name, err)
+		}
+	}
+	time.Sleep(bootstrapSettleDelay)
+
+	// ── Phase 4: Wait for y and z to self-heal to the new VIP ────────────
+	t.Logf("Phase 4: Waiting for offline nodes to self-heal stale VIP %s → new VIP %s", originalVIP, newVIP)
+	for _, node := range offlineNodes {
+		host := hostFromNodeURL(t, node.address)
+		t.Logf("Waiting for node %s (%s) to self-heal to VIP %s", node.name, host, newVIP)
+		verifyVIPStatusOnNode(t, host, newVIP)
+	}
+
+	// ── Phase 5: Verify on-disk keepalived config on all nodes ───────────
+	t.Log("Phase 5: Verifying all nodes have correct on-disk keepalived config")
+	verifyAllNodesHaveVIPConfig(t, newVIP)
+
+	// ── Phase 6: Verify the cluster reunifies under the new VIP ──────────
+	t.Log("Phase 6: Verifying all nodes are in a single cluster under new VIP")
+	waitForVIPState(t, newVIP)
+	waitForExclusiveVIPState(t, newVIP, allCandidateVIPs)
+
+	t.Logf("Stale-VIP self-heal test passed: all %d nodes converged to new VIP %s after offline VIP change", len(clusterConfig.nodes), newVIP)
+}
