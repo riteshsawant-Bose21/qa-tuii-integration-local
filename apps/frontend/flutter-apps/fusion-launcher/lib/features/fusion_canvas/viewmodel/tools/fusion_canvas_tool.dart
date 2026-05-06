@@ -36,6 +36,14 @@ class FusionCanvasTool<T extends FusionToolState> {
       ),
     ),
   );
+  static FusionCanvasTool<DragToolState> customDragTool({List<String> Function(String layerId)? transformSelectedLayerIds}) =>
+      FusionCanvasTool<DragToolState>(transformer: DragToolHelper(transformSelectedLayerIds: transformSelectedLayerIds));
+
+  static FusionCanvasTool<SelectToolState> customSingleSelectionTool(SelectionToolParams params) => FusionCanvasTool<SelectToolState>(
+    transformer: SelectionToolHelper(
+      selectionToolParams: params,
+    ),
+  );
 
   /// A combined selection + connection tool.
   ///

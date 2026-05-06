@@ -7,10 +7,10 @@ class InputConfig {
     required this.value,
   });
 
-  factory InputConfig.fromJson(Map<String, dynamic> json) {
+  factory InputConfig.fromJson(Map<String, dynamic> json,String funcID) {
     return InputConfig(
       exists: json['exists'] ?? false,
-      value: InputValue.fromJson(json['value'] ?? {}),
+      value: InputValue.fromJson(json['value'][funcID] ?? {}),
     );
   }
 
@@ -31,7 +31,7 @@ class InputValue {
 
   factory InputValue.fromJson(Map<String, dynamic> json) {
     return InputValue(
-      input: json['input'] ?? 0,
+      input: json['input'] ?? 1,
     );
   }
 

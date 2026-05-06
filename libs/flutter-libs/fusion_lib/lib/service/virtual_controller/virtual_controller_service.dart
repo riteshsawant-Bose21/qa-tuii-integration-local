@@ -9,14 +9,14 @@ class FusionVirtualControllerService {
 
   FusionVirtualControllerService({required this.networkClient});
 
-  Future<ResponseCallback<InputConfig>> getSourceSelect(Map<String,dynamic> pathParams,String vipAddress) async {
+  Future<ResponseCallback<InputConfig>> getSourceSelect(Map<String,dynamic> pathParams,String vipAddress,String funcID) async {
 
     ResponseCallback<InputConfig> response  = await networkClient.get(
       api: FusionApiEndpoint.fusionValue,
       urlParameters: pathParams,
       isSecure: false,
       baseUrlToOverride: vipAddress,
-      fromJson: (dynamic json) =>InputConfig.fromJson(json)
+      fromJson: (dynamic json) => InputConfig.fromJson(json,funcID)
     );
 
 

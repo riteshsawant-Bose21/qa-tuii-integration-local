@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionEventService {
@@ -57,7 +59,7 @@ class FusionEventService {
       );
 
       if (response.success && response.data != null) {
-        final List<dynamic> list = response.data as List<dynamic>;
+        final List<dynamic> list = response.data is String ? jsonDecode(response.data) : response.data as List<dynamic>;
         final List<CreateScheduleTaskDto> events = list.map((dynamic e) => CreateScheduleTaskDto.fromJson(e as Map<String, dynamic>)).toList();
         return ResponseCallback<List<CreateScheduleTaskDto>>.success(events);
       } else {
@@ -82,8 +84,8 @@ class FusionEventService {
       );
 
       if (response.success && response.data != null) {
-        final CreateScheduleTaskDto created = CreateScheduleTaskDto.fromJson(response.data as Map<String, dynamic>);
-        return ResponseCallback<CreateScheduleTaskDto>.success(created);
+        // final CreateScheduleTaskDto created = CreateScheduleTaskDto.fromJson(response.data as Map<String, dynamic>);
+        return ResponseCallback<CreateScheduleTaskDto>.success(event);
       } else {
         return ResponseCallback<CreateScheduleTaskDto>.failure(response.message);
       }
@@ -100,9 +102,7 @@ class FusionEventService {
     try {
       final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.snapshotsActivate,
-        data: {
-          'id': eventId,
-        },
+        additionalPath: eventId,
         baseUrlToOverride: vip,
         isSecure: false,
       );

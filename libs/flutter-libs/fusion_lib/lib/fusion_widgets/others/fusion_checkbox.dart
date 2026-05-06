@@ -11,6 +11,7 @@ class FusionCheckbox extends StatelessWidget {
   final BoxShape? shape;
   final double height;
   final double width;
+  final Widget? innerChild;
 
   const FusionCheckbox({
     super.key,
@@ -22,6 +23,7 @@ class FusionCheckbox extends StatelessWidget {
     required this.onChanged,
     this.iconSize = 16,
     this.enabled = true,
+    this.innerChild,
   });
 
   @override
@@ -47,7 +49,11 @@ class FusionCheckbox extends StatelessWidget {
             decoration: BoxDecoration(
               shape: resolvedShape,
               borderRadius: resolvedShape == BoxShape.rectangle ? BorderRadius.circular(4) : null,
-              color: resolvedShape == BoxShape.circle ? Colors.transparent : (isActive ? context.colorScheme.iconWhite : null),
+              color: resolvedShape == BoxShape.circle && innerChild != null
+                  ? isActive
+                        ? context.colorScheme.iconWhite
+                        : Colors.transparent
+                  : (isActive ? context.colorScheme.iconWhite : null),
               border: Border.all(
                 color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
                 width: 1,
@@ -56,19 +62,21 @@ class FusionCheckbox extends StatelessWidget {
             child: Center(
               child: isActive
                   ? (resolvedShape == BoxShape.circle
-                        ? Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: context.colorScheme.iconWhite,
-                            ),
-                          )
-                        : Icon(
-                            Icons.check,
-                            size: 10,
-                            color: context.colorScheme.black,
-                          ))
+                        ? innerChild ??
+                              Container(
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: context.colorScheme.iconWhite,
+                                ),
+                              )
+                        : innerChild ??
+                              Icon(
+                                Icons.check,
+                                size: 10,
+                                color: context.colorScheme.black,
+                              ))
                   : null,
             ),
           ),
