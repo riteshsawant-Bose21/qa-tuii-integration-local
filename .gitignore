@@ -20,6 +20,9 @@ dist
 .env
 .env.local
 
+# generated Flutter protobuf contracts
+libs/flutter-libs/fusion_lib/lib/generated/
+
 # kernel modules
 *.cmd*
 *.d
@@ -28,4 +31,3 @@ dist
 Module.symvers
 modules.order
 *.mod*
-
