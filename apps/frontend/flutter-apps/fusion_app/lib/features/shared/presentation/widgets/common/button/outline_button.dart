@@ -43,6 +43,7 @@ class CustomOutlineButton extends StatelessWidget {
                 onPressed!();
               }:null, // disabled
               style: ElevatedButton.styleFrom(
+
                 backgroundColor: backGroundColor ?? context.colorScheme.elevation2,
                 disabledBackgroundColor: backGroundColor ?? context.colorScheme.elevation2,
                 foregroundColor: context.colorScheme.elevation3,
@@ -52,6 +53,7 @@ class CustomOutlineButton extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
+
               ),
               child:  Text(
                 buttonText,

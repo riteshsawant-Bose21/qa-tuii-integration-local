@@ -7,7 +7,6 @@ import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshot
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/service/scene_set/scene_set_activate_service.dart';
-import 'package:fusion_lib/service/snapshot/snapshot_activate_service.dart';
 import '../viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import '../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import '../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
@@ -22,15 +21,15 @@ class ConfigurationSnapshots extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
-        BlocProvider<ConfigSnapshotsViewmodel>(
-          create:
-              (BuildContext context) => ConfigSnapshotsViewmodel(
-                projectViewModel: projectViewModel,
-                snapshotActivateService: SnapshotActivateService(
-                  networkClient: serviceLocator<FusionNetworkClient>(),
-                ),
-              ),
-        ),
+        // BlocProvider<ConfigSnapshotsViewmodel>(
+        //   create:
+        //       (BuildContext context) => ConfigSnapshotsViewmodel(
+        //         projectViewModel: projectViewModel,
+        //         snapshotActivateService: SnapshotActivateService(
+        //           networkClient: serviceLocator<FusionNetworkClient>(),
+        //         ),
+        //       ),
+        // ),
         BlocProvider<ConfigSceneSetsViewmodel>(
           create:
               (BuildContext context) => ConfigSceneSetsViewmodel(
@@ -40,12 +39,12 @@ class ConfigurationSnapshots extends StatelessWidget {
                 ),
               ),
         ),
-        BlocProvider<ConfigSnapshotActionsViewModel>(
-          create:
-              (BuildContext context) => ConfigSnapshotActionsViewModel(
-                projectViewModel: projectViewModel,
-              ),
-        ),
+        // BlocProvider<ConfigSnapshotActionsViewModel>(
+        //   create:
+        //       (BuildContext context) => ConfigSnapshotActionsViewModel(
+        //         projectViewModel: projectViewModel,
+        //       ),
+        // ),
       ],
       child: const _ConfigurationSnapshotsBody(),
     );

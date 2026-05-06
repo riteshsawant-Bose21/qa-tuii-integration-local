@@ -29,4 +29,5 @@ class AssetSvg {
   static const String standing = '$_path/standing.svg';
   static const String indoorEnv = '$_path/indoor_env.svg';
   static const String outdoorEnv = '$_path/outdoor_env.svg';
+  static const String smilyFace = '$_path/smily_face.svg';
 }

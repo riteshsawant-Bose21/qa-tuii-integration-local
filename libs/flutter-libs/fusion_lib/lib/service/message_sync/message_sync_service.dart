@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -22,7 +23,9 @@ class MessageSyncService {
         if (response.data == null) {
           return ResponseCallback<List<PavaMessageModel>>.success([]);
         }
-        final List<dynamic> list = response.data as List<dynamic>;
+
+        final List<dynamic> list = response.data is String ? jsonDecode(response.data) : response.data as List<dynamic>;
+
         final List<PavaMessageModel> messages = list.map((dynamic e) => PavaMessageModel.fromJson(e as Map<String, dynamic>)).toList();
         return ResponseCallback<List<PavaMessageModel>>.success(messages);
       } else {

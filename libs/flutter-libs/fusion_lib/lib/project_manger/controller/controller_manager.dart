@@ -1,6 +1,7 @@
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
+import 'package:fusion_lib/models/touch_ui_zone_config/touch_ui_zone_config.dart';
 import 'package:fusion_lib/project_manger/controller/controller_service.dart';
 
 /// Extension on [ProjectManager] providing FusionController-specific operations.
@@ -74,7 +75,7 @@ extension ControllerManager on ProjectManager {
     required ControllerDisplayConfig config,
   }) => _service.setControllerDisplayConfig(controllerId: controllerId, config: config);
 
-  // wallcontrollerconfig
-
   WallControllerConfig getWallControllerConfig() => _service.getWallControllerConfig();
+
+  TouchUIZoneConfig getTouchUIZoneConfig() => _service.getTouchUIZoneConfig();
 }

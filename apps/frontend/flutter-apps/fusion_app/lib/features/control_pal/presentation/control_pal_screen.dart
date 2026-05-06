@@ -4,6 +4,7 @@ import 'package:fusion_app/features/events/presentation/events_screen.dart';
 import 'package:fusion_app/features/message_player/presentation/message_player_all.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/app_bar.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/app_bar/bottom_app_bar.dart';
+import 'package:fusion_app/features/snapshots/presentation/snapshot_group_screen.dart';
 import 'package:fusion_app/features/snapshots/presentation/snapshots_screen.dart';
 import 'package:fusion_app/features/zones/presentation/controller_zone.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -89,7 +90,7 @@ class _ControlPalScreenState<T> extends State<ControlPalScreen> {
           );
         }, isDesignMode: false,);
       case ControlPalTab.snapshots:
-        return   SnapshotsScreen();
+        return SnapshotsGroupsScreen();
       case ControlPalTab.events:
         return  EventsScreen(showAppbar: false);
       case ControlPalTab.messages:
