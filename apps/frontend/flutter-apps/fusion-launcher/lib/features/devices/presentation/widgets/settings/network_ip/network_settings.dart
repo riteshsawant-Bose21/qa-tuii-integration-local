@@ -36,7 +36,7 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
             label: "Virtual IP (IPv4)",
             child: Row(
               children: <Widget>[
-                const ReadonlyTextView(value: "192.168.50.100"),
+                ReadonlyTextView(value: serviceLocator<ProjectViewModel>().virtualIP ?? "Not Set"),
                 const SizedBox(width: 16),
                 FusionNeumorphicButton(
                   semanticId: 'network_settings_configure_vip_button',

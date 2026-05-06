@@ -139,6 +139,11 @@ const (
 
 	WebsocketEndpoint = "/ws"
 
+	// Manufacturing
+
+	ManufacturingEndpoint             = "/manufacturing"
+	ManufacturingSetModelNameEndpoint = ManufacturingEndpoint + "/model-name"
+
 	//
 	// Private
 	//

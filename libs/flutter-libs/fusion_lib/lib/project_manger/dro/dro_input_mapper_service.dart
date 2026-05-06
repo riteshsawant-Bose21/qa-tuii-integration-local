@@ -449,6 +449,8 @@ extension DroInputMapperService on ProjectService {
 
     List<CircuitModel> allCircuits = circuits.getAll();
 
+    List<AssignedOutputStreamInfo> outputStreams = getAssignedOutputStreamToCircuit();
+
     for (CircuitModel circuit in allCircuits) {
       final Zone? zone = getZoneForCircuit(circuit.id);
 
@@ -464,6 +466,8 @@ extension DroInputMapperService on ProjectService {
       String locationName = "";
 
       List<DroSourceConnection> droSourceConnections = [];
+
+      bool isAes67Circuit = outputStreams.any((stream) => stream.assignedCircuits.any((val) => val.circuitId == circuit.id));
 
       if (zone != null) {
         //check if integrator blocks are there for zone, if yes then connect circuit to zone processing block instead of zone control
@@ -501,7 +505,7 @@ extension DroInputMapperService on ProjectService {
         DroOutput(
           id: circuit.id,
           name: circuit.name,
-          ioType: "analog",
+          ioType: isAes67Circuit ? "aes67" : "analog",
           //todo: need to add connection type for circuit
           serverLocation: locationName,
           ioProperties: IoProperties(
@@ -628,16 +632,18 @@ extension DroInputMapperService on ProjectService {
         // }
 
         if (matchedPort != null) {
-          droIoPorts.add(
-            DroIoPorts(
-              ioId: dsp.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
-              deviceId: dsp.id,
-              portType: connection.type.type,
-              portNums: [
-                matchedPort.portNumber,
-              ],
-            ),
-          );
+          if (connection.type != ConnectionType.aes67 || connection.type != ConnectionType.aes67Out) {
+            droIoPorts.add(
+              DroIoPorts(
+                ioId: dsp.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId,
+                deviceId: dsp.id,
+                portType: connection.type.type,
+                portNums: [
+                  matchedPort.portNumber,
+                ],
+              ),
+            );
+          }
         } else {
           if (connection.type == ConnectionType.amplifier) {
             String amplifierId = dsp.id == connection.deviceId ? connection.targetDeviceId : connection.deviceId;

@@ -50,6 +50,7 @@ func (c *VIPEventCoordinator) Handle(event vipmonitor.VIPEvent) {
 		if err := vip.SendLocalStatus(event.VIP, c.app.config.BindAddr, true); err != nil {
 			logger.Error("Failed to send UDP status: %v", err)
 		}
+		c.app.Server.StartTelemetrySubscriptions()
 		if c.app.discoveryReconciler.ShouldSuppressLocalGainMDNS(event.VIP) {
 			logger.Debug("[Discovery] Skipping duplicate local gain mDNS start for VIP %s after address change", event.VIP)
 			return
@@ -65,6 +66,7 @@ func (c *VIPEventCoordinator) Handle(event vipmonitor.VIPEvent) {
 		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
 			logger.Error("Failed to send UDP status: %v", err)
 		}
+		c.app.Server.StopTelemetrySubscriptions()
 		c.app.discoveryReconciler.RequestReconcile("event_lost_on_local_interface")
 
 	case vipmonitor.EventGainedOnVRRPUpdate:
@@ -72,6 +74,7 @@ func (c *VIPEventCoordinator) Handle(event vipmonitor.VIPEvent) {
 		if err := vip.SendLocalStatus(event.VIP, c.app.config.BindAddr, true); err != nil {
 			logger.Error("Failed to send UDP status: %v", err)
 		}
+		c.app.Server.StartTelemetrySubscriptions()
 		c.app.discoveryReconciler.RequestReconcile("event_gained_on_vrrp_update")
 
 	case vipmonitor.EventLostOnVRRPUpdate:
@@ -83,6 +86,7 @@ func (c *VIPEventCoordinator) Handle(event vipmonitor.VIPEvent) {
 		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
 			logger.Error("Failed to send UDP status: %v", err)
 		}
+		c.app.Server.StopTelemetrySubscriptions()
 		c.app.discoveryReconciler.RequestReconcile("event_lost_on_vrrp_update")
 
 	case vipmonitor.EventMovedOnVRRPUpdate:

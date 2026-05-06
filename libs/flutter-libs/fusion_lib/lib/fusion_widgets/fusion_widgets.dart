@@ -50,4 +50,5 @@ export 'text_views/fusion_timezones.dart';
 
 export 'virtual_controllers/zone_volume_control.dart';
 export 'virtual_controllers/virtual_controller.dart';
+export 'virtual_controllers/snapshots_screen.dart';
 export 'virtual_controllers/view_model/controller_zone_view_model.dart';

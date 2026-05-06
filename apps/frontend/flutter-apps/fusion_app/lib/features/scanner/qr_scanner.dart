@@ -158,7 +158,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
     setState(() => _isScanned = true);
 
-    controller?.stop();
+    controller?.pause();
 
     /// 🔹 Feedback
     Vibration.vibrate(duration: 100);
@@ -193,13 +193,15 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
           setState(() => _isScanned = false);
 
-          // TopBannerOverlay.show(
-          //   context: context,
-          //   message: state.message,
-          //   type: BannerType.error,
-          // );
+          FusionToast.show(
+            context,
+            message: state.message,
+            textColor: context.colorScheme.textPrimary,
+           // iconColor: context.colorScheme.errorText,
+            backgroundColor: context.colorScheme.errorFill,
+          );
 
-          controller?.start();
+          // controller?.start();
         }
       },
       child: Scaffold(
@@ -235,7 +237,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
           child: ScanInstruction(
             isFlashOn: _isTorchOn,
             onClickFlash: (value) {
-              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.111&controller_id=CONTROLLER632721600");
+              context.read<QrScannerViewModel>().onQrScanned("com.bosepro.fusion://connect?vip=192.168.1.111&controller_id=CONTROLLER350958744");
               _isTorchOn.value = value;
               controller?.toggleTorch();
             },
