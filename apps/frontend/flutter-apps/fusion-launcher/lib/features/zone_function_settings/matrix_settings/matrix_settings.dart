@@ -111,7 +111,8 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                             customBorder: const CircleBorder(),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Icon(
+                              child: FusionIcon.icon(
+                                semanticId: 'additional_settings_close_button',
                                 LucideIcons.x200,
                                 color: context.colorScheme.iconDefault,
                               ),
@@ -166,9 +167,15 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                       children: <Widget>[
                                         Flexible(
                                           flex: 2,
-                                          child: _SourcesSetting(
-                                            zoneID: widget.zoneID,
-                                            zoneFunctions: zoneFunction,
+                                          child: SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.container,
+                                              "zone_control_sources",
+                                            ),
+                                            child: _SourcesSetting(
+                                              zoneID: widget.zoneID,
+                                              zoneFunctions: zoneFunction,
+                                            ),
                                           ),
                                         ),
 
@@ -177,12 +184,18 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                           color: context.colorScheme.strokeLight,
                                         ),
                                         Flexible(
-                                          child: _MixSceneSetting(
-                                            allowController: vm.isAssignToControllersEnabled,
-                                            zoneId: widget.zoneID,
-                                            onAllowControllerChanged: () {
-                                              vm.toggleAssignToControllers();
-                                            },
+                                          child: SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.container,
+                                              "zone_control_mix_scenes",
+                                            ),
+                                            child: _MixSceneSetting(
+                                              allowController: vm.isAssignToControllersEnabled,
+                                              zoneId: widget.zoneID,
+                                              onAllowControllerChanged: () {
+                                                vm.toggleAssignToControllers();
+                                              },
+                                            ),
                                           ),
                                         ),
 

@@ -33,7 +33,7 @@ class FusionNetworkClient {
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
 
-  String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
+  String getApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
     if (baseUrlToOverride != null) {
       return isSecure
           ? "https://$baseUrlToOverride${api.path}"
@@ -73,8 +73,8 @@ class FusionNetworkClient {
 
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -84,7 +84,11 @@ class FusionNetworkClient {
 
       final bool isBinary = T == Uint8List;
 
-      final Options options = Options(headers: <String, dynamic>{...headers}, responseType: isBinary ? ResponseType.bytes : ResponseType.json);
+      final Options options = Options(
+        validateStatus: (_) => true,
+        headers: <String, dynamic>{...headers},
+        responseType: isBinary ? ResponseType.bytes : ResponseType.json,
+      );
 
       final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
 
@@ -96,7 +100,32 @@ class FusionNetworkClient {
           return ResponseCallback<T>.success(data, statusCode: response.statusCode);
         }
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        final dynamic rawError = response.data;
+
+        String bodyMessage = '';
+        if (rawError is String) {
+          bodyMessage = rawError.trim();
+        } else if (rawError is Map<String, dynamic>) {
+          final dynamic m = rawError['message'];
+          final dynamic e = rawError['error'];
+          final dynamic d = rawError['details'];
+
+          if (m is String && m.trim().isNotEmpty) {
+            bodyMessage = m.trim();
+          } else if (e is String && e.trim().isNotEmpty) {
+            bodyMessage = e.trim();
+          } else if (d is String) {
+            bodyMessage = d.trim();
+          }
+        }
+
+        final String fallback = httpClient.handleStatusCodeError(response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: bodyMessage.isNotEmpty ? bodyMessage : fallback,
+          statusCode: response.statusCode,
+          data: rawError is T ? rawError : null,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
@@ -117,8 +146,8 @@ class FusionNetworkClient {
 
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -126,7 +155,7 @@ class FusionNetworkClient {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final Options options = Options(headers: <String, dynamic>{...headers});
+      final Options options = Options(validateStatus: (_) => true, headers: <String, dynamic>{...headers});
 
       final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
 
@@ -155,8 +184,8 @@ class FusionNetworkClient {
 
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -166,6 +195,7 @@ class FusionNetworkClient {
 
       /// Detect content type based on data type
       final Options options = Options(
+        validateStatus: (_) => true,
         headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
       );
 
@@ -210,17 +240,18 @@ class FusionNetworkClient {
 
       /// Detect content type based on data type
       final Options options = Options(
+        validateStatus: (_) => true,
         headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
       );
 
       final Response<dynamic> response = await httpClient.dioInstance.patch(
         additionalPath != null
-            ? "${geApiUrl(
+            ? "${getApiUrl(
                 api,
                 baseUrlToOverride: baseUrlToOverride,
                 isSecure: isSecure,
               )}/$additionalPath"
-            : geApiUrl(
+            : getApiUrl(
                 api,
                 baseUrlToOverride: baseUrlToOverride,
                 isSecure: isSecure,
@@ -254,8 +285,8 @@ class FusionNetworkClient {
 
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -264,7 +295,7 @@ class FusionNetworkClient {
       }
 
       /// Detect content type based on data type
-      final Options options = Options(headers: <String, dynamic>{...headers});
+      final Options options = Options(validateStatus: (_) => true, headers: <String, dynamic>{...headers});
 
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
@@ -318,7 +349,7 @@ class FusionNetworkClient {
   }
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
-    if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    // if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
 
     try {
       // Close any existing socket to prevent leaks on reconnect.
@@ -384,7 +415,7 @@ class FusionNetworkClient {
   /// Connects to a WebSocket URL using the injected WebSocketService
   Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
     try {
-      webSocketService.connect(url);
+      await webSocketService.connect(url);
       FusionLogger.log(tag: LogTag.network, message: "WebSocket connecting to $url");
 
       return ResponseCallback<T>(success: true, message: "WebSocket connection initiated", statusCode: 200);
@@ -465,6 +496,7 @@ enum FusionApiEndpoint {
   projects("/projects", FusionApiType.backendServer),
   products('/products', FusionApiType.backendServer),
   devicesCloud('/devices', FusionApiType.backendServer),
+  // final String apiUrl = 'http://$host/softwareUpdate/upload';
   firmwareUpdateCheck('/firmware/updates/check', FusionApiType.backendServer),
   firmwareBundleDownloadUrl('/firmware/bundles', FusionApiType.backendServer),
   firmwareUpdateStatus('/firmware/updates/status', FusionApiType.backendServer),
@@ -476,7 +508,9 @@ enum FusionApiEndpoint {
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
   sceneSetsActivate('/scene-sets/activate', FusionApiType.fusionServer),
   snapshotsActivate('/snapshots/activate', FusionApiType.fusionServer),
-  tasks('/tasks', FusionApiType.fusionServer);
+  tasks('/tasks', FusionApiType.fusionServer),
+  clusterReboot('/cluster/reboot', FusionApiType.fusionServer),
+  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer);
 
   final String path;
   final FusionApiType type;

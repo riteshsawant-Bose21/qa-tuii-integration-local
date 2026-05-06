@@ -112,7 +112,8 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                             customBorder: const CircleBorder(),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Icon(
+                              child: FusionIcon.icon(
+                                semanticId: 'additional_settings_close_button',
                                 LucideIcons.x200,
                                 color: context.colorScheme.iconDefault,
                               ),
@@ -167,9 +168,16 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                       children: <Widget>[
                                         Flexible(
                                           flex: 2,
-                                          child: _SourcesSetting(
-                                            zoneID: widget.zoneID,
-                                            vm: vm,
+                                          child: SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.container,
+                                              "zone_control_sources",
+                                            ),
+
+                                            child: _SourcesSetting(
+                                              zoneID: widget.zoneID,
+                                              vm: vm,
+                                            ),
                                           ),
                                         ),
 
@@ -178,12 +186,18 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           color: context.colorScheme.strokeLight,
                                         ),
                                         Flexible(
-                                          child: _MixSceneSetting(
-                                            allowController: vm.isAssignToControllersEnabled,
-                                            zoneId: widget.zoneID,
-                                            onAllowControllerChanged: () {
-                                              vm.toggleAssignToControllers();
-                                            },
+                                          child: SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.container,
+                                              "zone_control_mix_scenes",
+                                            ),
+                                            child: _MixSceneSetting(
+                                              allowController: vm.isAssignToControllersEnabled,
+                                              zoneId: widget.zoneID,
+                                              onAllowControllerChanged: () {
+                                                vm.toggleAssignToControllers();
+                                              },
+                                            ),
                                           ),
                                         ),
 
@@ -199,7 +213,7 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                             vm.updatePriorityProperties(
                                               zoneOrSubzoneId: widget.zoneID,
                                               index: index,
-                                              isStateActive:isPressed,
+                                              isStateActive: isPressed,
                                             );
                                           },
                                           onPTTControlTypeChanged: (int index) {

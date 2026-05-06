@@ -36,6 +36,7 @@ class DeviceMappingDialog extends StatefulWidget {
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
   DeviceMappingDialogTab _selectedTab = DeviceMappingDialogTab.mapping;
+  int _updatesRefreshToken = 0;
 
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
@@ -73,7 +74,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                     case DeviceMappingDialogTab.droConfig:
                       return const DroConfigScreen();
                     case DeviceMappingDialogTab.updates:
-                      return const FirmwareUpdatesTab();
+                      return FirmwareUpdatesTab(refreshToken: _updatesRefreshToken);
                   }
                 },
               ),
@@ -106,16 +107,23 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   text: 'CONFIGURE NETWORK',
                   style: context.textTheme.labelMedium,
                 ),
-                InkWell(
-                  child: Icon(
-                    Icons.close,
-                    color: context.colorScheme.iconWhite,
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    if (serviceLocator<ProjectViewModel>().virtualIP == null) {
-                      serviceLocator<ProjectViewModel>().toggleControlMode();
-                    }
+                ValueListenableBuilder<bool>(
+                  valueListenable: serviceLocator<ProjectViewModel>().isDevicesRegisteringNotifier,
+                  builder: (BuildContext context, bool value, Widget? child) {
+                    if (value) return const SizedBox(); // Hide close button when devices are being registered
+
+                    return InkWell(
+                      child: Icon(
+                        Icons.close,
+                        color: context.colorScheme.iconWhite,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        if (serviceLocator<ProjectViewModel>().virtualIP == null) {
+                          serviceLocator<ProjectViewModel>().toggleControlMode();
+                        }
+                      },
+                    );
                   },
                 ),
               ],
@@ -142,7 +150,14 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     final bool isSelected = _selectedTab == tab;
 
     return InkWell(
-      onTap: () => setState(() => _selectedTab = tab),
+      onTap: () {
+        setState(() {
+          _selectedTab = tab;
+          if (tab == DeviceMappingDialogTab.updates) {
+            _updatesRefreshToken++;
+          }
+        });
+      },
       child: Container(
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(

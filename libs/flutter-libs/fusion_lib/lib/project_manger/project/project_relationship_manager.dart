@@ -7,6 +7,7 @@ enum RelationshipType {
   zoneAreas,
   zoneSourceSet,
   zoneSources,
+  zoneEndpoints,
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,

@@ -88,7 +88,7 @@ class Source extends HardwareComponent {
   final SourceConnectionType connectionType;
   String? ipAddress; //for AES67 sources
   final String sku;
-  final PagingSourceType? pagingSourceType; // Only applicable for paging sources
+  final PagingSourceType? pagingSourceType;
 
   /// Constructor for SourceEntity
   Source({

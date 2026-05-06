@@ -242,7 +242,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
 
   void selectHardware(HardwareComponent hardware) {
     final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
-    print("Selecting hardware ${hardware.name} with id ${hardware.id} and type ${hardware.runtimeType}");
+    // print("Selecting hardware ${hardware.name} with id ${hardware.id} and type ${hardware.runtimeType}");
     if (hardware is Speaker) {
       if (state.toolbarMode == ToolbarMode.system) {
         final String? id2 = projectVM.getCircuitForHardware(hardwareId: hardware.id)?.id;
@@ -250,15 +250,39 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
         //   print("Same circuit selected. Returning.");
         //   return;
         // }
-        print("Selecting circuit with id $id2 for hardware ${hardware.name}");
+        // print("Selecting circuit with id $id2 for hardware ${hardware.name}");
         projectVM.setCurrentSelectedCircuit(id2);
         return;
       }
     }
 
-    print("Selecting hardware with id ${hardware.id} for hardware ${hardware.name}");
+    // print("Selecting hardware with id ${hardware.id} for hardware ${hardware.name}");
 
     projectVM.setCurrentSelectedHardware(hardware.id);
+  }
+
+  List<String> transformLayerIdForSelection({required String layerId, required List<HardwareComponent>? hardwareInFloorWithPosition}) {
+    // return <String>[layerId];
+    if (state.toolbarMode == ToolbarMode.system) {
+      final HardwareComponent? hardware = hardwareInFloorWithPosition?.firstWhereOrNull(
+        (HardwareComponent e) => e.id == layerId,
+      );
+      if (hardware != null && hardware is Speaker) {
+        final String? circuitHardwareIds =
+            serviceLocator<ProjectViewModel>()
+                .getCircuitForHardware(
+                  hardwareId: hardware.id,
+                )
+                ?.id;
+        if (circuitHardwareIds == null) return <String>[layerId];
+        // print("Retunning layer ids for selection. hardware id: ${hardware.id}, circuit id: $circuitHardwareIds");
+        return <String>[
+          ...serviceLocator<ProjectViewModel>().getHardwareForCircuit(circuitId: circuitHardwareIds).map((HardwareComponent e) => e.id),
+          // circuitHardwareIds,
+        ];
+      }
+    }
+    return <String>[layerId];
   }
 }
 
