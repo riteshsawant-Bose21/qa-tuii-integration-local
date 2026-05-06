@@ -129,6 +129,7 @@ type SoftwareUpdateProgress struct {
 // VersionUpdate represents version information to sync across nodes
 type VersionUpdate struct {
 	Version Version `json:"version"`
+	Hash    string  `json:"hash"`
 	NodeID  string  `json:"node_id"`
 }
 
@@ -161,10 +162,11 @@ type VersionUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash    string         `json:"hash"`
-	Data    map[string]any `json:"data"`
-	Version Version        `json:"version"`
-	Clear   bool           `json:"clear,omitempty"`
+	Hash         string         `json:"hash"`
+	Data         map[string]any `json:"data"`
+	ObserverData map[string]any `json:"observer_data,omitempty"`
+	Version      Version        `json:"version"`
+	Clear        bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair
@@ -239,6 +241,18 @@ type RemoteStateSnapshot struct {
 // SnapshotOperation represents a snapshot operation broadcast across the cluster.
 type SnapshotOperation struct {
 	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SceneSetOperation represents a scene-set operation broadcast across the cluster.
+type SceneSetOperation struct {
+	SetID     string    `json:"set_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SceneOperation represents a scene operation broadcast across the cluster.
+type SceneOperation struct {
+	SceneID   string    `json:"scene_id"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
@@ -343,7 +357,7 @@ type TaskMessage struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   string           `json:"message_id"`
 	Priority    int64            `json:"priority"`
-	Zones       string           `json:"zones"`
+	Zones       []string         `json:"zones"`
 }
 
 // TaskMessagePatch represents a patchable message task
@@ -355,7 +369,7 @@ type TaskMessagePatch struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   *string          `json:"message_id,omitempty"`
 	Priority    *int64           `json:"priority"`
-	Zones       *string          `json:"zones"`
+	Zones       *[]string        `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
@@ -412,6 +426,16 @@ type WebSocketResponse struct {
 	Message   string    `json:"message"`   // Human-readable message
 	Data      any       `json:"data"`      // Response payload (can be null)
 	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
+}
+
+// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
+// Clients should treat "patch" mode as a partial update that must be merged
+// into their local cached state, while "snapshot" mode replaces local state.
+type WebSocketConfigUpdateEvent struct {
+	Mode    string         `json:"mode"`              // "patch" or "snapshot"
+	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
+	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
+	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
 }
 
 // WebSocketStats represents connection and usage statistics
@@ -484,4 +508,19 @@ type SoftwareUpdateInfo struct {
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
 		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
+}
+
+// PAVA Messages
+
+type TriggerMessageRequest struct {
+	Priority int      `json:"priority,omitempty"`
+	Zones    []string `json:"zones,omitempty"`
+}
+
+type MessageTrigger struct {
+	ID        string   `json:"id"`
+	Path      string   `json:"path"`
+	Priority  int      `json:"priority,omitempty"`
+	Zones     []string `json:"zones"`
+	Timestamp int64    `json:"timestamp"`
 }

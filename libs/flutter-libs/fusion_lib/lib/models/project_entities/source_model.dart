@@ -2,9 +2,33 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic, paging }
+enum SourceType {
+  mic,
+  media,
+  generic,
+  paging;
 
-enum PagingSourceType { messagePlayer, messagePlayerWithZoneSelect, pagingMic, pagingMicWithZoneSelect }
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceType.generic;
+    return SourceType.values.firstWhereOrNull((SourceType e) => e.name.toLowerCase() == value.toLowerCase()) ?? SourceType.generic;
+  }
+}
+
+enum PagingSourceType {
+  messagePlayer,
+  messagePlayerWithZoneSelect,
+  pagingMic,
+  pagingMicWithZoneSelect;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static PagingSourceType? fromString(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return PagingSourceType.values.firstWhereOrNull((PagingSourceType e) => e.name.toLowerCase() == value.toLowerCase());
+  }
+}
 
 enum SourceConnectionType {
   analogInput("Wired"),
@@ -21,6 +45,14 @@ enum SourceConnectionType {
   const SourceConnectionType(this.displayName);
 
   final String displayName;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceConnectionType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceConnectionType.analogInput;
+    return SourceConnectionType.values.firstWhereOrNull((SourceConnectionType e) => e.name.toLowerCase() == value.toLowerCase()) ??
+        SourceConnectionType.analogInput;
+  }
 }
 
 extension SourceConnectionTypeExtension on SourceConnectionType {

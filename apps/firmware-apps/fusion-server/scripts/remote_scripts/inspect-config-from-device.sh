@@ -8,7 +8,7 @@ if [[ $# -lt 2 ]]; then
 Usage: $0 <user@host> <bbolt command> [<args>...]
 
 This script makes a temporary copy of the Fusion database located at
-/var/lib/fusion/fusion.db on the specified remote device and then
+/persist/fusion/fusion.db on the specified remote device and then
 runs the bbolt command against that copy.
 
 The expected usage of the command is:
@@ -53,14 +53,14 @@ if [[ ! -f "$local_bbolt" ]]; then
   exit 1
 fi
 
-remote_bbolt="/var/lib/fusion/bbolt-linux-arm64"
+remote_bbolt="/persist/fusion/bbolt-linux-arm64"
 tmp_remote_bbolt="/tmp/bbolt-linux-arm64.$$"
 
 remote_bbolt_exists="$(ssh "$target" "if [ -f '$remote_bbolt' ]; then echo yes; else echo no; fi")"
 
 if [[ "$remote_bbolt_exists" != "yes" ]]; then
   scp "$local_bbolt" "$target:$tmp_remote_bbolt"
-  ssh "$target" "mkdir -p /var/lib/fusion && mv $tmp_remote_bbolt $remote_bbolt && chmod +x $remote_bbolt"
+  ssh "$target" "mkdir -p /persist/fusion && mv $tmp_remote_bbolt $remote_bbolt && chmod +x $remote_bbolt"
 fi
 
 ssh "$target" bash -s -- "$remote_bbolt" "$@" <<'EOF'
@@ -79,7 +79,7 @@ else
 fi
 trap 'rm -f "$TMP_DB"' EXIT
 
-cp /var/lib/fusion/fusion.db "$TMP_DB"
+cp /persist/fusion/fusion.db "$TMP_DB"
 
 cmd="$1"
 shift

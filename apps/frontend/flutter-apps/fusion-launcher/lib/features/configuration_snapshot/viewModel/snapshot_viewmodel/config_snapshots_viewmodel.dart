@@ -230,12 +230,31 @@ class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
     }
   }
 
-  /// Recall (activate) a snapshot by name on the fusion server
+  /// Recall (activate) a snapshot by id on the fusion server.
+  /// Sets [recallingSnapshotId] in state while the request is in-flight so
+  /// the UI can display a loader, clears it once the response arrives.
   Future<ResponseCallback<bool>> recallSnapshot({
     required String vip,
     required String snapshotId,
   }) async {
-    return _snapshotActivateService.activateSnapshot(vip: vip, name: snapshotId);
+    final ConfigSnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      emit(currentState.copyWith(recallingSnapshotId: snapshotId));
+    }
+    try {
+      final ResponseCallback<bool> result = await _snapshotActivateService.activateSnapshot(vip: vip, name: snapshotId);
+      final ConfigSnapshotsState updatedState = state;
+      if (updatedState is SnapshotsLoaded) {
+        emit(updatedState.copyWith(clearRecallingSnapshotId: true));
+      }
+      return result;
+    } catch (e) {
+      final ConfigSnapshotsState updatedState = state;
+      if (updatedState is SnapshotsLoaded) {
+        emit(updatedState.copyWith(clearRecallingSnapshotId: true));
+      }
+      rethrow;
+    }
   }
 
   @override

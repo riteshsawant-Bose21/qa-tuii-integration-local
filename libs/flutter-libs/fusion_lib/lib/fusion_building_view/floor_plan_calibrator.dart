@@ -178,6 +178,11 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     if (r == null) return null;
     // Adjust for pan/zoom
     final local = (p - _panOffset) / _zoomScale;
+
+    // Ignore interactions outside the visible floor plan image area.
+    // This keeps the current measurement line intact when user clicks outside.
+    if (!r.contains(local)) return null;
+
     final x = ((local.dx - r.left) / r.width).clamp(0.0, 1.0);
     final y = ((local.dy - r.top) / r.height).clamp(0.0, 1.0);
     return Offset(x, y);
@@ -2594,9 +2599,17 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       final p2 = endPoint!;
       if ((p2 - p1).distance <= 0.1) return;
 
+      // Keep measurement visuals consistent across zoom levels.
+      final double uiScale = 1.0 / zoomScale.clamp(0.25, 8.0);
+      final double lineStroke = (2.5 * uiScale).clamp(1.0, 4.0);
+      final double labelFontSize = (12 * uiScale).clamp(8.0, 14.0);
+      final double labelPad = (6 * uiScale).clamp(3.0, 8.0);
+      final double labelYOffset = (28 * uiScale).clamp(12.0, 36.0);
+      final double labelRadius = (4 * uiScale).clamp(2.0, 6.0);
+
       final base = Paint()
         ..color = Colors.black
-        ..strokeWidth = 2.5;
+        ..strokeWidth = lineStroke;
       // ..style = PaintingStyle.stroke;
 
       // final guide = Paint()
@@ -2606,12 +2619,16 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       // // draw white guide underlay for contrast
       // canvas.drawLine(p1, p2, guide);
-      // main line
-      canvas.drawLine(p1, p2, base);
+      final startArrow = _buildArrowHeadGeometry(p1, p2, uiScale);
+      final endArrow = _buildArrowHeadGeometry(p2, p1, uiScale);
+      if (startArrow == null || endArrow == null) return;
+
+      // Draw the shaft only between arrow bases to avoid cap artifacts beyond tips.
+      canvas.drawLine(startArrow.baseCenter, endArrow.baseCenter, base);
 
       // arrowheads
-      _drawArrowHead(canvas, p1, p2, base);
-      _drawArrowHead(canvas, p2, p1, base);
+      _drawArrowHead(canvas, startArrow, base.color);
+      _drawArrowHead(canvas, endArrow, base.color);
 
       // label (black rounded pill)
       final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
@@ -2620,28 +2637,27 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 12,
+            fontSize: labelFontSize,
             fontWeight: FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
 
-      const double pad = 6;
       final Offset labPos = Offset(
         mid.dx - tp.width / 2,
-        mid.dy - 28 - tp.height / 2,
+        mid.dy - labelYOffset - tp.height / 2,
       );
       final RRect bg = RRect.fromRectAndRadius(
         Rect.fromLTWH(
-          labPos.dx - pad,
-          labPos.dy - pad,
-          tp.width + pad * 2,
-          tp.height + pad * 2,
+          labPos.dx - labelPad,
+          labPos.dy - labelPad,
+          tp.width + labelPad * 2,
+          tp.height + labelPad * 2,
         ),
-        const Radius.circular(4),
+        Radius.circular(labelRadius),
       );
 
       canvas.drawRRect(
@@ -2675,28 +2691,48 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     }
   }
 
-  void _drawArrowHead(Canvas canvas, Offset from, Offset to, Paint p) {
-    // arrow pointing from -> to
-    const double len = 10;
-    const double angle = 28 * math.pi / 180;
+  _ArrowHeadGeometry? _buildArrowHeadGeometry(Offset from, Offset to, double uiScale) {
+    final double len = (10 * uiScale).clamp(4.0, 14.0);
+    final double halfWidth = (len * 0.42).clamp(2.0, 6.0);
 
-    final dir = (to - from);
+    // Outward direction from the line center to endpoint.
+    final dir = (from - to);
     final d = dir.distance;
-    if (d <= 0.001) return;
+    if (d <= 0.001) return null;
     final ux = dir.dx / d;
     final uy = dir.dy / d;
 
-    // rotate (-angle) and (+angle)
-    Offset rot(double a) => Offset(
-      ux * math.cos(a) - uy * math.sin(a),
-      ux * math.sin(a) + uy * math.cos(a),
+    // Base center sits toward the middle of the measurement segment.
+    final baseCenter = from - Offset(ux * len, uy * len);
+    final perp = Offset(-uy, ux);
+
+    final baseLeft = baseCenter + perp * halfWidth;
+    final baseRight = baseCenter - perp * halfWidth;
+
+    return _ArrowHeadGeometry(
+      tip: from,
+      baseCenter: baseCenter,
+      baseLeft: baseLeft,
+      baseRight: baseRight,
     );
+  }
 
-    final a1 = from + rot(angle) * len;
-    final a2 = from + rot(-angle) * len;
+  void _drawArrowHead(Canvas canvas, _ArrowHeadGeometry arrow, Color color) {
+    // Draw a sharp filled triangle arrowhead, connected to the line shaft.
 
-    canvas.drawLine(from, a1, p);
-    canvas.drawLine(from, a2, p);
+    final Path arrowPath = Path()
+      ..moveTo(arrow.tip.dx, arrow.tip.dy)
+      ..lineTo(arrow.baseLeft.dx, arrow.baseLeft.dy)
+      ..lineTo(arrow.baseRight.dx, arrow.baseRight.dy)
+      ..close();
+
+    canvas.drawPath(
+      arrowPath,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
+    );
   }
 
   @override
@@ -2719,6 +2755,20 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       old.panOffset != panOffset ||
       old.flipHorizontal != flipHorizontal ||
       old.flipVertical != flipVertical;
+}
+
+class _ArrowHeadGeometry {
+  final Offset tip;
+  final Offset baseCenter;
+  final Offset baseLeft;
+  final Offset baseRight;
+
+  const _ArrowHeadGeometry({
+    required this.tip,
+    required this.baseCenter,
+    required this.baseLeft,
+    required this.baseRight,
+  });
 }
 
 class CalibrationData {
