@@ -1213,7 +1213,6 @@ private:
     if (update.isMember("_fusion_clear") && update["_fusion_clear"].asBool())
     {
       handleClearMessage(targetPaths);
-      return;
     }
 
     for (const auto &path : targetPaths)

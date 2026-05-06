@@ -196,7 +196,7 @@ class PEQController {
       final num frequency = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'frequency')?.value ?? 1000;
       final num q = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'q')?.value ?? 1.0;
       final num gain = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'gain')?.value ?? 0.0;
-      final bool bypass = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'band_enable')?.value ?? false;
+      final bool bypass = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'band_enable')?.value ? false : true;
 
       tableData.add(_PEQDataPoint(type: type, frequency: frequency, q: q, gain: gain, bypass: bypass));
     }

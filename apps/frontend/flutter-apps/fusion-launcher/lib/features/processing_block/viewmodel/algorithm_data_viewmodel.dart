@@ -167,11 +167,18 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     _pendingUpdate = null;
 
     if (serviceLocator<ProjectViewModel>().isInControlMode && serviceLocator<ProjectViewModel>().virtualIP != null) {
+      // serviceLocator<BlockDataViewmodel>().updateBlockParameter(
+      //   blockId: processingBlock.id,
+      //   parameter: pending.field,
+      //   value: pending.value,
+      //   dimension: pending.dimension,
+      // );
       serviceLocator<BlockDataViewmodel>().updateBlockParameter(
         blockId: processingBlock.id,
         parameter: pending.field,
         value: pending.value,
         dimension: pending.dimension,
+        processingBlock: processingBlock,
       );
     } else {
       serviceLocator<ProjectViewModel>().updateProcessingBlock(

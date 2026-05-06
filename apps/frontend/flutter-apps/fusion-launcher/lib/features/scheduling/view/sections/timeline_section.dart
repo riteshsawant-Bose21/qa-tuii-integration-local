@@ -68,22 +68,37 @@ class _TimelineSectionState extends State<_TimelineSection> {
                         child: Row(
                           children: <Widget>[
                             // ── Now button ──────────────────────────────────
-                            FusionAppButton(
-                              semanticId: 'timeline_section_now_button',
-                              width: 100,
-                              height: 32,
-                              text: "Today",
-                              textstyle: context.textTheme.l1SemiBold,
-                              showPrefixIcon: true,
-                              prefixIcon: Icons.calendar_today,
-                              color: context.colorScheme.elevation1,
-                              onPressed: () => cubit.goToMonth(DateTime.now()),
-                              style: FusionAppButtonStyle.primary,
+                            Material(
+                              borderRadius: BorderRadius.circular(8),
+                              child: InkWell(
+                                onTap: () => cubit.goToMonth(DateTime.now()),
+                                hoverColor: context.colorScheme.strokeLight,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    children: <Widget>[
+                                      FusionIcon.icon(
+                                        Icons.calendar_today,
+                                        size: 14,
+                                        semanticId: "timeline_section_now_button_icon",
+                                      ),
+                                      const SizedBox(
+                                        width: 5,
+                                      ),
+                                      FusionAppText(
+                                        text: "Today",
+                                        style: context.textTheme.l1SemiBold,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 12),
 
                             // ── Previous ─────────────────────────────────────
                             IconButton(
+                              hoverColor: context.colorScheme.strokeLight,
                               onPressed: canGoBack ? prev : null,
                               icon: FusionIcon.icon(
                                 semanticId: 'timeline_section_previous_button',
@@ -141,9 +156,14 @@ class _TimelineSectionState extends State<_TimelineSection> {
                                 ),
                               ),
                             ] else ...<Widget>[
-                              FusionAppText(
-                                text: _weekRangeLabel(ws),
-                                style: context.textTheme.b3Medium,
+                              SizedBox(
+                                width: 220,
+                                child: FusionAppText(
+                                  maxLine: 1,
+                                  textAlign: TextAlign.center,
+                                  text: _weekRangeLabel(ws),
+                                  style: context.textTheme.b3Medium,
+                                ),
                               ),
                             ],
                             const SizedBox(width: 4),
@@ -151,6 +171,7 @@ class _TimelineSectionState extends State<_TimelineSection> {
                             // ── Next ─────────────────────────────────────────
                             IconButton(
                               onPressed: next,
+                              hoverColor: context.colorScheme.strokeLight,
                               icon: FusionIcon.icon(
                                 semanticId: 'timeline_section_next_button',
                                 Icons.chevron_right_rounded,
@@ -393,8 +414,7 @@ class _WeekDayColumnState extends State<_WeekDayColumn> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers below (ViewToggle, _HeaderChip, _MonthPickerGrid, _YearPickerList)
 // ─────────────────────────────────────────────────────────────────────────────
-
-class ViewToggle extends StatelessWidget {
+class ViewToggle extends StatefulWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
@@ -407,22 +427,43 @@ class ViewToggle extends StatelessWidget {
   });
 
   @override
+  State<ViewToggle> createState() => _ViewToggleState();
+}
+
+class _ViewToggleState extends State<ViewToggle> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF3D3D3D) : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.white54,
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+    Color backgroundColor;
+    if (widget.isActive) {
+      backgroundColor = context.colorScheme.elevation1;
+    } else if (_isHovered) {
+      backgroundColor = context.colorScheme.strokeLight;
+    } else {
+      backgroundColor = Colors.transparent;
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: widget.isActive || _isHovered ? Colors.white : Colors.white54,
+              fontSize: 12,
+              fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
         ),
       ),
@@ -430,35 +471,51 @@ class ViewToggle extends StatelessWidget {
   }
 }
 
-class _HeaderChip extends StatelessWidget {
+class _HeaderChip extends StatefulWidget {
   final String label;
 
   const _HeaderChip({required this.label});
 
   @override
+  State<_HeaderChip> createState() => _HeaderChipState();
+}
+
+class _HeaderChipState extends State<_HeaderChip> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          FusionAppText(
-            text: label,
-            style: context.textTheme.b3Medium,
-          ),
-          const SizedBox(width: 4),
-          FusionIcon.icon(
-            semanticId: 'header_chip_chevron',
-            Icons.keyboard_arrow_down_rounded,
-            size: 16,
-            color: context.colorScheme.iconDefault,
-          ),
-        ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 120,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: _isHovered ? context.colorScheme.strokeLight : context.colorScheme.elevation2,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: widget.label,
+                style: context.textTheme.b3Medium,
+              ),
+            ),
+            const SizedBox(width: 4),
+            FusionIcon.icon(
+              semanticId: 'header_chip_chevron',
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: context.colorScheme.iconDefault,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -510,29 +567,82 @@ class _MonthPickerGrid extends StatelessWidget {
             final bool isDisabled = selectedYear == minDate.year && month < minDate.month;
             final bool isSelected = month == selectedMonth;
 
-            return GestureDetector(
+            return _MonthChip(
+              label: _monthLabels[i],
+              isSelected: isSelected,
+              isDisabled: isDisabled,
               onTap: isDisabled ? null : () => onSelected(month),
-              child: Container(
-                width: 48,
-                height: 32,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected ? context.colorScheme.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: FusionAppText(
-                  text: _monthLabels[i],
-                  style: context.textTheme.l1Medium.withColor(
-                    isDisabled
-                        ? context.colorScheme.textDisabled
-                        : isSelected
-                        ? Colors.white
-                        : context.colorScheme.textBody,
-                  ),
-                ),
-              ),
             );
           }),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthChip extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final bool isDisabled;
+  final VoidCallback? onTap;
+
+  const _MonthChip({
+    required this.label,
+    required this.isSelected,
+    required this.isDisabled,
+    required this.onTap,
+  });
+
+  @override
+  State<_MonthChip> createState() => _MonthChipState();
+}
+
+class _MonthChipState extends State<_MonthChip> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Color backgroundColor;
+    if (widget.isSelected) {
+      backgroundColor = context.colorScheme.primary;
+    } else if (_isHovered && !widget.isDisabled) {
+      backgroundColor = context.colorScheme.strokeLight;
+    } else {
+      backgroundColor = Colors.transparent;
+    }
+
+    Color textColor;
+    if (widget.isDisabled) {
+      textColor = context.colorScheme.textDisabled;
+    } else if (widget.isSelected || (_isHovered && !widget.isDisabled)) {
+      textColor = Colors.white;
+    } else {
+      textColor = context.colorScheme.textBody;
+    }
+
+    return MouseRegion(
+      cursor: widget.isDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) {
+        if (!widget.isDisabled) setState(() => _isHovered = true);
+      },
+      onExit: (_) {
+        if (_isHovered) setState(() => _isHovered = false);
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 48,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: FusionAppText(
+            text: widget.label,
+            style: context.textTheme.l1Medium.withColor(textColor),
+          ),
         ),
       ),
     );
@@ -566,28 +676,71 @@ class _YearPickerList extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children:
-              years.map((int year) {
-                final bool isSelected = year == selectedYear;
+              years
+                  .map(
+                    (int year) => _YearChip(
+                      year: year,
+                      isSelected: year == selectedYear,
+                      onTap: () => onSelected(year),
+                    ),
+                  )
+                  .toList(),
+        ),
+      ),
+    );
+  }
+}
 
-                return GestureDetector(
-                  onTap: () => onSelected(year),
-                  child: Container(
-                    width: 48,
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isSelected ? context.colorScheme.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: FusionAppText(
-                      text: '$year',
-                      style: context.textTheme.l1Medium.withColor(
-                        isSelected ? Colors.white : context.colorScheme.textBody,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+class _YearChip extends StatefulWidget {
+  final int year;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _YearChip({
+    required this.year,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_YearChip> createState() => _YearChipState();
+}
+
+class _YearChipState extends State<_YearChip> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Color backgroundColor;
+    if (widget.isSelected) {
+      backgroundColor = context.colorScheme.primary;
+    } else if (_isHovered) {
+      backgroundColor = context.colorScheme.strokeLight;
+    } else {
+      backgroundColor = Colors.transparent;
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 48,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: FusionAppText(
+            text: '${widget.year}',
+            style: context.textTheme.l1Medium.withColor(
+              (widget.isSelected || _isHovered) ? Colors.white : context.colorScheme.textBody,
+            ),
+          ),
         ),
       ),
     );

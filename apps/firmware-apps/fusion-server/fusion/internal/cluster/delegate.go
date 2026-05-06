@@ -672,9 +672,9 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	// Same epoch, do normal merge
-	d.stateManager.MergeRemoteState(snapshot.State)
-
-	d.persistence.MarkDirty()
+	if d.stateManager.MergeRemoteState(snapshot.State) {
+		d.persistence.MarkDirty()
+	}
 
 	if join {
 		logger.Debug("[DELEGATE] MergeRemoteState completed during join")

@@ -11,6 +11,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_secure_storage_windows
   media_kit_libs_windows_audio
   permission_handler_windows
+  printing
   share_plus
   url_launcher_windows
   webview_windows

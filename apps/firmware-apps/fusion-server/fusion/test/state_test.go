@@ -13,6 +13,7 @@ import (
 	"fusion/internal/cluster"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
+
 	json "github.com/goccy/go-json"
 )
 
@@ -885,6 +886,77 @@ func TestCalculateDiffPreservesNewArray(t *testing.T) {
 	}
 	if !reflect.DeepEqual(arr, []any{true, false, false}) {
 		t.Errorf("Expected band_enable=[true false false], got %v", arr)
+	}
+}
+
+// TestDelegateMergeRemoteStateDoesNotMarkDirtyOnNoChange is a regression test for the
+// bug where ClusterDelegate.MergeRemoteState called d.persistence.MarkDirty()
+// unconditionally, even when no state entry was actually newer than the local copy.
+// In steady state (all nodes converged), every memberlist push/pull cycle invokes
+// MergeRemoteState with identical data, which triggered SaveState → new Timestamp in
+// BoltDB → new hash → BroadcastVersionUpdate → peer triggers anti-entropy repair → loop.
+//
+// The fix: MarkDirty is only called when StateManager.MergeRemoteState returns true
+// (i.e., at least one remote entry was strictly newer than the local entry).
+func TestDelegateMergeRemoteStateDoesNotMarkDirtyOnNoChange(t *testing.T) {
+	sm := persistence.NewStateManager(&stateConfig)
+	if err := sm.Set("key", "value"); err != nil {
+		t.Fatalf("Set failed: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "delegate-merge.db")
+	p, err := newPersistenceForStateTest(t, dbPath, sm)
+	if err != nil {
+		t.Fatalf("NewPersistence failed: %v", err)
+	}
+	defer p.Close()
+
+	// saveFired receives a token whenever SaveState completes (metadata notifier is
+	// called with notify=true from updateHash inside SaveState).
+	saveFired := make(chan struct{}, 1)
+	p.SetMetadataNotifier(func(_ *api.DatabaseMetadata) {
+		select {
+		case saveFired <- struct{}{}:
+		default:
+		}
+	})
+
+	delegate := &cluster.ClusterDelegate{}
+	delegateValue := reflect.ValueOf(delegate).Elem()
+	setUnexported := func(field string, value any) {
+		f := delegateValue.FieldByName(field)
+		reflect.NewAt(f.Type(), unsafe.Pointer(f.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+	}
+	setUnexported("appConfig", &api.AppConfig{NodeName: "local-node"})
+	setUnexported("persistence", p)
+	setUnexported("stateManager", sm)
+
+	// Simulate a steady-state push/pull: remote node has exactly the same state and
+	// version as local. MergeRemoteState should detect no change and skip MarkDirty.
+	localState := sm.GetFullState()
+	payload, err := json.Marshal(struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}{
+		Version: sm.GetVersion(),
+		NodeID:  "peer-node",
+		State:   localState.State,
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+
+	delegate.MergeRemoteState(payload, false)
+
+	// Wait longer than the save debounce (100ms) to give the save worker time to
+	// fire if MarkDirty was called.
+	select {
+	case <-saveFired:
+		t.Fatal("MergeRemoteState with identical state triggered SaveState; " +
+			"MarkDirty must only be called when state actually changes")
+	case <-time.After(300 * time.Millisecond):
+		// No save fired — correct behaviour.
 	}
 }
 
