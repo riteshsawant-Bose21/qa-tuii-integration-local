@@ -21,30 +21,33 @@ class GateController {
     valueHandler.updateValue(field: 'threshold', value: roundTo2Digits(value));
   }
 
-  num? get threshold {
+  num get threshold {
     return DeserializationUtil.numDeserializer.deserialize(
-      allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'threshold' && e.dimension == null)?.value,
-    );
+          allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'threshold' && e.dimension == null)?.value,
+        ) ??
+        0.0;
   }
 
   void updateRange(num value) {
     valueHandler.updateValue(field: 'range', value: roundTo2Digits(value));
   }
 
-  num? get range {
+  num get range {
     return DeserializationUtil.numDeserializer.deserialize(
-      allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'range' && e.dimension == null)?.value,
-    );
+          allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'range' && e.dimension == null)?.value,
+        ) ??
+        0.0;
   }
 
   void updateAttack(num value) {
     valueHandler.updateValue(field: 'attack', value: roundTo2Digits(value));
   }
 
-  num? get attack {
+  num get attack {
     return DeserializationUtil.numDeserializer.deserialize(
-      allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'attack' && e.dimension == null)?.value,
-    );
+          allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'attack' && e.dimension == null)?.value,
+        ) ??
+        0.0;
   }
 
   void updateHold(num value) {

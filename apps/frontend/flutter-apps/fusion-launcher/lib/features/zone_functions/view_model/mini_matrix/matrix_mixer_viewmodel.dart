@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:meta/meta.dart';
 
 import '../../../projects/view_model/block_data/block_data_viewmodel.dart';
 
@@ -118,7 +117,7 @@ class MatrixMixerViewModel extends Cubit<MatrixMixerState> {
         final int index = function.sourceIndex != null && function.sourceIndex!.containsKey(sourceId) ? function.sourceIndex![sourceId]! : 0;
 
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'gain',
           dimension: index,
           value: newLevel,
@@ -144,7 +143,7 @@ class MatrixMixerViewModel extends Cubit<MatrixMixerState> {
         final int index = function.sourceIndex != null && function.sourceIndex!.containsKey(sourceId) ? function.sourceIndex![sourceId]! : 0;
 
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'mute',
           dimension: index,
           value: !isSelected, // mute = !isSelected
@@ -170,7 +169,7 @@ class MatrixMixerViewModel extends Cubit<MatrixMixerState> {
         final int index = function.sourceIndex != null && function.sourceIndex!.containsKey(sourceId) ? function.sourceIndex![sourceId]! : 0;
 
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'input_mute',
           dimension: index,
           value: isMuted,
@@ -195,7 +194,7 @@ class MatrixMixerViewModel extends Cubit<MatrixMixerState> {
 
       if (serviceLocator<ProjectViewModel>().isInControlMode && serviceLocator<ProjectViewModel>().virtualIP != null) {
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'out_mute',
           dimension: 0,
           value: isMuted,
@@ -221,7 +220,7 @@ class MatrixMixerViewModel extends Cubit<MatrixMixerState> {
         return;
       }
 
-      final Map<String, dynamic>? data = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: function.id);
+      final Map<String, dynamic>? data = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: function.paramName);
       if (data == null) return;
 
       _applyBlockDataToProject(functionId: function.id, data: data);

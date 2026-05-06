@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/constants/semantics/test_keys.dart';
@@ -25,6 +26,7 @@ class SnapshotSet extends StatefulWidget {
 
 class _SnapshotSetState extends State<SnapshotSet> {
   ConfigSnapshotsViewmodel get _configSnapshotsViewmodel => context.read<ConfigSnapshotsViewmodel>();
+  ConfigSceneSetsViewmodel get _configSceneSetsViewmodel => context.read<ConfigSceneSetsViewmodel>();
   bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
 
   @override
@@ -70,6 +72,7 @@ class _SnapshotSetState extends State<SnapshotSet> {
                   _configSnapshotsViewmodel.handleDropOnSnapshots(
                     details.data,
                   );
+                  _configSceneSetsViewmodel.syncWithProjectViewModel(); // ← add this
                 },
                 builder: (
                   BuildContext context,

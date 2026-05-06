@@ -2,6 +2,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/controller_page_model.dart';
+import 'package:fusion_lib/models/touch_ui_zone_config/touch_ui_zone_config.dart';
 
 /// Extension on [ProjectViewModel] providing FusionController-specific
 /// **write** operations with undo/redo, auto-save, and project-update signals.
@@ -233,6 +234,17 @@ extension ControllerViewModel on ProjectViewModel {
       return projectManager.getWallControllerConfig();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to get wall controller config: $e');
+      rethrow;
+    }
+  }
+
+  // ─── TouchUI zone config ────────────────────────────────────────────────
+
+  TouchUIZoneConfig getTouchUIZoneConfig() {
+    try {
+      return projectManager.getTouchUIZoneConfig();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'ControllerViewModel: failed to get TouchUI zone config: $e');
       rethrow;
     }
   }

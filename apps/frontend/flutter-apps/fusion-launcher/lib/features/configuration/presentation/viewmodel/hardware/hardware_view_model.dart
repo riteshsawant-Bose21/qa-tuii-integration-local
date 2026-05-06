@@ -203,6 +203,15 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<Speaker> getListeningAreaSpeakers({required String areaId}) {
+    try {
+      return projectManager.getHardwareForListeningArea(areaId).whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for listening area: $e");
+      return <Speaker>[];
+    }
+  }
+
   List<HardwareComponent> getHardwareForFloor({required String floorId}) {
     try {
       return projectManager.getHardwareForFloor(floorId);
@@ -803,6 +812,7 @@ extension HardwareViewModel on ProjectViewModel {
       price: 0,
       mountingType: mountingType,
       pitch: pitch,
+      color: "black",
       yaw: yaw,
       inputPortsData: <PortData>[
         PortData(

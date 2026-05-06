@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/view_model/reboot/reboot_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
 import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -369,7 +370,6 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     width: 26,
                                     height: 26,
                                     borderRadius: 6,
-                                    enabled: false,
                                     color: context.colorScheme.elevation2,
                                     onTap: () {
                                       _showRestartConfirmation(context);
@@ -414,18 +414,35 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
   }
 
   void _showRestartConfirmation(BuildContext context) {
-    showDialog(
+    final RebootViewmodelCubit rebootCubit = serviceLocator<RebootViewmodelCubit>();
+    final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? "";
+    Future<bool>? rebootFuture;
+
+    showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder:
-          (BuildContext context) => FusionConfirmationPopup(
-            title: 'RESTART',
-            description: 'Do you want to restart ${widget.device.name} device?',
+          (BuildContext context) => FusionActionPopup(
+            title: 'REBOOT',
+            description: 'Do you want to reboot ${widget.device.name} device ?',
+            loadingMessage: 'Device rebooting',
             onConfirm: () {
-              // TODO: Implement actual restart logic
-              _startLoadingState('Please wait...', 'Device restarting');
+              rebootFuture = rebootCubit.rebootDevice(vip: vip, deviceId: widget.device.id);
             },
           ),
-    );
+    ).then((bool? result) async {
+      if (result != true || rebootFuture == null) return;
+      _startLoadingState('Please wait...', 'Device rebooting');
+      final bool success = await rebootFuture!;
+      if (!mounted) return;
+      _stopLoadingState();
+      if (!context.mounted) return;
+      if (success) {
+        FusionToast.success(context, message: "${widget.device.name} reboot successful.");
+      } else {
+        FusionToast.error(context, message: "${widget.device.name} reboot failed.");
+      }
+    });
   }
 
   void _startLoadingState(String title, String message) {
@@ -434,14 +451,15 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
       _loadingTitle = title;
       _loadingMessage = message;
     });
-
+    // Cancel any auto-stop timer; reboot flow controls the lifecycle.
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isPlayingAnimation = false;
-        });
-      }
+  }
+
+  void _stopLoadingState() {
+    _timer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _isPlayingAnimation = false;
     });
   }
 }

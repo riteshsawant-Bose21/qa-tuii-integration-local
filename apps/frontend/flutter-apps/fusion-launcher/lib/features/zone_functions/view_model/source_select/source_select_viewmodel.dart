@@ -96,7 +96,7 @@ class SourceSelectViewmodel extends Cubit<SourceSelectViewmodelState> {
 
       if (projectVM.isInControlMode && projectVM.virtualIP != null) {
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'input',
           value: index + 1, // server expects 1-based index
         );

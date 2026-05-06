@@ -218,10 +218,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   void setCurrentFloorIndex(int index) {
     try {
       // clear the selections when changing floor
-      currentSelectedHardwareId = null;
-      currentSelectedListeningAreaId = null;
-      currentSelectedZoneId = null;
-      currentSelectedSubZoneId = null;
+      activeSelection = null;
       // setShouldPlaceNonPlacedSpeakers(false);
 
       projectManager.setCurrentFloorIndex(index);
@@ -233,14 +230,24 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   void setCurrentSelectedHardware(String? hardware) {
-    currentSelectedHardwareId = hardware;
+    activeSelection = hardware != null ? SelectedItem(id: hardware, type: SelectedItemType.hardware) : null;
+    updateProject();
+  }
+
+  void setCurrentSelectedCircuit(String? circuit) {
+    activeSelection = circuit != null ? SelectedItem(id: circuit, type: SelectedItemType.circuit) : null;
     updateProject();
   }
 
   void setCurrentSelectedListeningArea(String? area) {
-    currentSelectedListeningAreaId = area;
+    activeSelection = area != null ? SelectedItem(id: area, type: SelectedItemType.listingArea) : null;
 
     // if (area == null) setShouldPlaceNonPlacedSpeakers(false);
+    updateProject();
+  }
+
+  void deselectAll() {
+    activeSelection = null;
     updateProject();
   }
 
@@ -250,7 +257,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       return getHardware(hardwareId: currentSelectedHardwareId!);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected hardware: $e");
-      currentSelectedHardwareId = null;
+      activeSelection = null;
     }
     return null;
   }
@@ -261,17 +268,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       return getListeningArea(areaId: currentSelectedListeningAreaId!);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get current selected listening area: $e");
-      currentSelectedListeningAreaId = null;
+      activeSelection = null;
     }
     return null;
-  }
-
-  // set Zone selection mode
-  void setZoneSelectionMode(bool isInSelectionMode) {
-    isInZoneSelectionMode = isInSelectionMode;
-    currentSelectedZoneId = null;
-    resetDeviceTypeIndex();
-    updateProject();
   }
 
   void setSelectedProductToAdd(ProductQueryModel? product) {
@@ -285,12 +284,23 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   void clearSelectedZone() {
-    currentSelectedZoneId = null;
+    activeSelection = null;
+    updateProject();
+  }
+
+  void selectZone(String zoneId) {
+    activeSelection = SelectedItem(id: zoneId, type: SelectedItemType.zone);
+    updateProject();
+  }
+
+  void selectSubZone(String subZoneId) {
+    activeSelection = SelectedItem(id: subZoneId, type: SelectedItemType.subzone);
     updateProject();
   }
 
   void clearSelectedSubZone() {
-    currentSelectedSubZoneId = null;
+    activeSelection = null;
+
     updateProject();
   }
 

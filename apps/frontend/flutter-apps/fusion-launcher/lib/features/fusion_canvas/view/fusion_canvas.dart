@@ -101,6 +101,7 @@ class FusionCanvas extends StatelessWidget {
                         FusionSnapState snapState,
                       ) {
                         final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
+
                         final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
                           state: state,
                           context: context,

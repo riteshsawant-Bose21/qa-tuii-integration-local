@@ -17,6 +17,15 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
   final String virtualIP = serviceLocator<ProjectViewModel>().virtualIP ?? '';
   final String projectId = serviceLocator<ProjectViewModel>().projectId;
 
+  String _toUserErrorMessage(Object error, {required String fallback}) {
+    String message = error.toString().trim();
+    if (message.startsWith('Exception:')) {
+      message = message.substring('Exception:'.length).trim();
+    }
+    if (message.isEmpty) return fallback;
+    return message;
+  }
+
   Future<void> _syncLocalFusionNetworkUnRegisteredDevices() async {
     try {
       final List<FusionNetworkDevice> devices = await repository.getFusionNetworkUnRegisteredDevices();
@@ -65,11 +74,12 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
     } on DeviceAlreadyRegisteredException {
       await resetDeviceCertificateAndRetry(deviceState);
     } catch (e) {
+      final String message = _toUserErrorMessage(e, fallback: 'Registration Failed');
       final DeviceRegistrationState updated = state.copyWith(
         devices: state.updateDevice(
           deviceState.copyWith(
             step: DeviceRegistrationStep.initial,
-            error: 'Registration Failed',
+            error: message,
           ),
         ),
       );
@@ -80,6 +90,11 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
 
   Future<void> bulkDeviceRegistration() async {
     emit(state.bulkRetryState);
+
+    // Set the global notifier to true to indicate that registration is in progress,
+    // this will hide the close button in the dialog to prevent user from closing it while registration is in progress.
+    serviceLocator<ProjectViewModel>().isDevicesRegisteringNotifier.value = true;
+
     final List<DeviceSpecificRegistrationState> devices = <DeviceSpecificRegistrationState>[...state.devices ?? <DeviceSpecificRegistrationState>[]];
     for (final DeviceSpecificRegistrationState deviceState in devices) {
       await singleDeviceRegister(deviceState);
@@ -90,6 +105,9 @@ class DeviceRegistrationViewModel extends Cubit<DeviceRegistrationState> {
         stepBulk: state.allCompleted ? DeviceRegistrationStep.completed : DeviceRegistrationStep.initial,
       ),
     );
+
+    // After all devices have been processed, set the global notifier back to false to show the close button again.
+    serviceLocator<ProjectViewModel>().isDevicesRegisteringNotifier.value = false;
   }
 
   Future<bool> updateCsrInFusionDevice(String fusionDeviceId, String certificate) async {

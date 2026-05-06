@@ -133,24 +133,11 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
   }
 
   void createZone(BuildContext context) {
-    // if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
-
-    if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isEmpty) {
-      return FusionToast.error(context, message: 'Select at least one listening area');
-    } else {
-      for (final AddListeningAreaToSubzoneModel subzone in state.subzones) {
-        if (subzone.listeningAreas.isEmpty) {
-          return FusionToast.error(context, message: 'Cannot create zone. One of the subzones has no listening areas assigned.');
-        }
-      }
-    }
-
-    // if selected listeing areas empty
-
+    // Validation is handled by saveEnabledNotifier — button won't fire if invalid
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
     final Zone zone = Zone(name: state.zoneName, zoneColor: state.zoneColor);
-    serviceLocator<ProjectViewModel>().addZone(zone: zone);
+    projectViewModel.addZone(zone: zone);
 
     if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isNotEmpty) {
       projectViewModel.updateListeningAreasInZone(
@@ -160,10 +147,8 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
     } else {
       for (final AddListeningAreaToSubzoneModel subzone in state.subzones) {
         final SubZone newSubZone = SubZone(name: subzone.subZoneName);
-
         projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
         projectViewModel.addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zone.id, autoSave: false);
-
         projectViewModel.updateListeningAreasInSubZone(
           listeningAreaIds: subzone.listeningAreas.map((ListeningArea area) => area.id).toList(),
           subZoneId: newSubZone.id,
@@ -178,7 +163,6 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
       );
     }
 
-    // Close popup
     Navigator.of(context).pop();
   }
 }
