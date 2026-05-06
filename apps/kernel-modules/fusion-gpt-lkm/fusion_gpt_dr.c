@@ -112,17 +112,13 @@ static uint model_min_samples_param = 4;
 module_param(model_min_samples_param, uint, 0644);
 MODULE_PARM_DESC(model_min_samples_param, "Minimum PI samples required before allowing a model-driven jump");
 
-static uint model_min_dac_span_param = 64;
+static uint model_min_dac_span_param = 1;
 module_param(model_min_dac_span_param, uint, 0644);
 MODULE_PARM_DESC(model_min_dac_span_param, "Minimum DAC span required across model samples");
 
 static uint model_max_mean_residual_param = 10;
 module_param(model_max_mean_residual_param, uint, 0644);
 MODULE_PARM_DESC(model_max_mean_residual_param, "Maximum mean absolute residual in PPS ticks for a valid jump model");
-
-static uint model_jump_min_error_param = 10;
-module_param(model_jump_min_error_param, uint, 0644);
-MODULE_PARM_DESC(model_jump_min_error_param, "Minimum absolute PPS error in ticks before taking a model-driven jump");
 
 static uint reacquire_delta_threshold_param = 20;
 module_param(reacquire_delta_threshold_param, uint, 0644);
@@ -373,12 +369,10 @@ struct fusion_gpt
 	u64 discipline_pre_blackout_delta;
 	u64 discipline_post_return_cap64;
 	u32 discipline_post_return_capture_count;
-	bool discipline_reacquire_jump_available;
 	bool discipline_holdover_active;
 	u32 discipline_lock_streak;
 	unsigned long holdover_expire_next_jiffies;
 	unsigned long pps_diag_next_jiffies;
-	bool discipline_model_jump_ready;
 	bool discipline_model_jump_consumed;
 	u64 pps_capture_ring[PPS_CAPTURE_RING_SIZE];
 	u32 pps_capture_head;
@@ -503,14 +497,12 @@ static void gpt_reset_control_domain_locked(struct fusion_gpt *g)
 	g->discipline_pre_blackout_delta = 0;
 	g->discipline_post_return_cap64 = 0;
 	g->discipline_post_return_capture_count = 0;
-	g->discipline_reacquire_jump_available = false;
 	g->discipline_holdover_active = false;
 	WRITE_ONCE(g->discipline_continuity_ready, false);
 	WRITE_ONCE(g->discipline_gm_locked, false);
 	g->discipline_lock_streak = 0;
 	WRITE_ONCE(g->holdover_expire_next_jiffies, jiffies);
 	g->pps_diag_next_jiffies = jiffies + HZ;
-	g->discipline_model_jump_ready = false;
 	g->discipline_model_jump_consumed = false;
 }
 
@@ -548,8 +540,6 @@ static void gpt_arm_holdover_validation_locked(struct fusion_gpt *g,
 	g->discipline_post_return_cap64 = 0;
 	g->discipline_post_return_capture_count = 0;
 	g->discipline_reacquire_pending = keep_continuity;
-	g->discipline_reacquire_jump_available = false;
-	g->discipline_model_jump_ready = false;
 	g->discipline_model_jump_consumed = false;
 	g->discipline_lock_streak = 0;
 	WRITE_ONCE(g->discipline_gm_locked, false);
@@ -1088,7 +1078,6 @@ static bool gpt_begin_reacquire_wait_locked(struct fusion_gpt *g, u64 cap64)
 	g->discipline_reacquire_pending = true;
 	g->discipline_post_return_cap64 = cap64;
 	g->discipline_post_return_capture_count = 1;
-	g->discipline_reacquire_jump_available = false;
 	g->discipline_model_jump_consumed = false;
 	g->discipline_lock_streak = 0;
 	WRITE_ONCE(g->discipline_gm_locked, false);
@@ -1151,7 +1140,6 @@ static bool gpt_update_reacquire_state_locked(struct fusion_gpt *g, u64 cap64,
 
 	if (matched) {
 		WRITE_ONCE(g->discipline_continuity_ready, true);
-		g->discipline_reacquire_jump_available = false;
 		g->discipline_holdover_active = false;
 		pr_info("fusion_gpt: reacquire_valid pre_delta=%llu post_delta=%llu diff=%llu threshold=%u dac=%d\n",
 			pre_delta, post_delta, delta_diff, threshold, g->dac_target);
@@ -1159,7 +1147,6 @@ static bool gpt_update_reacquire_state_locked(struct fusion_gpt *g, u64 cap64,
 	}
 
 	WRITE_ONCE(g->discipline_continuity_ready, false);
-	g->discipline_reacquire_jump_available = post_valid;
 	g->discipline_holdover_active = false;
 	g->discipline_lock_streak = 0;
 	pr_warn("fusion_gpt: reacquire_invalid reason=%s pre_delta=%llu post_delta=%llu diff=%llu threshold=%u dac=%d\n",
@@ -1322,7 +1309,6 @@ static bool gpt_fit_jump_model_locked(struct fusion_gpt *g)
 	u32 i;
 
 	g->discipline_model_valid = false;
-	g->discipline_model_jump_ready = false;
 	g->model_slope_q16 = 0;
 	g->model_intercept_q16 = 0;
 	g->model_mean_abs_residual = 0;
@@ -1390,32 +1376,18 @@ static bool gpt_fit_jump_model_locked(struct fusion_gpt *g)
 	}
 }
 
-static bool gpt_maybe_apply_reacquire_model_jump_locked(struct fusion_gpt *g,
-							int observed_dac,
-							long freq_error)
+static bool gpt_maybe_apply_model_jump_locked(struct fusion_gpt *g,
+					      int observed_dac,
+					      long freq_error)
 {
-	long abs_error = abs(freq_error);
-	u32 jump_min_error = READ_ONCE(model_jump_min_error_param);
 	int old_dac = g->dac_target;
 
-	if (!g->discipline_reacquire_jump_available)
+	if (!g->discipline_model_valid || g->discipline_model_jump_consumed)
 		return false;
 
-	g->discipline_reacquire_jump_available = false;
-	if (!g->discipline_model_valid || abs_error < jump_min_error)
-		return false;
-
-	g->discipline_model_jump_ready = true;
 	g->discipline_model_jump_consumed = true;
-
-	if (g->model_predicted_dac == g->dac_target) {
-		g->discipline_model_jump_ready = false;
-		return false;
-	}
-
 	g->dac_target = g->model_predicted_dac;
 	g->error_integrator = 0;
-	g->discipline_model_jump_ready = false;
 
 	pr_info("fusion_gpt: model_jump old_dac=%d observed_dac=%d predicted_dac=%d error=%ld residual=%u span=%u slope_q16=%d\n",
 		old_dac, observed_dac, g->dac_target, freq_error,
@@ -1476,7 +1448,6 @@ static void gpt_maybe_expire_discipline_holdover(struct fusion_gpt *g)
 		g->discipline_reacquire_pending = false;
 		g->discipline_post_return_cap64 = 0;
 		g->discipline_post_return_capture_count = 0;
-		g->discipline_reacquire_jump_available = false;
 		g->discipline_holdover_active = false;
 		g->discipline_lock_streak = 0;
 		elapsed_ms = jiffies_to_msecs(jiffies - last_pps);
@@ -1593,9 +1564,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			    !wait_for_reacquire_interval) {
 				rms_jitter = gpt_update_jitter_stats_locked(g, freq_error);
 				observed_dac = gpt_get_observed_dac_locked(g);
-				model_jump_log = gpt_maybe_apply_reacquire_model_jump_locked(g,
-									     observed_dac,
-									     freq_error);
+				model_jump_log = gpt_maybe_apply_model_jump_locked(g,
+										   observed_dac,
+										   freq_error);
 				if (!model_jump_log)
 					gpt_pi_step_locked(g, freq_error, &p_term_log,
 							   &i_term_log,
