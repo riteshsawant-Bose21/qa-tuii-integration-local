@@ -1,6 +1,5 @@
 go = "1.24.5"
 node = "23.11.1"
-protobuf = "25.3"  
 
 [settings]
 auto-install = true
