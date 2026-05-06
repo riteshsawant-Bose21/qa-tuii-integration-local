@@ -801,6 +801,7 @@
 // }
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
@@ -808,6 +809,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/constants/semantics/features/add_sources_popup/add_sources_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 import '../../configuration_aes67/viewModel/config_aes67_viewmodel.dart';
 import '../../configuration_aes67/viewModel/input_stream_viewmodel/input_stream_viewmodel.dart';
 import '../view_model/add_source_viewmodel.dart';
@@ -843,7 +845,7 @@ class AddSourceDrawer extends StatelessWidget {
         );
     final ValueNotifier<bool> buttonEnabledNotifier = ValueNotifier<bool>(false);
     // Listen to state changes and update button enabled status
-    bool _isAes67Complete(AddSourceViewModelState state) {
+    bool isAes67Complete(AddSourceViewModelState state) {
       if (state.selectedStream == null) return false;
 
       // If channels were manually assigned, they're valid
@@ -865,7 +867,7 @@ class AddSourceDrawer extends StatelessWidget {
       final bool isPaging = state.selectedSources.firstOrNull?.type == SourceType.paging;
       final bool hasConnectionType = state.selectedConnectionType != null;
       final bool isAes67 = state.selectedConnectionType == SourceConnectionType.aes67input;
-      final bool hasValidAes67 = !isAes67 || _isAes67Complete(state);
+      final bool hasValidAes67 = !isAes67 || isAes67Complete(state);
       buttonEnabledNotifier.value = hasSource && hasLocation && (isPaging || hasConnectionType) && hasValidAes67;
     }
 
@@ -897,7 +899,7 @@ class AddSourceDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap:
           () => show(
             context,
