@@ -188,7 +188,7 @@ class _FusionOutlinedDropdownState<T> extends State<FusionOutlinedDropdown<T>> {
               onEnter: (_) => setState(() => hovered = true),
               onExit: (_) => setState(() => hovered = false),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: hovered ? context.colorScheme.elevation2 : Colors.transparent,
                   borderRadius: BorderRadius.circular(widget.borderRadius),
