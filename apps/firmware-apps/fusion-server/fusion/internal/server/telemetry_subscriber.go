@@ -59,7 +59,6 @@ func (t *TelemetrySubscriber) Start(deviceIPs []string) {
 		wanted[ip] = true
 	}
 
-	// Remove stale (IPs no longer in cluster)
 	for ip, cancel := range t.devices {
 		if !wanted[ip] {
 			cancel()
@@ -67,12 +66,16 @@ func (t *TelemetrySubscriber) Start(deviceIPs []string) {
 		}
 	}
 
-	// Add new
 	for _, ip := range deviceIPs {
 		if _, exists := t.devices[ip]; !exists {
 			t.subscribeDevice(ip)
 		}
 	}
+}
+
+// Reconcile updates subscriptions to match deviceIPs.
+func (t *TelemetrySubscriber) Reconcile(deviceIPs []string) {
+	t.Start(deviceIPs)
 }
 
 // Stop cancels all active device subscriptions.
@@ -119,13 +122,10 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
 			return
 		}
 
-		// If the connection was stable for longer than the max backoff window,
-		// reset delay so the next reconnect attempt is immediate.
 		if time.Since(connStart) > zmqReconnectMaxDelay {
 			delay = zmqReconnectBaseDelay
 		}
 
-		// Transient error — back off and retry
 		logger.Warn("TelemetrySubscriber: connection to %s lost (%v), reconnecting in %s", addr, err, delay)
 		select {
 		case <-time.After(delay):
@@ -180,7 +180,6 @@ var meterDataMarker = []byte(`"meter_data"`)
 func (t *TelemetrySubscriber) handleMessage(deviceIP string, raw []byte) {
 	logger := logging.GetLogger()
 
-	// Fast-path: skip full JSON parse if the frame doesn't contain "meter_data"
 	if !bytes.Contains(raw, meterDataMarker) {
 		return
 	}

@@ -135,7 +135,7 @@ func (s *FusionServer) StopTelemetrySubscriptions() {
 // cluster membership. Call this when cluster topology changes while VIP.
 func (s *FusionServer) ReconcileTelemetrySubscriptions() {
 	ips := s.clusterMemberZMQIPs()
-	s.telemetrySub.Start(ips)
+	s.telemetrySub.Reconcile(ips)
 }
 
 // GetAudioSettings handles HTTP GET requests for audio settings data.

@@ -284,7 +284,6 @@ type SoftwareUpdateProgressResponse struct {
 	Timestamp    string `json:"timestamp"`
 	SerialNumber string `json:"serial_number,omitempty"`
 }
-
 type SoftwareUpdateInfo struct {
 	BuildConfiguration struct {
 		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`

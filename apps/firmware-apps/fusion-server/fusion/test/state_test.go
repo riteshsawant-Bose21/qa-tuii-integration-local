@@ -11,6 +11,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -918,7 +919,7 @@ func TestDelegateMergeRemoteStateDoesNotMarkDirtyOnNoChange(t *testing.T) {
 	// saveFired receives a token whenever SaveState completes (metadata notifier is
 	// called with notify=true from updateHash inside SaveState).
 	saveFired := make(chan struct{}, 1)
-	p.SetMetadataNotifier(func(_ *api.DatabaseMetadata) {
+	p.SetMetadataNotifier(func(_ *model.DatabaseMetadata) {
 		select {
 		case saveFired <- struct{}{}:
 		default:
