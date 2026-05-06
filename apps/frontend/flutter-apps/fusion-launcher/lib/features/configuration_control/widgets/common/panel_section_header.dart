@@ -22,36 +22,45 @@ class PanelSectionHeader extends StatelessWidget {
   /// Optional widget(s) shown on the trailing (right) side of the header.
   final Widget? trailing;
 
+  /// SemanticId for automation
+  final String semanticId;
+
   const PanelSectionHeader({
     super.key,
     required this.title,
     this.trailing,
+    required this.semanticId,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        border: Border(
-          bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: FusionAppText(
-              text: title,
-              style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
-            ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${semanticId}_panel_header"),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
           ),
-          if (trailing != null) trailing!,
-        ],
+          border: Border(
+            bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                semanticId: '${semanticId}_panel_title',
+                text: title,
+                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+              ),
+            ),
+            if (trailing != null)
+              SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, '${semanticId}_panel_header_icon_button'), child: trailing!),
+          ],
+        ),
       ),
     );
   }

@@ -12,12 +12,42 @@ part 'block_data_viewmodel_state.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // BlockDataViewmodel — singleton registered in service_locator.dart
 //
-// Resilient WebSocket config-subscription consumer with:
-//  • Heartbeat-based liveness detection (catches silent disconnects)
-//  • Exponential-backoff auto-reconnect
-//  • App lifecycle awareness (reconnects on resume from background)
-//  • Periodic config re-subscription as a keepalive
+// Connection state machine:
+//
+//   disconnected ──startWebsocket()──► connecting ──success──► connected
+//        ▲                                  │                      │
+//        │                           failure/error        heartbeat / resume
+//        │                                  │                      │
+//        └──────────ping timeout────── verifying ◄────────────────┘
+//                                           │
+//                                    pong received
+//                                           │
+//                                     connected (re-subscribes)
+//
+// Key design decisions:
+//  • App resume / heartbeat → send ping first, NEVER blindly tear down socket.
+//  • Reconnect is only triggered when (a) stream errors/closes, or
+//    (b) a liveness ping times out without a pong.
+//  • A single _WsConnectionState enum guards all entry points — no boolean soup.
+//  • Pending pings use Completers so the caller can await a true/false result.
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Internal connection state — the single source of truth for what the socket
+/// is doing right now. All public/private methods gate on this value.
+enum _WsState {
+  /// No socket exists. Safe to call [startWebsocket].
+  disconnected,
+
+  /// [connectWebSocket] is in-flight. Duplicate calls are ignored.
+  connecting,
+
+  /// Socket open, data flowing, heartbeat running.
+  connected,
+
+  /// A ping has been sent; awaiting pong before deciding whether to reconnect.
+  /// The socket is still open and fully usable during this window.
+  verifying,
+}
 
 class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserver {
   BlockDataViewmodel() : super(BlockDataState()) {
@@ -27,71 +57,65 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
 
   final FusionNetworkClient _networkClient = serviceLocator<FusionNetworkClient>();
 
-  // ── config subscription payload ──────────────────────────────────────────
-  static const Map<String, dynamic> _configSubscriptionMessage = <String, dynamic>{
+  // ── Message templates ──────────────────────────────────────────────────────
+
+  static const Map<String, dynamic> _kConfigSub = <String, dynamic>{
     'id': 'config-001',
     'version': 1,
     'type': 'config',
   };
 
-  // ── internals ──────────────────────────────────────────────────────────────
+  // ── Connection state machine ───────────────────────────────────────────────
 
-  StreamSubscription<ResponseCallback<dynamic>>? _webSocketSubscription;
+  _WsState _wsState = _WsState.disconnected;
 
-  /// Tracks which block+param combos the user is *currently* dragging/typing.
-  /// Key: "$blockId.$parameter"  Value: debounce Timer
-  /// While an entry exists, incoming server values for that key are ignored.
-  final Map<String, Timer> _activeInteractions = <String, Timer>{};
-
-  /// How long after the user's LAST input before we consider them "done"
-  /// and allow server values to flow back in.
-  /// Tune this to be slightly longer than your server round-trip.
-  static const Duration _interactionCooldown = Duration(milliseconds: 10000);
-
-  /// Debounce timers — coalesce rapid updates before sending to server.
-  /// Key: "$blockId.$parameter"  Value: (timer, latest value, dimension)
-  final Map<String, ({Timer timer, dynamic value, int? dimension})> _pendingSends = <String, ({int? dimension, Timer timer, dynamic value})>{};
-
-  /// How long to wait after the last input before actually sending to server.
-  static const Duration _sendDebounce = Duration(milliseconds: 150);
-
-  /// Listens to [ProjectViewModel] state changes and reacts to
-  /// [isInControlMode] flipping on/off.
-  StreamSubscription<dynamic>? _controlModeSubscription;
-
-  /// Timer used for auto-reconnect with exponential backoff.
-  Timer? _reconnectTimer;
-
-  /// Current reconnect delay — doubles after each failed attempt, resets on
-  /// a successful data reception.
-  Duration _reconnectDelay = const Duration(seconds: 2);
-
-  /// Hard ceiling so the backoff doesn't grow without bound.
-  static const Duration _maxReconnectDelay = Duration(seconds: 30);
-
-  /// Whether the last disconnection was intentional (user/control-mode off).
-  /// Prevents auto-reconnect from firing after a deliberate stop.
+  /// Whether [stopWebsocket] was called intentionally.
+  /// Prevents the auto-reconnect path from firing after a deliberate stop.
   bool _intentionallyStopped = false;
 
-  /// Guards against overlapping connect/disconnect cycles.
-  bool _isConnecting = false;
+  StreamSubscription<ResponseCallback<dynamic>>? _wsSubscription;
+  StreamSubscription<dynamic>? _controlModeSubscription;
 
-  // ── heartbeat (stale-connection detection) ─────────────────────────────────
+  // ── Ping / Pong ────────────────────────────────────────────────────────────
 
-  /// Periodic timer that checks whether we've received any data recently
-  /// and re-sends the config subscription as a keepalive.
+  int _pingSeq = 0;
+
+  /// Live ping completers keyed by their request id ("ping-N").
+  /// Each completer resolves to true (pong received) or false (timed out).
+  final Map<String, Completer<bool>> _pendingPings = <String, Completer<bool>>{};
+
+  /// How long to wait for a pong before declaring the socket dead.
+  static const Duration _kPingTimeout = Duration(seconds: 5);
+
+  // ── Heartbeat ──────────────────────────────────────────────────────────────
+
   Timer? _heartbeatTimer;
 
-  /// How often the heartbeat check fires.
-  static const Duration _heartbeatInterval = Duration(seconds: 30);
+  /// How often the heartbeat fires while connected.
+  static const Duration _kHeartbeatInterval = Duration(seconds: 30);
 
-  /// If no data arrives within this window the connection is considered stale.
-  static const Duration _staleThreshold = Duration(seconds: 60);
+  // ── Auto-reconnect (exponential backoff) ───────────────────────────────────
 
-  /// Timestamp of the last successfully received data frame.
-  DateTime? _lastDataReceivedAt;
+  Timer? _reconnectTimer;
+  Duration _reconnectDelay = const Duration(seconds: 2);
+  static const Duration _kMaxReconnectDelay = Duration(seconds: 30);
 
-  // ── lifecycle ──────────────────────────────────────────────────────────────
+  // ── Interaction suppression ────────────────────────────────────────────────
+
+  /// Tracks which blockId.parameter combos the user is currently editing.
+  /// While an entry is alive, incoming server echoes for that key are dropped.
+  final Map<String, Timer> _activeInteractions = <String, Timer>{};
+  static const Duration _kInteractionCooldown = Duration(milliseconds: 10000);
+
+  // ── Send debouncing ────────────────────────────────────────────────────────
+
+  final Map<String, ({Timer timer, dynamic value, int? dimension})> _pendingSends = <String, ({Timer timer, dynamic value, int? dimension})>{};
+  static const Duration _kSendDebounce = Duration(milliseconds: 150);
+  int _patchSeq = 0;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Lifecycle
+  // ═══════════════════════════════════════════════════════════════════════════
 
   @override
   Future<void> close() {
@@ -99,130 +123,130 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     _controlModeSubscription?.cancel();
     _heartbeatTimer?.cancel();
     _reconnectTimer?.cancel();
-    _cancelWebsocket();
+    _cancelAllPendingPings();
+    _teardownSocket();
     return super.close();
   }
 
-  // ── app lifecycle ──────────────────────────────────────────────────────────
+  // ── App lifecycle ──────────────────────────────────────────────────────────
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
     switch (lifecycleState) {
       case AppLifecycleState.resumed:
-        debugPrint('[BlockData] App resumed — checking connection…');
         _onAppResumed();
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
-        // Stop the heartbeat while backgrounded to save resources.
+        // Pause the heartbeat while backgrounded — saves resources and avoids
+        // a spurious reconnect if iOS suspends mid-ping.
         _heartbeatTimer?.cancel();
         _heartbeatTimer = null;
     }
   }
 
-  /// Called when the app returns to the foreground. Forces a fresh connection
-  /// because WebSocket sockets often die silently during background.
+  /// Called when the app returns to the foreground.
+  ///
+  /// *** THE FIX ***
+  /// Old code called [_forceReconnect] unconditionally — destroying a
+  /// perfectly healthy socket every single time the user came back from
+  /// a brief lock-screen or notification check.
+  ///
+  /// New behaviour: send a ping. If the server responds with a pong within
+  /// [_kPingTimeout], the socket is healthy — just re-send the config
+  /// subscription to catch up on any missed updates and restart the heartbeat.
+  /// Only if the ping times out (socket died silently) do we reconnect.
   void _onAppResumed() {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     if (!vm.isInControlMode) return;
 
-    // Force a reconnect — the old socket is almost certainly stale after
-    // the app was backgrounded (even for a short time, let alone days).
-    _forceReconnect();
+    debugPrint('[BlockData] App resumed — verifying socket health…');
+    _verifyOrReconnect();
   }
 
-  // ── control-mode wiring ────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Control-mode wiring
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Called once from the constructor.
-  /// Taps into the [ProjectViewModel] Cubit stream and reacts whenever
-  /// [isInControlMode] changes value — no manual start/stop calls needed.
   void _attachControlModeListener() {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-
-    // Seed: react to whatever the current state already is.
     _onControlModeChanged(vm.isInControlMode);
-
-    // Watch ONLY isInControlMode — map extracts the field, distinct() ensures
-    // we only fire when it actually changes, ignoring all other state updates.
-    _controlModeSubscription = vm.stream.map((ProjectViewModelState s) => vm.isInControlMode).distinct().listen(_onControlModeChanged);
+    _controlModeSubscription = vm.stream.map((_) => vm.isInControlMode).distinct().listen(_onControlModeChanged);
   }
 
-  void _onControlModeChanged(bool isActive) {
-    if (isActive) {
+  void _onControlModeChanged(bool active) {
+    if (active) {
       startWebsocket();
     } else {
       stopWebsocket(reason: BlockDataInactiveReason.controlModeOff);
     }
   }
 
-  // ── public API ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Public API
+  // ═══════════════════════════════════════════════════════════════════════════
 
   void onProjectOpened() {
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (vm.isInControlMode) {
-      startWebsocket();
-    }
+    if (serviceLocator<ProjectViewModel>().isInControlMode) startWebsocket();
   }
 
   void onProjectClosed() {
     stopWebsocket(reason: BlockDataInactiveReason.projectClosed);
   }
 
-  /// Request a full config refresh by re-sending the subscription message.
+  /// Tear down and re-establish the subscription (e.g. after a project switch).
   void refreshSubscription() {
     stopWebsocket(reason: BlockDataInactiveReason.notStarted);
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (vm.isInControlMode) {
-      startWebsocket();
-    }
+    if (serviceLocator<ProjectViewModel>().isInControlMode) startWebsocket();
   }
 
-  // ── connection ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Connection — start
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> startWebsocket() async {
-    // Guard: do not double-subscribe or overlap with an in-flight connect.
-    if (_webSocketSubscription != null || _isConnecting) return;
+    // Only start from a clean disconnected state — all other states mean
+    // work is already in progress (connecting, connected, or verifying).
+    if (_wsState != _WsState.disconnected) return;
 
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _intentionallyStopped = false;
-    _isConnecting = true;
+    _wsState = _WsState.connecting;
 
     final String? virtualIP = serviceLocator<ProjectViewModel>().virtualIP;
     if (virtualIP == null || virtualIP.isEmpty) {
-      FusionLogger.log(tag: LogTag.dspConfig, message: '[BlockData] Cannot start WebSocket: virtualIP is null or empty');
-      _isConnecting = false;
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: '[BlockData] Cannot start WebSocket: virtualIP is null/empty',
+      );
+      _wsState = _WsState.disconnected;
       return;
     }
 
     final String wsHost = virtualIP.contains(':') ? virtualIP : '$virtualIP:8080';
     final String wsUrl = 'ws://$wsHost/ws';
-    debugPrint('[BlockData] Starting WebSocket to $wsUrl…');
+    debugPrint('[BlockData] Connecting to $wsUrl…');
 
     try {
-      final ResponseCallback<dynamic> connectResponse = await _networkClient.connectWebSocket(url: wsUrl);
-      if (!connectResponse.success) {
-        // await _networkClient.sendWebSocketMessage(<String, Object>{"id": "config-001", "version": 1, "type": "config"});
-        debugPrint('[BlockData] Connect failed: ${connectResponse.message}');
-        _isConnecting = false;
+      final ResponseCallback<dynamic> result = await _networkClient.connectWebSocket(url: wsUrl);
+      if (!result.success) {
+        debugPrint('[BlockData] Connect failed: ${result.message}');
+        _wsState = _WsState.disconnected;
         _scheduleReconnect();
         return;
       }
     } catch (e) {
       debugPrint('[BlockData] Connect exception: $e');
-      _isConnecting = false;
+      _wsState = _WsState.disconnected;
       _scheduleReconnect();
       return;
     }
 
-    // Send the config subscription message to start receiving updates.
-    _sendConfigSubscription();
-
-    _lastDataReceivedAt = DateTime.now();
-
-    // Listen to incoming WebSocket messages.
-    _webSocketSubscription = _networkClient.webSocketMessages.listen(
+    // Attach stream listener BEFORE sending the subscription so we can
+    // never miss the first config push.
+    _wsSubscription = _networkClient.webSocketMessages.listen(
       _onDataReceived,
       onError: (dynamic error) {
         debugPrint('[BlockData] Stream error: $error');
@@ -235,195 +259,349 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
       cancelOnError: false,
     );
 
-    // Reset backoff on successful connection.
+    _sendConfigSubscription();
+
+    // Reset backoff — we succeeded.
     _reconnectDelay = const Duration(seconds: 2);
-    _isConnecting = false;
+    _wsState = _WsState.connected;
 
-    emit(state.copyWith(isConnected: true, clearInactiveReason: true));
+    if (!isClosed) {
+      emit(state.copyWith(isConnected: true, clearInactiveReason: true));
+    }
 
-    // Start the heartbeat checker to detect silent disconnects.
     _startHeartbeat();
+    debugPrint('[BlockData] WebSocket connected.');
   }
 
-  /// Sends the config subscription message so the server starts pushing
-  /// configuration updates (including `settings.audio` block data).
-  void _sendConfigSubscription() {
-    _networkClient.sendWebSocketMessage(_configSubscriptionMessage);
-    debugPrint('[BlockData] Sent config subscription message');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Liveness verification (ping / pong)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Verify whether the current socket is still alive without closing it.
+  ///
+  /// • If the socket is already disconnected → call [startWebsocket].
+  /// • If a connect/verify is already in progress → no-op (guard clause).
+  /// • If connected → send a ping, await pong:
+  ///     - pong received within timeout → re-subscribe + restart heartbeat.
+  ///     - ping timed out              → socket is dead, force reconnect.
+  Future<void> _verifyOrReconnect() async {
+    switch (_wsState) {
+      case _WsState.disconnected:
+        await startWebsocket();
+        return;
+      case _WsState.connecting:
+      case _WsState.verifying:
+        // Already transitioning — do not pile on.
+        return;
+      case _WsState.connected:
+        break; // Fall through to the ping logic.
+    }
+
+    _wsState = _WsState.verifying;
+    debugPrint('[BlockData] Sending liveness ping…');
+
+    final bool alive = await _sendPing();
+
+    // Guard: could have been stopped or closed while we awaited the ping.
+    if (isClosed || _intentionallyStopped) return;
+
+    if (alive) {
+      debugPrint('[BlockData] Pong received — socket healthy, re-subscribing.');
+      _wsState = _WsState.connected;
+      // Re-send subscription to catch up on any data missed while backgrounded.
+      _sendConfigSubscription();
+      // Restart the heartbeat timer (it was paused while backgrounded).
+      _startHeartbeat();
+    } else {
+      debugPrint('[BlockData] Ping timed out — socket is dead, reconnecting…');
+      _wsState = _WsState.disconnected;
+      _forceReconnect();
+    }
   }
 
-  /// Handles every message arriving from the WebSocket stream.
+  // ── Ping send ──────────────────────────────────────────────────────────────
+
+  /// Sends a ping message and returns a [Future] that resolves to:
+  ///   • `true`  — pong arrived within [_kPingTimeout].
+  ///   • `false` — no pong (socket silent or dead) OR socket not connected.
+  Future<bool> _sendPing() async {
+    // If the underlying socket is gone there is nothing to ping.
+    if (!_networkClient.webSocketService.isConnected) return false;
+
+    final String id = 'ping-${++_pingSeq}';
+    final Completer<bool> completer = Completer<bool>();
+    _pendingPings[id] = completer;
+
+    // Safety timeout — completes the future with false if no pong arrives.
+    Timer? timeoutTimer;
+    timeoutTimer = Timer(_kPingTimeout, () {
+      if (!completer.isCompleted) {
+        debugPrint('[BlockData] Ping $id timed out after ${_kPingTimeout.inSeconds}s');
+        _pendingPings.remove(id);
+        completer.complete(false);
+      }
+      timeoutTimer?.cancel();
+    });
+
+    _networkClient.sendWebSocketMessage(
+      <String, dynamic>{'id': id, 'version': 1, 'type': 'ping'},
+    );
+
+    final bool result = await completer.future;
+    timeoutTimer.cancel();
+    return result;
+  }
+
+  /// Resolves the Completer waiting for this pong message, if any.
+  void _handlePong(Map<String, dynamic> message) {
+    final String? id = message['id'] as String?;
+    if (id == null) return;
+    final Completer<bool>? completer = _pendingPings.remove(id);
+    if (completer != null && !completer.isCompleted) {
+      debugPrint('[BlockData] Pong received for $id');
+      completer.complete(true);
+    }
+  }
+
+  /// Cancels all in-flight pings, completing their futures with [false].
+  /// Called when the socket is being torn down so no caller hangs forever.
+  void _cancelAllPendingPings() {
+    for (final Completer<bool> c in _pendingPings.values) {
+      if (!c.isCompleted) c.complete(false);
+    }
+    _pendingPings.clear();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Heartbeat
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(_kHeartbeatInterval, (_) => _onHeartbeatTick());
+  }
+
+  /// On each heartbeat tick, verify liveness via ping/pong.
+  /// This also serves as a periodic config keepalive — [_verifyOrReconnect]
+  /// re-sends the subscription message on a successful pong.
+  Future<void> _onHeartbeatTick() async {
+    if (_intentionallyStopped || isClosed) return;
+    await _verifyOrReconnect();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Incoming data
+  // ═══════════════════════════════════════════════════════════════════════════
+
   void _onDataReceived(ResponseCallback<dynamic> message) {
-    _lastDataReceivedAt = DateTime.now();
+    if (!message.success || message.data == null) {
+      debugPrint('[BlockData] Message dropped (success=${message.success}, data=${message.data})');
+      return;
+    }
+
+    // Tolerate Map<dynamic, dynamic> (sometimes produced by nested decoding paths).
+    final Map<String, dynamic>? rawData = _asStringKeyedMap(message.data);
+    if (rawData == null) {
+      debugPrint('[BlockData] Message dropped — not a map: ${message.data.runtimeType}');
+      return;
+    }
+
+    final String? type = rawData['type'] as String?;
+
+    // ── Pong ──────────────────────────────────────────────────────────────
+    if (type == 'pong') {
+      _handlePong(rawData);
+      return;
+    }
+
+    // ── Config data ────────────────────────────────────────────────────────
+    if (type != 'config' && type != 'config_update') {
+      debugPrint('[BlockData] Message dropped — unhandled type: "$type"');
+      return;
+    }
+
+    // Receiving config data proves the socket is alive; snap back to connected
+    // in case we somehow received data during a verifying window.
+    if (_wsState == _WsState.verifying) {
+      _wsState = _WsState.connected;
+    }
 
     if (!state.isConnected && !isClosed) {
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));
     }
 
-    if (!message.success || message.data == null) return;
-
     try {
-      final dynamic rawData = message.data;
-      if (rawData is! Map<String, dynamic>) return;
+      final Map<String, dynamic>? data = _asStringKeyedMap(rawData['data']);
 
-      final String? type = rawData['type'] as String?;
-      if (type != 'config' && type != 'config_update') return;
+      // Two payload shapes are produced by the server:
+      //
+      // 1. Initial 'config' snapshot:
+      //      data: { settings: { audio: { <blockId>: {...} } } }
+      //
+      // 2. Incremental 'config_update' (mode == 'patch'):
+      //      data: {
+      //        mode: 'patch',
+      //        updates: {
+      //          _fusion_epoch: ..., _fusion_msg_id: ..., _fusion_version: ...,
+      //          settings: { audio: { <blockId>: {...} } }
+      //        }
+      //      }
+      //
+      // Look in both locations so we handle either case.
+      final Map<String, dynamic>? updates = _asStringKeyedMap(data?['updates']);
+      final Map<String, dynamic>? settings = _asStringKeyedMap(data?['settings']) ?? _asStringKeyedMap(updates?['settings']);
+      final Map<String, dynamic>? audio = _asStringKeyedMap(settings?['audio']);
 
-      final Map<String, dynamic>? data = rawData['data'] as Map<String, dynamic>?;
-      final Map<String, dynamic>? settings = data?['settings'] as Map<String, dynamic>?;
-      final Map<String, dynamic>? audio = settings?['audio'] as Map<String, dynamic>?;
-      if (audio == null) return;
+      if (audio == null) {
+        debugPrint(
+          '[BlockData] No audio payload found. type=$type '
+          'dataKeys=${data?.keys.toList()} '
+          'updatesKeys=${updates?.keys.toList()} '
+          'settingsKeys=${settings?.keys.toList()}',
+        );
+        return;
+      }
 
-      final Map<String, Map<String, dynamic>> updatedBlockData = Map<String, Map<String, dynamic>>.from(state.allBlockData);
+      final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData);
       bool anyAccepted = false;
 
       audio.forEach((String blockId, dynamic value) {
-        if (value is! Map<String, dynamic>) return;
+        final Map<String, dynamic>? blockMap = _asStringKeyedMap(value);
+        if (blockMap == null) {
+          debugPrint('[BlockData] Skipping $blockId — value is not a map (${value.runtimeType})');
+          return;
+        }
 
-        // Merge server data, but only apply to UI for params the user
-        // is NOT actively interacting with.
         final Map<String, dynamic> merged = Map<String, dynamic>.from(
-          updatedBlockData[blockId] ?? <String, dynamic>{},
+          updated[blockId] ?? <String, dynamic>{},
         );
+        bool blockAccepted = false;
 
-        bool blockHadAcceptedParam = false;
-        value.forEach((String param, dynamic paramValue) {
+        blockMap.forEach((String param, dynamic paramValue) {
           final String key = '$blockId.$param';
           if (_activeInteractions.containsKey(key)) {
-            // User is still interacting — keep our optimistic value, discard server echo.
-            debugPrint('[BlockData] Suppressing server echo for $key (interaction active)');
+            // User is still editing this control — suppress the server echo.
+            debugPrint('[BlockData] Suppressing server echo for $key');
           } else {
             merged[param] = paramValue;
-            blockHadAcceptedParam = true;
+            blockAccepted = true;
           }
         });
 
-        updatedBlockData[blockId] = merged;
-        if (blockHadAcceptedParam) anyAccepted = true;
+        updated[blockId] = merged;
+        if (blockAccepted) anyAccepted = true;
       });
 
       if (anyAccepted && !isClosed) {
+        // debugPrint('[BlockData] Emitting update for blocks: ${audio.keys.toList()}');
         emit(
           state.copyWith(
-            allBlockData: updatedBlockData,
+            allBlockData: updated,
             isConnected: true,
             clearInactiveReason: true,
           ),
         );
+      } else {
+        debugPrint('[BlockData] No block accepted (all suppressed or empty)');
       }
-    } catch (e) {
-      debugPrint('[BlockData] Parse error: $e');
+    } catch (e, st) {
+      debugPrint('[BlockData] Parse error: $e\n$st');
     }
   }
 
-  // ── heartbeat (stale-connection detection) ─────────────────────────────────
-
-  void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      _checkLiveness();
-    });
-  }
-
-  /// Checks whether data has been received within [_staleThreshold].
-  /// Also re-sends the config subscription message as a keepalive so the
-  /// server knows we're still listening.
-  void _checkLiveness() {
-    if (_intentionallyStopped || isClosed) return;
-
-    // Re-send the subscription as a keepalive / data refresh.
-    if (_networkClient.webSocketService.isConnected) {
-      _sendConfigSubscription();
-    }
-
-    if (_lastDataReceivedAt == null) return;
-
-    final Duration elapsed = DateTime.now().difference(_lastDataReceivedAt!);
-    if (elapsed > _staleThreshold) {
-      debugPrint(
-        '[BlockData] No data for ${elapsed.inSeconds}s — treating as stale, reconnecting…',
+  /// Defensively coerces a `dynamic` JSON value into a `Map<String, dynamic>`.
+  ///
+  /// `jsonDecode` in Dart normally produces `Map<String, dynamic>`, but values
+  /// coming from FFI bridges, `Map.from` / spreads, or platform channels can
+  /// arrive as `Map<dynamic, dynamic>` or `Map<Object?, Object?>`. A direct
+  /// `as Map<String, dynamic>` cast on those throws / returns null and the
+  /// payload is silently dropped — which is exactly the symptom reported.
+  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map<String, dynamic>(
+        (dynamic k, dynamic v) => MapEntry<String, dynamic>(k.toString(), v),
       );
-      _forceReconnect();
     }
+    return null;
   }
 
-  // ── reconnection ──────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Reconnect
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Tears down the current connection unconditionally and starts a fresh one.
+  /// Unconditionally tear down and restart the socket.
+  /// Only called when a liveness ping times out — never on app resume alone.
   void _forceReconnect() {
-    _cancelWebsocket();
-    if (!isClosed) {
-      emit(state.copyWith(isConnected: false));
-    }
-    // Small delay to let the old socket fully release.
+    _cancelAllPendingPings();
+    _teardownSocket();
+    _wsState = _WsState.disconnected;
+    if (!isClosed) emit(state.copyWith(isConnected: false));
+
+    // Small delay to let the OS fully release the old socket FD.
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(milliseconds: 500), () {
-      if (isClosed) return;
+      if (isClosed || _intentionallyStopped) return;
       startWebsocket();
     });
   }
 
   void _handleUnexpectedDisconnect() {
-    _cancelWebsocket();
-    if (!isClosed) {
-      emit(state.copyWith(isConnected: false));
-    }
-
-    if (!_intentionallyStopped) {
-      _scheduleReconnect();
-    }
+    _cancelAllPendingPings();
+    _teardownSocket();
+    _wsState = _WsState.disconnected;
+    if (!isClosed) emit(state.copyWith(isConnected: false));
+    if (!_intentionallyStopped) _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive ?? false) return;
     if (isClosed) return;
-
-    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
-    if (!vm.isInControlMode) return;
+    if (!serviceLocator<ProjectViewModel>().isInControlMode) return;
 
     debugPrint(
-      '[BlockData] Scheduling reconnect in ${_reconnectDelay.inSeconds}s…',
+      '[BlockData] Reconnecting in ${_reconnectDelay.inSeconds}s '
+      '(backoff: ${_reconnectDelay.inMilliseconds}ms)…',
     );
 
     _reconnectTimer = Timer(_reconnectDelay, () {
-      if (isClosed) return;
-      // Exponential backoff capped at _maxReconnectDelay.
+      if (isClosed || _intentionallyStopped) return;
+      // Double the delay for the next failure, capped at [_kMaxReconnectDelay].
       _reconnectDelay = Duration(
-        milliseconds: (_reconnectDelay.inMilliseconds * 2).clamp(
-          0,
-          _maxReconnectDelay.inMilliseconds,
-        ),
+        milliseconds: (_reconnectDelay.inMilliseconds * 2).clamp(0, _kMaxReconnectDelay.inMilliseconds),
       );
       startWebsocket();
     });
   }
 
-  // ── teardown ───────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Teardown
+  // ═══════════════════════════════════════════════════════════════════════════
 
+  /// Intentional stop — clears all state, emits inactive.
   void stopWebsocket({required BlockDataInactiveReason reason}) {
     debugPrint('[BlockData] Stopping WebSocket — reason: $reason');
     _intentionallyStopped = true;
+    _wsState = _WsState.disconnected;
+
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
     _reconnectDelay = const Duration(seconds: 2);
-    _lastDataReceivedAt = null;
 
-    // Clean up new maps
-    for (final Timer e in _activeInteractions.values) {
-      e.cancel();
-    }
+    _cancelAllPendingPings();
+
+    for (final Timer t in _activeInteractions.values) t.cancel();
     _activeInteractions.clear();
-    for (final dynamic e in _pendingSends.values) {
+    for (final ({Timer timer, dynamic value, int? dimension}) e in _pendingSends.values) {
       e.timer.cancel();
     }
     _pendingSends.clear();
 
-    // Remove old in-flight map (no longer needed)
-    // _inFlightBlocks.clear();  ← delete _inFlightBlocks entirely
+    _teardownSocket();
 
-    _cancelWebsocket();
     emit(
       BlockDataState(
         allBlockData: const <String, Map<String, dynamic>>{},
@@ -433,206 +611,298 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
     );
   }
 
-  void _cancelWebsocket() {
-    _isConnecting = false;
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
-    _webSocketSubscription?.cancel();
-    _webSocketSubscription = null;
-    // Fire-and-forget: disconnect is best-effort cleanup.
+  /// Low-level socket cleanup — cancels the stream subscription and
+  /// disconnects the underlying WebSocket. Does NOT update [_wsState] —
+  /// the caller owns that.
+  void _teardownSocket() {
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
     _networkClient.disconnectWebSocket();
   }
 
-  // ── REST-based block data (fallback / on-demand) ───────────────────────────
+  // ── Config subscription ────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> getBlockData({required String blockId}) async {
-    // Prefer WebSocket-supplied data if available.
+  void _sendConfigSubscription() {
+    _networkClient.sendWebSocketMessage(_kConfigSub);
+    debugPrint('[BlockData] Sent config subscription');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REST fallback / on-demand block data
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>?> getBlockData({
+    required String blockId,
+  }) async {
+    // Prefer WebSocket-supplied data when fresh.
     final Map<String, dynamic>? wsData = state.allBlockData[blockId];
     if (wsData != null && wsData.isNotEmpty) {
       emit(state.copyWith(blockId: blockId, blockData: wsData));
       return wsData;
     }
 
-    // Fallback to REST API.
+    // Fallback to REST.
     try {
       final ResponseCallback<Map<String, dynamic>?> response = await _networkClient.get(
         api: FusionApiEndpoint.fusionValue,
         isSecure: false,
         baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
-        urlParameters: <String, dynamic>{
-          "key": "settings.audio.$blockId",
-        },
+        urlParameters: <String, dynamic>{'key': 'settings.audio.$blockId'},
       );
+
       if (response.success && response.data != null) {
-        try {
-          final Map<String, dynamic> blockData = response.data!;
-          if (blockData["exists"] == true) {
-            final Map<String, dynamic> currentValue = blockData["value"] as Map<String, dynamic>;
-            // Merge into allBlockData so subsequent callers get it from cache.
-            final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData);
-            updated[blockId] = currentValue;
-            emit(state.copyWith(blockId: blockId, blockData: currentValue, allBlockData: updated));
-            return currentValue;
-          }
-        } catch (ex) {
-          FusionLogger.log(tag: LogTag.dspConfig, message: "Error parsing block data for $blockId: $ex");
+        final Map<String, dynamic> body = response.data!;
+        if (body['exists'] == true) {
+          final Map<String, dynamic> currentValue = body['value'] as Map<String, dynamic>;
+          final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData)..[blockId] = currentValue;
+          emit(
+            state.copyWith(
+              blockId: blockId,
+              blockData: currentValue,
+              allBlockData: updated,
+            ),
+          );
+          return currentValue;
         }
       } else {
-        FusionLogger.log(tag: LogTag.dspConfig, message: "Failed to fetch block data for $blockId: ${response.message}");
+        FusionLogger.log(
+          tag: LogTag.dspConfig,
+          message: '[BlockData] REST fetch failed for $blockId: ${response.message}',
+        );
       }
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.dspConfig, message: "Error fetching block data for $blockId: $ex");
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: '[BlockData] REST fetch exception for $blockId: $ex',
+      );
     }
+
     return null;
   }
 
-  /// Counter used to generate unique request IDs for WebSocket patch messages.
-  int _patchRequestCounter = 0;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Parameter updates
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Future<void> updateBlockParameter({
     required String blockId,
     required String parameter,
     required dynamic value,
     int? dimension,
+    ProcessingBlockModel? processingBlock,
   }) async {
-    final String interactionKey = '$blockId.$parameter';
+    final String key = '$blockId.$parameter';
 
-    // 1. Write optimistically to local state immediately — UI stays snappy.
-    final Map<String, Map<String, dynamic>> optimistic = Map<String, Map<String, dynamic>>.from(state.allBlockData);
-    final Map<String, dynamic> blockCopy = Map<String, dynamic>.from(
-      optimistic[blockId] ?? <String, dynamic>{},
-    );
-    blockCopy[parameter] = value;
-    optimistic[blockId] = blockCopy;
+    // 1. Optimistic local write — UI feels instant.
+    final Map<String, Map<String, dynamic>> optimistic = Map<String, Map<String, dynamic>>.from(state.allBlockData)
+      ..[blockId] = <String, dynamic>{
+        ...state.allBlockData[blockId] ?? <String, dynamic>{},
+        parameter: value,
+      };
     if (!isClosed) emit(state.copyWith(allBlockData: optimistic));
 
-    // 2. Mark this param as "user is interacting" — resets on every call.
-    _activeInteractions[interactionKey]?.cancel();
-    _activeInteractions[interactionKey] = Timer(_interactionCooldown, () {
-      _activeInteractions.remove(interactionKey);
-      debugPrint('[BlockData] Interaction released for $interactionKey');
+    // 2. Mark interaction — suppresses echo from server for [_kInteractionCooldown].
+    _activeInteractions[key]?.cancel();
+    _activeInteractions[key] = Timer(_kInteractionCooldown, () {
+      _activeInteractions.remove(key);
+      debugPrint('[BlockData] Interaction released for $key');
     });
 
-    // 3. Debounce the actual network send — only fires after user pauses.
-    _pendingSends[interactionKey]?.timer.cancel();
-    _pendingSends[interactionKey] = (
+    // 3. Debounce the network send — coalesces rapid slider movements.
+    _pendingSends[key]?.timer.cancel();
+    _pendingSends[key] = (
       value: value,
       dimension: dimension,
-      timer: Timer(_sendDebounce, () async {
-        _pendingSends.remove(interactionKey);
-        await _flushParameterUpdate(
-          blockId: blockId,
-          parameter: parameter,
-          value: value,
-          dimension: dimension,
-        );
+      timer: Timer(_kSendDebounce, () async {
+        _pendingSends.remove(key);
+        await _flushParameterUpdate(blockId: blockId, parameter: parameter, value: value, dimension: dimension, processingBlock: processingBlock);
       }),
     );
   }
 
-  /// The actual network call — called after debounce settles.
-  Future<void> _flushParameterUpdate({
+  /// Direct REST update (use when WebSocket is intentionally bypassed).
+  Future<void> updateBlockParameterViaAPi({
     required String blockId,
     required String parameter,
     required dynamic value,
     int? dimension,
   }) async {
     try {
-      final Map<String, dynamic> dataPayload =
+      final Map<String, dynamic> payload =
           dimension == null
               ? <String, dynamic>{
-                "settings": <String, dynamic>{
-                  "audio": <String, dynamic>{
+                'settings': <String, dynamic>{
+                  'audio': <String, dynamic>{
+                    blockId: <String, dynamic>{parameter: value},
+                  },
+                },
+              }
+              : <String, dynamic>{'value': value};
+
+      final ResponseCallback<dynamic> response = await _networkClient.patch(
+        api: FusionApiEndpoint.fusionValue,
+        isSecure: false,
+        urlParameters:
+            dimension != null
+                ? <String, dynamic>{
+                  'key': 'settings.audio.$blockId.$parameter[$dimension]',
+                }
+                : null,
+        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
+        data: payload,
+      );
+
+      if (!response.success) {
+        FusionLogger.log(
+          tag: LogTag.dspConfig,
+          message: '[BlockData] REST patch failed for $blockId.$parameter: ${response.message}',
+        );
+      }
+    } catch (ex) {
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: '[BlockData] REST patch exception for $blockId.$parameter: $ex',
+      );
+    }
+  }
+
+  /// Sends the actual network update after the debounce settles.
+  ///
+  /// Preference order:
+  ///   1. WebSocket [patch_config] — lowest latency, only when the connection
+  ///      is FULLY CONFIRMED healthy (_wsState == connected, i.e. a prior pong
+  ///      has been received).
+  ///   2. REST PATCH — used in every other state:
+  ///      • verifying  — a ping is in flight; the socket might be dead. Sending
+  ///        a patch on a potentially-dead socket and having the ping subsequently
+  ///        time out means the patch is silently lost with no retry.
+  ///      • connecting — socket handshake still in progress.
+  ///      • disconnected — no socket.
+  ///      REST guarantees delivery in all three cases.
+  ///
+  /// Does NOT attempt to reconnect the socket here — that is the responsibility
+  /// of the heartbeat / disconnect handler. Mixing reconnect logic into the
+  /// hot update path causes race conditions.
+  Future<void> _flushParameterUpdate({
+    required String blockId,
+    required String parameter,
+    required dynamic value,
+    int? dimension,
+    ProcessingBlockModel? processingBlock,
+  }) async {
+    try {
+      final Map<String, dynamic> audioPayload =
+          dimension == null
+              ? <String, dynamic>{
+                'settings': <String, dynamic>{
+                  'audio': <String, dynamic>{
                     blockId: <String, dynamic>{parameter: value},
                   },
                 },
               }
               : <String, dynamic>{
-                "settings": <String, dynamic>{
-                  "audio": <String, dynamic>{
+                'settings': <String, dynamic>{
+                  'audio': <String, dynamic>{
                     blockId: <String, dynamic>{
-                      parameter: _buildDimensionList(value, dimension),
+                      parameter: _buildDimensionList(value, dimension, parameter, processingBlock),
                     },
                   },
                 },
               };
 
-      if (_networkClient.webSocketService.isConnected) {
-        _sendPatchConfig(dataPayload);
-      } else {
-        await _ensureWebSocketConnected();
-        if (_networkClient.webSocketService.isConnected) {
-          _sendPatchConfig(dataPayload);
-        } else {
-          final ResponseCallback<dynamic> response = await _networkClient.patch(
-            api: FusionApiEndpoint.fusionValue,
-            isSecure: false,
-            urlParameters: dimension != null ? <String, dynamic>{"key": "settings.audio.$blockId.$parameter[$dimension]"} : null,
-            baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
-            data: dimension != null ? <String, dynamic>{"value": value} : dataPayload,
-          );
-          if (!response.success) {
-            FusionLogger.log(
-              tag: LogTag.dspConfig,
-              message: "Failed to update $blockId.$parameter: ${response.message}",
-            );
-          }
-        }
+      // IMPORTANT: check _wsState, NOT just the underlying isConnected flag.
+      //
+      // During 'verifying', the physical socket is still open so isConnected
+      // returns true — but we have not yet received a pong confirming the
+      // socket is alive. If the ping subsequently times out, _forceReconnect
+      // tears the socket down and any message sent in this window is dropped
+      // with no retry. REST is reliable; use it whenever we are not in the
+      // fully-confirmed 'connected' state.
+      final bool socketConfirmedHealthy = _wsState == _WsState.connected && _networkClient.webSocketService.isConnected;
+
+      if (socketConfirmedHealthy) {
+        _sendPatchConfig(audioPayload);
+        return;
       }
+
+      // Socket uncertain or unavailable — fall back to REST.
+      await _restPatch(
+        blockId: blockId,
+        parameter: parameter,
+        value: value,
+        dimension: dimension,
+        audioPayload: audioPayload,
+      );
     } catch (ex) {
       FusionLogger.log(
         tag: LogTag.dspConfig,
-        message: "Error updating $blockId.$parameter: $ex",
+        message: '[BlockData] Flush error for $blockId.$parameter: $ex',
       );
     }
   }
 
-  /// Sends a `patch_config` WebSocket message with the given data payload.
-  void _sendPatchConfig(Map<String, dynamic> dataPayload) {
-    _patchRequestCounter++;
-    final Map<String, dynamic> wsMessage = <String, dynamic>{
-      "id": "patch-$_patchRequestCounter",
-      "version": 1,
-      "type": "patch_config",
-      "data": dataPayload,
-    };
-    _networkClient.sendWebSocketMessage(wsMessage);
+  void _sendPatchConfig(Map<String, dynamic> data) {
+    _networkClient.sendWebSocketMessage(<String, dynamic>{
+      'id': 'patch-${++_patchSeq}',
+      'version': 1,
+      'type': 'patch_config',
+      'data': data,
+    });
   }
 
-  /// Tries to establish a WebSocket connection if not already connected.
-  /// Awaits a short delay to allow the connection handshake to complete.
-  Future<void> _ensureWebSocketConnected() async {
-    if (_networkClient.webSocketService.isConnected) return;
-
-    final String? virtualIP = serviceLocator<ProjectViewModel>().virtualIP;
-    if (virtualIP == null || virtualIP.isEmpty) return;
-
-    final String wsHost = virtualIP.contains(':') ? virtualIP : '$virtualIP:8080';
-    final String wsUrl = 'ws://$wsHost/ws';
-
-    try {
-      await _networkClient.connectWebSocket(url: wsUrl);
-      // Give the handshake a moment to complete.
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-
-      if (_networkClient.webSocketService.isConnected) {
-        // Re-subscribe for config updates on the fresh connection.
-        _sendConfigSubscription();
-        // If there's no active listener yet, start one.
-        if (_webSocketSubscription == null) {
-          await startWebsocket();
-        }
-      }
-    } catch (e) {
-      debugPrint('[BlockData] _ensureWebSocketConnected failed: $e');
+  Future<void> _restPatch({
+    required String blockId,
+    required String parameter,
+    required dynamic value,
+    required int? dimension,
+    required Map<String, dynamic> audioPayload,
+  }) async {
+    final ResponseCallback<dynamic> response = await _networkClient.patch(
+      api: FusionApiEndpoint.fusionValue,
+      isSecure: false,
+      urlParameters:
+          dimension != null
+              ? <String, dynamic>{
+                'key': 'settings.audio.$blockId.$parameter[$dimension]',
+              }
+              : null,
+      baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
+      data: dimension != null ? <String, dynamic>{'value': value} : audioPayload,
+    );
+    if (!response.success) {
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: '[BlockData] REST patch fallback failed for $blockId.$parameter: ${response.message}',
+      );
     }
   }
 
-  /// Builds a sparse list with [value] at [dimension] index and null elsewhere,
-  /// used when updating a single dimension of an array parameter.
-  List<dynamic> _buildDimensionList(dynamic value, int dimension) {
-    final List<dynamic> list = List<dynamic>.filled(dimension + 1, null);
-    list[dimension] = value;
-    return list;
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Builds a sparse list so a single array dimension can be patched without
+  /// overwriting sibling dimensions on the server.
+  List<dynamic> _buildDimensionList(dynamic value, int dimension, String param, ProcessingBlockModel? processingBlock) {
+    if (processingBlock == null) {
+      return List<dynamic>.filled(dimension + 1, null)..[dimension] = value;
+    }
+
+    final List<PropertySetting> existingProps = processingBlock.properties.where((PropertySetting val) => val.name == param && val.dimension != null).toList();
+
+    final List<dynamic> valueList = <dynamic>[];
+    for (final PropertySetting property in existingProps) {
+      final int index = property.dimension!;
+      if (valueList.length <= index) {
+        valueList.addAll(List<dynamic>.filled(index - valueList.length + 1, null));
+      }
+      valueList[index] = property.value;
+    }
+
+    // Ensure the list is large enough to hold the new value at [dimension].
+    if (valueList.length <= dimension) {
+      valueList.addAll(List<dynamic>.filled(dimension - valueList.length + 1, null));
+    }
+    valueList[dimension] = value;
+
+    return valueList;
   }
 }

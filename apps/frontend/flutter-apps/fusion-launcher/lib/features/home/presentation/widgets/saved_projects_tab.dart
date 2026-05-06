@@ -534,10 +534,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                         child: ProjectCard(
                                           index: index,
                                           projectData: project,
-                                          onDelete:
-                                              () => serviceLocator<ProjectSyncViewModel>().deleteProject(
-                                                projectId: project.id,
-                                              ),
+                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
                                         ),
                                       ),
                                     );
@@ -910,6 +907,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
             maxLines: widget.maxLines,
             enabled: widget.isEnabled,
             obscureText: isObscured,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             inputFormatters: widget.inputFormatters,
             style: context.textTheme.labelLarge?.copyWith(
               color: context.colorScheme.textPrimary,

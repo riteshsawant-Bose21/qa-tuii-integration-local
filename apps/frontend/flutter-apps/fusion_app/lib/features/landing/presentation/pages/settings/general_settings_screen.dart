@@ -19,7 +19,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: const CommonAppBar(title: 'General'),
+        appBar: const CommonMobileAppBar(title: 'General'),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(

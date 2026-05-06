@@ -104,7 +104,9 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 
 	buf := make([]byte, 65535)
 	for _, node := range nodes {
-		if err := sendUDPJSON(node.listener, node.udpAddr, map[string]any{"action": "get"}); err != nil {
+		// Any UDP request registers the client. Use a lightweight no_op so the
+		// handshake does not depend on a full-state UDP response fitting in one datagram.
+		if err := sendUDPJSON(node.listener, node.udpAddr, map[string]any{"action": "no_op"}); err != nil {
 			t.Fatalf("register udp observer on %s: %v", node.name, err)
 		}
 		_ = node.listener.SetReadDeadline(time.Now().Add(2 * time.Second))
@@ -135,17 +137,23 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 	}
 
 	const (
-		iterations                 = 180
-		processingDelay            = 20 * time.Millisecond
-		lagFailureThreshold        = 1500 * time.Millisecond
-		pendingFailureThreshold    = 120
-		pendingAgeFailureThreshold = 5 * time.Second
-		allowedMissesPerNode       = 1
+		iterations                      = 180
+		patchInterval                   = 5 * time.Millisecond
+		lagFailureThreshold             = 500 * time.Millisecond
+		pendingFailureThreshold         = 25
+		pendingAgeFailureThreshold      = 1500 * time.Millisecond
+		allowedMissesPerNode            = 1
+		reproducedLagFailureThreshold   = 1500 * time.Millisecond
+		reproducedPendingThreshold      = 120
+		reproducedPendingAgeFailureTime = 5 * time.Second
 	)
+	expectLagReproduction := os.Getenv("FUSION_UDP_EXPECT_LAG_REPRODUCTION") == "1"
 
 	patchDone := make(chan error, 1)
 	go func() {
 		client := &http.Client{Timeout: 3 * time.Second}
+		ticker := time.NewTicker(patchInterval)
+		defer ticker.Stop()
 		for i := 1; i <= iterations; i++ {
 			if err := patchJSON(
 				client,
@@ -154,6 +162,9 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 			); err != nil {
 				patchDone <- fmt.Errorf("patch iteration %d: %w", i, err)
 				return
+			}
+			if i < iterations {
+				<-ticker.C
 			}
 		}
 		patchDone <- nil
@@ -229,7 +240,6 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 				)
 			}
 		}
-		time.Sleep(processingDelay)
 	}
 
 	if err := <-patchDone; err != nil {
@@ -260,13 +270,37 @@ func TestFusionUDP_ObserverLatencyDiagnostic(t *testing.T) {
 				node.after.OldestPendingAgeMs,
 			))
 		}
-		if node.maxLag >= lagFailureThreshold ||
-			node.maxPending >= pendingFailureThreshold ||
-			time.Duration(node.maxPendingAge)*time.Millisecond >= pendingAgeFailureThreshold {
+		if node.maxLag >= reproducedLagFailureThreshold ||
+			node.maxPending >= reproducedPendingThreshold ||
+			time.Duration(node.maxPendingAge)*time.Millisecond >= reproducedPendingAgeFailureTime {
 			reproduced = true
 		}
+		if node.maxLag >= lagFailureThreshold {
+			failures = append(failures, fmt.Sprintf(
+				"%s exceeded max lag threshold: lag=%s threshold=%s",
+				node.name,
+				node.maxLag.Round(time.Millisecond),
+				lagFailureThreshold,
+			))
+		}
+		if node.maxPending >= pendingFailureThreshold {
+			failures = append(failures, fmt.Sprintf(
+				"%s exceeded max pending threshold: pending=%d threshold=%d",
+				node.name,
+				node.maxPending,
+				pendingFailureThreshold,
+			))
+		}
+		if time.Duration(node.maxPendingAge)*time.Millisecond >= pendingAgeFailureThreshold {
+			failures = append(failures, fmt.Sprintf(
+				"%s exceeded max pending age threshold: age=%dms threshold=%dms",
+				node.name,
+				node.maxPendingAge,
+				pendingAgeFailureThreshold.Milliseconds(),
+			))
+		}
 	}
-	if !reproduced {
+	if expectLagReproduction && !reproduced {
 		failures = append(failures, "observer latency diagnostic did not reproduce enough lag on any node")
 	}
 	if len(failures) > 0 {

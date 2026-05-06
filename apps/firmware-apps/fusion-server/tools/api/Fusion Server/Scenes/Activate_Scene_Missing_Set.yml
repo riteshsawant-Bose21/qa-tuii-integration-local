@@ -1,0 +1,26 @@
+info:
+  name: Activate Scene Missing Set
+  type: http
+  seq: 13
+
+http:
+  method: POST
+  url: "{{api_url}}/scene-sets/activate"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "set_id": "missing-set",
+        "scene_id": "scene-morning-01"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Negative-path test. Scene set id does not exist.

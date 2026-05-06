@@ -413,7 +413,12 @@ class _ZoneCardState extends State<ZoneCard> {
 
     return Visibility(
       visible: existingFunction?.hasPriority ?? false,
-      child: Row(
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          "priority$priorityIndex",
+        ),
+        child: Row(
         children: <Widget>[
           Expanded(
             child: DragTarget<Source>(
@@ -612,6 +617,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       children: <Widget>[
                         Expanded(
                           child: FusionAppText(
+                            semanticId: 'priority_${priorityIndex}_source_name',
                             text: selectedSource ?? 'Select',
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -632,6 +638,7 @@ class _ZoneCardState extends State<ZoneCard> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: FusionAppText(
+                            semanticId: 'priority_${priorityIndex}_status_patch',
                             text: 'P$priorityIndex',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
@@ -676,6 +683,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     : null,
           ),
         ],
+      ),
       ),
     );
   }
@@ -1120,6 +1128,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
+                        semanticId: 'sources_selected',
                         text: hasSelection ? 'Selected' : 'Select sources',
                         maxLine: 1,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(

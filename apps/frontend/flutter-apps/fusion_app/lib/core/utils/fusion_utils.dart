@@ -368,7 +368,7 @@ Status Code: ${statusCode ?? 'None'}
   static void showFeedbackWebView(BuildContext context)  {
      Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => const Column(),
+        builder: (BuildContext context) => const FeedbackWebView(),
         fullscreenDialog: true,
       ),
     );

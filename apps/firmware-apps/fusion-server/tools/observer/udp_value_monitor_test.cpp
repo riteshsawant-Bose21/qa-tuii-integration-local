@@ -8,12 +8,41 @@
 #include <gtest/gtest.h>
 #include <mutex>
 #include <sstream>
+#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 
 namespace {
 int reserveUDPPort() {
   int sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock == -1) {
+    return -1;
+  }
+
+  sockaddr_in addr;
+  std::memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(0);
+
+  if (bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0) {
+    close(sock);
+    return -1;
+  }
+
+  socklen_t addrLen = sizeof(addr);
+  if (getsockname(sock, reinterpret_cast<sockaddr *>(&addr), &addrLen) != 0) {
+    close(sock);
+    return -1;
+  }
+
+  const int port = ntohs(addr.sin_port);
+  close(sock);
+  return port;
+}
+
+int reserveTCPPort() {
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == -1) {
     return -1;
   }
@@ -63,7 +92,7 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   std::string serverError;
   std::mutex serverErrorMutex;
 
-  // Start a fake UDP server in a separate thread.
+  // Start a local UDP server in a separate thread.
   std::thread serverThread([&]() {
     // Create the UDP socket for the server.
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -203,7 +232,7 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   Json::Value val = monitorUDP.get("test.value");
   EXPECT_EQ(val.asInt(), 42);
 
-  // Cleanup: stop the UDPValueMonitor and shut down the fake server.
+  // Cleanup: stop the UDPValueMonitor and shut down the local server.
   monitorUDP.stop();
 }
 
@@ -304,6 +333,312 @@ bool isEnvEnabled(const char *name) {
   return value != nullptr && value[0] != '\0' && std::string(value) != "0";
 }
 
+TEST(UDPValueMonitorTest, ConfigPullRequiredPullsFullConfigOverHTTP) {
+  const int udpPort = reserveUDPPort();
+  const int httpPort = reserveTCPPort();
+  if (udpPort <= 0 || httpPort <= 0) {
+    GTEST_SKIP() << "Failed to reserve local ports";
+  }
+
+  std::atomic<bool> udpReady{false};
+  std::atomic<bool> httpReady{false};
+
+  std::thread httpThread([&]() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1) {
+      return;
+    }
+    const int reuseAddr = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+
+    sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(httpPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0 ||
+        listen(sock, 1) != 0) {
+      close(sock);
+      return;
+    }
+    httpReady.store(true);
+
+    int client = accept(sock, nullptr, nullptr);
+    if (client >= 0) {
+      char request[512];
+      recv(client, request, sizeof(request), 0);
+      const std::string body = "{\"large\":{\"value\":99}}\n";
+      std::ostringstream response;
+      response << "HTTP/1.0 200 OK\r\n"
+               << "Content-Type: application/json\r\n"
+               << "Content-Length: " << body.size() << "\r\n\r\n"
+               << body;
+      const std::string responseStr = response.str();
+      send(client, responseStr.c_str(), responseStr.size(), 0);
+      close(client);
+    }
+    close(sock);
+  });
+  ThreadJoiner joinHTTPThread(httpThread);
+
+  std::thread udpThread([&]() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      return;
+    }
+    const int reuseAddr = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+    timeval timeout{.tv_sec = 0, .tv_usec = 100000};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in serverAddr;
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(udpPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&serverAddr),
+             sizeof(serverAddr)) != 0) {
+      close(sock);
+      return;
+    }
+    udpReady.store(true);
+
+    char buffer[1024];
+    sockaddr_in clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+    Json::CharReaderBuilder readerBuilder;
+
+    auto receiveJson = [&](Json::Value *request) -> bool {
+      for (int attempts = 0; attempts < 30; ++attempts) {
+        ssize_t n = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
+                             reinterpret_cast<sockaddr *>(&clientAddr),
+                             &clientLen);
+        if (n < 0) {
+          if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            continue;
+          }
+          return false;
+        }
+        buffer[n] = '\0';
+        std::string errs;
+        std::istringstream stream{std::string(buffer)};
+        return Json::parseFromStream(readerBuilder, stream, request, &errs);
+      }
+      return false;
+    };
+
+    Json::Value request;
+    if (!receiveJson(&request)) {
+      close(sock);
+      return;
+    }
+    Json::Value deviceInfo;
+    deviceInfo["_fusion_op"] = "get_local_device_information";
+    deviceInfo["status"] = "success";
+    deviceInfo["payload"]["id"] = "pull-required-device";
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    const std::string deviceInfoStr = Json::writeString(writer, deviceInfo);
+    sendto(sock, deviceInfoStr.c_str(), deviceInfoStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    request.clear();
+    if (!receiveJson(&request)) {
+      close(sock);
+      return;
+    }
+    Json::Value initialState;
+    initialState["_fusion_op"] = "get";
+    initialState["status"] = "success";
+    initialState["payload"]["small"]["value"] = 1;
+    const std::string initialStateStr = Json::writeString(writer, initialState);
+    sendto(sock, initialStateStr.c_str(), initialStateStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    Json::Value pullRequired;
+    pullRequired["_fusion_op"] = "config_pull_required";
+    pullRequired["_fusion_epoch"] = 1;
+    pullRequired["_fusion_version"] = 2;
+    pullRequired["_fusion_msg_id"] = "pull-required-test";
+    const std::string pullRequiredStr = Json::writeString(writer, pullRequired);
+    sendto(sock, pullRequiredStr.c_str(), pullRequiredStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+    close(sock);
+  });
+  ThreadJoiner joinUDPThread(udpThread);
+
+  for (int i = 0; i < 50 &&
+                  (!udpReady.load() || !httpReady.load()); ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  ASSERT_TRUE(udpReady.load());
+  ASSERT_TRUE(httpReady.load());
+
+  std::mutex updateMutex;
+  std::condition_variable updateCv;
+  bool updateReceived = false;
+
+  UDPValueMonitor monitorUDP("127.0.0.1", udpPort, false, {}, httpPort);
+  monitorUDP.watch("large.value", [&](const std::string &, const Json::Value &,
+                                      const Json::Value &newValue) {
+    if (newValue.isInt() && newValue.asInt() == 99) {
+      std::lock_guard<std::mutex> lock(updateMutex);
+      updateReceived = true;
+      updateCv.notify_one();
+    }
+  });
+  monitorUDP.start();
+
+  {
+    std::unique_lock<std::mutex> lock(updateMutex);
+    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(2), [&] {
+      return updateReceived;
+    })) << "Timed out waiting for HTTP config pull";
+  }
+
+  EXPECT_EQ(monitorUDP.get("large.value").asInt(), 99);
+  monitorUDP.stop();
+}
+
+TEST(UDPValueMonitorTest, ConfigUpdateClearRemovesWatchedValues) {
+  const int serverPort = reserveUDPPort();
+  if (serverPort <= 0) {
+    GTEST_SKIP() << "Failed to reserve UDP port for local test server";
+  }
+
+  std::atomic<bool> serverReady{false};
+
+  std::thread serverThread([&]() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+      return;
+    }
+
+    const int reuseAddr = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, sizeof(reuseAddr));
+    timeval timeout{.tv_sec = 0, .tv_usec = 100000};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in serverAddr;
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(serverPort);
+    if (bind(sock, reinterpret_cast<sockaddr *>(&serverAddr),
+             sizeof(serverAddr)) != 0) {
+      close(sock);
+      return;
+    }
+    serverReady.store(true);
+
+    char buffer[1024];
+    sockaddr_in clientAddr;
+    socklen_t clientLen = sizeof(clientAddr);
+    Json::CharReaderBuilder readerBuilder;
+
+    auto receiveJson = [&](Json::Value *request) -> bool {
+      for (int attempts = 0; attempts < 30; ++attempts) {
+        ssize_t n = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
+                             reinterpret_cast<sockaddr *>(&clientAddr),
+                             &clientLen);
+        if (n < 0) {
+          if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            continue;
+          }
+          return false;
+        }
+        buffer[n] = '\0';
+        std::string errs;
+        std::istringstream stream{std::string(buffer)};
+        return Json::parseFromStream(readerBuilder, stream, request, &errs);
+      }
+      return false;
+    };
+
+    Json::Value request;
+    if (!receiveJson(&request) || !request.isMember("action") ||
+        request["action"].asString() != "get_local_device_information") {
+      close(sock);
+      return;
+    }
+
+    Json::Value deviceInfoEnvelope;
+    deviceInfoEnvelope["_fusion_op"] = "get_local_device_information";
+    deviceInfoEnvelope["status"] = "success";
+    deviceInfoEnvelope["payload"]["id"] = "test-device";
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    std::string responseStr = Json::writeString(writer, deviceInfoEnvelope);
+    sendto(sock, responseStr.c_str(), responseStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    request.clear();
+    if (!receiveJson(&request) || !request.isMember("action") ||
+        request["action"].asString() != "get") {
+      close(sock);
+      return;
+    }
+
+    Json::Value stateEnvelope;
+    stateEnvelope["_fusion_op"] = "get";
+    stateEnvelope["status"] = "success";
+    stateEnvelope["payload"]["test"]["value"] = 42;
+    responseStr = Json::writeString(writer, stateEnvelope);
+    sendto(sock, responseStr.c_str(), responseStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    Json::Value clearEnvelope;
+    clearEnvelope["_fusion_op"] = "config_update";
+    clearEnvelope["_fusion_epoch"] = 0;
+    clearEnvelope["_fusion_version"] = 1;
+    clearEnvelope["_fusion_clear"] = true;
+    responseStr = Json::writeString(writer, clearEnvelope);
+    sendto(sock, responseStr.c_str(), responseStr.size(), 0,
+           reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+
+    close(sock);
+  });
+  ThreadJoiner joinServerThread(serverThread);
+
+  for (int i = 0; i < 50 && !serverReady.load(); ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  ASSERT_TRUE(serverReady.load()) << "Server did not become ready";
+
+  std::mutex updateMutex;
+  std::condition_variable updateCv;
+  bool initialReceived = false;
+  bool clearReceived = false;
+
+  UDPValueMonitor monitorUDP("127.0.0.1", serverPort);
+  monitorUDP.watch("test.value", [&](const std::string &, const Json::Value &,
+                                     const Json::Value &newValue) {
+    std::lock_guard<std::mutex> lock(updateMutex);
+    if (newValue.isInt() && newValue.asInt() == 42) {
+      initialReceived = true;
+    }
+    if (newValue.isNull()) {
+      clearReceived = true;
+    }
+    updateCv.notify_all();
+  });
+
+  {
+    std::unique_lock<std::mutex> lock(updateMutex);
+    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(2),
+                                  [&] { return initialReceived; }));
+    EXPECT_TRUE(updateCv.wait_for(lock, std::chrono::seconds(2),
+                                  [&] { return clearReceived; }));
+  }
+
+  EXPECT_TRUE(monitorUDP.get("test.value").isNull());
+  EXPECT_TRUE(monitorUDP.get("").empty());
+
+  monitorUDP.stop();
+}
+
 bool parseJsonMessage(const char *buffer, ssize_t size, Json::Value *message) {
   Json::CharReaderBuilder readerBuilder;
   readerBuilder["collectComments"] = false;
@@ -336,6 +671,208 @@ bool parseHostPort(const std::string &addr, std::string *host, int *port) {
     return false;
   }
   return *port > 0;
+}
+
+std::string httpBaseForIntegrationHost(const std::string &host) {
+  const char *httpAddrEnv = std::getenv("FUSION_HTTP_ADDR");
+  if (httpAddrEnv != nullptr && httpAddrEnv[0] != '\0') {
+    std::string httpAddr = httpAddrEnv;
+    if (httpAddr.rfind("http://", 0) == 0 ||
+        httpAddr.rfind("https://", 0) == 0) {
+      return httpAddr;
+    }
+    return "http://" + httpAddr;
+  }
+  return "http://" + host + ":8080";
+}
+
+bool httpPatchJSON(const std::string &host, int httpPort,
+                   const std::string &path, const std::string &body,
+                   std::string *detail = nullptr) {
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    if (detail != nullptr) {
+      *detail = "socket() failed";
+    }
+    return false;
+  }
+
+  timeval timeout{};
+  timeout.tv_sec = 5;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+  sockaddr_in serverAddr{};
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(static_cast<uint16_t>(httpPort));
+  if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
+    if (detail != nullptr) {
+      *detail = "inet_pton failed for host " + host;
+    }
+    close(sockfd);
+    return false;
+  }
+  if (connect(sockfd, reinterpret_cast<sockaddr *>(&serverAddr),
+              sizeof(serverAddr)) != 0) {
+    if (detail != nullptr) {
+      *detail = "connect failed: " + std::string(strerror(errno));
+    }
+    close(sockfd);
+    return false;
+  }
+
+  std::ostringstream request;
+  request << "PATCH " << path << " HTTP/1.0\r\n"
+          << "Host: " << host << ":" << httpPort << "\r\n"
+          << "Content-Type: application/json\r\n"
+          << "Content-Length: " << body.size() << "\r\n"
+          << "Connection: close\r\n\r\n"
+          << body;
+  const std::string requestStr = request.str();
+
+  size_t sentTotal = 0;
+  while (sentTotal < requestStr.size()) {
+    ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
+                        requestStr.size() - sentTotal, 0);
+    if (sent < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      if (detail != nullptr) {
+        *detail = "send failed: " + std::string(strerror(errno));
+      }
+      close(sockfd);
+      return false;
+    }
+    sentTotal += static_cast<size_t>(sent);
+  }
+
+  std::string response;
+  char buffer[1024];
+  while (true) {
+    ssize_t n = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (n == 0) {
+      break;
+    }
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      if (detail != nullptr) {
+        *detail = "recv failed: " + std::string(strerror(errno));
+      }
+      close(sockfd);
+      return false;
+    }
+    response.append(buffer, static_cast<size_t>(n));
+    if (response.size() >= 32 && response.find("\r\n") != std::string::npos) {
+      break;
+    }
+  }
+  close(sockfd);
+
+  const std::string statusLine = response.substr(0, response.find("\r\n"));
+  const bool ok = statusLine.find(" 200 ") != std::string::npos;
+  if (!ok && detail != nullptr) {
+    *detail = "unexpected HTTP status: " + statusLine;
+  }
+  return ok;
+}
+
+bool httpDelete(const std::string &host, int httpPort, const std::string &path,
+                std::string *detail = nullptr) {
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    if (detail != nullptr) {
+      *detail = "socket() failed";
+    }
+    return false;
+  }
+
+  timeval timeout{};
+  timeout.tv_sec = 5;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+  sockaddr_in serverAddr{};
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(static_cast<uint16_t>(httpPort));
+  if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
+    if (detail != nullptr) {
+      *detail = "inet_pton failed for host " + host;
+    }
+    close(sockfd);
+    return false;
+  }
+  if (connect(sockfd, reinterpret_cast<sockaddr *>(&serverAddr),
+              sizeof(serverAddr)) != 0) {
+    if (detail != nullptr) {
+      *detail = "connect failed: " + std::string(strerror(errno));
+    }
+    close(sockfd);
+    return false;
+  }
+
+  std::ostringstream request;
+  request << "DELETE " << path << " HTTP/1.0\r\n"
+          << "Host: " << host << ":" << httpPort << "\r\n"
+          << "Connection: close\r\n\r\n";
+  const std::string requestStr = request.str();
+
+  size_t sentTotal = 0;
+  while (sentTotal < requestStr.size()) {
+    ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
+                        requestStr.size() - sentTotal, 0);
+    if (sent < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      if (detail != nullptr) {
+        *detail = "send failed: " + std::string(strerror(errno));
+      }
+      close(sockfd);
+      return false;
+    }
+    sentTotal += static_cast<size_t>(sent);
+  }
+
+  std::string response;
+  char buffer[1024];
+  while (true) {
+    ssize_t n = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (n == 0) {
+      break;
+    }
+    if (n < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      if (detail != nullptr) {
+        *detail = "recv failed: " + std::string(strerror(errno));
+      }
+      close(sockfd);
+      return false;
+    }
+    response.append(buffer, static_cast<size_t>(n));
+    if (response.size() >= 32 && response.find("\r\n") != std::string::npos) {
+      break;
+    }
+  }
+  close(sockfd);
+
+  const std::string statusLine = response.substr(0, response.find("\r\n"));
+  const bool ok = statusLine.find(" 204 ") != std::string::npos;
+  if (!ok && detail != nullptr) {
+    *detail = "unexpected HTTP status: " + statusLine;
+  }
+  return ok;
+}
+
+std::string jsonStringLiteral(const std::string &value) {
+  Json::Value json(value);
+  Json::StreamWriterBuilder writer;
+  writer["indentation"] = "";
+  return Json::writeString(writer, json);
 }
 } // namespace
 
@@ -599,35 +1136,29 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
     host = "127.0.0.1";
   }
 
-  UDPValueMonitor monitorUDP(host, port, false);
+  std::string httpHost;
+  int httpPort = 0;
+  std::string httpBase = httpBaseForIntegrationHost(host);
+  if (httpBase.rfind("http://", 0) == 0) {
+    httpBase = httpBase.substr(std::strlen("http://"));
+  }
+  ASSERT_TRUE(parseHostPort(httpBase, &httpHost, &httpPort))
+      << "Invalid FUSION_HTTP_ADDR (expected host:port): " << httpBase;
+  if (httpHost == "localhost") {
+    httpHost = "127.0.0.1";
+  }
+
+  UDPValueMonitor monitorUDP(host, port, false, {}, httpPort);
   monitorUDP.watch("observer_test.value", [](const std::string &, const Json::Value &, const Json::Value &) {});
   monitorUDP.start();
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
   const int expected = 42;
-  Json::Value update;
-  update["action"] = "put";
-  update["payload"]["observer_test"]["value"] = expected;
-
-  int sock = socket(AF_INET, SOCK_DGRAM, 0);
-  ASSERT_NE(sock, -1) << "Failed to create UDP client socket";
-
-  sockaddr_in serverAddr;
-  std::memset(&serverAddr, 0, sizeof(serverAddr));
-  serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(port);
-  ASSERT_GT(inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr), 0)
-      << "Invalid server address: " << host;
-
-  Json::StreamWriterBuilder writerBuilder;
-  writerBuilder["indentation"] = "";
-  const std::string payload = Json::writeString(writerBuilder, update);
-  const ssize_t sent =
-      sendto(sock, payload.c_str(), payload.size(), 0,
-             reinterpret_cast<const sockaddr *>(&serverAddr),
-             sizeof(serverAddr));
-  close(sock);
-  ASSERT_EQ(sent, static_cast<ssize_t>(payload.size()))
-      << "Failed to send UDP update";
+  const std::string body = "{\"observer_test\":{\"value\":42}}";
+  std::string patchDetail;
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
+      << "Failed to PATCH observer_test.value via fusion-server HTTP API: "
+      << patchDetail;
 
   Json::Value val;
   const auto deadline =
@@ -642,4 +1173,159 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
 
   EXPECT_EQ(val.asInt(), expected);
   monitorUDP.stop();
+}
+
+TEST(UDPValueMonitorTest, IntegrationOversizedUpdatePullsConfigFromFusionServer) {
+  if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
+    GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
+  }
+
+  const char *addrEnv = std::getenv("FUSION_UDP_ADDR");
+  std::string addr = addrEnv ? addrEnv : "127.0.0.1:7947";
+
+  std::string host;
+  int udpPort = 0;
+  ASSERT_TRUE(parseHostPort(addr, &host, &udpPort))
+      << "Invalid FUSION_UDP_ADDR (expected host:port): " << addr;
+
+  if (host == "localhost") {
+    host = "127.0.0.1";
+  }
+
+  std::string httpHost;
+  int httpPort = 0;
+  std::string httpBase = httpBaseForIntegrationHost(host);
+  if (httpBase.rfind("http://", 0) == 0) {
+    httpBase = httpBase.substr(std::strlen("http://"));
+  }
+  ASSERT_TRUE(parseHostPort(httpBase, &httpHost, &httpPort))
+      << "Invalid FUSION_HTTP_ADDR (expected host:port): " << httpBase;
+  if (httpHost == "localhost") {
+    httpHost = "127.0.0.1";
+  }
+  ASSERT_EQ(httpHost, host)
+      << "UDPValueMonitor HTTP pull uses the UDP host; set FUSION_UDP_ADDR and "
+         "FUSION_HTTP_ADDR to the same host for this test";
+
+  const auto unique =
+      std::chrono::steady_clock::now().time_since_epoch().count();
+  const std::string rootKey = "observer_pull_required_" + std::to_string(unique);
+  const std::string path = rootKey + ".value";
+  const std::string expectedPrefix = "pull-required-";
+  const std::string expected =
+      expectedPrefix + std::to_string(unique) + "-" + std::string(70 * 1024, 'x');
+
+  UDPValueMonitor monitorUDP(host, udpPort, false, {}, httpPort);
+  monitorUDP.watch(path, [](const std::string &, const Json::Value &,
+                            const Json::Value &) {});
+  monitorUDP.start();
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+  const std::string body = "{\"" + rootKey + "\":{\"value\":" +
+                           jsonStringLiteral(expected) + "}}";
+  std::string patchDetail;
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
+      << "Failed to PATCH oversized config value: " << patchDetail;
+
+  Json::Value val;
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(10);
+  while (std::chrono::steady_clock::now() < deadline) {
+    val = monitorUDP.get(path);
+    if (val.isString() && val.asString() == expected) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  const std::string cleanupBody = "{\"" + rootKey + "\":{\"value\":\"\"}}";
+  (void)httpPatchJSON(httpHost, httpPort, "/value", cleanupBody);
+  monitorUDP.stop();
+
+  ASSERT_TRUE(val.isString()) << "Observer did not receive pulled config value";
+  EXPECT_EQ(val.asString(), expected);
+}
+
+TEST(UDPValueMonitorTest, IntegrationDeleteValueBroadcastClearsObserverState) {
+  if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
+    GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
+  }
+
+  const char *addrEnv = std::getenv("FUSION_UDP_ADDR");
+  std::string addr = addrEnv ? addrEnv : "127.0.0.1:7947";
+
+  std::string host;
+  int udpPort = 0;
+  ASSERT_TRUE(parseHostPort(addr, &host, &udpPort))
+      << "Invalid FUSION_UDP_ADDR (expected host:port): " << addr;
+
+  if (host == "localhost") {
+    host = "127.0.0.1";
+  }
+
+  std::string httpHost;
+  int httpPort = 0;
+  std::string httpBase = httpBaseForIntegrationHost(host);
+  if (httpBase.rfind("http://", 0) == 0) {
+    httpBase = httpBase.substr(std::strlen("http://"));
+  }
+  ASSERT_TRUE(parseHostPort(httpBase, &httpHost, &httpPort))
+      << "Invalid FUSION_HTTP_ADDR (expected host:port): " << httpBase;
+  if (httpHost == "localhost") {
+    httpHost = "127.0.0.1";
+  }
+  ASSERT_EQ(httpHost, host)
+      << "UDPValueMonitor HTTP pull uses the UDP host; set FUSION_UDP_ADDR and "
+         "FUSION_HTTP_ADDR to the same host for this test";
+
+  const auto unique =
+      std::chrono::steady_clock::now().time_since_epoch().count();
+  const std::string rootKey =
+      "observer_delete_integration_" + std::to_string(unique);
+  const std::string path = rootKey + ".value";
+  const std::string expected = "delete-broadcast-" + std::to_string(unique);
+
+  UDPValueMonitor monitorUDP(host, udpPort, false, {}, httpPort);
+  monitorUDP.watch(path, [](const std::string &, const Json::Value &,
+                            const Json::Value &) {});
+  monitorUDP.start();
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+  const std::string body = "{\"" + rootKey + "\":{\"value\":" +
+                           jsonStringLiteral(expected) + "}}";
+  std::string patchDetail;
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
+      << "Failed to PATCH seed value before delete: " << patchDetail;
+
+  Json::Value val;
+  const auto patchDeadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (std::chrono::steady_clock::now() < patchDeadline) {
+    val = monitorUDP.get(path);
+    if (val.isString() && val.asString() == expected) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  ASSERT_TRUE(val.isString()) << "Observer did not receive seeded value";
+  ASSERT_EQ(val.asString(), expected);
+
+  std::string deleteDetail;
+  ASSERT_TRUE(httpDelete(httpHost, httpPort, "/value", &deleteDetail))
+      << "Failed to DELETE /value: " << deleteDetail;
+
+  const auto clearDeadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (std::chrono::steady_clock::now() < clearDeadline) {
+    val = monitorUDP.get(path);
+    if (val.isNull()) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  monitorUDP.stop();
+
+  EXPECT_TRUE(val.isNull())
+      << "Observer did not clear watched value after DELETE /value";
 }

@@ -580,14 +580,12 @@ The WebSocket server uses basic configuration:
 
 Multipass
 ```bash
-cd fusion/test
-go test -v websocket_test.go
+./scripts/multipass/run-tests --websocket
 ```
 
 Local 
 ```bash
-cd fusion/test
-FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
+FUSION_TEST_LOCAL=1 ./scripts/multipass/run-tests --websocket --vip 127.0.0.1:8080
 ```
 
 ### Test Coverage

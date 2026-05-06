@@ -80,23 +80,45 @@ check_connectivity() {
 
 process_instance() {
   local instance="$1"
-  local outfile
-
-  outfile="$OUTPUT_ROOT/${instance}.log"
-
-  print_info "[$instance] Collecting fusion-server log -> $outfile"
 
   if ! check_connectivity "$instance"; then
     print_error "[$instance] Multipass connectivity failed, skipping"
     return 1
   fi
 
-  if ! multipass exec "$instance" -- sudo journalctl -u fusion-server --no-pager -l >"$outfile" 2>&1; then
-    print_warn "[$instance] Failed to collect fusion-server log"
-    return 1
+  # Check for profiling files on the instance
+  local prof_files
+  prof_files=$(multipass exec "$instance" -- bash -c 'ls /tmp/fusion_server_*.prof 2>/dev/null' || true)
+
+  if [[ -z "$prof_files" ]]; then
+    # No profiling files — collect log at the standard flat location
+    local outfile="$OUTPUT_ROOT/${instance}.log"
+    print_info "[$instance] Collecting fusion-server log -> $outfile"
+    if ! multipass exec "$instance" -- sudo journalctl -u fusion-server --no-pager -l >"$outfile" 2>&1; then
+      print_warn "[$instance] Failed to collect fusion-server log"
+      return 1
+    fi
+    print_success "[$instance] Log saved: $outfile"
+    return 0
   fi
 
-  print_success "[$instance] Log saved: $outfile"
+  # Profiling files found — collect into a fusion-server/ subfolder
+  print_info "[$instance] Found profiling files, collecting into fusion-server/ subfolder"
+  local serverdir="$OUTPUT_ROOT/${instance}/fusion-server"
+  mkdir -p "$serverdir"
+
+  if ! multipass exec "$instance" -- sudo journalctl -u fusion-server --no-pager -l >"$serverdir/fusion-server.log" 2>&1; then
+    print_warn "[$instance] Failed to collect fusion-server log"
+  fi
+
+  while IFS= read -r prof_file; do
+    [[ -z "$prof_file" ]] && continue
+    if ! multipass transfer "${instance}:${prof_file}" "$serverdir/" 2>/dev/null; then
+      print_warn "[$instance] Failed to copy profiling file: $prof_file"
+    fi
+  done <<< "$prof_files"
+
+  print_success "[$instance] Logs and profiling files saved: $serverdir"
   return 0
 }
 

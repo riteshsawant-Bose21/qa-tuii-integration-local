@@ -1,8 +1,7 @@
-import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Base state class for the Events feature
-sealed class ConfigEventsState extends Equatable {
+sealed class ConfigEventsState {
   const ConfigEventsState();
 
   /// Get events list (empty for non-loaded states)
@@ -11,8 +10,8 @@ sealed class ConfigEventsState extends Equatable {
   /// Get selected event ID
   String? get selectedEventId => null;
 
-  @override
-  List<Object?> get props => <Object?>[];
+  /// Get the event ID currently being recalled (null if none)
+  String? get recallingEventId => null;
 }
 
 /// Initial state - no data loaded yet
@@ -33,9 +32,13 @@ class EventsLoaded extends ConfigEventsState {
   @override
   final String? selectedEventId;
 
+  @override
+  final String? recallingEventId;
+
   const EventsLoaded({
     required this.events,
     this.selectedEventId,
+    this.recallingEventId,
   });
 
   /// Create a copy with updated values
@@ -43,15 +46,15 @@ class EventsLoaded extends ConfigEventsState {
     List<FusionEvent>? events,
     String? selectedEventId,
     bool clearSelectedEventId = false,
+    String? recallingEventId,
+    bool clearRecallingEventId = false,
   }) {
     return EventsLoaded(
       events: events ?? this.events,
       selectedEventId: clearSelectedEventId ? null : (selectedEventId ?? this.selectedEventId),
+      recallingEventId: clearRecallingEventId ? null : (recallingEventId ?? this.recallingEventId),
     );
   }
-
-  @override
-  List<Object?> get props => <Object?>[events, selectedEventId];
 }
 
 /// Error state - failed to load events
@@ -59,7 +62,4 @@ class EventsError extends ConfigEventsState {
   final String message;
 
   const EventsError({required this.message});
-
-  @override
-  List<Object?> get props => <Object?>[message];
 }
