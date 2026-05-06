@@ -97,7 +97,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
 
     final Map<String, dynamic> config = <String, dynamic>{
       "devices": droResponseData.result!.devices,
-      "audio_streams": droResponseData.result!.audio_streams,
+      "audio_streams": droResponseData.result!.audioStreams,
       "settings": <String, Map<String, dynamic>>{
         "audio": blocksData,
       },
