@@ -1,3 +1,5 @@
+import 'package:equatable/equatable.dart';
+
 import 'product_asset.dart';
 
 /// Represents a frequency range with high and low values
@@ -253,7 +255,7 @@ class Coverage {
 ///
 /// Represents a speaker product from the product catalog API.
 /// Field names follow the README specification.
-class SpeakerProduct {
+class SpeakerProduct extends Equatable {
   final int productId;
   final ProductAsset assets;
   final String modelName;
@@ -325,6 +327,44 @@ class SpeakerProduct {
     this.sensitivity,
     this.isFusionCompatible = false,
   });
+
+  @override
+  List<Object?> get props => [
+    productId,
+    assets,
+    modelName,
+    modelFamily,
+    description,
+    acousticTechnology,
+    availableTaps,
+    boseProfessionalVoicing,
+    bsfFileUrl,
+    certifications,
+    coverage,
+    dimensions,
+    driverComponents,
+    environment,
+    frequencyRange,
+    frequencyResponse,
+    frequencyResponseCurve,
+    highImpedanceTaps,
+    impedance,
+    impedanceCurve,
+    installation,
+    isHighImpedanceRated,
+    isSubwoofer,
+    isWeatherRated,
+    maxSpl,
+    mountType,
+    netWeight,
+    noOfPassbands,
+    nominalImpedance,
+    polarData,
+    powerHandling,
+    productCodes,
+    sensitivity,
+    isFusionCompatible,
+  ];
 
   factory SpeakerProduct.fromJson(Map<String, dynamic> json) {
     final specs = json['specifications'] as Map<String, dynamic>? ?? {};

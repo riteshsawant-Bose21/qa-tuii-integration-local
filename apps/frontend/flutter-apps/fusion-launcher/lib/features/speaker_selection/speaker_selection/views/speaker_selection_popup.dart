@@ -10,7 +10,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../add_output_device_drawer/viewmodel/add_output_device_vm.dart';
 import '../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
 import '../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
 import '../../../speaker_selection_popup/views/widgets/constant_enums.dart';
@@ -21,19 +20,33 @@ import 'widgets/stepped_haptic_slider.dart';
 part 'widgets/left_content.dart';
 part 'widgets/right_content.dart';
 
-class SpeakerSelectionPopup2 extends StatelessWidget {
+class SpeakerSelectionPopup extends StatelessWidget {
   final bool isFromBuildingPage;
-  const SpeakerSelectionPopup2({super.key, required this.isFromBuildingPage});
+  final String? zoneId, subZoneId;
 
-  static Future<void> show({required BuildContext context, required bool isFromBuildingPage}) {
+  const SpeakerSelectionPopup({
+    super.key,
+    required this.isFromBuildingPage,
+    required this.zoneId,
+    required this.subZoneId,
+  });
+
+  static Future<void> show({
+    required BuildContext context,
+    required bool isFromBuildingPage,
+    String? zoneId,
+    String? subZoneId,
+  }) {
     return FusionDrawer.show<void>(
       context: context,
       semanticId: 'speaker_selection',
       title: 'SPEAKERS',
       width: 836,
       scrollable: false,
-      content: SpeakerSelectionPopup2(
+      content: SpeakerSelectionPopup(
         isFromBuildingPage: isFromBuildingPage,
+        zoneId: zoneId,
+        subZoneId: subZoneId,
       ),
     );
   }
@@ -41,7 +54,13 @@ class SpeakerSelectionPopup2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SpeakerSelectionViewModel>(
-      create: (BuildContext context) => SpeakerSelectionViewModel(isFromBuildingPage: isFromBuildingPage),
+      create: (BuildContext context) {
+        return SpeakerSelectionViewModel(
+          isFromBuildingPage: isFromBuildingPage,
+          zoneId: zoneId,
+          subZoneId: subZoneId,
+        );
+      },
       child: Container(
         width: double.infinity,
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),

@@ -1,4 +1,4 @@
-part of '../speaker_selection_popup_2.dart';
+part of '../speaker_selection_popup.dart';
 
 class SpeakerSelectionLeftContent extends StatelessWidget {
   const SpeakerSelectionLeftContent({super.key});
@@ -6,19 +6,100 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final SpeakerSelectionViewModel speakerSelection = context.watch<SpeakerSelectionViewModel>();
 
+    final bool isFromBuildingPage = speakerSelection.isFromBuildingPage;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       physics: const ClampingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          FusionOutlinedDropdown<String>(
-            label: 'Listening Area',
-            hint: 'Select listening area',
-            value: speakerSelection.state.listeningAreaId,
-            items: context.watch<ProjectViewModel>().listeningAreas.map((ListeningArea e) => e.id).toList(),
-            itemLabelBuilder: (String v) => v,
-            onChanged: (String areaId) => context.read<SpeakerSelectionViewModel>().setListeningArea(areaId),
+          if (speakerSelection.state.shouldAddNewListeningArea) ...<Widget>[
+            FusionLabeledField(
+              label: "Listening area name",
+              semanticId: 'listening_area_name',
+              child: FusionBorderedTextField(
+                controller: speakerSelection.ceilingHeightController,
+                semanticId: 'listening_area_name_textfield',
+                hintText: 'Enter listening area name',
+                contentPadding: const EdgeInsets.all(16),
+                onChanged: (String value) {
+                  context.read<SpeakerSelectionViewModel>().setNewListeningAreaName(value);
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            FusionOutlinedDropdown<FloorModel>(
+              label: 'Select floor',
+              hint: 'Select floor',
+              value: context.watch<ProjectViewModel>().getAllFloors().firstWhereOrNull((FloorModel f) => f.id == speakerSelection.state.floorId),
+              items: context.watch<ProjectViewModel>().getAllFloors(),
+              itemLabelBuilder: (FloorModel v) => v.name,
+              onChanged: (FloorModel floorId) => context.read<SpeakerSelectionViewModel>().setNewListeningAreaFloorId(floorId.id),
+            ),
+            const SizedBox(height: 20),
+
+            FusionAppButton(
+              height: 48,
+              semanticId: 'speaker_drawer_save_button',
+              style: FusionAppButtonStyle.primary,
+              text: "Save",
+              onPressed: () {
+                context.read<SpeakerSelectionViewModel>().addNewListeningArea(context);
+              },
+            ),
+          ] else ...<Widget>[
+            if (isFromBuildingPage) ...<Widget>[
+              FusionAppText(
+                text: 'Listening Area',
+                style: context.textTheme.l2Regular.copyWith(color: context.colorScheme.textSecondary),
+              ),
+              const SizedBox(height: 6),
+              BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState _) {
+                  final ListeningArea? la = context.read<ProjectViewModel>().getCurrentSelectedListeningArea();
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                    ),
+                    child: FusionAppText(
+                      text: la?.name ?? '-',
+                      style: context.textTheme.b3Medium.copyWith(color: context.colorScheme.textPrimary),
+                    ),
+                  );
+                },
+              ),
+            ] else ...<Widget>[
+              Builder(
+                builder: (BuildContext context) {
+                  final ListeningArea? area = speakerSelection.state.listeningAreaId != null ? speakerSelection.selectedListeningArea : null;
+
+                  return FusionOutlinedDropdown<ListeningArea>(
+                    label: 'Listening Area',
+                    hint: 'Select listening area',
+                    value: area,
+                    items: context.watch<SpeakerSelectionViewModel>().getListeningAreas(),
+                    itemLabelBuilder: (ListeningArea v) => v.name,
+                    onChanged: (ListeningArea area) => context.read<SpeakerSelectionViewModel>().setListeningArea(area.id),
+                  );
+                },
+              ),
+            ],
+          ],
+
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () {
+              final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+              vm.toggleAddNewListeningArea(!vm.state.shouldAddNewListeningArea);
+            },
+            child: FusionAppText(
+              text: speakerSelection.state.shouldAddNewListeningArea ? "Cancel" : "+ Add new listening area",
+              style: context.textTheme.l1Regular,
+            ),
           ),
 
           ///
@@ -196,15 +277,6 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
             ],
 
             const SizedBox(height: 20),
-          ] else ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 56.0),
-              child: Center(
-                child: FusionAppText(
-                  text: "Select listeing area",
-                ),
-              ),
-            ),
           ],
         ],
       ),
@@ -243,7 +315,7 @@ class _SuggestModeMountingTypeSelection extends StatelessWidget {
                             GestureDetector(
                               onTap: () {
                                 final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
-                                vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(mountingType: () => option));
+                                vm.updateSuggestModeArgs((SpeakerSuggestModeArgs args) => args.copyWith(mountingType: () => option));
                               },
                               child: Container(
                                 height: 52,
@@ -318,7 +390,7 @@ class _SuggestModeTargetSplySelection extends StatelessWidget {
             topBands: _splBands,
             onRangeChanged: (RangeValues values) {
               final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
-              vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(splRange: () => values));
+              vm.updateSuggestModeArgs((SpeakerSuggestModeArgs args) => args.copyWith(splRange: () => values));
             },
           ),
         ],
@@ -358,7 +430,7 @@ class _SuggestLowFrequencySelection extends StatelessWidget {
                             GestureDetector(
                               onTap: () {
                                 final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
-                                vm.updateSuggestModeArgs((SuggestModeArgs args) => args.copyWith(lowFrequency: () => option));
+                                vm.updateSuggestModeArgs((SpeakerSuggestModeArgs args) => args.copyWith(lowFrequency: () => option));
                               },
                               child: Container(
                                 height: 52,

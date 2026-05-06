@@ -89,13 +89,3 @@ enum OutputDeviceType {
     OutputDeviceType.mixer => 'Mixer',
   };
 }
-
-enum AudioChannel {
-  mono,
-  stereo;
-
-  String get displayName => switch (this) {
-    AudioChannel.mono => 'Mono',
-    AudioChannel.stereo => 'Stereo',
-  };
-}

@@ -1,7 +1,10 @@
-part of '../speaker_selection_popup_2.dart';
+part of '../speaker_selection_popup.dart';
 
 class SpeakerSelectionRightContent extends StatelessWidget {
   const SpeakerSelectionRightContent({super.key});
+
+  static const List<String> _suggestOrder = <String>['Maximum SPL', 'Target SPL', 'Minimum SPL'];
+
   @override
   Widget build(BuildContext context) {
     final SpeakerSelectionVmState speakerSelectionState = context.watch<SpeakerSelectionViewModel>().state;
@@ -108,101 +111,185 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                       ),
                     ),
 
-                    if (speakerSelectionState.selectModeArgs.useSubwoofer) ...<Widget>[
-                      const SizedBox(height: 20),
-                      FusionContainer(
-                        borderRadius: 8,
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: _ModeChip(
-                                  label: "Mid-High",
-                                  selected: speakerSelectionState.speakerListTab == 0,
-                                  padding: const EdgeInsets.all(6),
-                                  borderRadius: 6,
-                                  textStyle: context.textTheme.b3Medium,
-                                  onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerListTab(0),
+                    if (speakerSelectionState.speakerSelectionMode == SpeakerSelectionMode.select) ...<Widget>[
+                      if (speakerSelectionState.selectModeArgs.useSubwoofer) ...<Widget>[
+                        const SizedBox(height: 20),
+                        FusionContainer(
+                          borderRadius: 8,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: _ModeChip(
+                                    label: "Mid-High",
+                                    selected: speakerSelectionState.speakerListTab == 0,
+                                    padding: const EdgeInsets.all(6),
+                                    borderRadius: 6,
+                                    textStyle: context.textTheme.b3Medium,
+                                    onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerListTab(0),
+                                  ),
                                 ),
-                              ),
 
-                              Expanded(
-                                child: _ModeChip(
-                                  label: "Subwoofer",
-                                  padding: const EdgeInsets.all(6),
-                                  selected: speakerSelectionState.speakerListTab == 1,
-                                  borderRadius: 6,
-                                  textStyle: context.textTheme.b3Medium,
-                                  onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerListTab(1),
+                                Expanded(
+                                  child: _ModeChip(
+                                    label: "Subwoofer",
+                                    padding: const EdgeInsets.all(6),
+                                    selected: speakerSelectionState.speakerListTab == 1,
+                                    borderRadius: 6,
+                                    textStyle: context.textTheme.b3Medium,
+                                    onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerListTab(1),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                        ),
+                      ],
+
+                      /// ================== SEARCH BAR ==================
+                      const SizedBox(height: 20),
+                      _SearchBar(
+                        controller: context.read<SpeakerSelectionViewModel>().searchController,
+                      ),
+
+                      /// ================== PRODUCT LIST ==================
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
+                          builder: (BuildContext context, ProductQueryViewModelState productState) {
+                            return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+                              builder: (BuildContext context, SpeakerSelectionVmState speakerSelectionState) {
+                                return ValueListenableBuilder<TextEditingValue>(
+                                  valueListenable: context.read<SpeakerSelectionViewModel>().searchController,
+                                  builder: (BuildContext context, TextEditingValue __, Widget? ___) {
+                                    if (productState.products == null) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeCap: StrokeCap.round,
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    }
+
+                                    final List<SpeakerProduct> speakers = context.read<SpeakerSelectionViewModel>().speakers;
+
+                                    if (speakers.isEmpty) {
+                                      return const Center(
+                                        child: FusionAppText(
+                                          text: "No speakers found",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      );
+                                    }
+
+                                    return ClipRRect(
+                                      borderRadius: const BorderRadiusGeometry.vertical(top: Radius.circular(12)),
+                                      child: ListView.separated(
+                                        itemCount: speakers.length,
+                                        physics: const ClampingScrollPhysics(),
+                                        padding: const EdgeInsets.only(),
+                                        separatorBuilder: (_, __) => Divider(height: 1, color: context.colorScheme.strokeLight),
+                                        itemBuilder: (BuildContext context, int index) {
+                                          final SpeakerProduct product = speakers[index];
+
+                                          return _SpeakerCard(
+                                            index: index,
+                                            product: product,
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ] else ...<Widget>[
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
+                          builder: (BuildContext context, ProductQueryViewModelState productState) {
+                            if (productState.products == null) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeCap: StrokeCap.round,
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            }
+
+                            final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+                            final Map<String, List<SpeakerProduct>> sections = vm.getSuggestedSpeakersByCategory(
+                              context.read<ProductQueryViewModel>().speakers,
+                            );
+
+                            final List<_SuggestGroupItem> groupedItems = <_SuggestGroupItem>[];
+                            for (final String title in _suggestOrder) {
+                              final SpeakerProduct? product = (sections[title] ?? const <SpeakerProduct>[]).firstOrNull;
+                              if (product == null) continue;
+
+                              final _SuggestGroupItem? existing =
+                                  groupedItems.where((_SuggestGroupItem item) => item.product.productId == product.productId).firstOrNull;
+
+                              if (existing != null) {
+                                existing.titles.add(title);
+                              } else {
+                                groupedItems.add(
+                                  _SuggestGroupItem(
+                                    product: product,
+                                    titles: <String>[title],
+                                  ),
+                                );
+                              }
+                            }
+
+                            if (groupedItems.isEmpty) {
+                              return const Center(
+                                child: FusionAppText(
+                                  text: "No speakers found",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
+                            }
+
+                            return ListView.separated(
+                              physics: const ClampingScrollPhysics(),
+                              itemCount: groupedItems.length,
+                              separatorBuilder: (_, __) => Divider(height: 1, color: context.colorScheme.strokeLight),
+                              itemBuilder: (BuildContext context, int index) {
+                                final _SuggestGroupItem item = groupedItems[index];
+                                final String mergedTitle = item.titles.map((String t) => t.toUpperCase()).join(' / ');
+
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      FusionAppText(
+                                        text: mergedTitle,
+                                        style: context.textTheme.l3Caps.copyWith(
+                                          color: context.colorScheme.textBody,
+                                          letterSpacing: 0,
+                                        ),
+                                      ),
+                                      _SpeakerCard(
+                                        index: index,
+                                        product: item.product,
+                                        showSpecs: false,
+                                        showCompactSuggestSpecs: true,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ),
                     ],
-
-                    /// ================== SEARCH BAR ==================
-                    const SizedBox(height: 20),
-                    _SearchBar(
-                      controller: context.read<SpeakerSelectionViewModel>().searchController,
-                    ),
-
-                    /// ================== PRODUCT LIST ==================
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
-                        builder: (BuildContext context, ProductQueryViewModelState productState) {
-                          return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-                            builder: (BuildContext context, SpeakerSelectionVmState speakerSelectionState) {
-                              return ValueListenableBuilder<TextEditingValue>(
-                                valueListenable: context.read<SpeakerSelectionViewModel>().searchController,
-                                builder: (BuildContext context, TextEditingValue __, Widget? ___) {
-                                  if (productState.products == null) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeCap: StrokeCap.round,
-                                        strokeWidth: 2,
-                                      ),
-                                    );
-                                  }
-
-                                  final List<SpeakerProduct> speakers = context.read<SpeakerSelectionViewModel>().speakers;
-
-                                  if (speakers.isEmpty) {
-                                    return const Center(
-                                      child: FusionAppText(
-                                        text: "No speakers found",
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
-                                    );
-                                  }
-
-                                  return ClipRRect(
-                                    borderRadius: const BorderRadiusGeometry.vertical(top: Radius.circular(12)),
-                                    child: ListView.separated(
-                                      itemCount: speakers.length,
-                                      physics: const ClampingScrollPhysics(),
-                                      padding: const EdgeInsets.only(),
-                                      separatorBuilder: (_, __) => Divider(height: 1, color: context.colorScheme.strokeLight),
-                                      itemBuilder: (BuildContext context, int index) {
-                                        final SpeakerProduct product = speakers[index];
-
-                                        return _SpeakerCard(
-                                          index: index,
-                                          product: product,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -226,7 +313,8 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                   style: FusionAppButtonStyle.primary,
                   text: "Save",
                   onPressed: () {
-                    //
+                    context.read<SpeakerSelectionViewModel>().save();
+                    Navigator.of(context).pop();
                   },
                 ),
               ),
@@ -238,18 +326,30 @@ class SpeakerSelectionRightContent extends StatelessWidget {
   }
 }
 
+class _SuggestGroupItem {
+  final SpeakerProduct product;
+  final List<String> titles;
+
+  _SuggestGroupItem({
+    required this.product,
+    required this.titles,
+  });
+}
+
 class _SpeakerCard extends StatelessWidget {
   const _SpeakerCard({
     required this.index,
     required this.product,
     this.showSpecs = true,
     this.shouldRemove = false,
+    this.showCompactSuggestSpecs = false,
   });
 
   final int index;
   final SpeakerProduct product;
   final bool showSpecs;
   final bool shouldRemove;
+  final bool showCompactSuggestSpecs;
 
   String _formatUsd(double value) {
     final String fixed = value.toStringAsFixed(2);
@@ -258,10 +358,31 @@ class _SpeakerCard extends StatelessWidget {
     return '\$$wholeWithCommas.${parts[1]}';
   }
 
+  String _compactSuggestSpecText() {
+    final String maxSpl = product.maxSplText;
+    final String power = product.powerHandlingSummaryText;
+
+    final bool hasSpl = maxSpl.trim().isNotEmpty && maxSpl != 'N/A';
+    final bool hasPower = power.trim().isNotEmpty && power != 'N/A';
+
+    if (hasSpl && hasPower) return 'SPL = $maxSpl, Total Power = $power';
+    if (hasSpl) return 'SPL = $maxSpl';
+    if (hasPower) return 'Total Power = $power';
+    return 'Specifications not available';
+  }
+
+  String? _imageForSelectedColor({required SpeakerProduct product, required SpeakerColorOption selectedColor, required ProductQueryViewModel productsVm}) {
+    final String selectedKey = selectedColor.name.toLowerCase();
+    return productsVm.getProductImage(product.productId, color: selectedKey);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ProductQueryViewModel productsVm = context.watch<ProductQueryViewModel>();
+    final SpeakerSelectionViewModel speakerVm = context.watch<SpeakerSelectionViewModel>();
+    final SpeakerColorOption selectedColor = speakerVm.state.selectModeArgs.speakerColorOption;
     final double productPrice = productsVm.getPrice(product.productId);
+    final String? selectedColorImagePath = _imageForSelectedColor(product: product, selectedColor: selectedColor, productsVm: productsVm);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -280,7 +401,7 @@ class _SpeakerCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: FusionImageAuto(
-                  path: productsVm.getProductImage(product.productId),
+                  path: selectedColorImagePath,
                   fit: BoxFit.contain,
                   errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
                     return Icon(
@@ -321,14 +442,14 @@ class _SpeakerCard extends StatelessWidget {
                       children: <Widget>[
                         _ColorModeChip(
                           label: 'BLACK',
-                          selected: true,
-                          onTap: () {},
+                          selected: selectedColor == SpeakerColorOption.black,
+                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerColor(SpeakerColorOption.black),
                         ),
                         const SizedBox(width: 8),
                         _ColorModeChip(
                           label: 'WHITE',
-                          selected: false,
-                          onTap: () {},
+                          selected: selectedColor == SpeakerColorOption.white,
+                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerColor(SpeakerColorOption.white),
                         ),
                       ],
                     ),
@@ -433,6 +554,15 @@ class _SpeakerCard extends StatelessWidget {
               },
             ),
           ],
+          if (showCompactSuggestSpecs) ...<Widget>[
+            const SizedBox(height: 8),
+            FusionAppText(
+              text: _compactSuggestSpecText(),
+              style: context.textTheme.l1Regular.copyWith(
+                color: context.colorScheme.textPrimary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -512,7 +642,7 @@ class _SearchBar extends StatelessWidget {
                   return SizedBox(
                     width: 400,
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(16.0).copyWith(bottom: 0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,47 +654,60 @@ class _SearchBar extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
-                            final bool selected = speakerSelectionState.sortOption == entry;
+                          Flexible(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              physics: const ClampingScrollPhysics(),
+                              child: Column(
+                                children: <Widget>[
+                                  ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
+                                    final bool selected = speakerSelectionState.sortOption == entry;
 
-                            return SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_sort_option_${entry.index}"),
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () {
-                                  speakerSelectionViewModel.setSortOption(entry);
-                                  menuSetState(() {});
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: selected ? context.colorScheme.elevation3 : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: <Widget>[
-                                      SemanticHelper.toggle(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "speaker_sort_option_toggle_${entry.index}"),
-                                        value: selected,
-                                        child: Icon(
-                                          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                                          size: 16,
-                                          color: context.colorScheme.primaryWhite,
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_sort_option_${entry.index}"),
+                                      child: MouseRegion(
+                                        cursor: SystemMouseCursors.click,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.translucent,
+                                          onTap: () {
+                                            speakerSelectionViewModel.setSortOption(entry);
+                                            menuSetState(() {});
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(14),
+                                            decoration: BoxDecoration(
+                                              color: selected ? context.colorScheme.elevation3 : Colors.transparent,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: <Widget>[
+                                                SemanticHelper.toggle(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "speaker_sort_option_toggle_${entry.index}"),
+                                                  value: selected,
+                                                  child: Icon(
+                                                    selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                                                    size: 16,
+                                                    color: context.colorScheme.primaryWhite,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: FusionAppText(
+                                                    text: entry.displayName,
+                                                    style: context.textTheme.b3Regular,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FusionAppText(
-                                          text: entry.displayName,
-                                          style: context.textTheme.b3Regular,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                    );
+                                  }),
+                                ],
                               ),
-                            );
-                          }),
+                            ),
+                          ),
                         ],
                       ),
                     ),

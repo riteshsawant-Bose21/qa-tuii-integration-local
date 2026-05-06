@@ -8,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../projects/viewmodel/building_page_viewmodel.dart';
-import '../speaker_selection_popup.dart';
+import '../../../speaker_selection/speaker_selection/views/speaker_selection_popup.dart';
 import 'auto_place_dialog.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
@@ -67,15 +67,15 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                               if (allSpeakers.isNotEmpty) return const SizedBox.shrink();
 
-                              return PopupMenuButton<String>(
-                                color: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                tooltip: 'Add speakers',
-                                padding: EdgeInsets.zero,
-                                menuPadding: EdgeInsets.zero,
-                                clipBehavior: Clip.none,
-                                offset: const Offset(45, 0),
-                                constraints: const BoxConstraints(minWidth: 1000),
+                              return GestureDetector(
+                                onTap: () {
+                                  SpeakerSelectionPopup.show(
+                                    context: context,
+                                    isFromBuildingPage: true,
+                                    // zoneId: areaId,
+                                    // subZoneId: null,
+                                  );
+                                },
                                 child: SemanticHelper.button(
                                   testId: SemanticHelper.createTestId(SemanticTypes.button, "add_speaker_button"),
                                   child: Padding(
@@ -87,20 +87,6 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                     ),
                                   ),
                                 ),
-                                itemBuilder: (BuildContext context) {
-                                  return <PopupMenuEntry<String>>[
-                                    PopupMenuItem<String>(
-                                      enabled: false,
-                                      padding: EdgeInsets.zero,
-                                      child: Theme(
-                                        data: ThemeData.dark(),
-                                        child: const SpeakerSelectionPopup(
-                                          isFromBuildingPage: true,
-                                        ),
-                                      ),
-                                    ),
-                                  ];
-                                },
                               );
                             },
                           ),
@@ -206,15 +192,13 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    PopupMenuButton<String>(
-                                      color: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      tooltip: 'Edit speakers',
-                                      padding: EdgeInsets.zero,
-                                      menuPadding: EdgeInsets.zero,
-                                      clipBehavior: Clip.none,
-                                      offset: const Offset(60, 0),
-                                      constraints: const BoxConstraints(minWidth: 1000),
+                                    GestureDetector(
+                                      onTap: () {
+                                        SpeakerSelectionPopup.show(
+                                          context: context,
+                                          isFromBuildingPage: true,
+                                        );
+                                      },
                                       child: SemanticHelper.button(
                                         testId: SemanticHelper.createTestId(
                                           SemanticTypes.button,
@@ -229,18 +213,6 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                           ),
                                         ),
                                       ),
-                                      itemBuilder: (BuildContext context) {
-                                        return <PopupMenuEntry<String>>[
-                                          PopupMenuItem<String>(
-                                            enabled: false,
-                                            padding: EdgeInsets.zero,
-                                            child: Theme(
-                                              data: ThemeData.dark(),
-                                              child: const SpeakerSelectionPopup(isFromBuildingPage: true),
-                                            ),
-                                          ),
-                                        ];
-                                      },
                                     ),
                                     if (canPlace && !listeningArea.autoPlacement) ...<Widget>[
                                       const SizedBox(width: 8),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/speaker_selection_popup/views/speaker_selection_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/assets/asset_svg.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../speaker_selection/speaker_selection/views/speaker_selection_popup.dart';
 import '../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'circuit_device_widget.dart';
 import 'create_new_location_widget.dart';
@@ -177,12 +177,15 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   SemanticTypes.container,
                   "add_speakers_menu_container_$index",
                 ),
-                child: FusionArrowPopup(
-                  semanticId: 'add_speakers_menu',
-                  content: SpeakerSelectionPopup(
-                    isFromBuildingPage: false,
-                    zoneId: widget.zoneId,
-                  ),
+                child: GestureDetector(
+                  onTap: () {
+                     SpeakerSelectionPopup.show(
+                      context: context,
+                      isFromBuildingPage: false,
+                      zoneId: widget.zoneId,
+                      subZoneId: null,
+                    );
+                  },
                   child: Row(
                     children: <Widget>[
                       Icon(

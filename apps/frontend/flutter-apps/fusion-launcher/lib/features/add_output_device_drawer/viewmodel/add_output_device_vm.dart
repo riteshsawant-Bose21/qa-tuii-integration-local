@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/aes67_config.dart';
 
 part 'add_output_device_vm_state.dart';

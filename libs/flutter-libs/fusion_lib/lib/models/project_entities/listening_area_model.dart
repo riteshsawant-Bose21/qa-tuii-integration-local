@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show RangeValues;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
@@ -377,12 +379,15 @@ class ListeningArea {
   final ListeningPreference? listeningPreference;
 
   /// THESE ARE FILTER OPTIONS
+  final SpeakerSelectionMode speakerSelectionMode;
+  final SpeakerSelectModeArgs speakerSelectModeArgs;
+  final SpeakerSuggestModeArgs speakerSuggestModeArgs;
+
   final SignalType signalType;
   final MountingType mountingType;
   final LowFrequency lowFrequency;
   final WiringType? wiringType;
   final BackgroundNoise? backgroundNoise;
-  final SpeakerSelectionMode speakerSelectionMode;
   final bool autoPlacement;
   final AutoPlacementResult? autoPlacementResult;
 
@@ -394,7 +399,7 @@ class ListeningArea {
     this.environmentType = SpeakerEnvironmentType.indoor,
     this.listeningHeightOption = ListeningHeightOption.sitting,
     this.listeningHeight = 1.1, // Default to sitting height (1.1 m)
-    this.ceilingHeight = '',
+    this.ceilingHeight = '4.0',
     this.floorHeight = 0.0,
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
@@ -404,6 +409,8 @@ class ListeningArea {
     this.wiringType,
     this.backgroundNoise,
     this.speakerSelectionMode = SpeakerSelectionMode.select,
+    this.speakerSelectModeArgs = const SpeakerSelectModeArgs(),
+    this.speakerSuggestModeArgs = const SpeakerSuggestModeArgs(),
     this.autoPlacement = false,
     this.autoPlacementResult,
     this.preferredSpeakerColor,
@@ -517,6 +524,8 @@ class ListeningArea {
     ListeningPreference? listeningPreference,
     bool? isDrawn,
     SpeakerSelectionMode? speakerSelectionMode,
+    SpeakerSelectModeArgs? speakerSelectModeArgs,
+    SpeakerSuggestModeArgs? speakerSuggestModeArgs,
     bool? autoPlacement,
     AutoPlacementResult? autoPlacementResult,
   }) {
@@ -538,6 +547,8 @@ class ListeningArea {
       wiringType: wiringType ?? this.wiringType,
       backgroundNoise: backgroundNoise ?? this.backgroundNoise,
       speakerSelectionMode: speakerSelectionMode ?? this.speakerSelectionMode,
+      speakerSelectModeArgs: speakerSelectModeArgs ?? this.speakerSelectModeArgs,
+      speakerSuggestModeArgs: speakerSuggestModeArgs ?? this.speakerSuggestModeArgs,
       autoPlacement: autoPlacement ?? this.autoPlacement,
       autoPlacementResult: autoPlacementResult ?? this.autoPlacementResult,
       preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
@@ -578,6 +589,8 @@ class ListeningArea {
     'speakerSelectionMode': speakerSelectionMode.name,
     'autoPlacement': autoPlacement,
     'autoPlacementResult': autoPlacementResult?.toJson(),
+    'speakerSelectModeArgs': speakerSelectModeArgs.toJson(),
+    'speakerSuggestModeArgs': speakerSuggestModeArgs.toJson(),
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -612,6 +625,12 @@ class ListeningArea {
       speakerSelectionMode: SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
       autoPlacement: json['autoPlacement'] as bool? ?? false,
       autoPlacementResult: json['autoPlacementResult'] != null ? AutoPlacementResult.fromJson(json['autoPlacementResult'] as Map<String, dynamic>) : null,
+      speakerSelectModeArgs: json['speakerSelectModeArgs'] != null
+          ? SpeakerSelectModeArgs.fromJson(json['speakerSelectModeArgs'] as Map<String, dynamic>)
+          : const SpeakerSelectModeArgs(),
+      speakerSuggestModeArgs: json['speakerSuggestModeArgs'] != null
+          ? SpeakerSuggestModeArgs.fromJson(json['speakerSuggestModeArgs'] as Map<String, dynamic>)
+          : const SpeakerSuggestModeArgs(),
     );
   }
 
@@ -834,5 +853,181 @@ enum ListeningHeightOption {
       default:
         return ListeningHeightOption.custom;
     }
+  }
+}
+
+class SpeakerSelectModeArgs extends Equatable {
+  final List<MountingType> mountingTypes;
+  final SpeakerMaxSplRange? maxSplRange;
+  final SpeakerColorOption speakerColorOption;
+  final double lowFrequencyInHz;
+  final AudioChannel audioChannel;
+  final WiringType wiringType;
+  final bool useSubwoofer;
+  final bool monoSubwoofer;
+
+  const SpeakerSelectModeArgs({
+    this.mountingTypes = const <MountingType>[],
+    this.maxSplRange,
+    this.speakerColorOption = SpeakerColorOption.black,
+    this.lowFrequencyInHz = 70.0, // in Hz
+    this.audioChannel = AudioChannel.stereo,
+    this.wiringType = WiringType.highImpedance,
+    this.useSubwoofer = false,
+    this.monoSubwoofer = false,
+  });
+
+  @override
+  List<Object?> get props => <Object?>[
+    mountingTypes,
+    maxSplRange,
+    speakerColorOption,
+    lowFrequencyInHz,
+    audioChannel,
+    wiringType,
+    useSubwoofer,
+    monoSubwoofer,
+  ];
+
+  SpeakerSelectModeArgs copyWith({
+    ValueGetter<List<MountingType>>? mountingTypes,
+    ValueGetter<SpeakerMaxSplRange?>? maxSplRange,
+    ValueGetter<SpeakerColorOption>? speakerColorOption,
+    ValueGetter<double>? lowFrequencyInHz,
+    ValueGetter<AudioChannel>? audioChannel,
+    ValueGetter<WiringType>? wiringType,
+    ValueGetter<bool>? useSubwoofer,
+    ValueGetter<bool>? monoSubwoofer,
+  }) {
+    return SpeakerSelectModeArgs(
+      mountingTypes: mountingTypes != null ? mountingTypes() : this.mountingTypes,
+      maxSplRange: maxSplRange != null ? maxSplRange() : this.maxSplRange,
+      speakerColorOption: speakerColorOption != null ? speakerColorOption() : this.speakerColorOption,
+      lowFrequencyInHz: lowFrequencyInHz != null ? lowFrequencyInHz() : this.lowFrequencyInHz,
+      audioChannel: audioChannel != null ? audioChannel() : this.audioChannel,
+      wiringType: wiringType != null ? wiringType() : this.wiringType,
+      useSubwoofer: useSubwoofer != null ? useSubwoofer() : this.useSubwoofer,
+      monoSubwoofer: monoSubwoofer != null ? monoSubwoofer() : this.monoSubwoofer,
+    );
+  }
+
+  factory SpeakerSelectModeArgs.fromJson(Map<String, dynamic> json) {
+    final mountingTypes = List.from(json['mountingTypes'] ?? []).map((e) => MountingType.fromJson(e as String) ?? MountingType.surface);
+
+    return SpeakerSelectModeArgs(
+      mountingTypes: mountingTypes.toList(),
+      maxSplRange: SpeakerMaxSplRange.fromJson(json['maxSplRange'] as String?),
+      speakerColorOption: SpeakerColorOption.values.firstWhere((e) => e.name == json['speakerColorOption'], orElse: () => SpeakerColorOption.black),
+      lowFrequencyInHz: (json['lowFrequencyInHz'] as num?)?.toDouble() ?? 70.0,
+      audioChannel: AudioChannel.values.firstWhere((e) => e.name == json['audioChannel'], orElse: () => AudioChannel.stereo),
+      wiringType: WiringType.values.firstWhere((e) => e.name == json['wiringType'], orElse: () => WiringType.highImpedance),
+      useSubwoofer: json['useSubwoofer'] as bool? ?? false,
+      monoSubwoofer: json['monoSubwoofer'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'mountingTypes': mountingTypes.map((e) => e.name).toList(),
+    'maxSplRange': maxSplRange?.name,
+    'speakerColorOption': speakerColorOption.name,
+    'lowFrequencyInHz': lowFrequencyInHz,
+    'audioChannel': audioChannel.name,
+    'wiringType': wiringType.name,
+    'useSubwoofer': useSubwoofer,
+    'monoSubwoofer': monoSubwoofer,
+  };
+}
+
+class SpeakerSuggestModeArgs extends Equatable {
+  final MountingType mountingType;
+  final RangeValues splRange;
+  final LowFrequency lowFrequency;
+
+  const SpeakerSuggestModeArgs({
+    this.mountingType = MountingType.surface,
+    this.splRange = const RangeValues(60.0, 70.0),
+    this.lowFrequency = LowFrequency.fullRange,
+  });
+
+  @override
+  List<Object?> get props => <Object?>[mountingType, splRange, lowFrequency];
+
+  SpeakerSuggestModeArgs copyWith({
+    ValueGetter<MountingType>? mountingType,
+    ValueGetter<RangeValues>? splRange,
+    ValueGetter<LowFrequency>? lowFrequency,
+  }) {
+    return SpeakerSuggestModeArgs(
+      mountingType: mountingType != null ? mountingType() : this.mountingType,
+      splRange: splRange != null ? splRange() : this.splRange,
+      lowFrequency: lowFrequency != null ? lowFrequency() : this.lowFrequency,
+    );
+  }
+
+  factory SpeakerSuggestModeArgs.fromJson(Map<String, dynamic> json) {
+    return SpeakerSuggestModeArgs(
+      mountingType: MountingType.fromJson(json['mountingType'] as String?) ?? MountingType.surface,
+      splRange: json['splRange'] != null
+          ? RangeValues(
+              (json['splRange']['min'] as num).toDouble(),
+              (json['splRange']['max'] as num).toDouble(),
+            )
+          : const RangeValues(60.0, 70.0),
+      lowFrequency: LowFrequency.fromJson(json['lowFrequency'] as String?) ?? LowFrequency.fullRange,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'mountingType': mountingType.name,
+    'splRange': {'min': splRange.start, 'max': splRange.end},
+    'lowFrequency': lowFrequency.name,
+  };
+}
+
+enum SpeakerColorOption {
+  black,
+  white;
+
+  String get displayName {
+    switch (this) {
+      case SpeakerColorOption.black:
+        return 'Black';
+      case SpeakerColorOption.white:
+        return 'White';
+    }
+  }
+}
+
+enum AudioChannel {
+  mono,
+  stereo;
+
+  String get displayName => switch (this) {
+    AudioChannel.mono => 'Mono',
+    AudioChannel.stereo => 'Stereo',
+  };
+}
+
+enum SpeakerMaxSplRange {
+  lessThan105db,
+  range105to115db,
+  greaterThan115db;
+
+  String get displayName {
+    switch (this) {
+      case SpeakerMaxSplRange.lessThan105db:
+        return '< 105dB';
+      case SpeakerMaxSplRange.range105to115db:
+        return '105 - 115 dB';
+      case SpeakerMaxSplRange.greaterThan115db:
+        return '> 115dB';
+    }
+  }
+
+  static SpeakerMaxSplRange? fromJson(String? value) {
+    if (value == "lessThan105db") return SpeakerMaxSplRange.lessThan105db;
+    if (value == "range105to115db") return SpeakerMaxSplRange.range105to115db;
+    if (value == "greaterThan115db") return SpeakerMaxSplRange.greaterThan115db;
+    return null;
   }
 }
