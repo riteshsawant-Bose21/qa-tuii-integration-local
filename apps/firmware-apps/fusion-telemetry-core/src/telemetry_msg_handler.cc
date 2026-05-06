@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <mutex>
 #include <boost/program_options.hpp>
-#include <boost/json/src.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "telemetry_core.h"
 #include "telemetry_utils.h"
@@ -288,6 +287,9 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
     std::string meter_data;
     std::string meter_type;
     std::size_t size;
+
+    auto current_filter = std::make_shared<const bosepro::telemetryManager::FilterSet>();
+
     int ret_val = -1;
 
     // Check if it is time to report meter data
@@ -296,9 +298,51 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
         int err_cnt = 0;
         while (1)
         {
-                size = telm_mgr.get_meter_data(req_name,
+            size = telm_mgr.get_meter_data(req_name,
                                            ctx.meter_type,
                                            meter_data);
+
+            // Apply block-name filter if one is active
+            telm_mgr.get_filter(current_filter);
+            if (current_filter && !current_filter->empty())
+            {
+                try
+                {
+                    std::stringstream filter_in;
+                    filter_in << "[" << meter_data << "]";
+                    boost::property_tree::ptree arr;
+                    boost::property_tree::read_json(filter_in, arr);
+
+                    std::string filtered;
+                    bool first = true;
+                    for (const auto &item : arr)
+                    {
+                        const std::string &block = item.second.get<std::string>("block_name", "");
+                        if (current_filter->count(block))
+                        {
+                            std::ostringstream entry;
+                            boost::property_tree::write_json(entry, item.second, false);
+                            std::string entry_str = entry.str();
+                            if (!entry_str.empty() && entry_str.back() == '\n')
+                                entry_str.pop_back();
+                            if (!first) filtered += ",";
+                            filtered += entry_str;
+                            first = false;
+                        }
+                    }
+                    meter_data = filtered;
+                    size = meter_data.size();
+                }
+                catch (const std::exception &e)
+                {
+                    SPDLOG_WARN("Filter: failed to parse meter data ({})", e.what());
+                }
+            } 
+            else {
+                SPDLOG_DEBUG("No active filter or filter is empty, skipping filtering step");
+                meter_data = ""; // Clear meter data if no filter is active or filter is empty, to avoid sending unfiltered data
+                size = 0;
+            }
 
             std::stringstream temp;
             temp << "[" << meter_data << "]";
@@ -676,5 +720,33 @@ int process_update_report_period_rsp(bosepro::telemetryManager& telm_mgr,
     message << "}";
     message << "}\n";
 
+    return 0;
+}
+
+// Message Format:
+//   message_name:meter_data,
+//      packet_id: pkt_id,
+//      parameters:{
+//      value:filter block id's data string
+//   }
+int process_update_filter_req(bosepro::telemetryManager& telm_mgr,
+                             const bosepro::Telemetry_configuration& proc_pkt,
+                             uint64_t& pkt_id, std::string& req_name,
+                             bosepro::HandlerContext& ctx)
+{
+    std::vector<std::string> filter_blocks;
+    
+    // Get filter block id's
+    if (proc_pkt.get_config_value_vector("value", filter_blocks))
+    {
+        auto new_filter = std::make_shared<const bosepro::telemetryManager::FilterSet>(filter_blocks.begin(), filter_blocks.end());
+        telm_mgr.set_filter(new_filter);
+        SPDLOG_DEBUG("Updated telemetry filter with block ids: {}", proc_pkt.serialize_message());
+    }
+    else
+    {
+        SPDLOG_ERROR("Failed to get filter block ids from the request");
+        return -1;
+    }
     return 0;
 }

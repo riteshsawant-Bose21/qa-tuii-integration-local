@@ -32,14 +32,14 @@ func GetSoftwareUpdateVersion() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
-		return api.SoftwareUpdateVersionUnknown
+		return api.Unknown
 	}
 
 	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
 		logging.GetLogger().Warn("Failed to parse software update file")
-		return api.SoftwareUpdateVersionUnknown
+		return api.Unknown
 	}
 
 	return fw.BuildConfiguration.SoftwareUpdateBundleVersion
@@ -49,14 +49,14 @@ func GetBranchName() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
-		return api.BranchNameUnknown
+		return api.Unknown
 	}
 
 	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
 		logging.GetLogger().Warn("Failed to parse software update file")
-		return api.BranchNameUnknown
+		return api.Unknown
 	}
 
 	return fw.BuildConfiguration.FusionMonorepoBranch
@@ -66,14 +66,14 @@ func GetCommitHash() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
-		return api.CommitHashUnknown
+		return api.Unknown
 	}
 
 	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
 		logging.GetLogger().Warn("Failed to parse software update file")
-		return api.CommitHashUnknown
+		return api.Unknown
 	}
 
 	return fw.BuildConfiguration.FusionMonorepoCommitHash
@@ -83,14 +83,14 @@ func GetJenkinsBuildNumber() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
-		return api.JenkinsBuildNumberUnknown
+		return api.Unknown
 	}
 
 	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
 		logging.GetLogger().Warn("Failed to parse software update file")
-		return api.JenkinsBuildNumberUnknown
+		return api.Unknown
 	}
 
 	return fw.BuildConfiguration.JenkinsBuildNumber
@@ -100,14 +100,14 @@ func GetPreReleaseTag() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
-		return api.PreReleaseTagUnknown
+		return api.Unknown
 	}
 
 	var fw api.SoftwareUpdateInfo
 	err = json.Unmarshal(data, &fw)
 	if err != nil {
 		logging.GetLogger().Warn("Failed to parse software update file")
-		return api.PreReleaseTagUnknown
+		return api.Unknown
 	}
 
 	return fw.BuildConfiguration.PreReleaseTag
@@ -117,7 +117,7 @@ func GetSerialNumber() string {
 	data, err := os.ReadFile(api.SerialPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SerialPath)
-		return api.SerialUnknown
+		return api.Unknown
 	} else {
 		return string(bytes.TrimRight(data, "\x00\n"))
 	}
@@ -127,7 +127,7 @@ func GetMacAddress() string {
 	macAddr, err := getMacAddress()
 	if err != nil {
 		logging.GetLogger().Warn("Unable to read MAC address: %v", err)
-		return api.MacUnknown
+		return api.Unknown
 	}
 	return macAddr
 }
