@@ -524,3 +524,9 @@ type MessageTrigger struct {
 	Zones     []string `json:"zones"`
 	Timestamp int64    `json:"timestamp"`
 }
+
+// SetModelNameRequest is the request body for POST /manufacturing/model-name.
+// ModelName must be one of the accepted values: c1-evk, powersmart, fm6, fm8y, xlr-pal, blue-pal, som.
+type SetModelNameRequest struct {
+	ModelName string `json:"model_name"`
+}

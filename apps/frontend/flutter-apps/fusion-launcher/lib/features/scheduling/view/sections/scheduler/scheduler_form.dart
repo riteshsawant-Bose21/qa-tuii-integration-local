@@ -477,19 +477,22 @@ class SchedulerForm extends StatelessWidget {
       ) {
         return Form(
           key: formViewModel.key,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              ScheduleNameField(formViewModel: formViewModel),
-              const SizedBox(height: 20),
-              Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight),
-              const SizedBox(height: 20),
-              OccurrenceSelector(formViewModel: formViewModel),
-              const SizedBox(height: 20),
-              Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight),
-              const SizedBox(height: 20),
-              ScheduleTimingSection(formViewModel: formViewModel),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                ScheduleNameField(formViewModel: formViewModel),
+                const SizedBox(height: 20),
+                Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight),
+                const SizedBox(height: 20),
+                OccurrenceSelector(formViewModel: formViewModel),
+                const SizedBox(height: 20),
+                Divider(height: 1, thickness: 1, color: context.colorScheme.strokeLight),
+                const SizedBox(height: 20),
+                ScheduleTimingSection(formViewModel: formViewModel),
+              ],
+            ),
           ),
         );
       },

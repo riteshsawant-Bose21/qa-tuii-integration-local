@@ -10,11 +10,22 @@ import (
 	"fusion/internal/api"
 	"net"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 )
 
 func GetModelName() string {
-	return api.ModelUnknown
+	output, err := exec.Command("fusion-model-name", "get").Output()
+	if err != nil {
+		logging.GetLogger().Warn("Failed to get model name via fusion-model-name: %v", err)
+		return api.ModelUnknown
+	}
+	name := strings.TrimSpace(string(output))
+	if name == "" {
+		return api.ModelUnknown
+	}
+	return name
 }
 
 func GetSoftwareUpdateVersion() string {
