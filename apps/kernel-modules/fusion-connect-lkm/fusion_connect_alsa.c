@@ -1,4 +1,6 @@
 #include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/slab.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -404,14 +406,22 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     if (substream->dma_buffer.dev.type == SNDRV_DMA_TYPE_UNKNOWN) {
         err = snd_pcm_set_managed_buffer(substream,
-                                        SNDRV_DMA_TYPE_VMALLOC, 
-                                        NULL,
+                                        SNDRV_DMA_TYPE_DEV,
+                                        &g_pdev->dev,
                                         0, 0);
         if (err < 0)
         {
             pr_err("fusion_cn_alsa: set_managed_buffer failed (%d)\n", err);
             return err;
         }
+
+        dev_info(&g_pdev->dev,
+                 "FC ALSA dma_buffer: stream=%s area=%p addr=%pad bytes=%zu type=%d\n",
+                 stream_name,
+                 substream->dma_buffer.area,
+                 &substream->dma_buffer.addr,
+                 substream->dma_buffer.bytes,
+                 substream->dma_buffer.dev.type);
     }
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
@@ -462,6 +472,9 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     spin_unlock_irq(&stream->lock);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
+    dev_info(substream->pcm->card->dev,
+             "FC runtime buffer: stream=%s dma_area=%p dma_addr=%pad dma_bytes=%zu\n",
+             stream->stream_name, runtime->dma_area, &runtime->dma_addr, runtime->dma_bytes);
 
     return 0;
 }
@@ -852,6 +865,7 @@ static struct platform_driver fusion_cn_driver = {
 int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_ops *callbacks)
 {
     struct fusion_cn_chip *chip;
+    struct device_node *np;
     int err;
 
     err = platform_driver_register(&fusion_cn_driver);
@@ -869,9 +883,21 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
 
     g_pdev->dev.platform_data = fusion_cn_mgr;
 
+    np = of_find_compatible_node(NULL, NULL, "bosepro,fusion-connect-mem");
+    if (!np) {
+        printk(KERN_ERR "fusion_cn_alsa: Failed to find DT node for FusionConnect reserved memory\n");
+        platform_device_put(g_pdev);
+        g_pdev = NULL;
+        platform_driver_unregister(&fusion_cn_driver);
+        return -ENODEV;
+    }
+    g_pdev->dev.of_node = np;
+
     err = platform_device_add(g_pdev);
     if (err < 0) {
         printk(KERN_ERR "fusion_cn_alsa: platform_device_add failed: %d\n", err);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_put(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
@@ -881,15 +907,32 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
     chip = platform_get_drvdata(g_pdev);
     if (!chip) {
         printk(KERN_ERR "fusion_cn_alsa: Failed to get chip from platform data\n");
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
         return -ENODEV;
     }
 
+    err = of_reserved_mem_device_init(&g_pdev->dev);
+    if (err) {
+        printk(KERN_ERR "fusion_cn_alsa: of_reserved_mem_device_init failed: %d\n", err);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
+        platform_device_unregister(g_pdev);
+        g_pdev = NULL;
+        platform_driver_unregister(&fusion_cn_driver);
+        return err;
+    }
+    dev_info(&g_pdev->dev, "FusionConnect reserved memory attached\n");
+
     err = callbacks->register_alsa_driver(fusion_cn_mgr, chip);
     if (err < 0) {
         printk(KERN_ERR "fusion_cn_alsa: register_alsa_driver failed: %d\n", err);
+        of_reserved_mem_device_release(&g_pdev->dev);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
@@ -903,6 +946,11 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
 void fusion_cn_alsa_destroy(void)
 {
     if (g_pdev) {
+        of_reserved_mem_device_release(&g_pdev->dev);
+        if (g_pdev->dev.of_node) {
+            of_node_put(g_pdev->dev.of_node);
+            g_pdev->dev.of_node = NULL;
+        }
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
     }
