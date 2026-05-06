@@ -7,7 +7,7 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 import '../../../../schematics/presentation/pages/schematics_page.dart';
 import '../../../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../../../../wiring_design/view/wiring_device_list_view.dart';
-import '../../../widget/building/side_panel_widgets/schematic_properties.dart';
+import '../../../widget/building/side_panel_widgets/properties/schematic_properties.dart';
 
 class SystemPage extends StatelessWidget {
   const SystemPage({super.key});

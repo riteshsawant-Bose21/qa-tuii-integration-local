@@ -12,3 +12,4 @@ multipass.env
 data
 
 ignoredFiles/*
+*.test
