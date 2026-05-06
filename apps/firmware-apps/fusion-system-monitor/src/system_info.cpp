@@ -11,7 +11,7 @@
 namespace {
 
 constexpr float kHighUsageThreshold = 80.0f;
-constexpr const char *kThermalZoneBase = "/sys/class/thermal";
+constexpr const char *kSomTempPath = "/sys/class/thermal/thermal_zone0/temp";
 
 class SystemInfo : public bosepro::Module
 {
@@ -168,34 +168,16 @@ bool SystemInfo::parse_storage_usage(const std::string &path, float &usage)
 
 bool SystemInfo::parse_temperature()
 {
-    std::string temp_path;
-    try {
-        for (const auto &entry : std::filesystem::directory_iterator(kThermalZoneBase)) {
-            const std::string name = entry.path().filename().string();
-            if (name.rfind("thermal_zone", 0) == 0) {
-                temp_path = entry.path().string() + "/temp";
-                break;
-            }
-        }
-    } catch (const std::exception &e) {
-        SPDLOG_DEBUG("Could not scan {}: {}", kThermalZoneBase, e.what());
-    }
-
-    if (temp_path.empty()) {
-        SPDLOG_DEBUG("No thermal zone found under {}, skipping temperature", kThermalZoneBase);
-        return false;
-    }
-
-    std::ifstream temp_file(temp_path);
+    std::ifstream temp_file(kSomTempPath);
     if (!temp_file.is_open()) {
-        SPDLOG_ERROR("Failed to open {}", temp_path);
+        SPDLOG_ERROR("Failed to open {}", kSomTempPath);
         return false;
     }
 
     int milli_celsius = 0;
     temp_file >> milli_celsius;
     if (temp_file.fail()) {
-        SPDLOG_ERROR("Failed to read temperature from {}", temp_path);
+        SPDLOG_ERROR("Failed to read temperature from {}", kSomTempPath);
         return false;
     }
 
