@@ -161,7 +161,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Source DB Service.")
 
 	// Initialize Source Service
-	sourceSVC := source.NewService(sourceDBSvc, loggers.AppLogger)
+	sourceSVC := source.NewService(sourceDBSvc, s3Handler.Bucket(cfg.Cloud.SourceS3Bucket), loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
 	//Initialize Product Service (now includes sync functionality)

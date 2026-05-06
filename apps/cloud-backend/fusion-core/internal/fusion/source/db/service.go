@@ -47,7 +47,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		var (
 			sourceID           string
 			modelName          string
-			assetPath          string
+			assetPath          sql.NullString
 			modelFamily        string
 			primaryConnection  string
 			description        sql.NullString
@@ -85,9 +85,14 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 			pagingTypePtr = &pagingSourceType.String
 		}
 
+		assetPathStr := ""
+		if assetPath.Valid {
+			assetPathStr = assetPath.String
+		}
+
 		item := types.SourceItemResponse{
 			SourceID:    sourceID,
-			Assets:      []map[string][]string{{"black": {assetPath}}},
+			Assets:      []map[string][]string{{"black": {assetPathStr}}},
 			ModelName:   modelName,
 			ModelFamily: modelFamily,
 			Description: descPtr,
