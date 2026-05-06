@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
 import '../item_widget_builder.dart';
+import '../processing_blocks/widgets/disabled_widget_wrapper.dart';
 
 class PBItemTextfield extends StatelessWidget {
   const PBItemTextfield({
@@ -104,12 +105,14 @@ class PBNumberTextField extends StatelessWidget {
   final num? max;
   @override
   Widget build(BuildContext context) {
+    final bool isDisabled = DisabledWidgetWrapper.maybeOf(context)?.isDisabled ?? false;
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.textInput,
         'pb_number_textfield$semanticId',
       ),
       label: value?.toString(),
+      enabled: !isDisabled,
       child: PBTextField(
         value: value?.toString(),
         inputFormatters: <TextInputFormatter>[
@@ -171,11 +174,13 @@ class _PBTextFieldState extends State<PBTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDisabled = DisabledWidgetWrapper.maybeOf(context)?.isDisabled ?? false;
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.textInput,
         "pb_textfield_${widget.semanticId}",
       ),
+      enabled: !isDisabled,
       label: controller.text,
       child: FusionContainer(
         alignment: Alignment.center,
@@ -187,6 +192,7 @@ class _PBTextFieldState extends State<PBTextField> {
             focusNode: focusNode,
             keyboardType: TextInputType.number,
             controller: controller,
+            enabled: !isDisabled,
             style: context.textTheme.bodySmall,
             inputFormatters: widget.inputFormatters,
             textAlign: TextAlign.center,

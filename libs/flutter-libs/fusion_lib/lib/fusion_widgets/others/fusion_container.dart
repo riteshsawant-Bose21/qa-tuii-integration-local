@@ -41,6 +41,7 @@ class FusionContainer extends StatelessWidget {
         width: width,
         height: height,
         alignment: alignment,
+        padding: padding,
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           // color: context.colorScheme.shadowDark,

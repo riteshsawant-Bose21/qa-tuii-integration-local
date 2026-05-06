@@ -21,10 +21,11 @@ class CompressorController {
     valueHandler.updateValue(field: 'threshold', value: roundTo2Digits(value));
   }
 
-  num? get threshold {
+  num get threshold {
     return DeserializationUtil.numDeserializer.deserialize(
-      allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'threshold' && e.dimension == null)?.value,
-    );
+          allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'threshold' && e.dimension == null)?.value,
+        ) ??
+        0.0;
   }
 
   void updateReduction(num value) {
@@ -43,10 +44,11 @@ class CompressorController {
   }
 
   /// Retrieves the current band type from the processing block's properties.
-  num? get ratio {
+  num get ratio {
     return DeserializationUtil.numDeserializer.deserialize(
-      allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'ratio' && e.dimension == null)?.value,
-    );
+          allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'ratio' && e.dimension == null)?.value,
+        ) ??
+        1.0;
   }
 
   void updateAttack(num value) {
