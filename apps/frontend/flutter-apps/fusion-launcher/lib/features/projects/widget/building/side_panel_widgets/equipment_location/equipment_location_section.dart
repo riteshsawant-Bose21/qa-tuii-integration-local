@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/right_aligned_popup_menu.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/parts/endpointdialog.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
@@ -267,11 +266,22 @@ class __ExpansionTileState extends State<_ExpansionTile> {
 
             Expanded(
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_popup_menu_${widget.index}"),
-                child: RightAlignedPopupMenu(
-                  menuContent: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "equipment_location_section_item_popup_menu_${widget.index}",
+                ),
+                child: GestureDetector(
+                  onTap:
+                      () => AddEndpointDialog.show(
+                        context: context,
+                        category: EndpointDeviceCategory.endpoint,
+                        fromBuildingPage: true,
+                      ),
                   child: SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_${widget.index}_title_textfield"),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.container,
+                      "equipment_location_section_item_${widget.index}_title_textfield",
+                    ),
                     child: TitleTextFieldSwitcher(
                       hintText: "Name",
                       value: widget.title,

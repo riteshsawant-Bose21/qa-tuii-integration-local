@@ -340,10 +340,10 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/add_output_device_drawer/views/add_output_device_drawer.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
+import '../../../core/service_locator.dart';
 import '../view_model/create_zone_viewmodel_state.dart';
 import 'create_zone_content.dart';
 
@@ -361,38 +361,98 @@ class CreateZonePopup extends StatelessWidget {
     required this.isFromBuildingPage,
   });
 
+  static void showEdit(BuildContext context, {required Zone zone, bool isFromBuildingPage = false}) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final CreateZoneViewModel vm = CreateZoneViewModel()..init(isFromBuilding: isFromBuildingPage);
+    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
+
+    // Pre-populate using existing public setters
+    vm.setZoneName(zone.name);
+    vm.setZoneColor(zone.zoneColor);
+
+    for (final ListeningArea area in projectViewModel.getListeningAreasForZone(zoneId: zone.id)) {
+      vm.updateZoneListeningArea(area, false);
+    }
+
+    for (final SubZone sz in projectViewModel.getSubZonesForZone(parentZoneId: zone.id)) {
+      vm.addSubzone();
+      final int index = vm.state.subzones.length - 1;
+      vm.onSubzoneNameChanged(index, sz.name);
+      for (final ListeningArea area in projectViewModel.getListeningAreasForZone(zoneId: zone.id)) {
+        vm.updateZoneListeningArea(area, false);
+      }
+    }
+
+    FusionDrawer.show<void>(
+      context: context,
+      semanticId: 'edit_zone',
+      buttonLabel: 'Save Zone',
+      buttonEnabledNotifier: saveEnabled,
+      onButtonPressed: () {
+        final CreateZoneViewModelState s = vm.state;
+
+        projectViewModel.updateZone(zone: zone);
+
+        if (s.subzones.isEmpty) {
+          projectViewModel.updateListeningAreasInZone(
+            listeningAreaIds: s.zoneListeningAreas.map((ListeningArea a) => a.id).toList(),
+            zoneId: zone.id,
+          );
+        } else {
+          final List<SubZone> existingSubzones = projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
+          for (final SubZone sz in existingSubzones) {
+            projectViewModel.removeSubZoneFromZone(
+              subZoneId: sz.id,
+              parentZoneId: zone.id,
+            );
+          }
+          for (final AddListeningAreaToSubzoneModel subzone in s.subzones) {
+            final SubZone newSubZone = SubZone(name: subzone.subZoneName);
+            projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
+            projectViewModel.addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zone.id, autoSave: false);
+            projectViewModel.updateListeningAreasInSubZone(
+              listeningAreaIds: subzone.listeningAreas.map((ListeningArea a) => a.id).toList(),
+              subZoneId: newSubZone.id,
+            );
+          }
+        }
+
+        if (s.zoneFunctionType != null) {
+          projectViewModel.addFunctionToZone(
+            function: getNewZoneFunction(type: s.zoneFunctionType!),
+            zoneId: zone.id,
+          );
+        }
+
+        Navigator.of(context).pop();
+      },
+      title: 'Edit Zone',
+      content: BlocProvider<CreateZoneViewModel>.value(
+        value: vm,
+        child: CreateZoneContent(
+          isFromBuildingPage: isFromBuildingPage,
+          saveEnabledNotifier: saveEnabled,
+        ),
+      ),
+    );
+  }
+
   static void show(BuildContext context, {bool isFromBuildingPage = false}) {
     final CreateZoneViewModel vm = CreateZoneViewModel()..init(isFromBuilding: isFromBuildingPage);
-
+    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
     FusionDrawer.show<void>(
       context: context,
       semanticId: 'create_zone',
       buttonLabel: 'Save Zone',
+      buttonEnabledNotifier: saveEnabled, // ← add
       onButtonPressed: () => vm.createZone(context),
-      header: FusionDrawerHeader(
-        semanticId: 'create_zone',
-        title: 'Create Zone',
-        trailing: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-          bloc: vm,
-          buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
-          builder: (BuildContext ctx, CreateZoneViewModelState state) {
-            return _AddOutputDeviceButton(
-              onTap: () {
-                AddOutputDeviceDrawer.show(
-                  vm: vm,
-                  context: context,
-                  zoneColor: state.zoneColor,
-                  zoneName: state.zoneName,
-                  onBack: () => Navigator.of(context).maybePop(),
-                );
-              },
-            );
-          },
-        ),
-      ),
+      title: 'Create Zone',
       content: BlocProvider<CreateZoneViewModel>.value(
         value: vm,
-        child: CreateZoneContent(isFromBuildingPage: isFromBuildingPage),
+        child: CreateZoneContent(
+          isFromBuildingPage: isFromBuildingPage,
+          saveEnabledNotifier: saveEnabled, // ← add
+        ),
       ),
     );
   }
@@ -471,39 +531,6 @@ class _FusionDrawerHeaderState extends State<FusionDrawerHeader> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddOutputDeviceButton extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const _AddOutputDeviceButton({required this.onTap});
-
-  @override
-  State<_AddOutputDeviceButton> createState() => _AddOutputDeviceButtonState();
-}
-
-class _AddOutputDeviceButtonState extends State<_AddOutputDeviceButton> {
-  bool _hovered = false;
-  @override
-  Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "create_zone_add_output_device"),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: FusionAppText(
-            text: "Add Output Device",
-            style: context.textTheme.l1SemiBold.copyWith(
-              color: _hovered ? context.colorScheme.elevation6 : context.colorScheme.textPrimary,
-            ),
-          ),
         ),
       ),
     );

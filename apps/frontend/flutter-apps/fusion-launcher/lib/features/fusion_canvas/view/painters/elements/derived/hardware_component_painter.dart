@@ -5,13 +5,16 @@ import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canv
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_element_painter.dart';
+import '../mixin/fusion_canvas_interactable_mixin.dart';
 import 'hardware_painter/source_painter.dart';
 import 'hardware_painter/speaker_painter.dart';
 
 class HardwareComponentPainter extends FusionCanvasElementPainter {
   final HardwareComponent hardware;
   late final FusionCanvasElementPainter? painter;
-  HardwareComponentPainter({required this.hardware}) : super(item: FusionCanvasItem(id: hardware.id)) {
+
+  final bool canMove;
+  HardwareComponentPainter({required this.hardware, this.canMove = true}) : super(item: FusionCanvasItem(id: hardware.id)) {
     if (hardware is Speaker) {
       painter = SpeakerPainter(hardware: hardware as Speaker);
     } else if (hardware is Source) {
@@ -20,6 +23,13 @@ class HardwareComponentPainter extends FusionCanvasElementPainter {
       painter = null;
     }
   }
+
+  @override
+  Set<FusionCanvasLayerInteraction> get possibleInteractions => <FusionCanvasLayerInteraction>{
+    FusionCanvasLayerInteraction.select,
+    if (canMove) FusionCanvasLayerInteraction.drag,
+  };
+
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     this.painter?.paint(canvas, size, painter);
