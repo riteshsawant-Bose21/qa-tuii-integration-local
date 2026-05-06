@@ -191,7 +191,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
         Expanded(
           child: SemanticHelper.container(
-            testId: SemanticHelper.createTestId(SemanticTypes.container, 'source_matrix_out_column'),
+            testId: SemanticHelper.createTestId(SemanticTypes.container, 'out_column'),
             child: Column(
               children: <Widget>[
                 Padding(
