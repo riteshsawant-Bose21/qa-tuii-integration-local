@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -205,30 +204,12 @@ class BuildingPage extends StatelessWidget {
           },
         ),
       ),
-      DockItemConfig(
+      const DockItemConfig(
         id: "6",
         title: "COST CALCULATOR",
         side: "right",
         allowUndock: true,
-        dockItemWidget: CostCalculatorScreen(
-          speakers: serviceLocator<ProjectViewModel>().speakers,
-          sources: serviceLocator<ProjectViewModel>().sources,
-          controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-          racks:
-              serviceLocator<ProjectViewModel>().genericHardwareComponents
-                  .where(
-                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                  )
-                  .toList(),
-          amplifiers: <Amplifier>[],
-          fusionDevices: <FusionDsp>[],
-          others:
-              serviceLocator<ProjectViewModel>().genericHardwareComponents
-                  .where(
-                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                  )
-                  .toList(),
-        ),
+        dockItemWidget: CostCalculatorScreen(),
       ),
 
       DockItemConfig(
