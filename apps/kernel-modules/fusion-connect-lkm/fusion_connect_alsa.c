@@ -415,13 +415,12 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
             return err;
         }
 
-        dev_info(&g_pdev->dev,
-                 "FC ALSA dma_buffer: stream=%s area=%p addr=%pad bytes=%zu type=%d\n",
-                 stream_name,
-                 substream->dma_buffer.area,
-                 &substream->dma_buffer.addr,
-                 substream->dma_buffer.bytes,
-                 substream->dma_buffer.dev.type);
+        printk(KERN_DEBUG "fusion_cn_alsa: FC ALSA dma_buffer: stream=%s area=%p addr=%pad bytes=%zu type=%d\n",
+               stream_name,
+               substream->dma_buffer.area,
+               &substream->dma_buffer.addr,
+               substream->dma_buffer.bytes,
+               substream->dma_buffer.dev.type);
     }
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
@@ -472,9 +471,8 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     spin_unlock_irq(&stream->lock);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
-    dev_info(substream->pcm->card->dev,
-             "FC runtime buffer: stream=%s dma_area=%p dma_addr=%pad dma_bytes=%zu\n",
-             stream->stream_name, runtime->dma_area, &runtime->dma_addr, runtime->dma_bytes);
+    printk(KERN_DEBUG "fusion_cn_alsa: FC runtime buffer: stream=%s dma_area=%p dma_addr=%pad dma_bytes=%zu\n",
+           stream->stream_name, runtime->dma_area, &runtime->dma_addr, runtime->dma_bytes);
 
     return 0;
 }
@@ -925,7 +923,7 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
         platform_driver_unregister(&fusion_cn_driver);
         return err;
     }
-    dev_info(&g_pdev->dev, "FusionConnect reserved memory attached\n");
+    printk(KERN_DEBUG "fusion_cn_alsa: FusionConnect reserved memory attached\n");
 
     err = callbacks->register_alsa_driver(fusion_cn_mgr, chip);
     if (err < 0) {
