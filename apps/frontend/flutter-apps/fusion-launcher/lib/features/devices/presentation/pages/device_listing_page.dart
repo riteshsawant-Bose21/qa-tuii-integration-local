@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/alerts/alerts_dashboard.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/live_device_widgets.dart';
+import 'package:fusion_launcher/features/devices/view_model/reboot/reboot_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/models/device_system_info.dart';
 import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -279,6 +280,10 @@ class _DeviceListTabState extends State<DeviceListTab> {
   }
 
   _showRebootConfirmation(BuildContext context, HardwareComponent device) async {
+    final RebootViewmodelCubit rebootCubit = serviceLocator<RebootViewmodelCubit>();
+    final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? "";
+    Future<bool>? rebootFuture;
+
     final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -287,11 +292,19 @@ class _DeviceListTabState extends State<DeviceListTab> {
             title: 'REBOOT',
             description: 'Do you want to reboot ${device.name} device ?',
             loadingMessage: 'Device rebooting',
-            onConfirm: () {},
+            onConfirm: () {
+              rebootFuture = rebootCubit.rebootDevice(vip: vip, deviceId: device.id);
+            },
           ),
     );
-    if (result == true && context.mounted) {
-      FusionToast.success(context, message: "${device.name} reboot successful.");
+    if (result == true && rebootFuture != null) {
+      final bool success = await rebootFuture!;
+      if (!context.mounted) return;
+      if (success) {
+        FusionToast.success(context, message: "${device.name} reboot successful.");
+      } else {
+        FusionToast.error(context, message: "${device.name} reboot failed.");
+      }
     }
   }
 }

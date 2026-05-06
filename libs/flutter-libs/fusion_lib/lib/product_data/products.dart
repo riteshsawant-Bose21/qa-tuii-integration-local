@@ -130,7 +130,7 @@ class Products {
 
   // ── public: image access ──────────────────────────────────────────────────
 
-  ProductImageCache? imageFor({required int productId}) => _imageByProductId[productId];
+  ProductImageCache? imageFor({required int productId, String color = 'black'}) => _imageByProductId[productId];
 
   List<String> imagePathsFor({
     required int productId,

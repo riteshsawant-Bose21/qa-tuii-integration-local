@@ -15,10 +15,39 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../software_update/software_update_service.dart';
+
 part 'firmware_update_vm_state.dart';
 
 const String _firmwareUpdateFolderName = 'firmware-updates';
 const String _firmwareUpdateSnapshotKey = 'firmware_update.snapshot.v1';
+
+class SoftwareUpdateCubit extends Cubit<UpdateState> {
+  final FusionNetworkClient networkClient;
+  final SoftwareUpdateService _svc;
+  late final StreamSubscription<UpdateState> _sub;
+
+  factory SoftwareUpdateCubit({required FusionNetworkClient networkClient}) {
+    final SoftwareUpdateService svc = _ensureServiceInitialized(networkClient);
+    return SoftwareUpdateCubit._(networkClient, svc);
+  }
+
+  SoftwareUpdateCubit._(this.networkClient, this._svc) : super(_svc.state) {
+    _sub = _svc.stream.listen(emit);
+  }
+
+  static SoftwareUpdateService _ensureServiceInitialized(
+    FusionNetworkClient networkClient,
+  ) {
+    return SoftwareUpdateService.instance;
+  }
+
+  @override
+  Future<void> close() async {
+    await _sub.cancel();
+    return super.close();
+  }
+}
 
 class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
   final FusionDeviceService fusionDeviceService;
@@ -730,9 +759,9 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
                       item.serialNumber: item,
                   };
 
-              for (final MapEntry<String, FirmwareUpdateDeviceProgress> entry
+              for (final MapEntry<String, DeviceUpdateProgressEvent> entry
                   in event.devicesBySerial.entries) {
-                final FirmwareUpdateDeviceProgress device = entry.value;
+                final DeviceUpdateProgressEvent device = entry.value;
                 final String serial =
                     device.serialNumber.trim().isNotEmpty
                         ? device.serialNumber.trim()

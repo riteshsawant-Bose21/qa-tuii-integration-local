@@ -444,6 +444,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
 	app.registerPrivatePATCH(routes.StateEndpoint, app.Server.PatchState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
+
+	// Manufacturing
+	app.registerPrivatePOST(routes.ManufacturingSetModelNameEndpoint, app.Server.SetModelNameLocal)
 }
 
 func (app *App) startNetworkMonitor() {

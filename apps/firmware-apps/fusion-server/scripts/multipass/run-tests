@@ -25,6 +25,7 @@ function show_help() {
     echo "  --integration       Run only integration tests (ex: --integration --size 5) (build tag integration)"
     echo "  --logger            Run only logger tests"     
     echo "  --metadata          Run only metadata tests"
+    echo "  --meter-data        Run only meter data tests"
     echo "  --persistence       Run only persistence tests"     
     echo "  --protobuf          Run only protobuf compatibility tests"
     echo "  --sap               Run only SAP tests"     
@@ -65,6 +66,7 @@ while [[ $# -gt 0 ]]; do
         --health)           test_type="health"; shift ;;
         --logger)           test_type="logger"; shift ;;
         --metadata)         test_type="metadata"; shift ;;
+        --meter-data)       test_type="meter-data"; shift ;;
         --persistence)      test_type="persistence"; shift ;;
         --protobuf)         test_type="protobuf"; shift ;;
         --sap)              test_type="sap"; shift ;;
@@ -265,6 +267,7 @@ function test_file_for_type() {
         health)                 echo "health_test.go" ;;
         logger)                 echo "logger_test.go" ;;
         metadata)               echo "metadata_test.go" ;;
+        meter-data)             echo "meter_data_test.go" ;;
         persistence)            echo "persistence_test.go" ;;
         protobuf)               echo "protobuf_test.go" ;;
         sap)                    echo "sap_test.go" ;;
@@ -409,6 +412,7 @@ case "$test_type" in
     health)             run_package_tests "$(regex_for_test_file ./health_test.go)" ;;
     logger)             run_logger_tests ;;
     metadata)           run_package_tests "$(regex_for_test_file ./metadata_test.go)" ;;
+    meter-data)         run_package_tests "$(regex_for_test_file ./meter_data_test.go)" ;;
     persistence)
         run_subpackage_tests "./persistence"
         ;;

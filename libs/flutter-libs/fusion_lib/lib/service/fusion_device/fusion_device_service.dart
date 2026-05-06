@@ -388,4 +388,20 @@ class FusionDeviceService {
       rethrow;
     }
   }
+
+  /// Sends a `/cluster/reboot` request to the Fusion device cluster at [vip].
+  /// Optionally include the [deviceId] of the specific device to reboot in the body.
+  Future<ResponseCallback<dynamic>> rebootCluster({required String vip, String? deviceId}) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.post<dynamic>(
+        api: FusionApiEndpoint.clusterReboot,
+        baseUrlToOverride: vip,
+        isSecure: false,
+        data: deviceId != null ? <String, dynamic>{'device_id': deviceId} : null,
+      );
+      return response;
+    } catch (e) {
+      return ResponseCallback<dynamic>.failure(e.toString());
+    }
+  }
 }

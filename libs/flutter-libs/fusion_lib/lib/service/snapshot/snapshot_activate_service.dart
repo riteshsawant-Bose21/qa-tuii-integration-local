@@ -5,7 +5,6 @@ class SnapshotActivateService {
 
   SnapshotActivateService({required this.networkClient});
 
-  /// PUT /snapshots/activate/:name — activate a snapshot by name
   Future<ResponseCallback<bool>> activateSnapshot({
     required String vip,
     required String name,
@@ -13,16 +12,15 @@ class SnapshotActivateService {
     try {
       final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.snapshotsActivate,
-        data: {'id': name},
+        data: <String, dynamic>{'id': name},
         baseUrlToOverride: vip,
         isSecure: false,
       );
 
       if (response.success) {
         return ResponseCallback<bool>.success(true);
-      } else {
-        return ResponseCallback<bool>.failure(response.message);
       }
+      return ResponseCallback<bool>.failure(response.message);
     } catch (e) {
       return ResponseCallback<bool>.failure(e.toString());
     }

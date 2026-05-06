@@ -42,6 +42,8 @@ type FusionServer struct {
 	upgrader                  websocket.Upgrader
 	wsStats                   *api.WebSocketStats
 	statsLock                 sync.RWMutex
+	meterFilterManager        *MeterFilterManager
+	telemetrySub              *TelemetrySubscriber
 
 	maxConnections int
 }
@@ -54,12 +56,15 @@ type wsClientState struct {
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
 func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
+
 	server := &FusionServer{
-		node:           node,
-		handler:        handler,
-		wsClients:      make(map[*websocket.Conn]*wsClientState),
-		subscriptions:  make(map[string]map[*websocket.Conn]bool),
-		maxConnections: wsMaxConnections,
+		node:               node,
+		handler:            handler,
+		wsClients:          make(map[*websocket.Conn]*wsClientState),
+		subscriptions:      make(map[string]map[*websocket.Conn]bool),
+		meterFilterManager: NewMeterFilterManager(),
+		telemetrySub:       NewTelemetrySubscriber(hub, api.TelemetryCoreZMQPort),
+		maxConnections:     wsMaxConnections,
 		wsStats: &api.WebSocketStats{
 			Connections:    0,
 			Messages:       0,
@@ -83,6 +88,54 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	}
 	hub.Register(server)
 	return server
+}
+
+// clusterMemberFilterAddrs returns "ip:TelemetryCoreFilterPort" for every current cluster member.
+func (s *FusionServer) clusterMemberFilterAddrs() []string {
+	nodes := s.handler.GetMembers()
+	addrs := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		addrs = append(addrs, fmt.Sprintf("%s:%s", node.Addr.String(), api.TelemetryCoreFilterPort))
+	}
+	return addrs
+}
+
+// clusterMemberZMQIPs returns the IP string for every current cluster member
+// (port is embedded in TelemetrySubscriber).
+func (s *FusionServer) clusterMemberZMQIPs() []string {
+	nodes := s.handler.GetMembers()
+	ips := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		ips = append(ips, node.Addr.String())
+	}
+	return ips
+}
+
+// StartTelemetrySubscriptions connects to the ZMQ PUB socket on every current
+// cluster device. Called when this node gains the VIP.
+// It also resets all per-connection filters and immediately sends an empty
+// filter request to every telemetry core, clearing any stale filter state
+// that may have been left from a previous VIP holder or fusion-server restart.
+func (s *FusionServer) StartTelemetrySubscriptions() {
+	ips := s.clusterMemberZMQIPs()
+	addrs := s.clusterMemberFilterAddrs()
+	s.telemetrySub.Start(ips)
+	s.meterFilterManager.ResetAndClear(addrs)
+	logging.GetLogger().Debug("FusionServer: started telemetry ZMQ subscriptions for %d devices", len(ips))
+}
+
+// StopTelemetrySubscriptions cancels all active ZMQ subscriptions.
+// Called when this node loses the VIP.
+func (s *FusionServer) StopTelemetrySubscriptions() {
+	s.telemetrySub.Stop()
+	logging.GetLogger().Debug("FusionServer: stopped all telemetry ZMQ subscriptions")
+}
+
+// ReconcileTelemetrySubscriptions syncs active ZMQ subscriptions with the current
+// cluster membership. Call this when cluster topology changes while VIP.
+func (s *FusionServer) ReconcileTelemetrySubscriptions() {
+	ips := s.clusterMemberZMQIPs()
+	s.telemetrySub.Start(ips)
 }
 
 // GetAudioSettings handles HTTP GET requests for audio settings data.

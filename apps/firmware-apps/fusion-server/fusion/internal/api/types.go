@@ -242,6 +242,22 @@ type StateEntry struct {
 	Version Version `json:"version"`
 }
 
+// MeterDataMessage is the telemetry payload routed from the telemetry core to
+// WebSocket subscribers. Filtering is based on each sample's block_name.
+type MeterDataMessage struct {
+	MessageName string              `json:"message_name"`
+	Parameters  MeterDataParameters `json:"parameters"`
+}
+
+type MeterDataParameters struct {
+	Value []MeterDataSample `json:"value"`
+}
+
+type MeterDataSample struct {
+	BlockName string         `json:"block_name"`
+	Value     map[string]any `json:"value,omitempty"`
+}
+
 // StatusMessage contains fusion status information
 type StatusMessage struct {
 	VIP string `json:"vip"`
@@ -285,4 +301,10 @@ type MessageTrigger struct {
 	Priority  int      `json:"priority,omitempty"`
 	Zones     []string `json:"zones"`
 	Timestamp int64    `json:"timestamp"`
+}
+
+// SetModelNameRequest is the request body for POST /manufacturing/model-name.
+// ModelName must be one of the accepted values: c1-evk, powersmart, fm6, fm8y, xlr-pal, blue-pal, som.
+type SetModelNameRequest struct {
+	ModelName string `json:"model_name"`
 }

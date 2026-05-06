@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/device_registration/repositories/device_registration_repository.dart';
 import 'package:fusion_launcher/features/device_registration/viewmodel/device_registration_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -28,8 +27,78 @@ class _DeviceRegistraionPage extends StatefulWidget {
   State<_DeviceRegistraionPage> createState() => _DeviceRegistraionPageState();
 }
 
+// ── Toast entry ──────────────────────────────────────────────────────────────
+
+class _ToastEntry {
+  final String id;
+  final String message;
+  // opacity goes 1 → 0 during fade-out
+  double opacity;
+
+  _ToastEntry({required this.message}) : id = '${DateTime.now().microsecondsSinceEpoch}_${message.hashCode}', opacity = 1.0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
+
+  // ── Toast state ─────────────────────────────────────────────────────────────
+  final List<_ToastEntry> _toasts = <_ToastEntry>[];
+
+  // Track which error strings we have already shown to avoid re-showing on
+  // unrelated state rebuilds.
+  final Set<String> _shownErrors = <String>{};
+  String _lastBulkError = '';
+  Map<String, String> _lastDeviceErrors = <String, String>{};
+
+  void _clearVisibleErrors() {
+    if (!mounted) return;
+    setState(() => _toasts.clear());
+    _shownErrors.clear();
+  }
+
+  void _handleErrorToasts(DeviceRegistrationState state) {
+    final String bulkError = (state.error ?? '').trim();
+    if (bulkError.isNotEmpty && bulkError != _lastBulkError) {
+      _pushToast(bulkError);
+    }
+
+    final Map<String, String> currentDeviceErrors = <String, String>{};
+    for (final DeviceSpecificRegistrationState device in state.devices ?? <DeviceSpecificRegistrationState>[]) {
+      final String devError = (device.error ?? '').trim();
+      if (devError.isEmpty) continue;
+
+      currentDeviceErrors[device.device.id] = devError;
+      final String previous = _lastDeviceErrors[device.device.id] ?? '';
+      if (devError != previous) {
+        _pushToast('${device.device.name}: $devError');
+      }
+    }
+
+    _lastBulkError = bulkError;
+    _lastDeviceErrors = currentDeviceErrors;
+  }
+
+  void _pushToast(String message) {
+    if (message.trim().isEmpty) return;
+    if (_shownErrors.contains(message)) return;
+    _shownErrors.add(message);
+
+    final _ToastEntry entry = _ToastEntry(message: message);
+    setState(() => _toasts.add(entry));
+
+    // After 2 s begin fade-out, then remove.
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() => entry.opacity = 0.0);
+      Future<void>.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        setState(() => _toasts.remove(entry));
+        _shownErrors.remove(message);
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -56,25 +125,21 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
               DeviceRegistrationRepository(
                 vip: serviceLocator<ProjectViewModel>().virtualIP ?? '',
                 fusionDeviceService: serviceLocator<FusionDeviceService>(),
-                fusionDeviceDiscoveryService:
-                    serviceLocator<FusionDeviceDiscoveryService>(),
               ),
             );
           },
-          child: BlocConsumer<
-            DeviceRegistrationViewModel,
-            DeviceRegistrationState
-          >(
+          child: BlocConsumer<DeviceRegistrationViewModel, DeviceRegistrationState>(
             listener: (BuildContext context, DeviceRegistrationState state) {
               if (state.stepBulk == DeviceRegistrationStep.processing) {
                 _screenBlocker.show(context, content: const SizedBox());
               } else {
                 _screenBlocker.hide();
               }
+
+              _handleErrorToasts(state);
             },
             builder: (BuildContext context, DeviceRegistrationState state) {
-              final List<DeviceSpecificRegistrationState>? devices =
-                  state.devices;
+              final List<DeviceSpecificRegistrationState>? devices = state.devices;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,6 +161,45 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                       },
                     ),
                   ),
+
+                  // Animated error toasts — auto-dismiss after 2 s
+                  if (_toasts.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children:
+                            _toasts.map((_ToastEntry toast) {
+                              return AnimatedOpacity(
+                                opacity: toast.opacity,
+                                duration: const Duration(milliseconds: 400),
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF3A1A1A),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFF3B3B).withOpacity(0.4)),
+                                  ),
+                                  child: Row(
+                                    children: <Widget>[
+                                      const Icon(Icons.error_outline, color: Color(0xFFFF3B3B), size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: toast.message,
+                                          style: context.textTheme.b3Regular.copyWith(
+                                            color: const Color(0xFFFF6B6B),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    ),
                 ],
               );
             },
@@ -142,11 +246,7 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     );
   }
 
-  Widget _buildDeviceBody(
-    BuildContext context,
-    DeviceRegistrationState state,
-    List<DeviceSpecificRegistrationState> devices,
-  ) {
+  Widget _buildDeviceBody(BuildContext context, DeviceRegistrationState state, List<DeviceSpecificRegistrationState> devices) {
     if (devices.isEmpty) {
       return Center(
         child: FusionAppText(
@@ -160,13 +260,9 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
 
     final bool allCompleted = state.allCompleted;
 
-    final bool anyError = devices.any(
-      (DeviceSpecificRegistrationState item) =>
-          (item.error ?? '').trim().isNotEmpty,
-    );
+    final bool anyError = devices.any((DeviceSpecificRegistrationState item) => (item.error ?? '').trim().isNotEmpty);
     final int count = devices.length;
-    final String countText =
-        count == 1 ? 'One device is' : '$count devices are';
+    final String countText = count == 1 ? 'One device is' : '$count devices are';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
@@ -181,16 +277,12 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     FusionAppText(
-                      text:
-                          allCompleted
-                              ? 'Registered Device'
-                              : 'Unregistered Device Found',
+                      text: allCompleted ? 'Registered Device' : 'Unregistered Device Found',
                       style: context.textTheme.h4SemiBold,
                     ),
                     const SizedBox(height: 4),
                     FusionAppText(
-                      text:
-                          '$countText not yet registered in the Fusion Cloud and still need to be onboarded.',
+                      text: '$countText not yet registered in the Fusion Cloud and still need to be onboarded.',
                       style: context.textTheme.b3Regular.copyWith(
                         color: context.colorScheme.textBody,
                       ),
@@ -268,8 +360,7 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     bool allCompleted,
     bool anyError,
   ) {
-    final DeviceRegistrationViewModel viewModel =
-        context.read<DeviceRegistrationViewModel>();
+    final DeviceRegistrationViewModel viewModel = context.read<DeviceRegistrationViewModel>();
 
     if (allCompleted) {
       return _StatusPill(
@@ -280,8 +371,7 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     }
 
     if (state.stepBulk == DeviceRegistrationStep.processing) {
-      final ({double progress, int progressPercent}) progressState =
-          state.progressPercent;
+      final ({double progress, int progressPercent}) progressState = state.progressPercent;
 
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -330,7 +420,10 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
           const SizedBox(width: 14),
           _BuildAction(
             title: 'Retry',
-            onTap: viewModel.bulkDeviceRegistration,
+            onTap: () {
+              _clearVisibleErrors();
+              viewModel.bulkDeviceRegistration();
+            },
           ),
         ],
       );
@@ -382,22 +475,13 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     );
   }
 
-  Widget _buildDeviceRow(
-    BuildContext context,
-    DeviceRegistrationState state,
-    DeviceSpecificRegistrationState item,
-  ) {
-    final bool isCompleted =
-        item.step == DeviceRegistrationStep.completed ||
-        item.device.isDeviceCertificateValid;
+  Widget _buildDeviceRow(BuildContext context, DeviceRegistrationState state, DeviceSpecificRegistrationState item) {
+    final bool isCompleted = item.step == DeviceRegistrationStep.completed || item.device.isDeviceCertificateValid;
     final bool hasError = (item.error ?? '').trim().isNotEmpty;
 
-    final DeviceRegistrationViewModel viewModel =
-        context.read<DeviceRegistrationViewModel>();
+    final DeviceRegistrationViewModel viewModel = context.read<DeviceRegistrationViewModel>();
 
-    final bool canShowLoader =
-        (state.stepBulk == DeviceRegistrationStep.processing && !hasError) ||
-        item.step == DeviceRegistrationStep.processing;
+    final bool canShowLoader = (state.stepBulk == DeviceRegistrationStep.processing && !hasError) || item.step == DeviceRegistrationStep.processing;
 
     return SizedBox(
       height: 60,
@@ -459,7 +543,10 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                         const SizedBox(width: 14),
                         _BuildAction(
                           title: 'Retry',
-                          onTap: () => viewModel.singleDeviceRegister(item),
+                          onTap: () {
+                            _clearVisibleErrors();
+                            viewModel.singleDeviceRegister(item);
+                          },
                         ),
                       ],
                     );
@@ -526,16 +613,12 @@ class _BuildAction extends StatelessWidget {
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor:
-              outlined ? Colors.transparent : const Color(0xFF2A2A2A),
+          shadowColor: Colors.transparent,
+          backgroundColor: outlined ? Colors.transparent : const Color(0xFF2A2A2A),
           foregroundColor: context.colorScheme.textPrimary,
           textStyle: context.textTheme.l1Medium,
-          side: BorderSide(
-            color: outlined ? const Color(0xFF4A4A4A) : const Color(0xFF3A3A3A),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          side: BorderSide(color: outlined ? const Color(0xFF4A4A4A) : const Color(0xFF3A3A3A)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         child: FusionAppText(
           text: title,

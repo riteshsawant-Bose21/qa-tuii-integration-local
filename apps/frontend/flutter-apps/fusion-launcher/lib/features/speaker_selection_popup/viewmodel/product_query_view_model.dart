@@ -72,7 +72,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   final Mutex _pricesMutex = Mutex();
 
   bool _hasLoadedProducts = false;
-  late final AppCacheService pricesCacheService;
+  AppCacheService? _pricesCacheService;
 
   late final Products _productsApi;
 
@@ -83,7 +83,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
-      pricesCacheService = await cacheService.scope('prices');
+      _pricesCacheService ??= await cacheService.scope('prices');
 
       if (state.isRefreshing) return;
       if (!refresh && _hasLoadedProducts && state.products != null) return;
@@ -127,7 +127,13 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
-  String? getProductImage(int? productId) => productId != null ? _productsApi.imageFor(productId: productId)?.firstPath : null;
+  String? getProductImage(int? productId, {String? color}) {
+    final ProductImageCache? productCache = productId != null ? _productsApi.imageFor(productId: productId) : null;
+    if (color == null) return productCache?.firstPath;
+    if (color == 'black') return productCache?.black.firstOrNull;
+    if (color == 'white') return productCache?.white.firstOrNull;
+    return null;
+  }
 
   bool get isLoading => state.isLoading;
 
@@ -149,7 +155,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   String _priceCacheKey(int productId, String currency) => '${productId}_$currency';
 
   Future<void> _fetchProductPrices(int productId, String productType, {bool forceRefresh = false}) async {
-    final AppCacheService individualProductPriceCacheService = await pricesCacheService.scope(productType);
+    final AppCacheService individualProductPriceCacheService = await _pricesCacheService!.scope(productType);
 
     // TODO: SHARATH: Currently hardcoding to USD until we have a way to get user's preferred currency.
     // We can add a dropdown in the UI to select currency and pass that value here.

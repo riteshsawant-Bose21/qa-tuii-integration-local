@@ -54,7 +54,9 @@ class FirmwareUpdateViewModelState extends Equatable {
 
   bool get isAllDevicesRebooted {
     if (devicesRebootStatus.isEmpty) return false;
-    return devicesRebootStatus.every((FirmwareDeviceRebootStatus item) => item.isSUCCESS);
+    return devicesRebootStatus.every(
+      (FirmwareDeviceRebootStatus item) => item.isSUCCESS,
+    );
   }
 
   FirmwareUpdateViewModelState copyWith({
@@ -79,22 +81,26 @@ class FirmwareUpdateViewModelState extends Equatable {
     return FirmwareUpdateViewModelState(
       uiState: uiState ?? this.uiState,
       updateCheckResult: updateCheckResult ?? this.updateCheckResult,
-      bundleDownloadUrlResult: bundleDownloadUrlResult ?? this.bundleDownloadUrlResult,
+      bundleDownloadUrlResult:
+          bundleDownloadUrlResult ?? this.bundleDownloadUrlResult,
       availableVersion: availableVersion ?? this.availableVersion,
       downloadedFilePath: downloadedFilePath ?? this.downloadedFilePath,
       networkDevices: networkDevices ?? this.networkDevices,
-
-      //
       isProgressExpanded: isProgressExpanded ?? this.isProgressExpanded,
       progress: progress ?? this.progress,
       errorShortText: errorShortText ?? this.errorShortText,
       errorText: errorText ?? this.errorText,
-      deviceInstallProgress: deviceInstallProgress ?? this.deviceInstallProgress,
-      installTrackingCompleted: installTrackingCompleted ?? this.installTrackingCompleted,
+      deviceInstallProgress:
+          deviceInstallProgress ?? this.deviceInstallProgress,
+      installTrackingCompleted:
+          installTrackingCompleted ?? this.installTrackingCompleted,
       isUploadInProgress: isUploadInProgress ?? this.isUploadInProgress,
-      isSocketTrackingInProgress: isSocketTrackingInProgress ?? this.isSocketTrackingInProgress,
-      isWaitingForSocketResponse: isWaitingForSocketResponse ?? this.isWaitingForSocketResponse,
-      isRebootTrackingInProgress: isRebootTrackingInProgress ?? this.isRebootTrackingInProgress,
+      isSocketTrackingInProgress:
+          isSocketTrackingInProgress ?? this.isSocketTrackingInProgress,
+      isWaitingForSocketResponse:
+          isWaitingForSocketResponse ?? this.isWaitingForSocketResponse,
+      isRebootTrackingInProgress:
+          isRebootTrackingInProgress ?? this.isRebootTrackingInProgress,
       devicesRebootStatus: devicesRebootStatus ?? this.devicesRebootStatus,
     );
   }
@@ -121,7 +127,14 @@ class FirmwareUpdateViewModelState extends Equatable {
   ];
 }
 
-enum FirmwareCheckDecisionState { noUpdate, appUpdateRequired, updateAvailable, downloaded, installed, failed }
+enum FirmwareCheckDecisionState {
+  noUpdate,
+  appUpdateRequired,
+  updateAvailable,
+  downloaded,
+  installed,
+  failed,
+}
 
 class FirmwareCheckDecision {
   final FirmwareCheckDecisionState state;
@@ -167,5 +180,14 @@ class FirmwareInstallDeviceProgress extends Equatable {
   bool get isSuccess => updateState.toUpperCase() == 'SUCCESS';
 
   @override
-  List<Object?> get props => <Object?>[serialNumber, node, updateState, currentStep, totalSteps, currentTask, stepProgress, timestamp];
+  List<Object?> get props => <Object?>[
+    serialNumber,
+    node,
+    updateState,
+    currentStep,
+    totalSteps,
+    currentTask,
+    stepProgress,
+    timestamp,
+  ];
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/virtual_controllers/controller_meter_painter.dart';
 import 'package:fusion_lib/fusion_widgets/virtual_controllers/volume_meter_painter.dart';
+import 'package:fusion_lib/fusion_widgets/virtual_controllers/widgets/horizontal_slider.dart';
 
 class ZoneSourceCard extends StatelessWidget {
   final String title;
@@ -96,31 +97,46 @@ class ZoneSourceCard extends StatelessWidget {
                   color: muted ? context.colorScheme.iconDefault : context.colorScheme.primary,
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
                 /// Slider
                 Expanded(
-                  child: Container(
-                    height: 30,
-                    child :CustomPaint(
-                      painter:
-                    // VolumeMeterPainterBG(
-                    //   value: volume.toDouble(),
-                    //   trackColor: context.colorScheme.elevation2,
-                    //   gradientColors: [
-                    //   context.colorScheme.primary,
-                    //   context.colorScheme.iconWhite,
-                    //   ],
-                    //   )
+                  child: AbsorbPointer(
+                    absorbing: true,
+                    child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                          FusionContainer(
+                              raised: false,
+                              borderRadius: 50,
+                              child: Container(
+                                width: double.infinity,
+                                height: 16,
+                              ),
+                            ),
+                            Container(
+                              height: 15,
+                               child: HorizontalAudioSlider( key: key,
+                                  isMuted: muted,
+                                  initialValue: volume,
+
+                                  onChanged: (volume) {
+                                    //
+                                    // context
+                                    //     .read<
+                                    //     VirtualControllerViewModel>()
+                                    //     .updateVolume(
+                                    //     selectSubZone!,
+                                    //     volume,
+                                    //     sendToService: !widget
+                                    //         .isDesignMode);
 
 
-                      ControllerAudioMeterPainter(
-                      currentValue: volume.toDouble(),
-                      minDb: 0,
-                      maxDb: 100,
-                      trackColor:context.colorScheme.elevation2
-                    )
-                     ),
+                                  },)
+                            )
+
+                    ]
+                    ),
                   ),
                 ),
 
@@ -128,7 +144,6 @@ class ZoneSourceCard extends StatelessWidget {
 
                 /// Volume Number
                 SizedBox(
-                  width: 32,
                   child: Text(
                     "${volume.toInt()}",
                     textAlign: TextAlign.end,

@@ -16,6 +16,7 @@ import (
 
 	"fusion/internal/api"
 	model "fusion/internal/gen/proto/fusion"
+
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )

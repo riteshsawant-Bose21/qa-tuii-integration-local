@@ -11,6 +11,8 @@ import (
 // NotifyOp is a custom type representing notification message operations.
 type NotifyOp string
 
+// Maintain this list in alphabetical order. Define notifications using a naming
+// scheme that will maintain functional sub-ordering.
 const (
 	NotifyOpAck                       NotifyOp = "ack"
 	NotifyOpAudioRemove               NotifyOp = "audio_remove"
@@ -19,6 +21,7 @@ const (
 	NotifyOpConfigUpdate              NotifyOp = "config_update"
 	NotifyOpDeviceUpdate              NotifyOp = "device_update"
 	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
+	NotifyOpMeterData                 NotifyOp = "meter_data"
 	NotifyOpNoop                      NotifyOp = "no_op"
 	NotifyOpSceneActivate             NotifyOp = "scene_activate"
 	NotifyOpSceneDelete               NotifyOp = "scene_delete"
@@ -76,6 +79,7 @@ type NotifyMessage struct {
 	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
+	MeterData                 *MeterDataMessage
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -214,7 +218,8 @@ func (msg *NotifyMessage) IsPublic() bool {
 		msg.Operation == NotifyOpSoftwareUpdate ||
 		msg.Operation == NotifyOpSoftwareUpdateAvailable ||
 		msg.Operation == NotifyOpSoftwareUpdateSyncAck ||
-		msg.Operation == NotifyOpSoftwareUpdateProgress
+		msg.Operation == NotifyOpSoftwareUpdateProgress ||
+		msg.Operation == NotifyOpMeterData
 }
 
 func WithAudioRemove(update *AudioRemoveUpdate) func(*NotifyMessage) {

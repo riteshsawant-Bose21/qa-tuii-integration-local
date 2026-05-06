@@ -885,7 +885,7 @@ extension SceneService on ProjectService {
     }
   }
 
-  void duplicateSnapshot(String sceneId) {
+  String duplicateSnapshot(String sceneId, {bool linkToParent = true}) {
     final originalScene = snapshots.get(sceneId);
     if (originalScene == null) {
       throw Exception("Scene with id $sceneId does not exist.");
@@ -898,9 +898,12 @@ extension SceneService on ProjectService {
 
     snapshots.add(duplicatedScene.id, duplicatedScene);
 
-    final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
-    if (parentSetId != null) {
-      relationships.link(RelationshipType.sceneSetScenes, parentSetId, duplicatedScene.id);
+    // Only auto-link to original parent when duplicating a standalone snapshot
+    if (linkToParent) {
+      final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
+      if (parentSetId != null) {
+        relationships.link(RelationshipType.sceneSetScenes, parentSetId, duplicatedScene.id);
+      }
     }
 
     List<String> actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId).toList();
@@ -914,6 +917,7 @@ extension SceneService on ProjectService {
         relationships.link(RelationshipType.sceneActions, duplicatedScene.id, duplicatedAction.id);
       }
     }
+    return duplicatedScene.id; // ← return new ID
   }
 
   void duplicateSceneSet(String sceneSetId) {
@@ -929,9 +933,18 @@ extension SceneService on ProjectService {
 
     sceneSets.add(duplicatedSceneSet.id, duplicatedSceneSet);
 
-    List<String> sceneIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId).toList();
+    List<String> sceneIds = relationships
+        .getChildren(
+          RelationshipType.sceneSetScenes,
+          sceneSetId,
+        )
+        .toList();
+
     for (var sceneId in sceneIds) {
-      duplicateSnapshot(sceneId);
+      // Skip auto-linking so it doesn't attach to the original set
+      final String newSnapshotId = duplicateSnapshot(sceneId, linkToParent: false);
+      // Explicitly link to the NEW scene set
+      relationships.link(RelationshipType.sceneSetScenes, duplicatedSceneSet.id, newSnapshotId);
     }
   }
 }
