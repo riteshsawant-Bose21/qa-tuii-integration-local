@@ -492,11 +492,7 @@ func writePAVAProtoJSONWithStatus(w http.ResponseWriter, status int, msg proto.M
 	return err
 }
 
-<<<<<<< HEAD
-func audioMetadataToProto(meta *api.AudioMetadata) *model.AudioMetadata {
-=======
 func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
->>>>>>> gene/value
 	if meta == nil {
 		return nil
 	}
@@ -507,11 +503,7 @@ func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
 		DisplayName: meta.DisplayName,
 		Filename:    meta.Filename,
 		MimeType:    meta.MimeType,
-<<<<<<< HEAD
-		Uploaded:    timestamppb.New(meta.Uploaded),
-=======
 		Uploaded:    meta.Uploaded,
->>>>>>> gene/value
 		Duration:    int64(meta.Duration),
 		SizeBytes:   meta.SizeBytes,
 		Tags:        append([]string(nil), meta.Tags...),
@@ -519,11 +511,7 @@ func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
 	}
 }
 
-<<<<<<< HEAD
-func audioMetadataListToProto(metas []*api.AudioMetadata) []*model.AudioMetadata {
-=======
 func audioMetadataListToProto(metas []*model.AudioMetadata) []*model.AudioMetadata {
->>>>>>> gene/value
 	out := make([]*model.AudioMetadata, 0, len(metas))
 	for _, meta := range metas {
 		out = append(out, audioMetadataToProto(meta))

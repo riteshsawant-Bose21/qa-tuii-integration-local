@@ -233,11 +233,7 @@ func (s *FusionServer) GetDeviceInfoLocal(w http.ResponseWriter, r *http.Request
 
 	info := s.handler.HandleGetDeviceInfo()
 
-<<<<<<< HEAD
-	if err := writeProtoJSON(w, deviceInfoToProto(info)); err != nil {
-=======
 	if err := writeProtoJSON(w, &info); err != nil {
->>>>>>> gene/value
 		http.Error(w, fmt.Sprintf("Error encoding device info: %v", err), http.StatusInternalServerError)
 	}
 }

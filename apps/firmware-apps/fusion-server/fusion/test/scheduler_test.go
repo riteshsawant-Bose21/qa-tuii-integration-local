@@ -12,10 +12,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-<<<<<<< HEAD
-=======
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"

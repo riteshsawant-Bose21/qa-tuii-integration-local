@@ -612,9 +612,6 @@ func decodeAudioMetadataListResponse(body io.Reader) (*model.AudioMetadataListRe
 		return &protoResp, nil
 	}
 
-<<<<<<< HEAD
-	var legacy []*api.AudioMetadata
-=======
 	var legacy []struct {
 		Id          string        `json:"id"`
 		OrigName    string        `json:"orig_name"`
@@ -627,7 +624,6 @@ func decodeAudioMetadataListResponse(body io.Reader) (*model.AudioMetadataListRe
 		Tags        []string      `json:"tags"`
 		Checksum    string        `json:"checksum"`
 	}
->>>>>>> gene/value
 	if err := json.Unmarshal(data, &legacy); err != nil {
 		return nil, err
 	}

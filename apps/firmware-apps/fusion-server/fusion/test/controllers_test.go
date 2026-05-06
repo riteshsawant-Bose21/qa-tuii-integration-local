@@ -3,11 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-<<<<<<< HEAD
-=======
 	"fusion/internal/controllers"
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"io"
 	"net"
 	"net/http"

@@ -15,10 +15,7 @@ import (
 	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	"fusion/internal/api"
-<<<<<<< HEAD
-=======
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"

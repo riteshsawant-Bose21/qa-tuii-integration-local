@@ -651,11 +651,7 @@ func getSoftwareUpdateClusterNodeURLs(t *testing.T, ctx context.Context, vipURL 
 		url := fmt.Sprintf("http://%s:8080", d.GetAddress())
 
 		// Skip VIP/primary node - we only test propagation to followers
-<<<<<<< HEAD
-		if d.GetIsPrimaryNode() {
-=======
 		if d.GetIsPrimary() {
->>>>>>> gene/value
 			continue
 		}
 

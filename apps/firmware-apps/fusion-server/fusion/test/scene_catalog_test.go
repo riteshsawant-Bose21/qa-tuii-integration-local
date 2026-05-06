@@ -17,10 +17,7 @@ import (
 	json "github.com/goccy/go-json"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-<<<<<<< HEAD
-=======
 	"google.golang.org/protobuf/types/known/structpb"
->>>>>>> gene/value
 )
 
 func structPB(data map[string]any) *structpb.Struct {
@@ -675,13 +672,8 @@ func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 
 	for _, def := range defs {
 		for _, item := range listResp.Snapshots {
-<<<<<<< HEAD
-			if item.GetId() == def.ID {
-				t.Fatalf("Snapshot definition %s still present after delete-all", def.ID)
-=======
 			if item.GetId() == def.GetId() {
 				t.Fatalf("Snapshot definition %s still present after delete-all", def.GetId())
->>>>>>> gene/value
 			}
 		}
 	}

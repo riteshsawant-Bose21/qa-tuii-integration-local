@@ -425,11 +425,7 @@ func ensureVIPBaseline(t *testing.T, nodeURLs []string, originalVIP string, node
 	case activeVIP != "":
 		t.Logf("Restoring baseline VIP %s from active VIP %s", originalVIP, activeVIP)
 		operation, _ := setVIPRequest(t, vipURLForHost(activeVIP), originalVIP)
-<<<<<<< HEAD
-		waitForVIPOperationComplete(t, operation.StatusHost, operation.ID)
-=======
 		waitForVIPOperationComplete(t, operation.GetStatusHost(), operation.GetId())
->>>>>>> gene/value
 		waitForOldVIPRetirement(t, activeVIP)
 	default:
 		t.Logf("No active VIP candidate reachable; falling back to admin VIP write+reload for %s", originalVIP)

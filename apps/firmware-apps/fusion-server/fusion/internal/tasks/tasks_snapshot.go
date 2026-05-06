@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-<<<<<<< HEAD
-=======
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"fusion/internal/utils"
 	"io"
 	"net/http"

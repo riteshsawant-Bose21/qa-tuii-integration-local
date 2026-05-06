@@ -2,10 +2,7 @@ package server
 
 import (
 	"fmt"
-<<<<<<< HEAD
-=======
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"fusion/internal/utils"
 	"net/http"
 

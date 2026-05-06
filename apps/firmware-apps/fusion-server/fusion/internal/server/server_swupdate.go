@@ -28,28 +28,8 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
 	}
 
-<<<<<<< HEAD
-	if err := writeProtoJSON(w, swUpdateInfoToProto(info)); err != nil {
-=======
 	if err := writeProtoJSON(w, &info); err != nil {
->>>>>>> gene/value
 		logging.GetLogger().Error("Error encoding sw update info: %v", err)
-	}
-}
-
-func swUpdateInfoToProto(info api.SwUpdateInfo) *model.SwUpdateInfo {
-	return &model.SwUpdateInfo{
-		SerialNumber:          info.SerialNumber,
-		CurrentBundleVersion:  info.CurrentBundleVersion,
-		PreviousBundleVersion: info.PreviousBundleVersion,
-		Mount:                 info.Mount,
-		PreviousMount:         info.PreviousMount,
-		Status:                info.Status,
-		CurrentState:          info.CurrentState,
-		BootPartition:         info.BootPartition,
-		PreviousBootPartition: info.PreviousBootPartition,
-		Error:                 info.Error,
-		UpdatedAt:             info.UpdatedAt,
 	}
 }
 

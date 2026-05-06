@@ -154,11 +154,7 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *model.WebSocke
 		return createErrorResponse(&request.Id, api.WSCodeMissingDeviceID, "Missing device_id in payload"), nil
 	}
 
-<<<<<<< HEAD
-	patch := api.DevicePatch{
-=======
 	patch := model.DevicePatch{
->>>>>>> gene/value
 		Id:       payload.Id,
 		Location: payload.Location,
 		Name:     payload.Name,

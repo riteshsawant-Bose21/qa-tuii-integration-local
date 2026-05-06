@@ -15,7 +15,7 @@ PROTO_GO_OUT=fusion/internal/gen/proto
 GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin
 PROTOC_GEN_GO := $(GO_BIN_DIR)/protoc-gen-go
 PROTOC_GEN_GO_VERSION ?= v1.36.6
-PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto $(PROTO_SRC_DIR)/fusion/software_update.proto
+PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto $(PROTO_SRC_DIR)/fusion/software_update.proto $(PROTO_SRC_DIR)/fusion/vip.proto $(PROTO_SRC_DIR)/fusion/health.proto $(PROTO_SRC_DIR)/fusion/udp.proto $(PROTO_SRC_DIR)/fusion/version.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2

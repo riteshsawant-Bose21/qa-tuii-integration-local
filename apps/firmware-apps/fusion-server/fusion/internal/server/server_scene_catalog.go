@@ -6,70 +6,11 @@ import (
 	"io"
 	"net/http"
 
-<<<<<<< HEAD
-	"fusion/internal/api"
-=======
 	model "fusion/internal/gen/proto/fusion"
->>>>>>> gene/value
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
-
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
-<<<<<<< HEAD
-func snapshotDefinitionToProto(def api.SnapshotDefinition) (*model.SnapshotDefinition, error) {
-	var data *structpb.Struct
-	var err error
-	if def.Data != nil {
-		data, err = structpb.NewStruct(def.Data)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &model.SnapshotDefinition{
-		Id:   def.ID,
-		Name: def.Name,
-		Data: data,
-	}, nil
-}
-
-func sceneToProto(scene api.Scene) (*model.Scene, error) {
-	var data *structpb.Struct
-	var err error
-	if scene.Data != nil {
-		data, err = structpb.NewStruct(scene.Data)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &model.Scene{
-		Id:   scene.ID,
-		Name: scene.Name,
-		Data: data,
-	}, nil
-}
-
-func sceneSetToProto(set api.SceneSet) (*model.SceneSet, error) {
-	scenes := make([]*model.Scene, 0, len(set.Scenes))
-	for _, scene := range set.Scenes {
-		sceneMsg, err := sceneToProto(scene)
-		if err != nil {
-			return nil, err
-		}
-		scenes = append(scenes, sceneMsg)
-	}
-
-	return &model.SceneSet{
-		SetId:          set.SetID,
-		Name:           set.Name,
-		DefaultScene:   set.DefaultSceneID,
-		CurrentSceneId: set.CurrentSceneID,
-		Scenes:         scenes,
-	}, nil
-=======
 // CreateSnapshotDefinition handles POST /snapshots.
 func (s *FusionServer) CreateSnapshotDefinition(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
@@ -148,7 +89,6 @@ func (s *FusionServer) UpsertSnapshotDefinition(w http.ResponseWriter, r *http.R
 	if err := writeProtoJSON(w, &req); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
 	}
->>>>>>> gene/value
 }
 
 // ActivateSnapshot handles POST /snapshots/activate/{id}.
@@ -191,19 +131,7 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 	}
 
 	resp := &model.SnapshotDefinitionListResponse{
-<<<<<<< HEAD
-		Snapshots: make([]*model.SnapshotDefinition, 0, len(snapshots)),
-	}
-	for _, snapshot := range snapshots {
-		msg, err := snapshotDefinitionToProto(snapshot)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding snapshot %s: %v", snapshot.ID, err), http.StatusInternalServerError)
-			return
-		}
-		resp.Snapshots = append(resp.Snapshots, msg)
-=======
 		Snapshots: snapshots,
->>>>>>> gene/value
 	}
 
 	if err := writeProtoJSON(w, resp); err != nil {
@@ -270,19 +198,7 @@ func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &model.SceneListResponse{
-<<<<<<< HEAD
-		Scenes: make([]*model.Scene, 0, len(scenes)),
-	}
-	for _, scene := range scenes {
-		msg, err := sceneToProto(scene)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding scene %s: %v", scene.ID, err), http.StatusInternalServerError)
-			return
-		}
-		resp.Scenes = append(resp.Scenes, msg)
-=======
 		Scenes: scenes,
->>>>>>> gene/value
 	}
 
 	if err := writeProtoJSON(w, resp); err != nil {
@@ -451,15 +367,9 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &model.CurrentSceneResponse{
-<<<<<<< HEAD
-		SetId: set.SetID,
-		CurrentScene: &model.CurrentSceneMetadata{
-			SceneId: set.CurrentSceneID,
-=======
 		SetId: set.GetSetId(),
 		CurrentScene: &model.CurrentSceneMetadata{
 			SceneId: set.GetCurrentSceneId(),
->>>>>>> gene/value
 			Name:    currentSceneName,
 		},
 	}
@@ -483,19 +393,7 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &model.SceneSetListResponse{
-<<<<<<< HEAD
-		SceneSets: make([]*model.SceneSet, 0, len(sceneSets)),
-	}
-	for _, sceneSet := range sceneSets {
-		msg, err := sceneSetToProto(sceneSet)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding scene set %s: %v", sceneSet.SetID, err), http.StatusInternalServerError)
-			return
-		}
-		resp.SceneSets = append(resp.SceneSets, msg)
-=======
 		SceneSets: sceneSets,
->>>>>>> gene/value
 	}
 
 	if err := writeProtoJSON(w, resp); err != nil {
@@ -588,30 +486,8 @@ func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) 
 	}
 
 	resp := &model.SceneCatalogListResponse{
-<<<<<<< HEAD
-		Snapshots: make([]*model.SnapshotDefinition, 0, len(snapshots)),
-		SceneSets: make([]*model.SceneSet, 0, len(sceneSets)),
-	}
-
-	for _, snapshot := range snapshots {
-		msg, err := snapshotDefinitionToProto(snapshot)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding snapshot %s: %v", snapshot.ID, err), http.StatusInternalServerError)
-			return
-		}
-		resp.Snapshots = append(resp.Snapshots, msg)
-	}
-	for _, sceneSet := range sceneSets {
-		msg, err := sceneSetToProto(sceneSet)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding scene set %s: %v", sceneSet.SetID, err), http.StatusInternalServerError)
-			return
-		}
-		resp.SceneSets = append(resp.SceneSets, msg)
-=======
 		Snapshots: snapshots,
 		SceneSets: sceneSets,
->>>>>>> gene/value
 	}
 
 	if err := writeProtoJSON(w, resp); err != nil {

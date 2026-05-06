@@ -481,32 +481,11 @@ func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes in
 	}
 }
 
-<<<<<<< HEAD
-func softwareUpdateSyncToProto(update api.SoftwareUpdateSync) *model.SoftwareUpdateBundle {
-	return &model.SoftwareUpdateBundle{
-		Filename:  update.Filename,
-		Checksum:  update.Checksum,
-		SizeBytes: update.SizeBytes,
-		Uploaded:  timestamppb.New(update.Uploaded),
-		SourceIp:  update.SourceIP,
-		SyncId:    update.SyncID,
-	}
-}
-
-func softwareUpdateListToProto(bundles []api.SoftwareUpdateSync) *model.SoftwareUpdateListResponse {
-	resp := &model.SoftwareUpdateListResponse{
-		Bundles: make([]*model.SoftwareUpdateBundle, 0, len(bundles)),
-	}
-	for _, bundle := range bundles {
-		resp.Bundles = append(resp.Bundles, softwareUpdateSyncToProto(bundle))
-	}
-=======
 func softwareUpdateListToProto(bundles []*model.SoftwareUpdateBundle) *model.SoftwareUpdateListResponse {
 	resp := &model.SoftwareUpdateListResponse{
 		Bundles: make([]*model.SoftwareUpdateBundle, 0, len(bundles)),
 	}
 	resp.Bundles = append(resp.Bundles, bundles...)
->>>>>>> gene/value
 	return resp
 }
 
