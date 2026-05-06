@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// A reusable right-side drawer dialog.
 ///
 /// Displays a titled panel that slides in from the right with user-provided
 /// content and an optional action button at the bottom.
 class FusionDrawer extends StatelessWidget {
-  FusionDrawer({
+  const FusionDrawer({
     required this.semanticId,
     super.key,
     this.title,
@@ -18,6 +19,8 @@ class FusionDrawer extends StatelessWidget {
     this.backgroundColor,
     this.buttonEnabledNotifier,
     this.header,
+    this.showBackButton = false,
+    this.scrollable = true,
   }) : assert(
          header != null || title != null,
          'Either a custom header or a title must be provided.',
@@ -51,8 +54,15 @@ class FusionDrawer extends StatelessWidget {
   /// Called when the action button is pressed.
   final VoidCallback? onButtonPressed;
 
+  /// When true, shows a back button instead of a close icon in the header.
+  final bool showBackButton;
+
   /// Called when the close icon is tapped. Defaults to popping the route.
   final VoidCallback? onClose;
+
+  /// When true, the content will be wrapped in a SingleChildScrollView to allow scrolling.
+  /// If false, the content will be displayed as-is, and it's the caller's responsibility to ensure it handles overflow appropriately.
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -69,9 +79,7 @@ class FusionDrawer extends StatelessWidget {
             Expanded(
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_content'),
-                child: SingleChildScrollView(
-                  child: content,
-                ),
+                child: scrollable ? SingleChildScrollView(child: content) : content,
               ),
             ),
             if (buttonLabel != null) ...<Widget>[
@@ -129,6 +137,21 @@ class FusionDrawer extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
+            if (showBackButton) ...[
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                  child: FusionIcon.icon(
+                    semanticId: '${semanticId}_drawer_back_icon',
+                    LucideIcons.arrowLeft200,
+                    size: 16,
+                    color: context.colorScheme.iconWhite,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
             Expanded(
               child: FusionAppText(
                 text: title!.toUpperCase(),
@@ -136,9 +159,12 @@ class FusionDrawer extends StatelessWidget {
                 style: Theme.of(context).textTheme.l1MediumTight.withColor(context.colorScheme.textBody),
               ),
             ),
-            GestureDetector(
-              onTap: onClose ?? () => Navigator.of(context).maybePop(),
-              child: FusionIcon.icon(semanticId: '${semanticId}_drawer_close_icon', Icons.close, size: 16, color: context.colorScheme.iconWhite),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                child: FusionIcon.icon(semanticId: '${semanticId}_drawer_close_icon', Icons.close, size: 16, color: context.colorScheme.iconWhite),
+              ),
             ),
           ],
         ),
@@ -158,6 +184,8 @@ class FusionDrawer extends StatelessWidget {
     VoidCallback? onButtonPressed,
     Color? backgroundColor,
     ValueNotifier<bool>? buttonEnabledNotifier,
+    bool showBackButton = false,
+    bool scrollable = true,
   }) {
     assert(
       header != null || title != null,
@@ -185,8 +213,10 @@ class FusionDrawer extends StatelessWidget {
                 width: width,
                 buttonLabel: buttonLabel,
                 onButtonPressed: onButtonPressed,
+                showBackButton: showBackButton,
                 onClose: () => Navigator.of(ctx).pop(),
                 buttonEnabledNotifier: buttonEnabledNotifier,
+                scrollable: scrollable,
               ),
             ),
           ),

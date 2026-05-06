@@ -127,7 +127,13 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
-  String? getProductImage(int? productId) => productId != null ? _productsApi.imageFor(productId: productId)?.firstPath : null;
+  String? getProductImage(int? productId, {String? color}) {
+    final ProductImageCache? productCache = productId != null ? _productsApi.imageFor(productId: productId) : null;
+    if (color == null) return productCache?.firstPath;
+    if (color == 'black') return productCache?.black.firstOrNull;
+    if (color == 'white') return productCache?.white.firstOrNull;
+    return null;
+  }
 
   bool get isLoading => state.isLoading;
 
