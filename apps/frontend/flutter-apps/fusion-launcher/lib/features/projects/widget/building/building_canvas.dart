@@ -188,8 +188,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                   ...listeningAreaPainters,
                                   for (final Wall wall in serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: floor.id)) WallPainter(wall: wall),
                                   for (final HardwareComponent hw in hardwareInFloorWithPosition)
-                                    if (isAcousticsMode && hw is Speaker)
-                                      HardwareComponentPainter(hardware: hw)
+                                    if (hw is Speaker)
+                                      HardwareComponentPainter(hardware: hw, canMove: isAcousticsMode)
                                     else if (!isAcousticsMode)
                                       HardwareComponentPainter(hardware: hw),
                                 ],
