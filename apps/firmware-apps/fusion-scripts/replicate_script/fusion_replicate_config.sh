@@ -80,8 +80,7 @@ Description:
 
 Requirements:
   - devices.json and config.json must exist in the same directory as this script.
-  - Target device public API must be reachable at http://<target_ip>:8080.
-  - Target device admin API must be reachable at http://<target_ip>:9090.
+  - Target device API must be reachable at http://<target_ip>:8080.
 
 Examples:
   ./fusion_replicate_config 10.1.123.237
@@ -135,17 +134,12 @@ fetch_target_devices() {
   curl --fail --silent --show-error "${api_base}/devices"
 }
 
-normalize_devices_array() {
-  jq -c 'if type == "array" then . else (.devices // []) end'
-}
-
 confirm_plan() {
   local source_count="$1"
   local target_count="$2"
   local source_summary="$3"
   local target_summary="$4"
   local api_base="$5"
-  local admin_base="$6"
   local answer
 
   echo
@@ -154,9 +148,8 @@ confirm_plan() {
   echo "- Source devices: $source_count"
   echo "- Target devices: $target_count"
   echo "- Target API: ${api_base}"
-  echo "- Target admin API: ${admin_base}"
   echo "- Device info updates: id, location, name (mapped by array index)"
-  echo "- Config apply: PATCH ${admin_base}/state with config.json body"
+  echo "- Config apply: POST ${api_base}/value with config.json body"
   echo
   echo "Source device info (by index):"
   echo "$source_summary"
@@ -210,14 +203,14 @@ patch_devices() {
 }
 
 apply_config() {
-  local admin_base="$1"
+  local api_base="$1"
 
-  print_info "Applying configuration to ${admin_base}/state"
+  print_info "Applying configuration to ${api_base}/value"
   curl --fail --silent --show-error \
-    -X PATCH \
+    -X POST \
     -H "Content-Type: application/json" \
     --data-binary "@$SOURCE_CONFIG_JSON" \
-    "${admin_base}/state" >/dev/null
+    "${api_base}/value" >/dev/null
 }
 
 prompt_generate_output() {
@@ -265,7 +258,7 @@ generate_output_from_config() {
 }
 
 main() {
-  local target_ip api_base admin_base source_count target_devices_json target_count source_summary target_summary
+  local target_ip api_base source_count target_devices_json target_count source_summary target_summary
 
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
@@ -279,16 +272,15 @@ main() {
 
   target_ip="$1"
   api_base="http://${target_ip}:8080"
-  admin_base="http://${target_ip}:9090"
 
   require_tools
   require_source_files
 
   source_count=$(jq 'length' "$SOURCE_DEVICES_JSON")
-  target_devices_json=$(fetch_target_devices "$api_base" | normalize_devices_array)
+  target_devices_json=$(fetch_target_devices "$api_base")
 
   if ! jq -e 'type == "array"' <<<"$target_devices_json" >/dev/null; then
-    print_error "Target API /devices did not return a devices array"
+    print_error "Target API /devices did not return a top-level JSON array"
     exit 1
   fi
 
@@ -302,14 +294,14 @@ main() {
   source_summary=$(jq -r 'to_entries[] | "  [\(.key)] id=\(.value.id // "<no-id>") | location=\(.value.location // "") | name=\(.value.name // "")"' "$SOURCE_DEVICES_JSON")
   target_summary=$(jq -r 'to_entries[] | "  [\(.key)] id=\(.value.id // "<no-id>") | location=\(.value.location // "") | name=\(.value.name // "")"' <<<"$target_devices_json")
 
-  if ! confirm_plan "$source_count" "$target_count" "$source_summary" "$target_summary" "$api_base" "$admin_base"; then
+  if ! confirm_plan "$source_count" "$target_count" "$source_summary" "$target_summary" "$api_base"; then
     exit 1
   fi
 
   patch_devices "$api_base" "$target_devices_json" "$source_count"
   print_success "Device identity fields replicated successfully"
 
-  apply_config "$admin_base"
+  apply_config "$api_base"
   print_success "Configuration replicated successfully"
 
   if prompt_generate_output; then

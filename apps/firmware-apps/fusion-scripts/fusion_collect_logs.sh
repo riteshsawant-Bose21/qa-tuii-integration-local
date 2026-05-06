@@ -238,11 +238,11 @@ collect_api_data() {
   fi
   rm -f "$outdir/devices.err"
 
-  print_info "[${ip}] Calling admin API: /state"
-  if ! curl --fail --silent --show-error "http://${ip}:9090/state" >"$outdir/config.json" 2>"$outdir/config.err"; then
+  print_info "[${ip}] Calling API: /value"
+  if ! curl --fail --silent --show-error "http://${ip}:8080/value" >"$outdir/config.json" 2>"$outdir/config.err"; then
     local err
     err=$(cat "$outdir/config.err")
-    write_error_file "$outdir/config.json" "API request failed for /state: $err"
+    write_error_file "$outdir/config.json" "API request failed for /value: $err"
     failures=$((failures + 1))
   fi
   rm -f "$outdir/config.err"

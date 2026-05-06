@@ -15,7 +15,7 @@ The script reads these files from its own directory and will fail if either file
 
 - `fusion_replicate_config.sh`: Main replication script
 - `devices.json`: Source device metadata (must be a JSON array) (ignored in git)
-- `config.json`: Source configuration payload for admin `PATCH /state` (ignored in git)
+- `config.json`: Source configuration payload for `/value` (ignored in git)
 - `visualizer.py`: Optional visualization generator
 
 ## What the script does
@@ -30,7 +30,7 @@ Given a target VIP:
    - `id`
    - `location`
    - `name`
-6. Applies `config.json` to `PATCH http://<ip>:9090/state`.
+6. Posts full `config.json` to `POST http://<ip>:8080/value`.
 7. Optionally asks whether to generate a visualization image from `config.json`.
 
 ## Mapping behavior
@@ -38,7 +38,7 @@ Given a target VIP:
 Device mapping is by array index only.
 
 - Source device at index `i` in `devices.json`
-- Target device at index `i` from `GET /devices` (using the returned `devices` array)
+- Target device at index `i` from `GET /devices`
 
 ## Prerequisites
 
@@ -47,8 +47,7 @@ Required:
 - macOS/Linux shell
 - `curl`
 - `jq`
-- Target public API reachable on `http://<ip>:8080`
-- Target admin API reachable on `http://<ip>:9090`
+- Target API reachable on `http://<ip>:8080`
 
 Optional for visualization:
 
@@ -125,7 +124,7 @@ The script fails fast for core replication errors:
 - Invalid JSON in source files
 - `GET /devices` not returning JSON array
 - Source/target device count mismatch
-- PATCH API errors
+- PATCH/POST API errors
 
 Visualization errors are non-fatal:
 
