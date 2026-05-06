@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
@@ -26,10 +25,10 @@ func (s *FusionServer) GetDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var pkg fusionpb.DeviceConfigurationPackage
+	var pkg model.DeviceConfigurationPackage
 
 	if value, exists := s.handler.StateManager.Get(droConditionedOutputStateKey); exists {
-		var output fusionpb.DroConditionedOutput
+		var output model.DroConditionedOutput
 		if err := decodeTypedJSON(value, &output); err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding %s: %v", droConditionedOutputStateKey, err), http.StatusInternalServerError)
 			return
@@ -38,7 +37,7 @@ func (s *FusionServer) GetDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 	}
 
 	if value, exists := s.handler.StateManager.Get(fusionConnectAdditionsStateKey); exists {
-		var additions fusionpb.FusionConnectAdditions
+		var additions model.FusionConnectAdditions
 		if err := decodeTypedJSON(value, &additions); err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding %s: %v", fusionConnectAdditionsStateKey, err), http.StatusInternalServerError)
 			return
@@ -63,7 +62,7 @@ func (s *FusionServer) PutDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var request fusionpb.DeviceConfigurationPackage
+	var request model.DeviceConfigurationPackage
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
@@ -94,7 +93,7 @@ func (s *FusionServer) PutDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	resp := &fusionpb.DeviceConfigurationPackagePutResponse{Status: "success"}
+	resp := &model.DeviceConfigurationPackagePutResponse{Status: "success"}
 	if diff == nil {
 		resp.Status = "noop"
 	} else {
@@ -111,7 +110,7 @@ func (s *FusionServer) PutDSPDeploymentPackage(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func buildDSPDeploymentStatePatch(request *fusionpb.DeviceConfigurationPackage) (map[string]any, error) {
+func buildDSPDeploymentStatePatch(request *model.DeviceConfigurationPackage) (map[string]any, error) {
 	if request == nil || request.DroConditionedOutput == nil || request.FusionConnectAdditions == nil || request.FusionConnectAdditions.Settings == nil {
 		return nil, fmt.Errorf("DSP deployment package is incomplete")
 	}
@@ -150,7 +149,7 @@ func buildDSPDeploymentStatePatch(request *fusionpb.DeviceConfigurationPackage) 
 	}, nil
 }
 
-func projectAudioSettings(settings *fusionpb.FusionConnectAudioSettings) (map[string]any, error) {
+func projectAudioSettings(settings *model.FusionConnectAudioSettings) (map[string]any, error) {
 	if settings == nil {
 		return nil, fmt.Errorf("settings are nil")
 	}
@@ -207,8 +206,8 @@ func decodeTypedJSON(input any, target proto.Message) error {
 	return serverProtoJSONUnmarshalOptions.Unmarshal(data, target)
 }
 
-func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
-	return &fusionpb.DeviceInfo{
+func deviceInfoToProto(info api.DeviceInfo) *model.DeviceInfo {
+	return &model.DeviceInfo{
 		Address:                  info.Address,
 		Id:                       info.Id,
 		Location:                 info.Location,
@@ -222,7 +221,7 @@ func deviceInfoToProto(info api.DeviceInfo) *fusionpb.DeviceInfo {
 	}
 }
 
-func devicePatchFromProto(patch *fusionpb.DevicePatch) api.DevicePatch {
+func devicePatchFromProto(patch *model.DevicePatch) api.DevicePatch {
 	if patch == nil {
 		return api.DevicePatch{}
 	}
@@ -246,8 +245,8 @@ func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	info := s.handler.HandleGetDevicesInfo()
-	response := &fusionpb.DeviceListResponse{
-		Devices: make([]*fusionpb.DeviceInfo, 0, len(info)),
+	response := &model.DeviceListResponse{
+		Devices: make([]*model.DeviceInfo, 0, len(info)),
 	}
 	for _, device := range info {
 		response.Devices = append(response.Devices, deviceInfoToProto(device))
@@ -288,7 +287,7 @@ func (c *FusionServer) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var patchProto fusionpb.DevicePatch
+	var patchProto model.DevicePatch
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &patchProto); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
@@ -315,7 +314,7 @@ func (c *FusionServer) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var patchProto fusionpb.DevicePatch
+	var patchProto model.DevicePatch
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &patchProto); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return

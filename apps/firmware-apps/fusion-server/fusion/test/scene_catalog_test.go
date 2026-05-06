@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"slices"
@@ -59,7 +58,7 @@ func activateSnapshotDef(t *testing.T, id string) *http.Response {
 
 func activateScene(t *testing.T, setID, sceneID string) *http.Response {
 	t.Helper()
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.ActivateSceneSetRequest{
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.ActivateSceneSetRequest{
 		SetId:   setID,
 		SceneId: sceneID,
 	})
@@ -73,9 +72,9 @@ func activateScene(t *testing.T, setID, sceneID string) *http.Response {
 	return resp
 }
 
-func getCurrentScene(t *testing.T, setID string) *fusionpb.CurrentSceneResponse {
+func getCurrentScene(t *testing.T, setID string) *model.CurrentSceneResponse {
 	t.Helper()
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.CurrentSceneRequest{SetId: setID})
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.CurrentSceneRequest{SetId: setID})
 	if err != nil {
 		t.Fatalf("getCurrentScene: failed to marshal request: %v", err)
 	}
@@ -88,7 +87,7 @@ func getCurrentScene(t *testing.T, setID string) *fusionpb.CurrentSceneResponse 
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("getCurrentScene: unexpected status %d: %s", resp.StatusCode, string(body))
 	}
-	var out fusionpb.CurrentSceneResponse
+	var out model.CurrentSceneResponse
 	if err := decodeProtoResponse(resp.Body, &out); err != nil {
 		t.Fatalf("getCurrentScene: failed to decode response: %v", err)
 	}
@@ -140,7 +139,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 		t.Fatalf("List snapshot defs returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -176,7 +175,7 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -291,7 +290,7 @@ func TestSceneCatalogSceneSetUpsertViaPost(t *testing.T) {
 		t.Fatalf("List scene sets returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SceneSetListResponse
+	var listResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -520,7 +519,7 @@ func TestSceneCatalogListScenes(t *testing.T) {
 		t.Fatalf("List scenes returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var listResp fusionpb.SceneListResponse
+	var listResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -553,7 +552,7 @@ func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -585,7 +584,7 @@ func TestSceneCatalogListSceneSets(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SceneSetListResponse
+	var listResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -620,7 +619,7 @@ func TestSceneCatalogListAll(t *testing.T) {
 		t.Fatalf("Scene catalog list returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var catalog fusionpb.SceneCatalogListResponse
+	var catalog model.SceneCatalogListResponse
 	if err := decodeProtoResponse(resp.Body, &catalog); err != nil {
 		t.Fatalf("Failed to decode catalog response: %v", err)
 	}
@@ -663,7 +662,7 @@ func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -699,7 +698,7 @@ func TestSceneCatalogDeleteSnapshotDefinitionByName(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var listResp fusionpb.SnapshotDefinitionListResponse
+	var listResp model.SnapshotDefinitionListResponse
 	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
 		t.Fatalf("Failed to decode snapshot list response: %v", err)
 	}
@@ -754,7 +753,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var setsResp fusionpb.SceneSetListResponse
+	var setsResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &setsResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -771,7 +770,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -808,7 +807,7 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var setsResp fusionpb.SceneSetListResponse
+	var setsResp model.SceneSetListResponse
 	if err := decodeProtoResponse(resp.Body, &setsResp); err != nil {
 		t.Fatalf("Failed to decode scene set list response: %v", err)
 	}
@@ -836,7 +835,7 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}
@@ -892,7 +891,7 @@ func TestSceneCatalogDeleteSceneByName(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var scenesResp fusionpb.SceneListResponse
+	var scenesResp model.SceneListResponse
 	if err := decodeProtoResponse(resp.Body, &scenesResp); err != nil {
 		t.Fatalf("Failed to decode scene list response: %v", err)
 	}

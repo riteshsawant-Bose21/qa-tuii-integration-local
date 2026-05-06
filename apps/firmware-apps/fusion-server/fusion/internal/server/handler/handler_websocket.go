@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"path/filepath"
 
 	"github.com/gorilla/websocket"
@@ -21,15 +20,15 @@ type WebSocketServer interface {
 	// Topic-based subscription methods
 	SubscribeToTopic(conn *websocket.Conn, topic string)
 	UnsubscribeFromTopic(conn *websocket.Conn, topic string)
-	BroadcastToTopic(topic string, message *fusionpb.WebSocketResponse) error
+	BroadcastToTopic(topic string, message *model.WebSocketResponse) error
 }
 
 // HandleWebSocketMessageWithConn processes incoming WebSocket messages and enables pull-then-push pattern
-func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	logger := logging.GetLogger()
 
 	// Parse WebSocket request
-	var request fusionpb.WebSocketRequest
+	var request model.WebSocketRequest
 	if err := protojson.Unmarshal(data, &request); err != nil {
 		return createErrorResponse(nil, api.WSCodeInvalidJSON, "Invalid JSON format"), nil
 	}
@@ -60,7 +59,7 @@ func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Co
 }
 
 // routeWebSocketMessageWithConn routes messages to appropriate handlers with connection context for subscriptions
-func (h *Handler) routeWebSocketMessageWithConn(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) routeWebSocketMessageWithConn(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	switch request.Type {
 	case api.WSMsgTypeDevices:
 		return h.handleDevicesWithSubscription(request, conn, server)
@@ -90,7 +89,7 @@ func (h *Handler) routeWebSocketMessageWithConn(request *fusionpb.WebSocketReque
 }
 
 // handleConfigurationWithSubscription returns current config and subscribes client to config updates (Pull-then-Push)
-func (h *Handler) handleConfigurationWithSubscription(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleConfigurationWithSubscription(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	state, err := h.GetInitialState()
 	if err != nil {
 		logging.GetLogger().Error("Failed to get configuration state: %v", err)
@@ -104,7 +103,7 @@ func (h *Handler) handleConfigurationWithSubscription(request *fusionpb.WebSocke
 }
 
 // handleDevicesWithSubscription handles device listing requests and subscribes client to updates (Pull-then-Push)
-func (h *Handler) handleDevicesWithSubscription(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleDevicesWithSubscription(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	// Subscribe client to device updates for push notifications
 	server.SubscribeToTopic(conn, api.WSTopicDeviceUpdates)
 	logging.GetLogger().Info("Client subscribed to device updates for request %s", request.Id)
@@ -120,8 +119,8 @@ func (h *Handler) handleDevicesWithSubscription(request *fusionpb.WebSocketReque
 }
 
 // handleDeviceByIDWithSubscription handles device lookup by ID and subscribes client to that device's updates
-func (h *Handler) handleDeviceByIDWithSubscription(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
-	var payload fusionpb.WebSocketDeviceLookupRequest
+func (h *Handler) handleDeviceByIDWithSubscription(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
+	var payload model.WebSocketDeviceLookupRequest
 	if err := websocketRequestDataToProto(request.Data, &payload); err != nil {
 		return createErrorResponse(&request.Id, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
@@ -144,8 +143,8 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *fusionpb.WebSocketRe
 }
 
 // handleUpdateDeviceInfoWithNotification handles device updates and broadcasts changes to subscribed clients
-func (h *Handler) handleUpdateDeviceInfoWithNotification(request *fusionpb.WebSocketRequest, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
-	var payload fusionpb.WebSocketUpdateDeviceInfoRequest
+func (h *Handler) handleUpdateDeviceInfoWithNotification(request *model.WebSocketRequest, server WebSocketServer) (*model.WebSocketResponse, error) {
+	var payload model.WebSocketUpdateDeviceInfoRequest
 	if err := websocketRequestDataToProto(request.Data, &payload); err != nil {
 		return createErrorResponse(&request.Id, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
 	}
@@ -176,7 +175,7 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *fusionpb.WebSo
 }
 
 // handlePatchConfigurationWithNotification applies a partial state patch and notifies config subscribers
-func (h *Handler) handlePatchConfigurationWithNotification(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handlePatchConfigurationWithNotification(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	var patchData map[string]any
 	if err := websocketRequestDataToAny(request.Data, &patchData); err != nil {
 		return createErrorResponse(&request.Id, api.WSCodeInvalidPayload, ErrInvalidPayload), nil
@@ -205,24 +204,24 @@ func (h *Handler) handlePatchConfigurationWithNotification(request *fusionpb.Web
 }
 
 // handleUnsubscribeConfig unsubscribes client from config update events
-func (h *Handler) handleUnsubscribeConfig(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleUnsubscribeConfig(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	server.UnsubscribeFromTopic(conn, api.WSTopicConfigUpdates)
 	return createSuccessResponse(&request.Id, api.WSMsgTypeUnsubscribeConfig, api.WSCodeOK, "Unsubscribed from configuration updates", nil), nil
 }
 
 // handleUnsubscribeDevices allows clients to unsubscribe from device updates
-func (h *Handler) handleUnsubscribeDevices(request *fusionpb.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleUnsubscribeDevices(request *model.WebSocketRequest, conn *websocket.Conn, server WebSocketServer) (*model.WebSocketResponse, error) {
 	server.UnsubscribeFromTopic(conn, api.WSTopicDeviceUpdates)
 	return createSuccessResponse(&request.Id, api.WSMsgTypeUnsubscribeDevices, api.WSCodeOK, "Unsubscribed from device updates", nil), nil
 }
 
 // handlePing handles ping requests
-func (h *Handler) handlePing(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handlePing(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	return createSuccessResponse(&request.Id, api.WSMsgTypePong, api.WSCodePong, "pong", nil), nil
 }
 
 // handleStartUpdate handles software update trigger requests
-func (h *Handler) handleStartUpdate(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleStartUpdate(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	logger := logging.GetLogger()
 
 	logger.Info("Received software update start request - broadcasting to cluster")

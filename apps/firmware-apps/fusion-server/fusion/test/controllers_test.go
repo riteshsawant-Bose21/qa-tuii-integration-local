@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"io"
 	"net"
 	"net/http"
@@ -55,7 +54,7 @@ func TestControllerLifecycle(t *testing.T) {
 			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 		}
 
-		var controllers fusionpb.ControllerListResponse
+		var controllers model.ControllerListResponse
 		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}
@@ -105,7 +104,7 @@ func TestControllerLifecycle(t *testing.T) {
 			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 		}
 
-		var apiControllers fusionpb.ControllerListResponse
+		var apiControllers model.ControllerListResponse
 		if err := decodeProtoHTTPBody(resp, &apiControllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}
@@ -141,7 +140,7 @@ func TestControllerLifecycle(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		var controllers fusionpb.ControllerListResponse
+		var controllers model.ControllerListResponse
 		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}
@@ -172,7 +171,7 @@ func TestControllerLifecycle(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		controllers = fusionpb.ControllerListResponse{}
+		controllers = model.ControllerListResponse{}
 		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}

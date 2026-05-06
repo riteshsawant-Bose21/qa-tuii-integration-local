@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ func TestGetDatabaseMetadataEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK from GET /metadata")
 
-	var metadataResp fusionpb.DatabaseMetadataResponse
+	var metadataResp model.DatabaseMetadataResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &metadataResp), "Expected valid protobuf JSON from GET /metadata")
 	require.NotNil(t, metadataResp.Metadata, "Expected metadata payload")
 	require.NotNil(t, metadataResp.Metadata.Version, "Expected metadata.version payload")

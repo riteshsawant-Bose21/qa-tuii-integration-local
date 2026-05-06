@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -42,8 +41,8 @@ func websocketStructFromMap(data map[string]any) (*structpb.Struct, error) {
 	return structpb.NewStruct(data)
 }
 
-func websocketResponse(id *string, msgType string, code int, status, message string, data any) *fusionpb.WebSocketResponse {
-	response := &fusionpb.WebSocketResponse{
+func websocketResponse(id *string, msgType string, code int, status, message string, data any) *model.WebSocketResponse {
+	response := &model.WebSocketResponse{
 		Version:   1,
 		Type:      msgType,
 		Code:      int32(code),

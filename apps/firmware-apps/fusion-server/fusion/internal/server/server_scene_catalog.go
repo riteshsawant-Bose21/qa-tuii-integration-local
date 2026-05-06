@@ -7,14 +7,13 @@ import (
 	"net/http"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func snapshotDefinitionToProto(def api.SnapshotDefinition) (*fusionpb.SnapshotDefinition, error) {
+func snapshotDefinitionToProto(def api.SnapshotDefinition) (*model.SnapshotDefinition, error) {
 	var data *structpb.Struct
 	var err error
 	if def.Data != nil {
@@ -24,14 +23,14 @@ func snapshotDefinitionToProto(def api.SnapshotDefinition) (*fusionpb.SnapshotDe
 		}
 	}
 
-	return &fusionpb.SnapshotDefinition{
+	return &model.SnapshotDefinition{
 		Id:   def.ID,
 		Name: def.Name,
 		Data: data,
 	}, nil
 }
 
-func sceneToProto(scene api.Scene) (*fusionpb.Scene, error) {
+func sceneToProto(scene api.Scene) (*model.Scene, error) {
 	var data *structpb.Struct
 	var err error
 	if scene.Data != nil {
@@ -41,15 +40,15 @@ func sceneToProto(scene api.Scene) (*fusionpb.Scene, error) {
 		}
 	}
 
-	return &fusionpb.Scene{
+	return &model.Scene{
 		Id:   scene.ID,
 		Name: scene.Name,
 		Data: data,
 	}, nil
 }
 
-func sceneSetToProto(set api.SceneSet) (*fusionpb.SceneSet, error) {
-	scenes := make([]*fusionpb.Scene, 0, len(set.Scenes))
+func sceneSetToProto(set api.SceneSet) (*model.SceneSet, error) {
+	scenes := make([]*model.Scene, 0, len(set.Scenes))
 	for _, scene := range set.Scenes {
 		sceneMsg, err := sceneToProto(scene)
 		if err != nil {
@@ -58,7 +57,7 @@ func sceneSetToProto(set api.SceneSet) (*fusionpb.SceneSet, error) {
 		scenes = append(scenes, sceneMsg)
 	}
 
-	return &fusionpb.SceneSet{
+	return &model.SceneSet{
 		SetId:          set.SetID,
 		Name:           set.Name,
 		DefaultScene:   set.DefaultSceneID,
@@ -106,8 +105,8 @@ func (s *FusionServer) ListSnapshotDefinitions(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	resp := &fusionpb.SnapshotDefinitionListResponse{
-		Snapshots: make([]*fusionpb.SnapshotDefinition, 0, len(snapshots)),
+	resp := &model.SnapshotDefinitionListResponse{
+		Snapshots: make([]*model.SnapshotDefinition, 0, len(snapshots)),
 	}
 	for _, snapshot := range snapshots {
 		msg, err := snapshotDefinitionToProto(snapshot)
@@ -181,8 +180,8 @@ func (s *FusionServer) ListScenes(w http.ResponseWriter, r *http.Request) {
 		scenes = append(scenes, set.Scenes...)
 	}
 
-	resp := &fusionpb.SceneListResponse{
-		Scenes: make([]*fusionpb.Scene, 0, len(scenes)),
+	resp := &model.SceneListResponse{
+		Scenes: make([]*model.Scene, 0, len(scenes)),
 	}
 	for _, scene := range scenes {
 		msg, err := sceneToProto(scene)
@@ -213,7 +212,7 @@ func (s *FusionServer) ActivateSceneSet(w http.ResponseWriter, r *http.Request) 
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.ActivateSceneSetRequest
+	var req model.ActivateSceneSetRequest
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -254,7 +253,7 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var req fusionpb.CurrentSceneRequest
+	var req model.CurrentSceneRequest
 	if err := serverProtoJSONUnmarshalOptions.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
@@ -283,9 +282,9 @@ func (s *FusionServer) GetCurrentScene(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := &fusionpb.CurrentSceneResponse{
+	resp := &model.CurrentSceneResponse{
 		SetId: set.SetID,
-		CurrentScene: &fusionpb.CurrentSceneMetadata{
+		CurrentScene: &model.CurrentSceneMetadata{
 			SceneId: set.CurrentSceneID,
 			Name:    currentSceneName,
 		},
@@ -309,8 +308,8 @@ func (s *FusionServer) ListSceneSets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &fusionpb.SceneSetListResponse{
-		SceneSets: make([]*fusionpb.SceneSet, 0, len(sceneSets)),
+	resp := &model.SceneSetListResponse{
+		SceneSets: make([]*model.SceneSet, 0, len(sceneSets)),
 	}
 	for _, sceneSet := range sceneSets {
 		msg, err := sceneSetToProto(sceneSet)
@@ -410,9 +409,9 @@ func (s *FusionServer) ListSceneCatalog(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	resp := &fusionpb.SceneCatalogListResponse{
-		Snapshots: make([]*fusionpb.SnapshotDefinition, 0, len(snapshots)),
-		SceneSets: make([]*fusionpb.SceneSet, 0, len(sceneSets)),
+	resp := &model.SceneCatalogListResponse{
+		Snapshots: make([]*model.SnapshotDefinition, 0, len(snapshots)),
+		SceneSets: make([]*model.SceneSet, 0, len(sceneSets)),
 	}
 
 	for _, snapshot := range snapshots {

@@ -13,7 +13,6 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
@@ -290,9 +289,9 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	resp := &fusionpb.DatabaseMetadataResponse{
-		Metadata: &fusionpb.DatabaseMetadata{
-			Version: &fusionpb.VersionInfo{
+	resp := &model.DatabaseMetadataResponse{
+		Metadata: &model.DatabaseMetadata{
+			Version: &model.VersionInfo{
 				Epoch:   metadata.Version.Epoch,
 				Counter: metadata.Version.Counter,
 				NodeId:  metadata.Version.NodeID,
@@ -511,9 +510,9 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*fusionpb.SessionListResponse, error) {
-	out := &fusionpb.SessionListResponse{
-		Sessions: make(map[string]*fusionpb.SAPSession, len(sessions)),
+func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*model.SessionListResponse, error) {
+	out := &model.SessionListResponse{
+		Sessions: make(map[string]*model.SAPSession, len(sessions)),
 	}
 
 	for id, session := range sessions {
@@ -527,12 +526,12 @@ func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*fusionpb
 	return out, nil
 }
 
-func sapSessionToProto(session *handler.SAPSession) (*fusionpb.SAPSession, error) {
+func sapSessionToProto(session *handler.SAPSession) (*model.SAPSession, error) {
 	if session == nil {
 		return nil, nil
 	}
 
-	resp := &fusionpb.SAPSession{
+	resp := &model.SAPSession{
 		Id:        session.ID,
 		Origin:    session.OriginIP,
 		Timestamp: timestamppb.New(session.Timestamp),
@@ -568,11 +567,11 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := s.handler.HandleGetControllers()
-	response := &fusionpb.ControllerListResponse{
-		Controllers: make([]*fusionpb.ControllerInfo, 0, len(result)),
+	response := &model.ControllerListResponse{
+		Controllers: make([]*model.ControllerInfo, 0, len(result)),
 	}
 	for _, controller := range result {
-		response.Controllers = append(response.Controllers, &fusionpb.ControllerInfo{
+		response.Controllers = append(response.Controllers, &model.ControllerInfo{
 			Id:      controller.ID,
 			Name:    controller.Name,
 			Address: controller.Address,
@@ -612,7 +611,7 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response := &fusionpb.ControllerInfo{
+	response := &model.ControllerInfo{
 		Id:      ctrl.ID,
 		Name:    ctrl.Name,
 		Address: ctrl.Address,
@@ -645,7 +644,7 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return success response for wink command
-	response := &fusionpb.ControllerWinkResponse{
+	response := &model.ControllerWinkResponse{
 		Status:       "success",
 		Message:      "Wink command sent successfully",
 		ControllerId: id,

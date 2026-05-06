@@ -8,7 +8,6 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
@@ -33,8 +32,8 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func swUpdateInfoToProto(info api.SwUpdateInfo) *fusionpb.SwUpdateInfo {
-	return &fusionpb.SwUpdateInfo{
+func swUpdateInfoToProto(info api.SwUpdateInfo) *model.SwUpdateInfo {
+	return &model.SwUpdateInfo{
 		SerialNumber:          info.SerialNumber,
 		CurrentBundleVersion:  info.CurrentBundleVersion,
 		PreviousBundleVersion: info.PreviousBundleVersion,

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"net/http"
@@ -27,7 +26,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var request fusionpb.SnapshotTaskCreateRequest
+	var request model.SnapshotTaskCreateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &request); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
@@ -92,7 +91,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	_ = writeProtoJSON(w, &fusionpb.CreateTaskResponse{Id: task.ID})
+	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.ID})
 }
 
 // UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
@@ -121,7 +120,7 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 	defer r.Body.Close()
 
-	var patch fusionpb.SnapshotTaskUpdateRequest
+	var patch model.SnapshotTaskUpdateRequest
 	if err := protoJSONUnmarshalOptions.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return

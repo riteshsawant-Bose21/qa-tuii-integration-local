@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
@@ -232,7 +231,7 @@ func TestAudioUploadMissingFile(t *testing.T) {
 // uploadAudio is a helper that performs a multipart/form-data upload to POST /pava/messages
 // with the "binary" file part and optional "display_name". It asserts 201 and
 // returns the parsed metadata.
-func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data []byte, displayName string) *fusionpb.AudioMetadata {
+func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data []byte, displayName string) *model.AudioMetadata {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -274,7 +273,7 @@ func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data 
 		t.Fatalf("POST %s returned %d, want 201; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
 	}
 
-	var meta fusionpb.AudioMetadata
+	var meta model.AudioMetadata
 	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		t.Fatalf("decoding metadata failed: %v", err)
 	}
@@ -294,7 +293,7 @@ func TestTriggerMessageRecordsImmediateManualHistory(t *testing.T) {
 	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
 
 	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
-	reqBody := marshalProtoMessage(t, &fusionpb.TriggerMessageRequest{Priority: 100})
+	reqBody := marshalProtoMessage(t, &model.TriggerMessageRequest{Priority: 100})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", audioServerAddr, triggerEndpoint), bytes.NewReader(reqBody))
 	if err != nil {
 		t.Fatalf("creating trigger request failed: %v", err)
@@ -349,7 +348,7 @@ func TestTriggerMessageEmitsZonesPayloadLocal(t *testing.T) {
 	defer deleteAudio(t, ctx, baseURL, meta.Id)
 
 	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
-	reqBody := marshalProtoMessage(t, &fusionpb.TriggerMessageRequest{
+	reqBody := marshalProtoMessage(t, &model.TriggerMessageRequest{
 		Priority: 77,
 		Zones:    []string{"lobby", "gym"},
 	})
@@ -508,7 +507,7 @@ func TestAudioUploadWithTags(t *testing.T) {
 		t.Fatalf("POST %s returned %d, want 201; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
 	}
 
-	var meta fusionpb.AudioMetadata
+	var meta model.AudioMetadata
 	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		t.Fatalf("decoding metadata failed: %v", err)
 	}
@@ -602,13 +601,13 @@ func TestListAllTags(t *testing.T) {
 	}
 }
 
-func decodeAudioMetadataListResponse(body io.Reader) (*fusionpb.AudioMetadataListResponse, error) {
+func decodeAudioMetadataListResponse(body io.Reader) (*model.AudioMetadataListResponse, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return nil, err
 	}
 
-	var protoResp fusionpb.AudioMetadataListResponse
+	var protoResp model.AudioMetadataListResponse
 	if err := decodeProtoBody(bytes.NewReader(data), &protoResp); err == nil {
 		return &protoResp, nil
 	}
@@ -618,9 +617,9 @@ func decodeAudioMetadataListResponse(body io.Reader) (*fusionpb.AudioMetadataLis
 		return nil, err
 	}
 
-	out := make([]*fusionpb.AudioMetadata, 0, len(legacy))
+	out := make([]*model.AudioMetadata, 0, len(legacy))
 	for _, meta := range legacy {
-		out = append(out, &fusionpb.AudioMetadata{
+		out = append(out, &model.AudioMetadata{
 			Id:          meta.Id,
 			OrigName:    meta.OrigName,
 			DisplayName: meta.DisplayName,
@@ -634,16 +633,16 @@ func decodeAudioMetadataListResponse(body io.Reader) (*fusionpb.AudioMetadataLis
 		})
 	}
 
-	return &fusionpb.AudioMetadataListResponse{Messages: out}, nil
+	return &model.AudioMetadataListResponse{Messages: out}, nil
 }
 
-func decodeAudioTagListResponse(body io.Reader) (*fusionpb.AudioTagListResponse, error) {
+func decodeAudioTagListResponse(body io.Reader) (*model.AudioTagListResponse, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return nil, err
 	}
 
-	var protoResp fusionpb.AudioTagListResponse
+	var protoResp model.AudioTagListResponse
 	if err := decodeProtoBody(bytes.NewReader(data), &protoResp); err == nil {
 		return &protoResp, nil
 	}
@@ -653,7 +652,7 @@ func decodeAudioTagListResponse(body io.Reader) (*fusionpb.AudioTagListResponse,
 		return nil, err
 	}
 
-	return &fusionpb.AudioTagListResponse{Tags: legacy}, nil
+	return &model.AudioTagListResponse{Tags: legacy}, nil
 }
 
 func TestAudioSyncAcrossNodes(t *testing.T) {
@@ -716,7 +715,7 @@ func hasMetadata(_ *testing.T, base, id string) bool {
 		return false
 	}
 
-	var meta fusionpb.AudioMetadata
+	var meta model.AudioMetadata
 	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		return false
 	}
@@ -724,7 +723,7 @@ func hasMetadata(_ *testing.T, base, id string) bool {
 	return meta.GetId() == id
 }
 
-func verifyAudioSynced(t *testing.T, ctx context.Context, base string, meta *fusionpb.AudioMetadata) {
+func verifyAudioSynced(t *testing.T, ctx context.Context, base string, meta *model.AudioMetadata) {
 
 	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", meta.Id, 1)
 	url := fmt.Sprintf("%s%s", base, streamEndpoint)
@@ -782,7 +781,7 @@ func getClusterNodeURLs(t *testing.T, ctx context.Context, vipURL string) []stri
 		t.Fatalf("failed to read /devices response: %v", err)
 	}
 
-	var devicesResp fusionpb.DeviceListResponse
+	var devicesResp model.DeviceListResponse
 	if err := decodeProtoBody(bytes.NewReader(body), &devicesResp); err != nil {
 		t.Fatalf("failed to decode /devices: %v; body=%s", err, string(body))
 	}

@@ -12,7 +12,6 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -73,7 +72,7 @@ func clearAllTasks(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	var list fusionpb.TaskListResponse
+	var list model.TaskListResponse
 	require.NoError(t, protojson.Unmarshal(body, &list))
 
 	for _, task := range list.Tasks {
@@ -89,7 +88,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	clearAllTasks(t)
 
 	// Create a snapshot task
-	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotTaskCreateRequest{
 		Id:          "snap-crud",
 		CronExpr:    "*/5 * * * *",
 		Description: "Snapshot CRUD test",
@@ -110,7 +109,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	var tasksList fusionpb.TaskListResponse
+	var tasksList model.TaskListResponse
 	require.NoError(t, protojson.Unmarshal(body, &tasksList))
 	require.Len(t, tasksList.Tasks, 1)
 	assert.Equal(t, "snap-crud", tasksList.Tasks[0].Id)
@@ -123,7 +122,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 
 	body, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	var got fusionpb.Task
+	var got model.Task
 	require.NoError(t, protojson.Unmarshal(body, &got))
 	assert.Equal(t, "snap-crud", got.Id)
 	assert.Equal(t, "Snapshot CRUD test", got.Description)
@@ -132,7 +131,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 	newDesc := "Updated description"
 	newCron := "*/10 * * * *"
 
-	patchJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskUpdateRequest{
+	patchJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotTaskUpdateRequest{
 		Description: &newDesc,
 		CronExpr:    &newCron,
 	})
@@ -154,7 +153,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 
 	body, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	var updated fusionpb.Task
+	var updated model.Task
 	require.NoError(t, protojson.Unmarshal(body, &updated))
 	assert.Equal(t, newDesc, updated.Description)
 	assert.Equal(t, newCron, updated.CronExpr)
@@ -175,7 +174,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 
 	body, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	var finalList fusionpb.TaskListResponse
+	var finalList model.TaskListResponse
 	require.NoError(t, protojson.Unmarshal(body, &finalList))
 	assert.Len(t, finalList.Tasks, 0, "Expected 0 tasks after deletion")
 }
@@ -198,7 +197,7 @@ func TestTasksHistoryEndpoints(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 from GET /tasks/history")
 
 	body, _ := io.ReadAll(resp.Body)
-	var history fusionpb.TaskHistoryResponse
+	var history model.TaskHistoryResponse
 	require.NoError(t, protojson.Unmarshal(body, &history))
 	// Not asserting length, since history depends on live task execution.
 }
@@ -230,7 +229,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 		Zones:       []string{},
 	}
 
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskCreateRequest{
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.MessageTaskCreateRequest{
 		Id:          taskMessage.ID,
 		Description: taskMessage.Description,
 		CronExpr:    taskMessage.CronExpr,
@@ -271,7 +270,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	require.True(t, found, "expected scheduled message to be listed")
 
 	lobbyZones := "Lobby"
-	patchBody, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskUpdateRequest{
+	patchBody, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.MessageTaskUpdateRequest{
 		Zones: &lobbyZones,
 	})
 	require.NoError(t, err)
@@ -286,7 +285,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusOK, patchResp.StatusCode)
 
 	clearZones := ""
-	patchBody, err = protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.MessageTaskUpdateRequest{
+	patchBody, err = protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.MessageTaskUpdateRequest{
 		Zones: &clearZones,
 	})
 	require.NoError(t, err)
@@ -364,7 +363,7 @@ func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
 func TestEnableDisableEndpoints(t *testing.T) {
 	clearAllTasks(t)
 
-	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotTaskCreateRequest{
 		Id:          "toggle-api",
 		CronExpr:    "*/5 * * * *",
 		Description: "toggle via API",
@@ -402,7 +401,7 @@ func TestSchedulerTasksEndpointErrorCases(t *testing.T) {
 	clearAllTasks(t)
 
 	// Create one valid task to have a known ID.
-	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+	taskJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotTaskCreateRequest{
 		Id:          "error-id",
 		CronExpr:    "*/5 * * * *",
 		Description: "error test",
@@ -523,7 +522,7 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	// Schedule snapshot activation
-	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&fusionpb.SnapshotTaskCreateRequest{
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotTaskCreateRequest{
 		Id:          "schedule-snap",
 		CronExpr:    "@every 1s",
 		Description: "scheduled activation test",

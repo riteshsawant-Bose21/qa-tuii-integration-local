@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"mime"
@@ -35,7 +34,7 @@ var (
 
 // writeSoftwareUpdateError writes a JSON error response for SoftwareUpdate endpoints.
 func writeSoftwareUpdateError(w http.ResponseWriter, statusCode int, errMsg, detail string) {
-	_ = writeProtoJSONWithStatus(w, statusCode, &fusionpb.SoftwareUpdateErrorResponse{
+	_ = writeProtoJSONWithStatus(w, statusCode, &model.SoftwareUpdateErrorResponse{
 		Error:   errMsg,
 		Message: detail,
 	})
@@ -471,8 +470,8 @@ func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes int64, uploaded time.Time) *fusionpb.SoftwareUpdateUploadResponse {
-	return &fusionpb.SoftwareUpdateUploadResponse{
+func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes int64, uploaded time.Time) *model.SoftwareUpdateUploadResponse {
+	return &model.SoftwareUpdateUploadResponse{
 		Filename:  filename,
 		Checksum:  checksum,
 		SizeBytes: sizeBytes,
@@ -480,8 +479,8 @@ func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes in
 	}
 }
 
-func softwareUpdateSyncToProto(update api.SoftwareUpdateSync) *fusionpb.SoftwareUpdateBundle {
-	return &fusionpb.SoftwareUpdateBundle{
+func softwareUpdateSyncToProto(update api.SoftwareUpdateSync) *model.SoftwareUpdateBundle {
+	return &model.SoftwareUpdateBundle{
 		Filename:  update.Filename,
 		Checksum:  update.Checksum,
 		SizeBytes: update.SizeBytes,
@@ -491,9 +490,9 @@ func softwareUpdateSyncToProto(update api.SoftwareUpdateSync) *fusionpb.Software
 	}
 }
 
-func softwareUpdateListToProto(bundles []api.SoftwareUpdateSync) *fusionpb.SoftwareUpdateListResponse {
-	resp := &fusionpb.SoftwareUpdateListResponse{
-		Bundles: make([]*fusionpb.SoftwareUpdateBundle, 0, len(bundles)),
+func softwareUpdateListToProto(bundles []api.SoftwareUpdateSync) *model.SoftwareUpdateListResponse {
+	resp := &model.SoftwareUpdateListResponse{
+		Bundles: make([]*model.SoftwareUpdateBundle, 0, len(bundles)),
 	}
 	for _, bundle := range bundles {
 		resp.Bundles = append(resp.Bundles, softwareUpdateSyncToProto(bundle))
@@ -566,13 +565,13 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 }
 
 // handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
-func (h *Handler) handleSwUpdateInfo(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleSwUpdateInfo(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	infos := h.clusterTransport.GetAllSwUpdateInfo()
 	return createSuccessResponse(&request.Id, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
 // handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
-func (h *Handler) handleListSoftwareUpdates(request *fusionpb.WebSocketRequest) (*fusionpb.WebSocketResponse, error) {
+func (h *Handler) handleListSoftwareUpdates(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
 		bundles = []api.SoftwareUpdateSync{}

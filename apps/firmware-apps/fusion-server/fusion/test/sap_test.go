@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"net"
 	"net/http"
 	"strings"
@@ -62,7 +61,7 @@ func TestMultipassSAPPropagation(t *testing.T) {
 		t.Fatalf("Failed to get SAP session: %v", err)
 	}
 
-	var wrapper fusionpb.SessionListResponse
+	var wrapper model.SessionListResponse
 	if err := decodeProtoBody(resp.Body, &wrapper); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}

@@ -15,7 +15,6 @@ import (
 	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -38,7 +37,7 @@ func helperAdminURL(path string) string {
 // TestUpdateDeviceInfoLocal exercises PATCH /device (UpdateDeviceInfoLocal).
 func TestUpdateDeviceInfoLocal(t *testing.T) {
 
-	base := &fusionpb.DevicePatch{
+	base := &model.DevicePatch{
 		Id:       ptrStringValue("test-device"),
 		Location: ptrStringValue("RoomB"),
 		Name:     ptrStringValue("BaseDevice"),
@@ -55,7 +54,7 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content when setting base device via PATCH")
 	// Now PATCH /device to change only the Name.
-	patch := &fusionpb.DevicePatch{
+	patch := &model.DevicePatch{
 		Name: ptrStringValue("RenamedDevice"),
 	}
 	bytesPatch, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
@@ -76,7 +75,7 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on GET /device after patch")
 
-	var updated fusionpb.DeviceInfo
+	var updated model.DeviceInfo
 	require.NoError(t, decodeProtoBody(resp.Body, &updated), "Expected valid JSON after patch")
 	assert.Equal(t, base.GetId(), updated.Id, "ID should remain unchanged")
 	assert.Equal(t, "RenamedDevice", updated.Name, "Name should have been updated")
@@ -85,7 +84,7 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 
 // TestUpdateDeviceInfoNotFound attempts PATCH /devices/{id} on a non-existent device.
 func TestUpdateDeviceInfoNotFound(t *testing.T) {
-	patch := &fusionpb.DevicePatch{
+	patch := &model.DevicePatch{
 		Name: ptrStringValue("ShouldNotExist"),
 	}
 	bytesPatch, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
@@ -123,7 +122,7 @@ func TestUpdateDeviceInfoSuccess(t *testing.T) {
 	updatedName := fmt.Sprintf("ProtoDevice-%d", time.Now().UnixNano())
 
 	defer func() {
-		restore := &fusionpb.DevicePatch{Name: ptrStringValue(originalName)}
+		restore := &model.DevicePatch{Name: ptrStringValue(originalName)}
 		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(restore)
 		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodPatch, helperURL(routes.DevicesEndpoint)+"/"+deviceID, bytes.NewReader(body))
@@ -135,7 +134,7 @@ func TestUpdateDeviceInfoSuccess(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode, "restore PATCH /devices/{id} should succeed")
 	}()
 
-	patch := &fusionpb.DevicePatch{Name: ptrStringValue(updatedName)}
+	patch := &model.DevicePatch{Name: ptrStringValue(updatedName)}
 	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
 	require.NoError(t, err)
 
@@ -149,7 +148,7 @@ func TestUpdateDeviceInfoSuccess(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "PATCH /devices/{id} should succeed")
 
 	refreshed := getDevicesInfo(t)
-	var found *fusionpb.DeviceInfo
+	var found *model.DeviceInfo
 	for _, candidate := range refreshed.Devices {
 		if candidate.GetId() == deviceID {
 			found = candidate
@@ -179,7 +178,7 @@ func TestPutDSPDeploymentPackage(t *testing.T) {
 	defer getResp.Body.Close()
 	assert.Equal(t, http.StatusOK, getResp.StatusCode, "Expected 200 OK on GET /device")
 
-	var got fusionpb.DeviceConfigurationPackage
+	var got model.DeviceConfigurationPackage
 	require.NoError(t, decodeProtoBody(getResp.Body, &got), "Expected valid JSON from GET /device")
 	require.NotNil(t, got.DroConditionedOutput)
 	require.NotNil(t, got.FusionConnectAdditions)
@@ -365,19 +364,19 @@ func ptrStringValue(s string) *string {
 	return &s
 }
 
-func getDevicesInfo(t *testing.T) *fusionpb.DeviceListResponse {
+func getDevicesInfo(t *testing.T) *model.DeviceListResponse {
 	t.Helper()
 	resp, err := http.Get(helperURL(routes.DevicesEndpoint))
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var list fusionpb.DeviceListResponse
+	var list model.DeviceListResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &list))
 	return &list
 }
 
-func testDeviceConfigurationPackage(t *testing.T) (*fusionpb.DeviceConfigurationPackage, string) {
+func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPackage, string) {
 	t.Helper()
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	deviceID := "provisioned-device-" + suffix
@@ -386,18 +385,18 @@ func testDeviceConfigurationPackage(t *testing.T) (*fusionpb.DeviceConfiguration
 	frequencies, err := structpb.NewList([]any{100.0, 200.0, 300.0})
 	require.NoError(t, err)
 
-	return &fusionpb.DeviceConfigurationPackage{
-		DroConditionedOutput: &fusionpb.DroConditionedOutput{
-			Devices: []*fusionpb.DroConditionedDevice{
+	return &model.DeviceConfigurationPackage{
+		DroConditionedOutput: &model.DroConditionedOutput{
+			Devices: []*model.DroConditionedDevice{
 				{
 					Id:         deviceID,
 					Label:      "Provisioned Device",
 					DeviceType: "fusion_c1",
-					DspStaticConfig: &fusionpb.StaticConfiguration{
-						AudioTasks: []*fusionpb.AudioTask{
+					DspStaticConfig: &model.StaticConfiguration{
+						AudioTasks: []*model.AudioTask{
 							{
 								Name: "Main Task",
-								Blocks: []*fusionpb.Block{
+								Blocks: []*model.Block{
 									{
 										Name:      blockID,
 										Algorithm: "eq",
@@ -409,19 +408,19 @@ func testDeviceConfigurationPackage(t *testing.T) (*fusionpb.DeviceConfiguration
 				},
 			},
 		},
-		FusionConnectAdditions: &fusionpb.FusionConnectAdditions{
-			AudioStreams: []*fusionpb.FusionConnectAudioStream{
+		FusionConnectAdditions: &model.FusionConnectAdditions{
+			AudioStreams: []*model.FusionConnectAudioStream{
 				{
 					SourceDeviceUid: deviceID,
 					DestDeviceUid:   sinkID,
-					Properties: &fusionpb.FusionConnectAudioStreamProperties{
+					Properties: &model.FusionConnectAudioStreamProperties{
 						Channels:        2,
 						IsFusionConnect: true,
 					},
 				},
 			},
-			Settings: &fusionpb.FusionConnectAudioSettings{
-				Audio: map[string]*fusionpb.AudioBlockSettings{
+			Settings: &model.FusionConnectAudioSettings{
+				Audio: map[string]*model.AudioBlockSettings{
 					blockID: {
 						Parameters: map[string]*structpb.Value{
 							"frequencies": structpb.NewListValue(frequencies),
@@ -433,7 +432,7 @@ func testDeviceConfigurationPackage(t *testing.T) (*fusionpb.DeviceConfiguration
 	}, blockID
 }
 
-func putDeviceConfigurationPackage(t *testing.T, payload *fusionpb.DeviceConfigurationPackage) (*http.Response, *fusionpb.DeviceConfigurationPackagePutResponse) {
+func putDeviceConfigurationPackage(t *testing.T, payload *model.DeviceConfigurationPackage) (*http.Response, *model.DeviceConfigurationPackagePutResponse) {
 	t.Helper()
 	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(payload)
 	require.NoError(t, err)
@@ -445,7 +444,7 @@ func putDeviceConfigurationPackage(t *testing.T, payload *fusionpb.DeviceConfigu
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
-	var putResp fusionpb.DeviceConfigurationPackagePutResponse
+	var putResp model.DeviceConfigurationPackagePutResponse
 	require.NoError(t, decodeProtoBody(resp.Body, &putResp), "Expected valid JSON from PUT /device")
 
 	return resp, &putResp

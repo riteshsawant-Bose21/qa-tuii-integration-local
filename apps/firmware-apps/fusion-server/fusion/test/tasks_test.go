@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
-	fusionpb "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -36,38 +35,38 @@ func marshalProtoMessage(t *testing.T, msg proto.Message) []byte {
 	return data
 }
 
-func decodeTaskListResponse(t *testing.T, body io.Reader) *fusionpb.TaskListResponse {
+func decodeTaskListResponse(t *testing.T, body io.Reader) *model.TaskListResponse {
 	t.Helper()
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var resp fusionpb.TaskListResponse
+	var resp model.TaskListResponse
 	require.NoError(t, protojson.Unmarshal(data, &resp))
 	return &resp
 }
 
-func decodeTaskResponse(t *testing.T, body io.Reader) *fusionpb.Task {
+func decodeTaskResponse(t *testing.T, body io.Reader) *model.Task {
 	t.Helper()
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var task fusionpb.Task
+	var task model.Task
 	require.NoError(t, protojson.Unmarshal(data, &task))
 	return &task
 }
 
-func decodeTaskHistoryResponse(t *testing.T, body io.Reader) *fusionpb.TaskHistoryResponse {
+func decodeTaskHistoryResponse(t *testing.T, body io.Reader) *model.TaskHistoryResponse {
 	t.Helper()
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var resp fusionpb.TaskHistoryResponse
+	var resp model.TaskHistoryResponse
 	require.NoError(t, protojson.Unmarshal(data, &resp))
 	return &resp
 }
 
-func newSnapshotTaskRequest(id, snapshot, cronExpr, description string) *fusionpb.SnapshotTaskCreateRequest {
-	return &fusionpb.SnapshotTaskCreateRequest{
+func newSnapshotTaskRequest(id, snapshot, cronExpr, description string) *model.SnapshotTaskCreateRequest {
+	return &model.SnapshotTaskCreateRequest{
 		Id:          id,
 		CronExpr:    cronExpr,
 		Description: description,
@@ -114,7 +113,7 @@ func clearHistory(t *testing.T) {
 }
 
 // fetchHistory fetches the current execution history.
-func fetchHistory(t *testing.T) []*fusionpb.TaskExecutionRecord {
+func fetchHistory(t *testing.T) []*model.TaskExecutionRecord {
 	resp, err := http.Get(tasksServerURL + routes.TasksHistoryEndpoint)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -157,7 +156,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		cron := "*/10 * * * *"
 		snap := "default"
 
-		taskJSON := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
+		taskJSON := marshalProtoMessage(t, &model.SnapshotTaskUpdateRequest{
 			Description: &desc,
 			CronExpr:    &cron,
 			SnapshotId:  &snap,
@@ -283,7 +282,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("AddTaskHandler missing required fields", func(t *testing.T) {
-		payload := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{})
+		payload := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{})
 		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(payload))
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -327,7 +326,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	t.Run("UpdateTaskHandler missing required fields", func(t *testing.T) {
 		desc := ""
 		cron := ""
-		payload := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
+		payload := marshalProtoMessage(t, &model.SnapshotTaskUpdateRequest{
 			Description: &desc,
 			CronExpr:    &cron,
 		})
@@ -417,7 +416,7 @@ func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
 
 	start := time.Now().Add(5 * time.Second)
 
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          "future-task",
 		CronExpr:    "* * * * *",
 		Description: "test future start window",
@@ -444,7 +443,7 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 
 	end := time.Now().Add(2 * time.Second)
 
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          "end-window-task",
 		CronExpr:    "*/5 * * * * *",
 		Description: "test end window",
@@ -484,7 +483,7 @@ func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 
 	newStart := time.Now().Add(30 * time.Second)
 
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskUpdateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskUpdateRequest{
 		StartAt: timestamppb.New(newStart),
 	})
 
@@ -526,7 +525,7 @@ func TestTaskSchedulesAfterStartAt(t *testing.T) {
 
 	start := time.Now().Add(2 * time.Second)
 
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          "start-window-task",
 		CronExpr:    "* * * * *",
 		Description: "test start window",
@@ -576,7 +575,7 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 	start := now.Truncate(time.Minute).Add(3 * time.Minute)
 	end := start.Add(2 * time.Minute)
 
-	recurrence := &fusionpb.RecurringWindow{
+	recurrence := &model.RecurringWindow{
 		StartTime: fmt.Sprintf("%02d:%02d", start.Hour(), start.Minute()),
 		EndTime:   fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute()),
 		Days:      []int32{int32(now.Weekday())},
@@ -586,7 +585,7 @@ func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
 	createSnapshot(t, snapID)
 
 	taskID := "recurrence-future-window"
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          taskID,
 		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence future window",
@@ -619,7 +618,7 @@ func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
 	// Choose a weekday that is NOT today.
 	wrongDay := (int(now.Weekday()) + 1) % 7
 
-	recurrence := &fusionpb.RecurringWindow{
+	recurrence := &model.RecurringWindow{
 		StartTime: "00:00",
 		EndTime:   "23:59",
 		Days:      []int32{int32(wrongDay)},
@@ -629,7 +628,7 @@ func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
 	createSnapshot(t, snapID)
 
 	taskID := "recurrence-wrong-day"
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          taskID,
 		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence wrong weekday",
@@ -664,7 +663,7 @@ func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
 	end := now.Add(3 * time.Minute)
 	endStr := fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute())
 
-	recurrence := &fusionpb.RecurringWindow{
+	recurrence := &model.RecurringWindow{
 		StartTime: startStr,
 		EndTime:   endStr,
 		Days:      []int32{int32(now.Weekday())},
@@ -674,7 +673,7 @@ func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
 	createSnapshot(t, snapID)
 
 	taskID := "recurrence-active-window"
-	body := marshalProtoMessage(t, &fusionpb.SnapshotTaskCreateRequest{
+	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          taskID,
 		CronExpr:    "*/5 * * * * *",
 		Description: "recurrence active window",
