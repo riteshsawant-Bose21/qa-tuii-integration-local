@@ -10,9 +10,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
-import '../../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
-import '../../../speaker_selection_popup/views/widgets/constant_enums.dart';
+import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
+import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
+import '../../speaker_selection_popup/views/widgets/constant_enums.dart';
 import '../viewmodel/speaker_selection_vm.dart';
 import 'widgets/stepped_both_side_haptic_slider.dart';
 import 'widgets/stepped_haptic_slider.dart';

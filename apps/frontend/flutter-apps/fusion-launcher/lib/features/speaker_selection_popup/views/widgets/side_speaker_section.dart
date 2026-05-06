@@ -8,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../projects/viewmodel/building_page_viewmodel.dart';
-import '../../../speaker_selection/speaker_selection/views/speaker_selection_popup.dart';
+import '../../../speaker_selection/views/speaker_selection_popup.dart';
 import 'auto_place_dialog.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {

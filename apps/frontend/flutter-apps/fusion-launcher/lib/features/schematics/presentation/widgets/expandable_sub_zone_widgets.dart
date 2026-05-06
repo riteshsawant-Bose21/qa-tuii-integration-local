@@ -6,7 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../speaker_selection/speaker_selection/views/speaker_selection_popup.dart';
+import '../../../speaker_selection/views/speaker_selection_popup.dart';
 import 'circuit_device_widget.dart';
 
 /// Separate widget for subzones with its own expansion state and full features

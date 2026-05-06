@@ -7,8 +7,8 @@ import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/produ
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
-import '../../../../core/assets/asset_svg.dart';
-import '../../../speaker_selection_popup/views/widgets/constant_enums.dart';
+import '../../../core/assets/asset_svg.dart';
+import '../../speaker_selection_popup/views/widgets/constant_enums.dart';
 
 part 'speaker_selection_vm_state.dart';
 
