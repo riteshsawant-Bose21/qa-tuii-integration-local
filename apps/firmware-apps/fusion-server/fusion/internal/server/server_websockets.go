@@ -7,6 +7,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 
 	"github.com/gorilla/websocket"
 )

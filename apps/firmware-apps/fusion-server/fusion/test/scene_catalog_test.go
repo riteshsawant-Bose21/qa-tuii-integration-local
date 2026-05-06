@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"slices"
@@ -16,33 +17,72 @@ import (
 	json "github.com/goccy/go-json"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+<<<<<<< HEAD
+=======
+	"google.golang.org/protobuf/types/known/structpb"
+>>>>>>> gene/value
 )
 
-func upsertSnapshotDefs(t *testing.T, defs []api.SnapshotDefinition) {
-	t.Helper()
-	payload, _ := json.Marshal(map[string]any{"snapshots": defs})
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(payload))
-	if err != nil {
-		t.Fatalf("upsertSnapshotDefs: POST request failed: %v", err)
+func structPB(data map[string]any) *structpb.Struct {
+	if data == nil {
+		return nil
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("upsertSnapshotDefs: unexpected status %d: %s", resp.StatusCode, string(body))
+	s, err := structpb.NewStruct(data)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
+func snapshotDef(id, name string, data map[string]any) *model.SnapshotDefinition {
+	return &model.SnapshotDefinition{Id: id, Name: name, Data: structPB(data)}
+}
+
+func scene(id, name string, data map[string]any) *model.Scene {
+	return &model.Scene{Id: id, Name: name, Data: structPB(data)}
+}
+
+func sceneSet(setID, name string, scenes ...*model.Scene) *model.SceneSet {
+	return &model.SceneSet{SetId: setID, Name: name, Scenes: scenes}
+}
+
+func upsertSnapshotDefs(t *testing.T, defs []*model.SnapshotDefinition) {
+	t.Helper()
+	for _, def := range defs {
+		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(def)
+		if err != nil {
+			t.Fatalf("upsertSnapshotDefs: marshal failed: %v", err)
+		}
+		resp, err := http.Post(snapshotDefsListURL, api.JsonMIMEType, bytes.NewBuffer(payload))
+		if err != nil {
+			t.Fatalf("upsertSnapshotDefs: POST request failed: %v", err)
+		}
+		if resp.StatusCode != http.StatusCreated {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			t.Fatalf("upsertSnapshotDefs: unexpected status %d: %s", resp.StatusCode, string(body))
+		}
+		resp.Body.Close()
 	}
 }
 
-func upsertSceneSets(t *testing.T, sets []api.SceneSet) {
+func upsertSceneSets(t *testing.T, sets []*model.SceneSet) {
 	t.Helper()
-	payload, _ := json.Marshal(map[string]any{"scene_sets": sets})
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(payload))
-	if err != nil {
-		t.Fatalf("upsertSceneSets: POST request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("upsertSceneSets: unexpected status %d: %s", resp.StatusCode, string(body))
+	for _, set := range sets {
+		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(set)
+		if err != nil {
+			t.Fatalf("upsertSceneSets: marshal failed: %v", err)
+		}
+		resp, err := http.Post(sceneSetsListURL, api.JsonMIMEType, bytes.NewBuffer(payload))
+		if err != nil {
+			t.Fatalf("upsertSceneSets: POST request failed: %v", err)
+		}
+		if resp.StatusCode != http.StatusCreated {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			t.Fatalf("upsertSceneSets: unexpected status %d: %s", resp.StatusCode, string(body))
+		}
+		resp.Body.Close()
 	}
 }
 
@@ -125,9 +165,9 @@ func deleteEndpointByName(t *testing.T, endpointBase string, name string) *http.
 
 func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 	id := fmt.Sprintf("snap-def-post-%d", time.Now().UnixNano())
-	def := api.SnapshotDefinition{ID: id, Name: "Test Snapshot (POST)", Data: map[string]any{id + "_gain": -6.0}}
+	def := snapshotDef(id, "Test Snapshot (POST)", map[string]any{id + "_gain": -6.0})
 
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{def})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{def})
 
 	resp, err := http.Get(snapshotDefsListURL)
 	if err != nil {
@@ -158,14 +198,17 @@ func TestSceneCatalogSnapshotDefUpsertViaPost(t *testing.T) {
 
 func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 	id := fmt.Sprintf("snap-def-patch-%d", time.Now().UnixNano())
-	def := api.SnapshotDefinition{ID: id, Name: "Test Snapshot (PATCH)", Data: map[string]any{id + "_gain": -3.0}}
+	def := snapshotDef(id, "Test Snapshot (PATCH)", map[string]any{id + "_gain": -3.0})
 
-	payload, _ := json.Marshal(map[string]any{"snapshots": []api.SnapshotDefinition{def}})
-	req, _ := http.NewRequest(http.MethodPatch, valueURL, bytes.NewBuffer(payload))
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(def)
+	if err != nil {
+		t.Fatalf("failed to marshal snapshot definition: %v", err)
+	}
+	req, _ := http.NewRequest(http.MethodPut, snapshotDefsListURL+"/"+id, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", api.JsonMIMEType)
 	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
-		t.Fatalf("PATCH /value failed: %v", err)
+		t.Fatalf("PUT /snapshots/{id} failed: %v", err)
 	}
 	resp.Body.Close()
 
@@ -219,8 +262,8 @@ func TestSceneCatalogActivateSnapshotDefPatchesState(t *testing.T) {
 	stateKey := fmt.Sprintf("snap_def_activate_%d_gain_db", time.Now().UnixNano())
 	stateVal := -9.0
 
-	def := api.SnapshotDefinition{ID: id, Name: "Activation test", Data: map[string]any{stateKey: stateVal}}
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{def})
+	def := snapshotDef(id, "Activation test", map[string]any{stateKey: stateVal})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{def})
 
 	resp := activateSnapshotDef(t, id)
 	defer resp.Body.Close()
@@ -245,8 +288,8 @@ func TestSceneCatalogSnapshotDefClobberOnDuplicateID(t *testing.T) {
 	id := fmt.Sprintf("snap-def-clobber-%d", time.Now().UnixNano())
 	stateKey := fmt.Sprintf("snap_def_clobber_%d_val", time.Now().UnixNano())
 
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{{ID: id, Name: "First", Data: map[string]any{stateKey: 1.0}}})
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{{ID: id, Name: "Second", Data: map[string]any{stateKey: 2.0}}})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(id, "First", map[string]any{stateKey: 1.0})})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(id, "Second", map[string]any{stateKey: 2.0})})
 
 	resp := activateSnapshotDef(t, id)
 	defer resp.Body.Close()
@@ -270,15 +313,9 @@ func TestSceneCatalogSnapshotDefClobberOnDuplicateID(t *testing.T) {
 func TestSceneCatalogSceneSetUpsertViaPost(t *testing.T) {
 	setID := fmt.Sprintf("set-post-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-a"
-	set := api.SceneSet{
-		SetID: setID,
-		Name:  "Test Set (POST)",
-		Scenes: []api.Scene{
-			{ID: sceneID, Name: "Scene A", Data: map[string]any{sceneID + "_gain": -3.0}},
-		},
-	}
+	set := sceneSet(setID, "Test Set (POST)", scene(sceneID, "Scene A", map[string]any{sceneID + "_gain": -3.0}))
 
-	upsertSceneSets(t, []api.SceneSet{set})
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp, err := http.Get(sceneSetsListURL)
 	if err != nil {
@@ -343,13 +380,8 @@ func TestSceneCatalogActivateSceneSetNotFound(t *testing.T) {
 func TestSceneCatalogActivateSceneNotMember(t *testing.T) {
 	setID := fmt.Sprintf("set-notmember-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-real"
-	set := api.SceneSet{
-		SetID: setID,
-		Scenes: []api.Scene{
-			{ID: sceneID, Data: map[string]any{}},
-		},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "", scene(sceneID, "", map[string]any{}))
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, "scene-not-in-this-set-ever")
 	defer resp.Body.Close()
@@ -365,14 +397,8 @@ func TestSceneCatalogActivateScenePatchesState(t *testing.T) {
 	stateKey := fmt.Sprintf("set_activate_%d_level", time.Now().UnixNano())
 	stateVal := -12.0
 
-	set := api.SceneSet{
-		SetID: setID,
-		Name:  "Activation test set",
-		Scenes: []api.Scene{
-			{ID: sceneID, Name: "Scene B", Data: map[string]any{stateKey: stateVal}},
-		},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "Activation test set", scene(sceneID, "Scene B", map[string]any{stateKey: stateVal}))
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneID)
 	defer resp.Body.Close()
@@ -420,12 +446,8 @@ func TestSceneCatalogGetCurrentSceneSetNotFound(t *testing.T) {
 func TestSceneCatalogGetCurrentSceneBeforeActivation(t *testing.T) {
 	setID := fmt.Sprintf("set-current-before-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-a"
-	set := api.SceneSet{
-		SetID:  setID,
-		Name:   "Current scene test (before)",
-		Scenes: []api.Scene{{ID: sceneID, Name: "Scene A", Data: map[string]any{}}},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "Current scene test (before)", scene(sceneID, "Scene A", map[string]any{}))
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	result := getCurrentScene(t, setID)
 	if result.GetCurrentScene().GetSceneId() != "" {
@@ -436,14 +458,8 @@ func TestSceneCatalogGetCurrentSceneBeforeActivation(t *testing.T) {
 func TestSceneCatalogGetCurrentSceneAfterActivation(t *testing.T) {
 	setID := fmt.Sprintf("set-current-after-%d", time.Now().UnixNano())
 	sceneID := setID + "-scene-morning"
-	set := api.SceneSet{
-		SetID: setID,
-		Name:  "Current scene test (after)",
-		Scenes: []api.Scene{
-			{ID: sceneID, Name: "Morning", Data: map[string]any{}},
-		},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "Current scene test (after)", scene(sceneID, "Morning", map[string]any{}))
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneID)
 	defer resp.Body.Close()
@@ -468,15 +484,11 @@ func TestSceneCatalogCurrentSceneUpdatesOnSubsequentActivation(t *testing.T) {
 	setID := fmt.Sprintf("set-current-update-%d", time.Now().UnixNano())
 	sceneAID := setID + "-scene-a"
 	sceneBID := setID + "-scene-b"
-	set := api.SceneSet{
-		SetID: setID,
-		Name:  "Current scene update test",
-		Scenes: []api.Scene{
-			{ID: sceneAID, Name: "Scene A", Data: map[string]any{}},
-			{ID: sceneBID, Name: "Scene B", Data: map[string]any{}},
-		},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "Current scene update test",
+		scene(sceneAID, "Scene A", map[string]any{}),
+		scene(sceneBID, "Scene B", map[string]any{}),
+	)
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp := activateScene(t, setID, sceneAID)
 	resp.Body.Close()
@@ -500,14 +512,8 @@ func TestSceneCatalogListScenes(t *testing.T) {
 	setID := fmt.Sprintf("set-list-scenes-%d", time.Now().UnixNano())
 	sceneAID := setID + "-a"
 	sceneBID := setID + "-b"
-	set := api.SceneSet{
-		SetID: setID,
-		Scenes: []api.Scene{
-			{ID: sceneAID, Name: "A", Data: map[string]any{}},
-			{ID: sceneBID, Name: "B", Data: map[string]any{}},
-		},
-	}
-	upsertSceneSets(t, []api.SceneSet{set})
+	set := sceneSet(setID, "", scene(sceneAID, "A", map[string]any{}), scene(sceneBID, "B", map[string]any{}))
+	upsertSceneSets(t, []*model.SceneSet{set})
 
 	resp, err := http.Get(scenesListURL)
 	if err != nil {
@@ -540,9 +546,9 @@ func TestSceneCatalogListScenes(t *testing.T) {
 func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 	prefix := fmt.Sprintf("snap-list-%d", time.Now().UnixNano())
 	ids := []string{prefix + "-one", prefix + "-two", prefix + "-three"}
-	defs := make([]api.SnapshotDefinition, len(ids))
+	defs := make([]*model.SnapshotDefinition, len(ids))
 	for i, id := range ids {
-		defs[i] = api.SnapshotDefinition{ID: id, Data: map[string]any{}}
+		defs[i] = snapshotDef(id, "", map[string]any{})
 	}
 	upsertSnapshotDefs(t, defs)
 
@@ -572,9 +578,9 @@ func TestSceneCatalogListSnapshotDefinitions(t *testing.T) {
 func TestSceneCatalogListSceneSets(t *testing.T) {
 	prefix := fmt.Sprintf("set-list-%d", time.Now().UnixNano())
 	setIDs := []string{prefix + "-alpha", prefix + "-beta"}
-	sets := make([]api.SceneSet, len(setIDs))
+	sets := make([]*model.SceneSet, len(setIDs))
 	for i, id := range setIDs {
-		sets[i] = api.SceneSet{SetID: id, Scenes: []api.Scene{{ID: id + "-s1", Data: map[string]any{}}}}
+		sets[i] = sceneSet(id, "", scene(id+"-s1", "", map[string]any{}))
 	}
 	upsertSceneSets(t, sets)
 
@@ -606,8 +612,8 @@ func TestSceneCatalogListAll(t *testing.T) {
 	snapID := prefix + "-snap"
 	setID := prefix + "-set"
 
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{{ID: snapID, Data: map[string]any{}}})
-	upsertSceneSets(t, []api.SceneSet{{SetID: setID, Scenes: []api.Scene{{ID: setID + "-s1", Data: map[string]any{}}}}})
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{snapshotDef(snapID, "", map[string]any{})})
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "", scene(setID+"-s1", "", map[string]any{}))})
 
 	resp, err := http.Get(sceneCatalogListURL)
 	if err != nil {
@@ -643,9 +649,9 @@ func TestSceneCatalogListAll(t *testing.T) {
 
 func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 	prefix := fmt.Sprintf("snap-delete-all-%d", time.Now().UnixNano())
-	defs := []api.SnapshotDefinition{
-		{ID: prefix + "-a", Data: map[string]any{}},
-		{ID: prefix + "-b", Data: map[string]any{}},
+	defs := []*model.SnapshotDefinition{
+		snapshotDef(prefix+"-a", "", map[string]any{}),
+		snapshotDef(prefix+"-b", "", map[string]any{}),
 	}
 	upsertSnapshotDefs(t, defs)
 
@@ -669,8 +675,13 @@ func TestSceneCatalogDeleteAllSnapshotDefinitions(t *testing.T) {
 
 	for _, def := range defs {
 		for _, item := range listResp.Snapshots {
+<<<<<<< HEAD
 			if item.GetId() == def.ID {
 				t.Fatalf("Snapshot definition %s still present after delete-all", def.ID)
+=======
+			if item.GetId() == def.GetId() {
+				t.Fatalf("Snapshot definition %s still present after delete-all", def.GetId())
+>>>>>>> gene/value
 			}
 		}
 	}
@@ -680,9 +691,9 @@ func TestSceneCatalogDeleteSnapshotDefinitionByName(t *testing.T) {
 	prefix := fmt.Sprintf("snap-delete-one-%d", time.Now().UnixNano())
 	deleteID := prefix + "-delete"
 	keepID := prefix + "-keep"
-	upsertSnapshotDefs(t, []api.SnapshotDefinition{
-		{ID: deleteID, Data: map[string]any{}},
-		{ID: keepID, Data: map[string]any{}},
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{
+		snapshotDef(deleteID, "", map[string]any{}),
+		snapshotDef(keepID, "", map[string]any{}),
 	})
 
 	resp := deleteEndpointByName(t, snapshotDefsListURL, deleteID)
@@ -735,10 +746,7 @@ func TestSceneCatalogDeleteAllSceneSetsAlsoRemovesScenes(t *testing.T) {
 	prefix := fmt.Sprintf("scene-sets-delete-all-%d", time.Now().UnixNano())
 	setID := prefix + "-set"
 	sceneID := prefix + "-scene"
-	upsertSceneSets(t, []api.SceneSet{{
-		SetID:  setID,
-		Scenes: []api.Scene{{ID: sceneID, Data: map[string]any{}}},
-	}})
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "", scene(sceneID, "", map[string]any{}))})
 
 	resp := deleteEndpoint(t, sceneSetsListURL)
 	defer resp.Body.Close()
@@ -789,9 +797,9 @@ func TestSceneCatalogDeleteSceneSetByNameAlsoRemovesItsScenes(t *testing.T) {
 	keepSetID := prefix + "-set-keep"
 	keepSceneID := prefix + "-scene-keep"
 
-	upsertSceneSets(t, []api.SceneSet{
-		{SetID: deleteSetID, Scenes: []api.Scene{{ID: deleteSceneID, Data: map[string]any{}}}},
-		{SetID: keepSetID, Scenes: []api.Scene{{ID: keepSceneID, Data: map[string]any{}}}},
+	upsertSceneSets(t, []*model.SceneSet{
+		sceneSet(deleteSetID, "", scene(deleteSceneID, "", map[string]any{})),
+		sceneSet(keepSetID, "", scene(keepSceneID, "", map[string]any{})),
 	})
 
 	resp := deleteEndpointByName(t, sceneSetsListURL, deleteSetID)
@@ -864,13 +872,10 @@ func TestSceneCatalogDeleteSceneByName(t *testing.T) {
 	deleteSceneID := prefix + "-scene-delete"
 	keepSceneID := prefix + "-scene-keep"
 
-	upsertSceneSets(t, []api.SceneSet{{
-		SetID: setID,
-		Scenes: []api.Scene{
-			{ID: deleteSceneID, Name: "Delete", Data: map[string]any{}},
-			{ID: keepSceneID, Name: "Keep", Data: map[string]any{}},
-		},
-	}})
+	upsertSceneSets(t, []*model.SceneSet{sceneSet(setID, "",
+		scene(deleteSceneID, "Delete", map[string]any{}),
+		scene(keepSceneID, "Keep", map[string]any{}),
+	)})
 
 	resp := activateScene(t, setID, deleteSceneID)
 	resp.Body.Close()

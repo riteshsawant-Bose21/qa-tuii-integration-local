@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	model "fusion/internal/gen/proto/fusion"
 	"net"
 	"net/http"
 	"strings"

@@ -7,8 +7,8 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
-import 'package:fusion_launcher/generated/proto/fusion/device_config.pb.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/generated/proto/fusion/device_config.pb.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../core/service_locator.dart';
@@ -29,10 +29,16 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   final ScrollController _horizontalController = ScrollController();
   Map<String, List<Offset>> _centersById = <String, List<Offset>>{};
 
-  final TextEditingController _droAddressController = TextEditingController(text: serviceLocator<FusionPreferences>().droServerUrl);
+  final TextEditingController _droAddressController = TextEditingController(
+    text: serviceLocator<FusionPreferences>().droServerUrl,
+  );
   final TextEditingController _virtualIPController = TextEditingController();
-  final TextEditingController _backendUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl);
-  final TextEditingController _cloudWebUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().cloudWebUrl);
+  final TextEditingController _backendUrlController = TextEditingController(
+    text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl,
+  );
+  final TextEditingController _cloudWebUrlController = TextEditingController(
+    text: serviceLocator<FusionPreferences>().cloudWebUrl,
+  );
 
   // @override
   // void initState() {
@@ -63,7 +69,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
             // TODO: implement listener
           },
           builder: (BuildContext context, ProjectViewModelState state) {
-            _virtualIPController.text = serviceLocator<ProjectViewModel>().virtualIP ?? '';
+            _virtualIPController.text =
+                serviceLocator<ProjectViewModel>().virtualIP ?? '';
 
             return Row(
               children: <Widget>[
@@ -78,7 +85,9 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                           child: SizedBox(
                             height: MediaQuery.of(context).size.height,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12.0,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
@@ -89,16 +98,24 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: SourcesColumn(
-                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      sources:
+                                          serviceLocator<ProjectViewModel>()
+                                              .sources,
                                       onSourceChanged: _updateSource,
                                       onSourceDeleted: _deleteSource,
                                       onSourceAdded: _addSource,
-                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
-                                      onFloorUpdated: (FloorModel updatedFloor) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(floor: updatedFloor);
+                                      isControlMode:
+                                          serviceLocator<ProjectViewModel>()
+                                              .isInControlMode,
+                                      onFloorUpdated: (
+                                        FloorModel updatedFloor,
+                                      ) {
+                                        serviceLocator<ProjectViewModel>()
+                                            .updateFloor(floor: updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
+                                        serviceLocator<ProjectViewModel>()
+                                            .addFloor(floor: newFloor);
                                       },
                                     ),
                                   ),
@@ -109,9 +126,15 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: MixColumn(
-                                      mixes: serviceLocator<ProjectViewModel>().sourceSets,
-                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
-                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      mixes:
+                                          serviceLocator<ProjectViewModel>()
+                                              .sourceSets,
+                                      isControlMode:
+                                          serviceLocator<ProjectViewModel>()
+                                              .isInControlMode,
+                                      sources:
+                                          serviceLocator<ProjectViewModel>()
+                                              .sources,
                                       onMixUpdated: _onMixUpdated,
                                       onMixAdded: _onMixAdded,
                                       onMixDeleted: _onMixDeleted,
@@ -124,36 +147,72 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: ZonesColumn(
-                                      zones: serviceLocator<ProjectViewModel>().zones,
-                                      sourceSets: serviceLocator<ProjectViewModel>().sourceSets,
-                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
-                                      allSpeakers: serviceLocator<ProjectViewModel>().speakers,
-                                      sources: serviceLocator<ProjectViewModel>().sources,
+                                      zones:
+                                          serviceLocator<ProjectViewModel>()
+                                              .zones,
+                                      sourceSets:
+                                          serviceLocator<ProjectViewModel>()
+                                              .sourceSets,
+                                      isControlMode:
+                                          serviceLocator<ProjectViewModel>()
+                                              .isInControlMode,
+                                      allSpeakers:
+                                          serviceLocator<ProjectViewModel>()
+                                              .speakers,
+                                      sources:
+                                          serviceLocator<ProjectViewModel>()
+                                              .sources,
                                       onZoneAdded: _addNewZone,
                                       onZoneUpdated: _updateZone,
                                       onZoneDeleted: _deleteZone,
                                       onSpeakerUpdated: (Speaker speakers) {
-                                        print("Updating hardware: ${speakers.toJson()}");
-                                        serviceLocator<ProjectViewModel>().updateHardware(hardware: speakers);
+                                        print(
+                                          "Updating hardware: ${speakers.toJson()}",
+                                        );
+                                        serviceLocator<ProjectViewModel>()
+                                            .updateHardware(hardware: speakers);
                                       },
-                                      onSpeakerModelUpdated: (Speaker speaker, LocationModel locationModel) {
+                                      onSpeakerModelUpdated: (
+                                        Speaker speaker,
+                                        LocationModel locationModel,
+                                      ) {
                                         // Update speaker model for position and rotation changes
                                         // serviceLocator<ProjectViewModel>().updateHardware(speaker);
-                                        print("Updating hardware location: ${speaker.toJson()} with location: ${locationModel.toJson()}");
+                                        print(
+                                          "Updating hardware location: ${speaker.toJson()} with location: ${locationModel.toJson()}",
+                                        );
                                         //for location changes
-                                        serviceLocator<ProjectViewModel>().updateHardwareLocation(hardwareId: speaker.id, newLocation: locationModel);
+                                        serviceLocator<ProjectViewModel>()
+                                            .updateHardwareLocation(
+                                              hardwareId: speaker.id,
+                                              newLocation: locationModel,
+                                            );
                                       },
                                       onSpeakerDeleted: (Speaker speaker) {
-                                        serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                                        serviceLocator<ProjectViewModel>()
+                                            .removeHardware(
+                                              hardwareId: speaker.id,
+                                            );
                                       },
-                                      onSpeakerAdded: (Speaker speaker, String zoneId) {
-                                        serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                                      onSpeakerAdded: (
+                                        Speaker speaker,
+                                        String zoneId,
+                                      ) {
+                                        serviceLocator<ProjectViewModel>()
+                                            .addHardware(
+                                              hardware: speaker,
+                                              autoSave: false,
+                                            );
                                       },
-                                      onFloorUpdated: (FloorModel updatedFloor) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(floor: updatedFloor);
+                                      onFloorUpdated: (
+                                        FloorModel updatedFloor,
+                                      ) {
+                                        serviceLocator<ProjectViewModel>()
+                                            .updateFloor(floor: updatedFloor);
                                       },
                                       onFloorAdded: (FloorModel newFloor) {
-                                        serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
+                                        serviceLocator<ProjectViewModel>()
+                                            .addFloor(floor: newFloor);
                                       },
                                     ),
                                   ),
@@ -165,10 +224,19 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     dragLeft: false,
                                     dragRight: true,
                                     child: DspColumn(
-                                      vipAddress: serviceLocator<ProjectViewModel>().virtualIP,
-                                      isControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
-                                      droAddress: serviceLocator<FusionPreferences>().droServerUrl,
-                                      fusionDevices: serviceLocator<ProjectViewModel>().fusionDevices ?? <FusionDsp>[],
+                                      vipAddress:
+                                          serviceLocator<ProjectViewModel>()
+                                              .virtualIP,
+                                      isControlMode:
+                                          serviceLocator<ProjectViewModel>()
+                                              .isInControlMode,
+                                      droAddress:
+                                          serviceLocator<FusionPreferences>()
+                                              .droServerUrl,
+                                      fusionDevices:
+                                          serviceLocator<ProjectViewModel>()
+                                              .fusionDevices ??
+                                          <FusionDsp>[],
                                       onRequestFusionDeviceList: () {
                                         sendDataToDRO();
                                       },
@@ -235,7 +303,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   hintText: 'Enter DRO IP address',
                                   isDense: true,
                                   border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                                 style: const TextStyle(fontSize: 12),
                               ),
@@ -246,12 +317,16 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 child: ElevatedButton(
                                   onPressed: () {
                                     // validate ip address and update project
-                                    final String ip = _droAddressController.text.trim();
-                                    serviceLocator<FusionPreferences>().setDroServerUrl(ip);
+                                    final String ip =
+                                        _droAddressController.text.trim();
+                                    serviceLocator<FusionPreferences>()
+                                        .setDroServerUrl(ip);
                                     // serviceLocator<ProjectViewModel>().updateProject();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: FusionAppText(text: 'DRO IP updated to $ip'),
+                                        content: FusionAppText(
+                                          text: 'DRO IP updated to $ip',
+                                        ),
                                         backgroundColor: Colors.green.shade600,
                                       ),
                                     );
@@ -259,10 +334,15 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Update', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(
+                                    text: 'Update',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
                                 ),
                               ),
                             ],
@@ -299,9 +379,14 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   hintText: '192.168.1.100',
                                   isDense: true,
                                   border: const OutlineInputBorder(),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   disabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                 ),
                                 style: const TextStyle(fontSize: 12),
@@ -313,15 +398,23 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    serviceLocator<ProjectViewModel>().setVirtualIP(ip: _virtualIPController.text);
+                                    serviceLocator<ProjectViewModel>()
+                                        .setVirtualIP(
+                                          ip: _virtualIPController.text,
+                                        );
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Reconfigure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(
+                                    text: 'Reconfigure',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
                                 ),
                               ),
                             ],
@@ -358,9 +451,14 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   hintText: '192.168.1.100',
                                   isDense: true,
                                   border: const OutlineInputBorder(),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   disabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                 ),
                                 style: const TextStyle(fontSize: 12),
@@ -372,15 +470,23 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    serviceLocator<FusionPreferences>().setFusionCloudBackendUrl(_backendUrlController.text);
+                                    serviceLocator<FusionPreferences>()
+                                        .setFusionCloudBackendUrl(
+                                          _backendUrlController.text,
+                                        );
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Configure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(
+                                    text: 'Configure',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
                                 ),
                               ),
                             ],
@@ -417,9 +523,14 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                   hintText: '192.168.1.100',
                                   isDense: true,
                                   border: const OutlineInputBorder(),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   disabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                 ),
                                 style: const TextStyle(fontSize: 12),
@@ -431,15 +542,23 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 height: 28,
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    serviceLocator<FusionPreferences>().setCloudWebUrl(_cloudWebUrlController.text);
+                                    serviceLocator<FusionPreferences>()
+                                        .setCloudWebUrl(
+                                          _cloudWebUrlController.text,
+                                        );
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Configure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(
+                                    text: 'Configure',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
                                 ),
                               ),
                             ],
@@ -465,18 +584,28 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                 child: ElevatedButton(
                                   onPressed: () async {
                                     FusionUiUtils.showLoader(context);
-                                    final ResponseCallback<dynamic> response = await serviceLocator<FusionNetworkClient>().delete(
-                                      api: FusionApiEndpoint.fusionValue,
-                                    );
-                                    if (context.mounted) FusionUiUtils.hideLoader(context);
+                                    final ResponseCallback<dynamic>
+                                    response = await serviceLocator<
+                                          FusionNetworkClient
+                                        >()
+                                        .delete(
+                                          api: FusionApiEndpoint.audioSettings,
+                                        );
+                                    if (context.mounted)
+                                      FusionUiUtils.hideLoader(context);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.grey.shade800,
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     elevation: 0,
                                   ),
-                                  child: const FusionAppText(text: 'Clear audio settings', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(
+                                    text: 'Clear audio settings',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
                                 ),
                               ),
                             ],
@@ -503,7 +632,9 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
         final String id = key.value;
         final RenderObject? renderObj = element.findRenderObject();
         if (renderObj is RenderBox) {
-          final Offset center = renderObj.localToGlobal(renderObj.size.center(Offset.zero));
+          final Offset center = renderObj.localToGlobal(
+            renderObj.size.center(Offset.zero),
+          );
           newMap.putIfAbsent(id, () => <Offset>[]).add(center);
         }
       }
@@ -600,8 +731,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
   void sendToDSP() async {
     FusionUtils.showLoader(context);
     try {
-      final ProjectManager projectManager = serviceLocator<ProjectViewModel>().projectManager;
-      final Map<String, dynamic>? droResponse = projectManager.value.droResponse;
+      final ProjectManager projectManager =
+          serviceLocator<ProjectViewModel>().projectManager;
+      final Map<String, dynamic>? droResponse =
+          projectManager.value.droResponse;
 
       if (droResponse == null) {
         _showProvisioningSnackBar(
@@ -611,17 +744,22 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
         return;
       }
 
-      final DeviceConfigurationPackage deviceConfigPackage = _buildDeviceConfigurationPackage(
-        droResponse: droResponse,
-      );
+      final DeviceConfigurationPackage deviceConfigPackage =
+          _buildDeviceConfigurationPackage(
+            droResponse: droResponse,
+          );
 
-      final ResponseCallback<dynamic> fusionServerResponse = await serviceLocator<FusionNetworkClient>().put(
-        api: FusionApiEndpoint.fusionDeviceConfig,
-        data: jsonDecode(deviceConfigPackage.writeToJson()),
-      );
+      final ResponseCallback<dynamic> fusionServerResponse =
+          await serviceLocator<FusionNetworkClient>().put(
+            api: FusionApiEndpoint.fusionDeviceConfig,
+            data: jsonDecode(deviceConfigPackage.writeToJson()),
+          );
 
       _showProvisioningSnackBar(
-        message: fusionServerResponse.success ? 'Configuration is Live!' : 'Error: ${fusionServerResponse.message}',
+        message:
+            fusionServerResponse.success
+                ? 'Configuration is Live!'
+                : 'Error: ${fusionServerResponse.message}',
         isSuccess: fusionServerResponse.success,
       );
     } catch (e) {
@@ -656,11 +794,10 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
       },
     };
 
-    return DeviceConfigurationPackage()
-      ..mergeFromProto3Json(
-        packageJson,
-        ignoreUnknownFields: true,
-      );
+    return DeviceConfigurationPackage()..mergeFromProto3Json(
+      packageJson,
+      ignoreUnknownFields: true,
+    );
   }
 
   void _showProvisioningSnackBar({

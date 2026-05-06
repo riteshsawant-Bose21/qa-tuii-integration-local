@@ -177,14 +177,6 @@ It remains intentionally separate from the bulk `/device` provisioning package:
 this time. That is acceptable because it is a runtime patch surface rather than
 a bulk deployment contract.
 
-## Legacy `/value` Direction
-
-Public `/value` has been removed.
-
-That remains the correct policy direction. The server may still keep internal
-replicated state sections that originated in the old `/value` world, but that
-state is not the public API model anymore.
-
 ## Why `/settings` Instead Of Generic Config Mutation
 
 - It matches the actual launcher usage pattern

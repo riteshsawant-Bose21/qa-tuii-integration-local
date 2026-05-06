@@ -7,9 +7,12 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
 
 const configUpdateReliableDebounce = 250 * time.Millisecond
@@ -333,7 +336,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
 		}
 		logger.Info("[Hub] Broadcasting SoftwareUpdate availability: %s (%d bytes) from %s",
-			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SizeBytes, message.SoftwareUpdate.SourceIP)
+			message.SoftwareUpdate.GetFilename(), message.SoftwareUpdate.GetSizeBytes(), message.SoftwareUpdate.GetSourceIp())
 
 	case api.NotifyOpSoftwareUpdateSyncAck:
 		if message.SoftwareUpdateAck == nil {
@@ -428,13 +431,12 @@ func cloneNotifyMessageForBroadcast(message *api.NotifyMessage) *api.NotifyMessa
 		cloned.ConfigValue = &cfg
 	}
 	if message.DeviceInfo != nil {
-		info := *message.DeviceInfo
-		cloned.DeviceInfo = &info
+		cloned.DeviceInfo = proto.Clone(message.DeviceInfo).(*model.DeviceInfo)
 	}
 	return &cloned
 }
 
-func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata) {
+func (h *Hub) BroadcastVersionUpdate(node string, metadata *model.DatabaseMetadata) {
 	if metadata == nil || h.transport == nil || h.transport.LocalNode() == nil {
 		return
 	}
@@ -443,9 +445,13 @@ func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata
 		api.NotifyOpVersionUpdate,
 		node,
 		api.WithVersionUpdate(&api.VersionUpdate{
-			Version: metadata.Version,
-			Hash:    metadata.Hash,
-			NodeID:  node,
+			Version: api.Version{
+				Epoch:   metadata.GetVersion().GetEpoch(),
+				Counter: metadata.GetVersion().GetCounter(),
+				NodeID:  metadata.GetVersion().GetNodeId(),
+			},
+			Hash:   metadata.Hash,
+			NodeID: node,
 		}),
 	)
 

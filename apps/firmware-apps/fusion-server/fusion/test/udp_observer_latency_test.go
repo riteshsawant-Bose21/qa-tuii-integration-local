@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -417,11 +418,29 @@ func fetchUDPStatusSnapshot(t *testing.T, baseURL string) udpStatusSnapshot {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("GET udp status status=%d body=%s", resp.StatusCode, string(body))
 	}
-	var snapshot udpStatusSnapshot
-	if err := json.NewDecoder(resp.Body).Decode(&snapshot); err != nil {
+	var payload model.UDPDebugStats
+	if err := decodeProtoBody(resp.Body, &payload); err != nil {
 		t.Fatalf("decode udp status: %v", err)
 	}
-	return snapshot
+	return udpStatusSnapshot{
+		QueueDepth:           int(payload.GetQueueDepth()),
+		QueueCapacity:        int(payload.GetQueueCapacity()),
+		MaxQueueDepth:        payload.GetMaxQueueDepth(),
+		RegisteredClients:    int(payload.GetRegisteredClients()),
+		PendingBroadcasts:    int(payload.GetPendingBroadcasts()),
+		OldestPendingAgeMs:   payload.GetOldestPendingAgeMs(),
+		EnqueuedPackets:      payload.GetEnqueuedPackets(),
+		DroppedPackets:       payload.GetDroppedPackets(),
+		HandledPackets:       payload.GetHandledPackets(),
+		AckPackets:           payload.GetAckPackets(),
+		ResponsesSent:        payload.GetResponsesSent(),
+		BroadcastMessages:    payload.GetBroadcastMessages(),
+		BroadcastDatagrams:   payload.GetBroadcastDatagrams(),
+		LastBroadcastEpoch:   payload.GetLastBroadcastEpoch(),
+		LastBroadcastVersion: payload.GetLastBroadcastVersion(),
+		LastBroadcastSentAt:  payload.GetLastBroadcastSentAtNs(),
+		MaintenanceEnabled:   payload.GetMaintenanceEnabled(),
+	}
 }
 
 func nestedInt(msg map[string]any, path ...string) (int, bool) {

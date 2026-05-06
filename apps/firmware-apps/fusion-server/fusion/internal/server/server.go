@@ -13,10 +13,12 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
 	"fusion/internal/utils"
+	"fusion/internal/version"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -203,6 +205,20 @@ func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if key := r.URL.Query().Get("key"); key != "" {
+		response, err := s.handler.HandleHTTPGet(key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set(api.ContentType, api.JsonMIMEType)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			logging.GetLogger().Error("Export keyed state failed: %v", err)
+		}
+		return
+	}
+
 	// Retrieve the full state from the state manager.
 	state := s.handler.StateManager.GetFullState()
 
@@ -240,6 +256,46 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
+// PatchState handles private HTTP PATCH requests that apply a partial update to configuration state.
+func (s *FusionServer) PatchState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	patch, err := decodeValuePayload(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response, err := s.handler.HandleHTTPPatch(patch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.GetLogger().Error("Patch state failed: %v", err)
+	}
+}
+
+func decodeValuePayload(r *http.Request) (map[string]any, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	defer r.Body.Close()
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("invalid JSON format: %w", err)
+	}
+
+	return payload, nil
+}
+
 // HandleRoot handles requests to the root URL ("/") and returns server information.
 func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Only serve the root path.
@@ -256,14 +312,25 @@ func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(info)
+	if err := writeProtoJSON(w, info); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // GetVersion handles version HTTP requests.
 func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
+	}
+
+	resp := &model.VersionResponse{
+		Name:      "Fusion Server",
+		Version:   version.Version,
+		Commit:    version.Commit,
+		BuildTime: version.BuildTime,
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -294,7 +361,11 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 			Version: &model.VersionInfo{
 				Epoch:   metadata.Version.Epoch,
 				Counter: metadata.Version.Counter,
+<<<<<<< HEAD
 				NodeId:  metadata.Version.NodeID,
+=======
+				NodeId:  metadata.Version.NodeId,
+>>>>>>> gene/value
 			},
 			ActiveSnapshot: metadata.ActiveSnapshot,
 			Hash:           metadata.Hash,
@@ -572,7 +643,11 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, controller := range result {
 		response.Controllers = append(response.Controllers, &model.ControllerInfo{
+<<<<<<< HEAD
 			Id:      controller.ID,
+=======
+			Id:      controller.Id,
+>>>>>>> gene/value
 			Name:    controller.Name,
 			Address: controller.Address,
 			Version: controller.Version,
@@ -612,7 +687,11 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	response := &model.ControllerInfo{
+<<<<<<< HEAD
 		Id:      ctrl.ID,
+=======
+		Id:      ctrl.Id,
+>>>>>>> gene/value
 		Name:    ctrl.Name,
 		Address: ctrl.Address,
 		Version: ctrl.Version,

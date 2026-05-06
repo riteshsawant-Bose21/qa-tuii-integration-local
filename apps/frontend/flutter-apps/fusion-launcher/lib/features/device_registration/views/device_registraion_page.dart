@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/device_registration/repositories/device_registration_repository.dart';
 import 'package:fusion_launcher/features/device_registration/viewmodel/device_registration_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -55,10 +56,15 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
               DeviceRegistrationRepository(
                 vip: serviceLocator<ProjectViewModel>().virtualIP ?? '',
                 fusionDeviceService: serviceLocator<FusionDeviceService>(),
+                fusionDeviceDiscoveryService:
+                    serviceLocator<FusionDeviceDiscoveryService>(),
               ),
             );
           },
-          child: BlocConsumer<DeviceRegistrationViewModel, DeviceRegistrationState>(
+          child: BlocConsumer<
+            DeviceRegistrationViewModel,
+            DeviceRegistrationState
+          >(
             listener: (BuildContext context, DeviceRegistrationState state) {
               if (state.stepBulk == DeviceRegistrationStep.processing) {
                 _screenBlocker.show(context, content: const SizedBox());
@@ -67,7 +73,8 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
               }
             },
             builder: (BuildContext context, DeviceRegistrationState state) {
-              final List<DeviceSpecificRegistrationState>? devices = state.devices;
+              final List<DeviceSpecificRegistrationState>? devices =
+                  state.devices;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +142,11 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     );
   }
 
-  Widget _buildDeviceBody(BuildContext context, DeviceRegistrationState state, List<DeviceSpecificRegistrationState> devices) {
+  Widget _buildDeviceBody(
+    BuildContext context,
+    DeviceRegistrationState state,
+    List<DeviceSpecificRegistrationState> devices,
+  ) {
     if (devices.isEmpty) {
       return Center(
         child: FusionAppText(
@@ -149,9 +160,13 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
 
     final bool allCompleted = state.allCompleted;
 
-    final bool anyError = devices.any((DeviceSpecificRegistrationState item) => (item.error ?? '').trim().isNotEmpty);
+    final bool anyError = devices.any(
+      (DeviceSpecificRegistrationState item) =>
+          (item.error ?? '').trim().isNotEmpty,
+    );
     final int count = devices.length;
-    final String countText = count == 1 ? 'One device is' : '$count devices are';
+    final String countText =
+        count == 1 ? 'One device is' : '$count devices are';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
@@ -166,12 +181,16 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     FusionAppText(
-                      text: allCompleted ? 'Registered Device' : 'Unregistered Device Found',
+                      text:
+                          allCompleted
+                              ? 'Registered Device'
+                              : 'Unregistered Device Found',
                       style: context.textTheme.h4SemiBold,
                     ),
                     const SizedBox(height: 4),
                     FusionAppText(
-                      text: '$countText not yet registered in the Fusion Cloud and still need to be onboarded.',
+                      text:
+                          '$countText not yet registered in the Fusion Cloud and still need to be onboarded.',
                       style: context.textTheme.b3Regular.copyWith(
                         color: context.colorScheme.textBody,
                       ),
@@ -249,7 +268,8 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     bool allCompleted,
     bool anyError,
   ) {
-    final DeviceRegistrationViewModel viewModel = context.read<DeviceRegistrationViewModel>();
+    final DeviceRegistrationViewModel viewModel =
+        context.read<DeviceRegistrationViewModel>();
 
     if (allCompleted) {
       return _StatusPill(
@@ -260,7 +280,8 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     }
 
     if (state.stepBulk == DeviceRegistrationStep.processing) {
-      final ({double progress, int progressPercent}) progressState = state.progressPercent;
+      final ({double progress, int progressPercent}) progressState =
+          state.progressPercent;
 
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -361,13 +382,22 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
     );
   }
 
-  Widget _buildDeviceRow(BuildContext context, DeviceRegistrationState state, DeviceSpecificRegistrationState item) {
-    final bool isCompleted = item.step == DeviceRegistrationStep.completed || item.device.isDeviceCertificateValid;
+  Widget _buildDeviceRow(
+    BuildContext context,
+    DeviceRegistrationState state,
+    DeviceSpecificRegistrationState item,
+  ) {
+    final bool isCompleted =
+        item.step == DeviceRegistrationStep.completed ||
+        item.device.isDeviceCertificateValid;
     final bool hasError = (item.error ?? '').trim().isNotEmpty;
 
-    final DeviceRegistrationViewModel viewModel = context.read<DeviceRegistrationViewModel>();
+    final DeviceRegistrationViewModel viewModel =
+        context.read<DeviceRegistrationViewModel>();
 
-    final bool canShowLoader = (state.stepBulk == DeviceRegistrationStep.processing && !hasError) || item.step == DeviceRegistrationStep.processing;
+    final bool canShowLoader =
+        (state.stepBulk == DeviceRegistrationStep.processing && !hasError) ||
+        item.step == DeviceRegistrationStep.processing;
 
     return SizedBox(
       height: 60,
@@ -496,11 +526,16 @@ class _BuildAction extends StatelessWidget {
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: outlined ? Colors.transparent : const Color(0xFF2A2A2A),
+          backgroundColor:
+              outlined ? Colors.transparent : const Color(0xFF2A2A2A),
           foregroundColor: context.colorScheme.textPrimary,
           textStyle: context.textTheme.l1Medium,
-          side: BorderSide(color: outlined ? const Color(0xFF4A4A4A) : const Color(0xFF3A3A3A)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          side: BorderSide(
+            color: outlined ? const Color(0xFF4A4A4A) : const Color(0xFF3A3A3A),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: FusionAppText(
           text: title,

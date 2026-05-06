@@ -3,6 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+<<<<<<< HEAD
+=======
+	"fusion/internal/controllers"
+	model "fusion/internal/gen/proto/fusion"
+>>>>>>> gene/value
 	"io"
 	"net"
 	"net/http"
@@ -10,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion/internal/routes"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -242,7 +246,7 @@ func (m *MockTCPController) HandleMessages() error {
 	encoder := json.NewEncoder(m.conn)
 
 	for {
-		var msg api.ControllerTCPMessage
+		var msg controllers.TCPMessage
 		if err := decoder.Decode(&msg); err != nil {
 			return fmt.Errorf("failed to decode message: %v", err)
 		}
@@ -250,7 +254,7 @@ func (m *MockTCPController) HandleMessages() error {
 		switch msg.Action {
 		case "identify":
 
-			identifyResponsePayload := api.ControllerIdentifyResponse{
+			identifyResponsePayload := controllers.IdentifyResponse{
 				ID:              m.ID,
 				DeviceType:      m.DeviceType,
 				SoftwareVersion: m.FirmwareVersion,
@@ -261,7 +265,7 @@ func (m *MockTCPController) HandleMessages() error {
 				return fmt.Errorf("failed to marshal identity response: %v", err)
 			}
 
-			response := api.ControllerTCPMessage{
+			response := controllers.TCPMessage{
 				Action:  "identity",
 				Payload: payloadBytes,
 			}

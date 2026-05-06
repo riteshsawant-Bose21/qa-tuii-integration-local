@@ -15,6 +15,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -228,7 +229,7 @@ func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testin
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := api.AudioMetadata{
+	meta := model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Test Audio",
 		Filename:    "sync-audio-existing.bin",
@@ -388,7 +389,7 @@ func TestSaveAudioMetaUpdatesDatabaseHash(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := &api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -403,6 +404,55 @@ func TestSaveAudioMetaUpdatesDatabaseHash(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, actualHash, metadata.Hash)
+}
+
+func TestDatabaseHashIgnoresPersistentStateTimestampOnlyDifferences(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "persistent_state_timestamp_hash_test.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	require.NoError(t, sm.Set("mode", "baseline"))
+
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	require.NoError(t, p.SaveState())
+	require.NoError(t, p.CreateSnapshot("baseline"))
+
+	beforeHash, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	err = rawBoltDBForTest(t, p).Update(func(tx *bbolt.Tx) error {
+		for _, bucketName := range []string{"active", "snapshots"} {
+			bucket := tx.Bucket([]byte(bucketName))
+			if bucket == nil {
+				return errors.New("expected bucket to exist")
+			}
+
+			if err := bucket.ForEach(func(k, v []byte) error {
+				var state persistence.PersistentState
+				if err := json.Unmarshal(v, &state); err != nil {
+					return err
+				}
+				state.Timestamp = time.Date(2030, time.January, 2, 3, 4, 5, 0, time.UTC)
+				updated, err := json.Marshal(state)
+				if err != nil {
+					return err
+				}
+				return bucket.Put(k, updated)
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	afterHash, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	require.Equal(t, beforeHash, afterHash)
 }
 
 func TestImportDataRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
@@ -702,7 +752,7 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	require.NoError(t, err)
 	defer p1.Close()
 
-	audioMeta := &api.AudioMetadata{
+	audioMeta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -710,7 +760,7 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	}
 	require.NoError(t, p1.SaveAudioMeta(audioMeta))
 
-	deviceInfo := &api.DevicePatch{
+	deviceInfo := &model.DevicePatch{
 		Id:   stringPtr("dev-1"),
 		Name: stringPtr("Kitchen"),
 	}
@@ -824,7 +874,7 @@ func TestSetDeviceInfoReturnsErrNotFoundWhenDeviceBucketMissing(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = p.SetDeviceInfo(&api.DevicePatch{Name: stringPtr("Kitchen")})
+	err = p.SetDeviceInfo(&model.DevicePatch{Name: stringPtr("Kitchen")})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
@@ -1068,14 +1118,14 @@ func TestListAllTagsReturnsEmptyWithoutErrorWhenAudioBucketMissing(t *testing.T)
 	require.Empty(t, tags)
 }
 
-func readDatabaseMetadata(dbPath string) (*api.DatabaseMetadata, error) {
+func readDatabaseMetadata(dbPath string) (*model.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var metadata api.DatabaseMetadata
+	var metadata model.DatabaseMetadata
 	err = db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1094,8 +1144,8 @@ func readDatabaseMetadata(dbPath string) (*api.DatabaseMetadata, error) {
 	return &metadata, nil
 }
 
-func readDatabaseMetadataFromDB(db *bbolt.DB) (*api.DatabaseMetadata, error) {
-	var metadata api.DatabaseMetadata
+func readDatabaseMetadataFromDB(db *bbolt.DB) (*model.DatabaseMetadata, error) {
+	var metadata model.DatabaseMetadata
 	err := db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1169,16 +1219,32 @@ func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 }
 
 func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, error) {
-	if bucketName != "fusion" || key != "metadata" {
+	switch bucketName {
+	case "fusion":
+		if key != "metadata" {
+			return value, nil
+		}
+
+		var metadata model.DatabaseMetadata
+		if err := json.Unmarshal(value, &metadata); err != nil {
+			return nil, err
+		}
+		metadata.Hash = ""
+		metadata.Version = nil
+		return json.Marshal(metadata)
+
+	case "snapshots", "active":
+		var state persistence.PersistentState
+		if err := json.Unmarshal(value, &state); err != nil {
+			return nil, err
+		}
+		state.Version = api.Version{}
+		state.Timestamp = time.Time{}
+		return json.Marshal(state)
+
+	default:
 		return value, nil
 	}
-
-	var metadata api.DatabaseMetadata
-	if err := json.Unmarshal(value, &metadata); err != nil {
-		return nil, err
-	}
-	metadata.Hash = ""
-	return json.Marshal(metadata)
 }
 
 func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {

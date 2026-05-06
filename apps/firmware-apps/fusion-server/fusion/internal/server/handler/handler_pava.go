@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -62,7 +63,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Filter
-	filtered := make([]*api.AudioMetadata, 0, len(metas))
+	filtered := make([]*model.AudioMetadata, 0, len(metas))
 	for _, m := range metas {
 		// Build a lowercase set of tags on the item
 		itemTags := make(map[string]struct{}, len(m.Tags))
@@ -254,13 +255,13 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build metadata record
-	meta := &api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          id,
 		OrigName:    origName,
 		DisplayName: displayName,
 		Filename:    onDiskName,
 		MimeType:    mimeType,
-		Uploaded:    time.Now().UTC(),
+		Uploaded:    timestamppb.New(time.Now().UTC()),
 		SizeBytes:   totalSize,
 		Tags:        normalized,
 		Checksum:    checksum,
@@ -491,7 +492,11 @@ func writePAVAProtoJSONWithStatus(w http.ResponseWriter, status int, msg proto.M
 	return err
 }
 
+<<<<<<< HEAD
 func audioMetadataToProto(meta *api.AudioMetadata) *model.AudioMetadata {
+=======
+func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
+>>>>>>> gene/value
 	if meta == nil {
 		return nil
 	}
@@ -502,7 +507,11 @@ func audioMetadataToProto(meta *api.AudioMetadata) *model.AudioMetadata {
 		DisplayName: meta.DisplayName,
 		Filename:    meta.Filename,
 		MimeType:    meta.MimeType,
+<<<<<<< HEAD
 		Uploaded:    timestamppb.New(meta.Uploaded),
+=======
+		Uploaded:    meta.Uploaded,
+>>>>>>> gene/value
 		Duration:    int64(meta.Duration),
 		SizeBytes:   meta.SizeBytes,
 		Tags:        append([]string(nil), meta.Tags...),
@@ -510,7 +519,11 @@ func audioMetadataToProto(meta *api.AudioMetadata) *model.AudioMetadata {
 	}
 }
 
+<<<<<<< HEAD
 func audioMetadataListToProto(metas []*api.AudioMetadata) []*model.AudioMetadata {
+=======
+func audioMetadataListToProto(metas []*model.AudioMetadata) []*model.AudioMetadata {
+>>>>>>> gene/value
 	out := make([]*model.AudioMetadata, 0, len(metas))
 	for _, meta := range metas {
 		out = append(out, audioMetadataToProto(meta))

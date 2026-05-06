@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -14,6 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -22,6 +26,24 @@ const (
 	wsTestTimeout = 5 * time.Second
 	shortTimeout  = 2 * time.Second
 )
+
+type wsRequest struct {
+	ID      string
+	Version int
+	Type    string
+	Data    any
+}
+
+type wsResponse struct {
+	ID        *string
+	Version   int
+	Type      string
+	Code      int
+	Status    string
+	Message   string
+	Data      any
+	Timestamp time.Time
+}
 
 // getTestURL returns the appropriate URL based on environment
 func getTestURL() string {
@@ -38,32 +60,65 @@ func connectWebSocket(t *testing.T, serverURL string) *websocket.Conn {
 	return c
 }
 
-func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *api.WebSocketRequest) {
-	data, err := json.Marshal(req)
+func wsValue(t *testing.T, data any) *structpb.Value {
+	t.Helper()
+	if data == nil {
+		return nil
+	}
+	if reflect.TypeOf(data) == reflect.TypeOf(struct{}{}) {
+		return structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{}})
+	}
+	value, err := structpb.NewValue(data)
+	require.NoError(t, err, "Failed to encode websocket data value")
+	return value
+}
+
+func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *wsRequest) {
+	protoReq := &model.WebSocketRequest{
+		Id:      req.ID,
+		Version: int32(req.Version),
+		Type:    req.Type,
+		Data:    wsValue(t, req.Data),
+	}
+	data, err := protojson.Marshal(protoReq)
 	require.NoError(t, err, "Failed to marshal request")
 
 	err = conn.WriteMessage(websocket.TextMessage, data)
 	require.NoError(t, err, "Failed to send WebSocket message")
 }
 
-func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Duration) *api.WebSocketResponse {
+func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Duration) *wsResponse {
 	conn.SetReadDeadline(time.Now().Add(timeout))
 	_, data, err := conn.ReadMessage()
 	require.NoError(t, err, "Failed to read WebSocket message")
 
-	var response api.WebSocketResponse
-	err = json.Unmarshal(data, &response)
+	var protoResp model.WebSocketResponse
+	err = protojson.Unmarshal(data, &protoResp)
 	require.NoError(t, err, "Failed to unmarshal WebSocket response")
 
-	return &response
+	var responseData any
+	if protoResp.Data != nil {
+		responseData = protoResp.Data.AsInterface()
+	}
+	var ts time.Time
+	if protoResp.Timestamp != nil {
+		ts = protoResp.Timestamp.AsTime()
+	}
+
+	return &wsResponse{
+		ID:        protoResp.Id,
+		Version:   int(protoResp.Version),
+		Type:      protoResp.Type,
+		Code:      int(protoResp.Code),
+		Status:    protoResp.Status,
+		Message:   protoResp.Message,
+		Data:      responseData,
+		Timestamp: ts,
+	}
 }
 
-func mustMarshal(v interface{}) json.RawMessage {
-	data, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return data
+func mustMarshal(v interface{}) any {
+	return v
 }
 
 // ====================
@@ -228,7 +283,7 @@ func TestWebSocketVersionCompatibility(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Test current version (should work)
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "test-version-1",
 		Version: 1,
 		Type:    api.WSMsgTypePing,
@@ -278,7 +333,7 @@ func TestWebSocketDevicesRequest(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "devices-test-1",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -305,7 +360,7 @@ func TestWebSocketDevicesAutoSubscription(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Request devices list (automatically subscribes)
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "devices-sub-1",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -323,7 +378,7 @@ func TestWebSocketDevicesResponseFormat(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "format-test",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -361,7 +416,7 @@ func TestWebSocketConfigurationRequest(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "config-test-1",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -387,7 +442,7 @@ func TestWebSocketConfigurationAutoSubscription(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Request config (automatically subscribes)
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "config-sub-1",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -405,7 +460,7 @@ func TestWebSocketConfigurationResponseFormat(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "config-format-test",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -439,7 +494,7 @@ func TestWebSocketPatchConfiguration(t *testing.T) {
 		},
 	}
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "patch-config-test",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -470,7 +525,7 @@ func TestWebSocketPatchConfigurationEmpty(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Test empty patch (should be no-op)
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "patch-empty-test",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -492,7 +547,7 @@ func TestWebSocketPatchConfigurationInvalidPayload(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Test invalid JSON payload
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "patch-invalid-test",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -514,7 +569,7 @@ func TestWebSocketUnsubscribeConfig(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// First subscribe by requesting config
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "sub-first",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -524,7 +579,7 @@ func TestWebSocketUnsubscribeConfig(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // config response
 
 	// Now unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "unsub-config-test",
 		Version: 1,
 		Type:    api.WSMsgTypeUnsubscribeConfig,
@@ -552,7 +607,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 	readWebSocketResponse(t, connUpdater, wsTestTimeout)
 
 	// Phase 1: Subscribe to config updates by requesting config
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "config-lifecycle-sub",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -567,7 +622,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 		"test_before_unsub": fmt.Sprintf("value_%d", baseTimestamp),
 		"lifecycle_phase":   "phase_2_subscribed",
 	}
-	patchReq := &api.WebSocketRequest{
+	patchReq := &wsRequest{
 		ID:      "config-update-before",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -585,7 +640,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 	}
 
 	// Phase 3: Unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "config-lifecycle-unsub",
 		Version: 1,
 		Type:    api.WSMsgTypeUnsubscribeConfig,
@@ -599,7 +654,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 		"test_after_unsub": fmt.Sprintf("value_%d", baseTimestamp+1),
 		"lifecycle_phase":  "phase_4_unsubscribed",
 	}
-	patchReqAfter := &api.WebSocketRequest{
+	patchReqAfter := &wsRequest{
 		ID:      "config-update-after",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -628,7 +683,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 	defer connMonitorFresh.Close()
 	readWebSocketResponse(t, connMonitorFresh, wsTestTimeout) // Skip welcome
 
-	resubReq := &api.WebSocketRequest{
+	resubReq := &wsRequest{
 		ID:      "config-lifecycle-resub",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -642,7 +697,7 @@ func TestWebSocketConfigSubscriptionLifecycle(t *testing.T) {
 		"test_after_resub": fmt.Sprintf("value_%d", baseTimestamp+2),
 		"lifecycle_phase":  "phase_6_resubscribed",
 	}
-	patchReqResub := &api.WebSocketRequest{
+	patchReqResub := &wsRequest{
 		ID:      "config-update-resub",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -678,7 +733,7 @@ func TestWebSocketConfigPushNotifications(t *testing.T) {
 	readWebSocketResponse(t, connUpdater, wsTestTimeout)
 
 	// Monitor subscribes to config updates by requesting config
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "monitor-config-sub",
 		Version: 1,
 		Type:    api.WSMsgTypeConfiguration,
@@ -694,7 +749,7 @@ func TestWebSocketConfigPushNotifications(t *testing.T) {
 		},
 	}
 
-	patchReq := &api.WebSocketRequest{
+	patchReq := &wsRequest{
 		ID:      "trigger-config-notification",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -731,7 +786,7 @@ func setupConfigSubscribers(t *testing.T, numSubscribers int) []*websocket.Conn 
 		readWebSocketResponse(t, subscribers[i], wsTestTimeout) // Skip welcome
 
 		// Subscribe to config updates by requesting config
-		subReq := &api.WebSocketRequest{
+		subReq := &wsRequest{
 			ID:      fmt.Sprintf("multi-config-sub-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypeConfiguration,
@@ -756,7 +811,7 @@ func readAndValidateConfigNotification(t *testing.T, conn *websocket.Conn, subsc
 		return false
 	}
 
-	var notification api.WebSocketResponse
+	var notification wsResponse
 	if err := json.Unmarshal(data, &notification); err != nil {
 		t.Errorf("Config subscriber %d failed to unmarshal response: %v", subscriberID, err)
 		return false
@@ -795,7 +850,7 @@ func TestWebSocketConfigMultipleSubscriberNotifications(t *testing.T) {
 		"multi_subscriber_test": fmt.Sprintf("timestamp_%d", time.Now().UnixNano()),
 	}
 
-	patchReq := &api.WebSocketRequest{
+	patchReq := &wsRequest{
 		ID:      "multi-config-update",
 		Version: 1,
 		Type:    api.WSMsgTypePatchConfiguration,
@@ -825,12 +880,12 @@ func TestWebSocketConfigErrorHandling(t *testing.T) {
 
 	errorTests := []struct {
 		name         string
-		request      *api.WebSocketRequest
+		request      *wsRequest
 		expectedCode int
 	}{
 		{
 			name: "invalid_patch_payload",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "error-patch-1",
 				Version: 1,
 				Type:    api.WSMsgTypePatchConfiguration,
@@ -840,7 +895,7 @@ func TestWebSocketConfigErrorHandling(t *testing.T) {
 		},
 		{
 			name: "missing_patch_data",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "error-patch-2",
 				Version: 1,
 				Type:    api.WSMsgTypePatchConfiguration,
@@ -873,7 +928,7 @@ func TestWebSocketDeviceByID(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// First get list of devices to find a valid ID
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "get-devices",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -890,7 +945,7 @@ func TestWebSocketDeviceByID(t *testing.T) {
 	deviceID := device["id"].(string)
 
 	// Now test device lookup by ID
-	lookupReq := &api.WebSocketRequest{
+	lookupReq := &wsRequest{
 		ID:      "device-by-id-test",
 		Version: 1,
 		Type:    api.WSMsgTypeDeviceByID,
@@ -916,7 +971,7 @@ func TestWebSocketDeviceByIDNotFound(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "device-not-found",
 		Version: 1,
 		Type:    api.WSMsgTypeDeviceByID,
@@ -949,7 +1004,7 @@ func TestWebSocketDeviceByIDMissingDeviceID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := &api.WebSocketRequest{
+			req := &wsRequest{
 				ID:      fmt.Sprintf("missing-id-%s", tc.name),
 				Version: 1,
 				Type:    api.WSMsgTypeDeviceByID,
@@ -985,7 +1040,7 @@ func TestWebSocketUpdateDeviceInfo(t *testing.T) {
 		"location":  "Updated Location",
 	}
 
-	updateReq := &api.WebSocketRequest{
+	updateReq := &wsRequest{
 		ID:      "update-device-test",
 		Version: 1,
 		Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1033,7 +1088,7 @@ func TestWebSocketUpdateDevicePartialFields(t *testing.T) {
 	}
 
 	for i, updateData := range partialUpdates {
-		req := &api.WebSocketRequest{
+		req := &wsRequest{
 			ID:      fmt.Sprintf("partial-update-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1091,7 +1146,7 @@ func TestWebSocketUpdateDeviceValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := &api.WebSocketRequest{
+			req := &wsRequest{
 				ID:      fmt.Sprintf("validation-%s", tc.name),
 				Version: 1,
 				Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1139,7 +1194,7 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 			defer wg.Done()
 
 			timestamp := time.Now().UnixNano()
-			updateReq := &api.WebSocketRequest{
+			updateReq := &wsRequest{
 				ID:      fmt.Sprintf("concurrent-update-%d", connIndex),
 				Version: 1,
 				Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1170,7 +1225,7 @@ func TestWebSocketPingPong(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "ping-test-1",
 		Version: 1,
 		Type:    api.WSMsgTypePing,
@@ -1192,7 +1247,7 @@ func TestWebSocketMultiplePingPong(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	for i := 0; i < 5; i++ {
-		req := &api.WebSocketRequest{
+		req := &wsRequest{
 			ID:      fmt.Sprintf("ping-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypePing,
@@ -1213,7 +1268,7 @@ func TestWebSocketPingTimeout(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Send ping and immediately set very short timeout
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "ping-timeout-test",
 		Version: 1,
 		Type:    api.WSMsgTypePing,
@@ -1237,7 +1292,7 @@ func TestWebSocketUnsubscribeDevices(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// First subscribe by requesting devices
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "subscribe-first",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1247,7 +1302,7 @@ func TestWebSocketUnsubscribeDevices(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // devices response
 
 	// Now unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "unsubscribe-test",
 		Version: 1,
 		Type:    api.WSMsgTypeUnsubscribeDevices,
@@ -1275,7 +1330,7 @@ func TestWebSocketSubscriptionLifecycle(t *testing.T) {
 	readWebSocketResponse(t, connMonitor, wsTestTimeout)
 
 	// Phase 1: Monitor subscribes
-	monitorReq := &api.WebSocketRequest{
+	monitorReq := &wsRequest{
 		ID:      "monitor-sub",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1284,7 +1339,7 @@ func TestWebSocketSubscriptionLifecycle(t *testing.T) {
 	readWebSocketResponse(t, connMonitor, wsTestTimeout) // devices response
 
 	// Phase 2: Monitor unsubscribes
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "monitor-unsub",
 		Version: 1,
 		Type:    api.WSMsgTypeUnsubscribeDevices,
@@ -1294,7 +1349,7 @@ func TestWebSocketSubscriptionLifecycle(t *testing.T) {
 	assert.Equal(t, api.WSMsgTypeUnsubscribeDevices, unsubResponse.Type)
 
 	// Phase 3: Monitor re-subscribes
-	resubReq := &api.WebSocketRequest{
+	resubReq := &wsRequest{
 		ID:      "monitor-resub",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1311,7 +1366,7 @@ func TestWebSocketResubscriptionAfterUnsubscribe(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Subscribe
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "sub",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1321,7 +1376,7 @@ func TestWebSocketResubscriptionAfterUnsubscribe(t *testing.T) {
 	assert.Equal(t, api.WSMsgTypeDevices, subResponse.Type)
 
 	// Unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "unsub",
 		Version: 1,
 		Type:    api.WSMsgTypeUnsubscribeDevices,
@@ -1331,7 +1386,7 @@ func TestWebSocketResubscriptionAfterUnsubscribe(t *testing.T) {
 	assert.Equal(t, api.WSMsgTypeUnsubscribeDevices, unsubResponse.Type)
 
 	// Re-subscribe
-	resubReq := &api.WebSocketRequest{
+	resubReq := &wsRequest{
 		ID:      "resub",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1353,12 +1408,12 @@ func TestWebSocketErrorCodes(t *testing.T) {
 
 	errorTests := []struct {
 		name         string
-		request      *api.WebSocketRequest
+		request      *wsRequest
 		expectedCode int
 	}{
 		{
 			name: "invalid_message_type",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "error-1",
 				Version: 1,
 				Type:    "invalid_type",
@@ -1367,7 +1422,7 @@ func TestWebSocketErrorCodes(t *testing.T) {
 		},
 		{
 			name: "missing_device_id_in_lookup",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "error-2",
 				Version: 1,
 				Type:    api.WSMsgTypeDeviceByID,
@@ -1396,7 +1451,7 @@ func TestWebSocketErrorResponseFormat(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Send request that will cause error
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "error-format-test",
 		Version: 1,
 		Type:    "unknown_type",
@@ -1470,7 +1525,7 @@ func TestWebSocketPushNotifications(t *testing.T) {
 	readWebSocketResponse(t, conn2, wsTestTimeout)
 
 	// conn1 subscribes to device updates
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "subscribe-for-notifications",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1486,7 +1541,7 @@ func TestWebSocketPushNotifications(t *testing.T) {
 	deviceID := devices[0].(map[string]interface{})["id"].(string)
 
 	// conn2 updates the device
-	updateReq := &api.WebSocketRequest{
+	updateReq := &wsRequest{
 		ID:      "trigger-notification",
 		Version: 1,
 		Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1528,7 +1583,7 @@ func TestWebSocketPullThenPushPattern(t *testing.T) {
 	readWebSocketResponse(t, connUpdater, wsTestTimeout)
 
 	// Step 1: Pull - get initial device data and auto-subscribe
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "pull-phase",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1545,7 +1600,7 @@ func TestWebSocketPullThenPushPattern(t *testing.T) {
 	deviceID := devices[0].(map[string]interface{})["id"].(string)
 
 	// Step 2: Push - update device and expect notification
-	updateReq := &api.WebSocketRequest{
+	updateReq := &wsRequest{
 		ID:      "push-trigger",
 		Version: 1,
 		Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1608,7 +1663,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 		readWebSocketResponse(t, subscribers[i], wsTestTimeout) // Skip welcome
 
 		// Subscribe each connection
-		subReq := &api.WebSocketRequest{
+		subReq := &wsRequest{
 			ID:      fmt.Sprintf("multi-sub-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypeDevices,
@@ -1625,7 +1680,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 	// Get device ID and perform update
 	deviceID := getFirstDeviceID(t, updater)
 
-	updateReq := &api.WebSocketRequest{
+	updateReq := &wsRequest{
 		ID:      "multi-subscriber-update",
 		Version: 1,
 		Type:    api.WSMsgTypeUpdateDeviceInfo,
@@ -1678,7 +1733,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 			continue
 		}
 
-		var notification api.WebSocketResponse
+		var notification wsResponse
 		if err := json.Unmarshal(data, &notification); err != nil {
 			t.Errorf("Subscriber %d failed to unmarshal response: %v", i, err)
 			continue
@@ -1708,7 +1763,7 @@ func TestWebSocketCrossClusterDeviceVisibility(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "cluster-devices",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1747,7 +1802,7 @@ func TestWebSocketVIPConnection(t *testing.T) {
 	assert.Equal(t, "welcome", welcome.Type)
 
 	// Should be able to get device list through VIP
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "vip-devices",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,
@@ -1798,7 +1853,7 @@ func TestWebSocketConcurrentConnections(t *testing.T) {
 
 	// Test that all connections are working
 	for i, conn := range connections {
-		req := &api.WebSocketRequest{
+		req := &wsRequest{
 			ID:      fmt.Sprintf("concurrent-ping-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypePing,
@@ -1823,7 +1878,7 @@ func TestWebSocketRapidRequests(t *testing.T) {
 	// Send multiple rapid ping requests
 	numRequests := 10
 	for i := 0; i < numRequests; i++ {
-		req := &api.WebSocketRequest{
+		req := &wsRequest{
 			ID:      fmt.Sprintf("rapid-%d", i),
 			Version: 1,
 			Type:    api.WSMsgTypePing,
@@ -1832,7 +1887,7 @@ func TestWebSocketRapidRequests(t *testing.T) {
 	}
 
 	// Read all responses
-	responses := make(map[string]*api.WebSocketResponse)
+	responses := make(map[string]*wsResponse)
 	for i := 0; i < numRequests; i++ {
 		response := readWebSocketResponse(t, conn, wsTestTimeout)
 		responses[*response.ID] = response
@@ -1872,7 +1927,7 @@ func TestWebSocketLongRunningConnection(t *testing.T) {
 			return
 		case <-ticker.C:
 			counter++
-			req := &api.WebSocketRequest{
+			req := &wsRequest{
 				ID:      fmt.Sprintf("keepalive-%d", counter),
 				Version: 1,
 				Type:    api.WSMsgTypePing,
@@ -1892,7 +1947,7 @@ func TestWebSocketLongRunningConnection(t *testing.T) {
 // ====================
 
 func getFirstDeviceID(t *testing.T, conn *websocket.Conn) string {
-	req := &api.WebSocketRequest{
+	req := &wsRequest{
 		ID:      "helper-get-devices",
 		Version: 1,
 		Type:    api.WSMsgTypeDevices,

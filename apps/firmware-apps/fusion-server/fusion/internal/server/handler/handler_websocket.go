@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"path/filepath"
 
 	"github.com/gorilla/websocket"
@@ -153,7 +154,11 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *model.WebSocke
 		return createErrorResponse(&request.Id, api.WSCodeMissingDeviceID, "Missing device_id in payload"), nil
 	}
 
+<<<<<<< HEAD
 	patch := api.DevicePatch{
+=======
+	patch := model.DevicePatch{
+>>>>>>> gene/value
 		Id:       payload.Id,
 		Location: payload.Location,
 		Name:     payload.Name,
@@ -274,7 +279,7 @@ func (h *Handler) handleStartUpdate(request *model.WebSocketRequest) (*model.Web
 }
 
 // getDevicesList retrieves all devices
-func (h *Handler) getDevicesList() ([]api.DeviceInfo, error) {
+func (h *Handler) getDevicesList() ([]model.DeviceInfo, error) {
 
 	devicesInfo := h.clusterTransport.GetAllDevicesInfo()
 
@@ -283,7 +288,7 @@ func (h *Handler) getDevicesList() ([]api.DeviceInfo, error) {
 }
 
 // getDeviceByID retrieves a specific device by ID
-func (h *Handler) getDeviceByID(deviceID string) (*api.DeviceInfo, error) {
+func (h *Handler) getDeviceByID(deviceID string) (*model.DeviceInfo, error) {
 
 	// Search all cluster devices
 	allDevices := h.clusterTransport.GetAllDevicesInfo()
@@ -300,6 +305,6 @@ func (h *Handler) getDeviceByID(deviceID string) (*api.DeviceInfo, error) {
 }
 
 // updateDeviceInfo updates device information
-func (h *Handler) updateDeviceInfo(deviceID string, patch *api.DevicePatch) error {
+func (h *Handler) updateDeviceInfo(deviceID string, patch *model.DevicePatch) error {
 	return h.clusterTransport.UpdateDeviceInfo(deviceID, patch)
 }

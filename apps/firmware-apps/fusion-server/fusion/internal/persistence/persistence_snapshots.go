@@ -3,7 +3,7 @@ package persistence
 import (
 	"fmt"
 	"fusion-services-core/logging"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
@@ -232,7 +232,7 @@ func (p *Persistence) SnapshotExists(snapshotName string) (bool, error) {
 }
 
 // GetDatabaseMetadata retrieves the database metadata.
-func (p *Persistence) GetDatabaseMetadata() (*api.DatabaseMetadata, error) {
+func (p *Persistence) GetDatabaseMetadata() (*model.DatabaseMetadata, error) {
 
 	metadata, err := p.loadMetadata()
 	if err != nil {

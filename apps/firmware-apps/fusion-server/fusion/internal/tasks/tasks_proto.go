@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"fusion/internal/api"
+<<<<<<< HEAD
+=======
+	model "fusion/internal/gen/proto/fusion"
+>>>>>>> gene/value
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"

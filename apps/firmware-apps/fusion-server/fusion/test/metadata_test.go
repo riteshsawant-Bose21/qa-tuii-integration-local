@@ -4,6 +4,10 @@ import (
 	"net/http"
 	"testing"
 
+<<<<<<< HEAD
+=======
+	model "fusion/internal/gen/proto/fusion"
+>>>>>>> gene/value
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"

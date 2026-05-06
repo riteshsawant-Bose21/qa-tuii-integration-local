@@ -89,6 +89,10 @@ proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/sessions.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/metadata.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/software_update.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/vip.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/health.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/udp.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/version.pb.go
 
 # Cross compilation
 build-linux-amd64: proto

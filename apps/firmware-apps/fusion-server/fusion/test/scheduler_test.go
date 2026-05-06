@@ -12,6 +12,10 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+<<<<<<< HEAD
+=======
+	model "fusion/internal/gen/proto/fusion"
+>>>>>>> gene/value
 	"fusion/internal/routes"
 
 	json "github.com/goccy/go-json"
@@ -23,6 +27,15 @@ import (
 const (
 	taskServerURL = "http://192.168.2.100:8080"
 )
+
+type scheduledMessage struct {
+	ID          string   `json:"id"`
+	Description string   `json:"description"`
+	CronExpr    string   `json:"cron_expr"`
+	MessageID   string   `json:"message_id"`
+	Priority    int64    `json:"priority"`
+	Zones       []string `json:"zones"`
+}
 
 func init() {
 	logging.InitLogger(logging.LogConfig{
@@ -220,7 +233,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	)
 	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
 
-	taskMessage := api.TaskMessage{
+	taskMessage := scheduledMessage{
 		ID:          "scheduled-message-empty-zones",
 		Description: "Scheduled message with implicit all zones",
 		CronExpr:    "@every 1m",
@@ -256,7 +269,7 @@ func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
 	defer listResp.Body.Close()
 	require.Equal(t, http.StatusOK, listResp.StatusCode)
 
-	var scheduled []api.TaskMessage
+	var scheduled []scheduledMessage
 	require.NoError(t, json.NewDecoder(listResp.Body).Decode(&scheduled))
 
 	found := false
@@ -332,7 +345,7 @@ func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
 	meta := uploadAudio(t, ctx, baseURL, "scheduled_zones_payload.wav", wav, "Scheduled Zones Payload")
 	defer deleteAudio(t, ctx, baseURL, meta.Id)
 
-	taskMessage := api.TaskMessage{
+	taskMessage := scheduledMessage{
 		ID:          "scheduled-message-zones-payload",
 		Description: "Scheduled message with explicit zones",
 		CronExpr:    "@every 1s",
@@ -341,7 +354,14 @@ func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
 		Zones:       []string{"lobby", "gym"},
 	}
 
-	payload, err := json.Marshal(taskMessage)
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.MessageTaskCreateRequest{
+		Id:          taskMessage.ID,
+		Description: taskMessage.Description,
+		CronExpr:    taskMessage.CronExpr,
+		MessageId:   taskMessage.MessageID,
+		Priority:    taskMessage.Priority,
+		Zones:       "lobby,gym",
+	})
 	require.NoError(t, err)
 
 	resp, err := http.Post(scheduleTasksURL(routes.PAVAScheduleEndpoint), api.JsonMIMEType, bytes.NewReader(payload))

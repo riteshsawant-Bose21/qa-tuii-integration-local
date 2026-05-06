@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+<<<<<<< HEAD
+=======
+	model "fusion/internal/gen/proto/fusion"
+
+>>>>>>> gene/value
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
