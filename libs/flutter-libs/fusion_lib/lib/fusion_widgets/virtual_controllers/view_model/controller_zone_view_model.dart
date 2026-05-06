@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide Source;
@@ -33,17 +35,28 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     ));
   }
 
-  void selectZone(WallZone zone,int zoneIndex,{int currentSubzoneIndex=0,int sourceIndex=0}) {
-    activeZone = zone;
+  void selectZone(WallZone zone,int zoneIndex,gainID,{WallSubZone? subZone,int currentSubzoneIndex=0,int sourceIndex=1}) {
+   activeZone = zone;
+
+   WallSubZone? selectSubZone;
+   if(subZone!=null){
+     selectSubZone = subZone;
+   }else{
+     selectSubZone = zone.subZones[currentSubzoneIndex];
+   }
+
+
     emit(VirtualZoneSelected(
       zone: zone,
+      subZone: selectSubZone!,
       zoneIndex: zoneIndex,
       currentSubzoneIndex: currentSubzoneIndex,
       currentSourceIndex: sourceIndex,
+      gainID: gainID,
     ));
   }
 
-  void selectSource(WallZoneSource source,String zoneID,String subzoneID,{bool sendToService=false}) {
+  void selectSource(WallZoneSource source,String zoneID,String funcID,{bool sendToService=false}) {
     if(sendToService) {
 
       final patch = {
@@ -53,13 +66,13 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
         "data": {
           "settings": {
             "audio": {
-              subzoneID: {"input": source.index}
+              funcID: {"input": source.index}
             }
           }
         }
       };
 
-      WebSocketService().sendMessage(patch);
+      WebSocketService().sendMessage(jsonEncode(patch));
     }
     print("selectSource: EMIT ${source.sourceName}");
     emit(SourceSelected(
@@ -67,21 +80,20 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     ));
   }
 
-
-
   //  Volume change
-  void updateVolume(WallSubZone sourceModel, double volume,{bool sendToService=false}) {
+  void updateVolume(WallSubZone sourceModel, double volume,{bool sendToService=false ,bool isMuted = false}) {
 
-    if(bassVolume==volume){
-      return;
-    }
+
+    // if(bassVolume==volume){
+    //   return;
+    // }
 
     WallSubZone zoneSourceModel = sourceModel.copyWith(
-      ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: volume == 0 ? 0 :1),
+      ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: isMuted ? 1 :0),
     );
 
-    int? foundZoneIndex;
-    int? foundSubZoneIndex;
+    int foundZoneIndex=-1;
+    int foundSubZoneIndex=-1;
 
     for (int i = 0; i < _zones.length; i++) {
       final subIndex = _zones[i].subZones
@@ -93,8 +105,12 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
         break;
       }
     }
+    // print("foundZoneIndex");
+    // print(foundZoneIndex);
+    // print("foundSubZoneIndex");
+    // print(foundSubZoneIndex);
 
-    if(foundZoneIndex!=null && foundSubZoneIndex!=null) {
+    if(foundZoneIndex!=-1 && foundSubZoneIndex!=-1) {
 
       bassVolume = volume;
       _zones[foundZoneIndex].subZones[foundSubZoneIndex] = zoneSourceModel;
@@ -104,7 +120,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
       if(sendToService) {
         _throttler.run(() {
           //throttle with trailing
-          final dbGain = AudioUtils.volumeToDbGain(bassVolume! / 100.0);
+          final dbGain =  AudioUtils().percentageToDbfs(bassVolume!);
           final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
           final patch = {
             "id": gainID,
@@ -113,19 +129,18 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
             "data": {
               "settings": {
                 "audio": {
-                  gainID: {"gain": dbGain,"mute": false,"timestamp":timestamp}
+                  gainID: {"gain": dbGain,"mute": isMuted,
+                   // "timestamp":timestamp
+                  }
                 }
               }
             }
           };
-
-
-
-          WebSocketService().sendMessage(patch);
+          WebSocketService().sendMessage(jsonEncode(patch));
         });
       }
 
-      emit(GainUpdated(zoneSourceModel: zoneSourceModel));
+      emit(GainUpdated(zoneSourceModel: zoneSourceModel,fromServer: sendToService));
 
       emit(VirtualZonesLoaded(zones: _zones));
     } else {
@@ -134,6 +149,26 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
     }
 
   }
+
+  void updateMute(bool isMuted,gainID,dbGain) {
+
+    final patch = {
+      "id": gainID,
+      "version": 1,
+      "type": "patch_config",
+      "data": {
+        "settings": {
+          "audio": {
+            gainID: {"gain": dbGain,"mute": isMuted,
+            }
+          }
+        }
+      }
+    };
+    WebSocketService().sendMessage(jsonEncode(patch));
+    emit(MuteUpdated(isMuted: isMuted));
+  }
+
 
   Future<WallSubZone> getGain(int zoneIndex,int sourceIndex, WallSubZone sourceModel) async{
 
@@ -147,28 +182,32 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
 
     if(model.data?.exists == false){
       print("getGain: No data received for gainID: $gainID");
+      sourceModel = sourceModel.copyWith(ono: sourceModel.ono.copyWith(gain: 0));
       return sourceModel;
     }
-    double volume = AudioUtils.toUiVolume( model.data?.value.gain ?? 0);
+    double volume =  AudioUtils().dbfsToPercentage( model.data?.value.gain ?? 0);
+    bool mute =   model.data?.value.mute ?? false;
 
     WallSubZone zoneSourceModel = sourceModel.copyWith(
-      ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: volume == 0 ? 0 :1),
+      ono: sourceModel.ono.copyWith(gain: volume.toInt(),mute: mute ? 1:0),
     );
     _zones[zoneIndex].subZones[sourceIndex] = zoneSourceModel;
     return zoneSourceModel;
   }
 
-  Future<WallZone> getSelectSource(String zoneID) async{
+  Future<WallZone> getSelectSource(String funcID) async{
     Map<String,dynamic> pathParams = {
-      "key": "settings.audio.$zoneID"
+      "key": "settings.audio"
     };
-    ResponseCallback<InputConfig> model = await  _service.getSourceSelect(pathParams,vipAddress);
+    ResponseCallback<InputConfig> model = await  _service.getSourceSelect(pathParams,vipAddress,funcID);
+    print("Func ID : ${model.data!.toJson()}");
 
-    int index = _zones.indexWhere((z)=> z.id == zoneID);
+    int index = _zones.indexWhere((z)=> "${z.functionId!}/selector" == funcID);
+    print("found Func ID : $index");
     WallZone zoneModel = _zones[index];
     if(index!=-1){
 
-    _zones[index].sourceSelected = model.data?.value.input ?? 0;
+    _zones[index].sourceSelected = model.data?.value.input ?? 1;
     }
     return zoneModel;
 
@@ -181,7 +220,7 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
 
      newZoneIndex++;
 
-    selectZone(_zones[newZoneIndex], newZoneIndex);
+    selectZone(_zones[newZoneIndex], newZoneIndex,'');
   }
 
   //  Previous source
@@ -191,6 +230,6 @@ class VirtualControllerViewModel extends Cubit<VirtualControllerState> {
 
      newZoneIndex--;
 
-    selectZone(_zones[newZoneIndex], newZoneIndex);
+    selectZone(_zones[newZoneIndex], newZoneIndex,'');
   }
 }

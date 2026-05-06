@@ -6,7 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../speaker_selection_popup/views/speaker_selection_popup.dart';
+import '../../../speaker_selection/views/speaker_selection_popup.dart';
 import 'circuit_device_widget.dart';
 
 /// Separate widget for subzones with its own expansion state and full features
@@ -111,15 +111,16 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             //   subZoneId: widget.subZoneId,
                             //   onSpeakerAdded: onSpeakerAdded,
                             // ),
-                            FusionArrowPopup(
-                              semanticId: "add_speakers_menu",
-                              content: SpeakerSelectionPopup(
-                                isFromBuildingPage: false,
-                                zoneId: widget.zoneId,
-                                subZoneId: widget.subZoneId,
-                              ),
-                              backgroundColor: context.colorScheme.elevation1,
-                              child: Row(
+                            GestureDetector(
+                              onTap: () {
+                                 SpeakerSelectionPopup.show(
+                                  context: context,
+                                  isFromBuildingPage: false,
+                                  zoneId: widget.zoneId,
+                                  subZoneId: widget.subZoneId,
+                                );
+                              },
+                               child: Row(
                                 children: <Widget>[
                                   Icon(
                                     Icons.add,
