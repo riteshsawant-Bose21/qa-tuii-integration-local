@@ -61,6 +61,8 @@ enum SelectedItemType {
   zone,
   subzone,
   circuit,
+  listingArea,
+  hardware,
 }
 
 class SelectedItem {
@@ -95,6 +97,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// Live drag offsets for hardware components (canvas pos delta during drag, not persisted).
   final ValueNotifier<Map<String, Offset>> liveDragOffsets = ValueNotifier<Map<String, Offset>>(<String, Offset>{});
 
+  // This notifier is used to indicate whether the devices are being registered or not,
+  // We want to hide close button when the devices are being registered to prevent
+  // user from closing the dialog while registration is in progress
+  ValueNotifier<bool> isDevicesRegisteringNotifier = ValueNotifier<bool>(false);
+
   ProjectData? _currentProject;
 
   int get totalProjects => allProjects.length;
@@ -102,14 +109,30 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   bool get hasProjects => allProjects.isNotEmpty;
 
   /// Temp variables for various selections
-  String? currentSelectedHardwareId;
-  String? currentSelectedListeningAreaId;
-  String? currentSelectedZoneId;
-  String? currentSelectedSubZoneId;
+  // String? currentSelectedHardwareId;
+  // String? currentSelectedListeningAreaId;
+  // String? currentSelectedZoneId;
+  // String? currentSelectedSubZoneId;
+  SelectedItem? activeSelection;
 
-  /// Listening area selection mode flag
-  // bool isInListeningAreaMode = false;
-  bool isInZoneSelectionMode = false;
+  String? get currentSelectedHardwareId => switch (activeSelection?.type) {
+    SelectedItemType.source ||
+    SelectedItemType.hardware ||
+    SelectedItemType.sourceSet ||
+    SelectedItemType.endpoint ||
+    SelectedItemType.processor ||
+    SelectedItemType.amplifier ||
+    SelectedItemType.controller ||
+    SelectedItemType.racks ||
+    SelectedItemType.switchs => activeSelection?.id,
+
+    SelectedItemType.zone || SelectedItemType.subzone || SelectedItemType.circuit || SelectedItemType.listingArea || null => null,
+  };
+
+  String? get currentSelectedCircuitId => activeSelection?.type == SelectedItemType.circuit ? activeSelection?.id : null;
+  String? get currentSelectedListeningAreaId => activeSelection?.type == SelectedItemType.listingArea ? activeSelection?.id : null;
+  String? get currentSelectedZoneId => activeSelection?.type == SelectedItemType.zone ? activeSelection?.id : null;
+  String? get currentSelectedSubZoneId => activeSelection?.type == SelectedItemType.subzone ? activeSelection?.id : null;
 
   int currentDeviceTypeIndex = -1;
 
@@ -374,51 +397,35 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(ProjectError(message: message));
   }
 
-  void exitSelectionModes() {
-    // isInListeningAreaMode = false;
-    isInZoneSelectionMode = false;
-    currentSelectedListeningAreaId = null;
-    currentSelectedZoneId = null;
-    currentSelectedSubZoneId = null;
-    updateProject();
-  }
-
-  // void enterZoneSelectionMode(Zone zone) {
-  //   // isInListeningAreaMode = false;
-  //   isInZoneSelectionMode = true;
-  //   currentSelectedZoneId = zone.id;
-  //   currentSelectedListeningAreaId = null;
-  //   currentSelectedSubZoneId = null;
-  //   resetDeviceTypeIndex();
-  //   emit(ZoneSelectionMode(zone));
-  // }
-
   void enterSubZoneSelectionMode(SubZone subZone) {
     // isInListeningAreaMode = false;
-    isInZoneSelectionMode = true;
-    currentSelectedSubZoneId = subZone.id;
-    currentSelectedZoneId = null;
-    currentSelectedListeningAreaId = null;
+    // isInZoneSelectionMode = true;
+    // currentSelectedSubZoneId = subZone.id;
+    // currentSelectedZoneId = null;
+    // currentSelectedListeningAreaId = null;
+    activeSelection = SelectedItem(id: subZone.id, type: SelectedItemType.subzone);
     resetDeviceTypeIndex();
     emit(SubZoneSelectionMode(subZone));
   }
 
   void enterListeningAreaMode() {
-    isInZoneSelectionMode = false;
+    // isInZoneSelectionMode = false;
     // isInListeningAreaMode = true;
-    currentSelectedZoneId = null;
-    currentSelectedSubZoneId = null;
+    // currentSelectedZoneId = null;
+    activeSelection = null;
     resetDeviceTypeIndex();
     emit(ListeningAreaSelectionMode());
   }
 
   Color getCurrentSelectionZoneColor() {
+    final String? currentSelectedZoneId = activeSelection?.type == SelectedItemType.zone ? activeSelection?.id : null;
+    final String? currentSelectedSubZoneId = activeSelection?.type == SelectedItemType.subzone ? activeSelection?.id : null;
     if (currentSelectedZoneId != null) {
-      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId);
       return zone.color;
     } else if (currentSelectedSubZoneId != null) {
       final Zone zone = projectManager.getZoneForSubZone(
-        subZoneId: currentSelectedSubZoneId!,
+        subZoneId: currentSelectedSubZoneId,
       );
       return zone.color;
     }
@@ -426,12 +433,15 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   String getCurrentSelectionZoneName() {
+    final String? currentSelectedZoneId = activeSelection?.type == SelectedItemType.zone ? activeSelection?.id : null;
+    final String? currentSelectedSubZoneId = activeSelection?.type == SelectedItemType.subzone ? activeSelection?.id : null;
+
     if (currentSelectedZoneId != null) {
-      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId);
       return zone.name;
     } else if (currentSelectedSubZoneId != null) {
       final Zone zone = projectManager.getZoneForSubZone(
-        subZoneId: currentSelectedSubZoneId!,
+        subZoneId: currentSelectedSubZoneId,
       );
       return zone.name;
     }
@@ -440,10 +450,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void changeDeviceTypeIndex(int index) {
     currentDeviceTypeIndex = index;
-    isInZoneSelectionMode = false;
+    // isInZoneSelectionMode = false;
     // isInListeningAreaMode = false;
-    currentSelectedZoneId = null;
-    currentSelectedSubZoneId = null;
+    // currentSelectedZoneId = null;
+    // currentSelectedSubZoneId = null;
     print("Device type index changed to $index");
     emit(DeviceTypeIndexChanged(index));
   }
@@ -496,6 +506,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
         case SelectedItemType.racks:
         case SelectedItemType.switchs:
         case SelectedItemType.circuit:
+        case SelectedItemType.hardware:
           projectManager.removeHardware(_selectedDevice!.id);
           break;
         case SelectedItemType.zone:
@@ -506,6 +517,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
           break;
         case SelectedItemType.sourceSet:
           projectManager.removeSourceSet(_selectedDevice!.id);
+          break;
+        case SelectedItemType.listingArea:
+          projectManager.removeListeningArea(_selectedDevice!.id);
           break;
       }
       clearSelections();
@@ -539,12 +553,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   void increaseQty() {
+    final String? currentSelectedListeningAreaId = activeSelection?.type == SelectedItemType.listingArea ? activeSelection?.id : null;
     final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
     final Speaker clonedSpeaker = speakers.last.getClone();
     addHardware(hardware: clonedSpeaker);
   }
 
   void decreaseQty() {
+    final String? currentSelectedListeningAreaId = activeSelection?.type == SelectedItemType.listingArea ? activeSelection?.id : null;
     final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
     final Speaker clonedSpeaker = speakers.last;
     removeHardware(hardwareId: clonedSpeaker.id);
@@ -570,5 +586,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       emit(ProjectError(message: "Failed to import project: $e"));
       return ResponseCallback<bool>(success: false, message: e.toString());
     }
+  }
+
+  @override
+  Future<void> close() {
+    isDevicesRegisteringNotifier.dispose();
+    return super.close();
   }
 }

@@ -1,0 +1,20 @@
+info:
+  name: Set Model Name
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{admin_url}}/manufacturing/model-name"
+  body:
+    type: json
+    data: |-
+      {
+        "model_name": "fm6"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

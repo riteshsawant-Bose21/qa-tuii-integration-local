@@ -14,7 +14,11 @@ import '../usecase/fc_bounded_delta_resolver_usecase.dart';
 import '../usecase/fc_layer_interaction_support_usecase.dart';
 
 class DragToolHelper extends FusionCanvasToolTransformer<DragToolState> {
-  const DragToolHelper();
+  const DragToolHelper({
+    this.transformSelectedLayerIds,
+  });
+  final List<String> Function(String layerId)? transformSelectedLayerIds;
+
   @override
   FusionToolState transform({
     required FusionCanvasInputState inputState,
@@ -42,7 +46,17 @@ class DragToolHelper extends FusionCanvasToolTransformer<DragToolState> {
           // final Set<String> selectedElementIds = <String>{...currentState.selectedElementIds};
 
           final bool isShiftPressed = context.inputState.isShiftPressed;
-          final Set<String> effectiveSelectedLayerIds = isShiftPressed ? (<String>{...selectedLayerIds, hoveredPainterId}) : <String>{hoveredPainterId};
+          final Set<String> effectiveSelectedLayerIds =
+              isShiftPressed
+                  ? (<String>{
+                    ...selectedLayerIds,
+                    ...transformSelectedLayerIds?.call(hoveredPainterId) ?? <String>[hoveredPainterId],
+
+                    ///hoveredPainterId
+                  })
+                  : <String>{
+                    ...transformSelectedLayerIds?.call(hoveredPainterId) ?? <String>[hoveredPainterId],
+                  };
 
           final Set<String> effectiveSelectedElementIds =
               isShiftPressed
@@ -79,7 +93,9 @@ class DragToolHelper extends FusionCanvasToolTransformer<DragToolState> {
               : <FusionCanvasElement>[];
 
       final Set<String> draggedLayerIds =
-          currentState.selectedLayerIds.length > 2 ? <String>{...currentState.selectedLayerIds, hoveredPainterId} : <String>{hoveredPainterId};
+          currentState.selectedLayerIds.length > 2
+              ? <String>{...currentState.selectedLayerIds, ...?transformSelectedLayerIds?.call(hoveredPainterId)}
+              : <String>{...?transformSelectedLayerIds?.call(hoveredPainterId)};
       print(
         "Is shift pressed for tap down? ${context.inputState.isShiftPressed}. draggedLayerIds: $draggedLayerIds, hoveredPainterId: $hoveredPainterId, currentState.selectedLayerIds: ${currentState.selectedLayerIds}",
       );

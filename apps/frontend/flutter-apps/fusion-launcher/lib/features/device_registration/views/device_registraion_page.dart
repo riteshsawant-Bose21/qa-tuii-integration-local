@@ -27,8 +27,78 @@ class _DeviceRegistraionPage extends StatefulWidget {
   State<_DeviceRegistraionPage> createState() => _DeviceRegistraionPageState();
 }
 
+// ── Toast entry ──────────────────────────────────────────────────────────────
+
+class _ToastEntry {
+  final String id;
+  final String message;
+  // opacity goes 1 → 0 during fade-out
+  double opacity;
+
+  _ToastEntry({required this.message}) : id = '${DateTime.now().microsecondsSinceEpoch}_${message.hashCode}', opacity = 1.0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
+
+  // ── Toast state ─────────────────────────────────────────────────────────────
+  final List<_ToastEntry> _toasts = <_ToastEntry>[];
+
+  // Track which error strings we have already shown to avoid re-showing on
+  // unrelated state rebuilds.
+  final Set<String> _shownErrors = <String>{};
+  String _lastBulkError = '';
+  Map<String, String> _lastDeviceErrors = <String, String>{};
+
+  void _clearVisibleErrors() {
+    if (!mounted) return;
+    setState(() => _toasts.clear());
+    _shownErrors.clear();
+  }
+
+  void _handleErrorToasts(DeviceRegistrationState state) {
+    final String bulkError = (state.error ?? '').trim();
+    if (bulkError.isNotEmpty && bulkError != _lastBulkError) {
+      _pushToast(bulkError);
+    }
+
+    final Map<String, String> currentDeviceErrors = <String, String>{};
+    for (final DeviceSpecificRegistrationState device in state.devices ?? <DeviceSpecificRegistrationState>[]) {
+      final String devError = (device.error ?? '').trim();
+      if (devError.isEmpty) continue;
+
+      currentDeviceErrors[device.device.id] = devError;
+      final String previous = _lastDeviceErrors[device.device.id] ?? '';
+      if (devError != previous) {
+        _pushToast('${device.device.name}: $devError');
+      }
+    }
+
+    _lastBulkError = bulkError;
+    _lastDeviceErrors = currentDeviceErrors;
+  }
+
+  void _pushToast(String message) {
+    if (message.trim().isEmpty) return;
+    if (_shownErrors.contains(message)) return;
+    _shownErrors.add(message);
+
+    final _ToastEntry entry = _ToastEntry(message: message);
+    setState(() => _toasts.add(entry));
+
+    // After 2 s begin fade-out, then remove.
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() => entry.opacity = 0.0);
+      Future<void>.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        setState(() => _toasts.remove(entry));
+        _shownErrors.remove(message);
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -65,6 +135,8 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
               } else {
                 _screenBlocker.hide();
               }
+
+              _handleErrorToasts(state);
             },
             builder: (BuildContext context, DeviceRegistrationState state) {
               final List<DeviceSpecificRegistrationState>? devices = state.devices;
@@ -89,6 +161,45 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                       },
                     ),
                   ),
+
+                  // Animated error toasts — auto-dismiss after 2 s
+                  if (_toasts.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children:
+                            _toasts.map((_ToastEntry toast) {
+                              return AnimatedOpacity(
+                                opacity: toast.opacity,
+                                duration: const Duration(milliseconds: 400),
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF3A1A1A),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFF3B3B).withOpacity(0.4)),
+                                  ),
+                                  child: Row(
+                                    children: <Widget>[
+                                      const Icon(Icons.error_outline, color: Color(0xFFFF3B3B), size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: toast.message,
+                                          style: context.textTheme.b3Regular.copyWith(
+                                            color: const Color(0xFFFF6B6B),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    ),
                 ],
               );
             },
@@ -309,7 +420,10 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
           const SizedBox(width: 14),
           _BuildAction(
             title: 'Retry',
-            onTap: viewModel.bulkDeviceRegistration,
+            onTap: () {
+              _clearVisibleErrors();
+              viewModel.bulkDeviceRegistration();
+            },
           ),
         ],
       );
@@ -429,7 +543,10 @@ class _DeviceRegistraionPageState extends State<_DeviceRegistraionPage> {
                         const SizedBox(width: 14),
                         _BuildAction(
                           title: 'Retry',
-                          onTap: () => viewModel.singleDeviceRegister(item),
+                          onTap: () {
+                            _clearVisibleErrors();
+                            viewModel.singleDeviceRegister(item);
+                          },
                         ),
                       ],
                     );
@@ -496,6 +613,7 @@ class _BuildAction extends StatelessWidget {
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
           elevation: 0,
+          shadowColor: Colors.transparent,
           backgroundColor: outlined ? Colors.transparent : const Color(0xFF2A2A2A),
           foregroundColor: context.colorScheme.textPrimary,
           textStyle: context.textTheme.l1Medium,

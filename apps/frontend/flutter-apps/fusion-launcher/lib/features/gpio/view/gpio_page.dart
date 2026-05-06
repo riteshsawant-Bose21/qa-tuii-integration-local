@@ -4,10 +4,10 @@ import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gpio/gpio_view_model.dart';
-import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart' hide SizedBox;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/widgets/configuration_widgets/action_drop_down.dart';
+import '../../../core/widgets/fusion_app_table.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/gpio_state.dart';
 import '../viewmodel/gpio_viewmodel.dart';

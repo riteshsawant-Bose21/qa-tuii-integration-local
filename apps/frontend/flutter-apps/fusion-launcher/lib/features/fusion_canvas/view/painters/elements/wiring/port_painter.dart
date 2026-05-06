@@ -128,7 +128,7 @@ mixin PortPainter on FusionCanvasElementPainter {
     required _PortState isConnected,
   }) {
     final Rect portRect = Rect.fromCircle(center: position, radius: portRadius);
-    final double length = 150.0;
+    final double length = 100.0;
     final Offset outsidePosition = switch (portData.portAlignment) {
       Alignment.centerLeft => position - Offset(length + 5, 0),
       Alignment.centerRight => position + Offset(length + 5, 0),

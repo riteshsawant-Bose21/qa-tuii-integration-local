@@ -115,11 +115,13 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
   void _syncSelectionFromProject() {
     final String? nextListeningAreaId = _projectViewModel.currentSelectedListeningAreaId;
     final String? nextSpeakerId = _projectViewModel.currentSelectedHardwareId;
+    final String? nextCircuitId = _projectViewModel.currentSelectedCircuitId;
 
     final bool listeningAreaChanged = state.selectedListeningAreaId != nextListeningAreaId;
     final bool speakerChanged = state.selectedSpeakerId != nextSpeakerId;
+    final bool circuitChanged = state.selectedCircuitId != nextCircuitId;
 
-    if (!listeningAreaChanged && !speakerChanged) {
+    if (!listeningAreaChanged && !speakerChanged && !circuitChanged) {
       return;
     }
 
@@ -130,6 +132,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       state.toolState,
       selectedListeningAreaId: nextListeningAreaId,
       selectedSpeakerId: nextSpeakerId,
+      selectedCircuitId: nextCircuitId,
     );
     // : state.toolState;
 
@@ -139,6 +142,8 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       selectedSpeakerId: nextSpeakerId,
       clearSelectedListeningAreaId: listeningAreaChanged && nextListeningAreaId == null,
       clearSelectedSpeakerId: speakerChanged && nextSpeakerId == null,
+      clearSelectedCircuitId: circuitChanged && nextCircuitId == null,
+      selectedCircuitId: nextCircuitId,
     );
     emit(
       copyWith,
@@ -149,17 +154,20 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     BuildingPageToolState mode, {
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
+    String? selectedCircuitId,
   }) {
     if (mode is SplToolState) {
       return SplSelectToolState(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedCircuitId: selectedCircuitId,
       );
     }
     if (mode is SystemSelectToolState) {
       return SystemSelectToolState(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedCircuitId: selectedCircuitId,
       );
     }
     // if (mode == ToolbarMode.acoustics) {
@@ -167,6 +175,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     return SelectToolState(
       selectedListeningAreaId: selectedListeningAreaId,
       selectedSpeakerId: selectedSpeakerId,
+      selectedCircuitId: selectedCircuitId,
     );
     // }
     // return SystemToolState();
@@ -175,13 +184,16 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
   BuildingPageToolState _toolStateWithProjectSelection(BuildingPageToolState toolState) {
     final String? selectedListeningAreaId = _projectViewModel.currentSelectedListeningAreaId;
     final String? selectedSpeakerId = _projectViewModel.currentSelectedHardwareId;
+    final String? selectedCircuitId = _projectViewModel.currentSelectedCircuitId;
 
     if (toolState case final SelectToolState value) {
       return value.copyWith(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedCircuitId: selectedCircuitId,
         clearSelectedListeningAreaId: selectedListeningAreaId == null,
         clearSelectedSpeakerId: selectedSpeakerId == null,
+        clearSelectedCircuitId: selectedCircuitId == null,
       );
     }
 
@@ -222,8 +234,55 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
 
   void selectWall(String id) {
     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-    
+  }
+
+  void selectListingArea(String id) {
+    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(id);
+  }
+
+  void selectHardware(HardwareComponent hardware) {
+    final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+    // print("Selecting hardware ${hardware.name} with id ${hardware.id} and type ${hardware.runtimeType}");
+    if (hardware is Speaker) {
+      if (state.toolbarMode == ToolbarMode.system) {
+        final String? id2 = projectVM.getCircuitForHardware(hardwareId: hardware.id)?.id;
+        // if (id2 == state.selectedCircuitId) {
+        //   print("Same circuit selected. Returning.");
+        //   return;
+        // }
+        // print("Selecting circuit with id $id2 for hardware ${hardware.name}");
+        projectVM.setCurrentSelectedCircuit(id2);
+        return;
+      }
+    }
+
+    // print("Selecting hardware with id ${hardware.id} for hardware ${hardware.name}");
+
+    projectVM.setCurrentSelectedHardware(hardware.id);
+  }
+
+  List<String> transformLayerIdForSelection({required String layerId, required List<HardwareComponent>? hardwareInFloorWithPosition}) {
+    // return <String>[layerId];
+    if (state.toolbarMode == ToolbarMode.system) {
+      final HardwareComponent? hardware = hardwareInFloorWithPosition?.firstWhereOrNull(
+        (HardwareComponent e) => e.id == layerId,
+      );
+      if (hardware != null && hardware is Speaker) {
+        final String? circuitHardwareIds =
+            serviceLocator<ProjectViewModel>()
+                .getCircuitForHardware(
+                  hardwareId: hardware.id,
+                )
+                ?.id;
+        if (circuitHardwareIds == null) return <String>[layerId];
+        // print("Retunning layer ids for selection. hardware id: ${hardware.id}, circuit id: $circuitHardwareIds");
+        return <String>[
+          ...serviceLocator<ProjectViewModel>().getHardwareForCircuit(circuitId: circuitHardwareIds).map((HardwareComponent e) => e.id),
+          // circuitHardwareIds,
+        ];
+      }
+    }
+    return <String>[layerId];
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/processing_block_model.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/models/algorithm/algorithm_metadata.dart';
 import '../../../../core/service_locator.dart';
@@ -15,7 +16,6 @@ import '../../../processing_block/view/widgets/pb_textfield.dart';
 import '../../../processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import '../../source_mix.dart';
 import '../neumorphic_audio_toggle_button.dart';
-import 'package:provider/provider.dart';
 
 class ZonesGainBlockWidget extends StatelessWidget {
   const ZonesGainBlockWidget({
@@ -114,7 +114,7 @@ class ZonesGainBlockWidget extends StatelessWidget {
                                     children: <Widget>[
                                       VerticalSlider(
                                         semanticId: 'slider_and_meter_widget',
-                                        value: context.watch<GainController>().currentGainSliderValue ?? 0,
+                                        value: context.watch<GainController>().currentGainValue,
                                         min: -60.0,
                                         max: 12.0,
                                         showIntervals: true,

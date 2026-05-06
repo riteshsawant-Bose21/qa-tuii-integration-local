@@ -215,7 +215,9 @@ class SelectionToolHelper extends FusionCanvasToolTransformer<SelectToolState> {
               ? (currentState.selectedLayerIds.contains(hoveredPainterId)
                   ? (<String>{...currentState.selectedLayerIds}..remove(hoveredPainterId))
                   : (<String>{...currentState.selectedLayerIds}..add(hoveredPainterId)))
-              : <String>{hoveredPainterId};
+              : <String>{
+                ...selectionToolParams.transformSelectedLayerIds?.call(hoveredPainterId) ?? <String>[hoveredPainterId],
+              };
 
       final Set<String> effectiveSelectedElementIds =
           (multiSelectEnabled && context.inputState.isShiftPressed)
