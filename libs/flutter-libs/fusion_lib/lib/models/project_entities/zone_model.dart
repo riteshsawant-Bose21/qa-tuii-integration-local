@@ -52,7 +52,6 @@ class Zone {
     '#80DEEA', // Light Cyan
     '#FFAB91', // Peach
     '#AED581', // Mint Green
-    '#F48FB1', // Rose Pink
   ];
 
   static getRandomColor() {

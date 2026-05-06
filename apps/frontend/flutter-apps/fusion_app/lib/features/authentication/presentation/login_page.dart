@@ -4,9 +4,13 @@ import 'package:fusion_app/core/service_locator.dart';
 import 'package:fusion_app/core/utils/fusion_utils.dart';
 import 'package:fusion_app/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/button/button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/icon_button.dart';
+import 'package:fusion_app/features/shared/presentation/widgets/common/button/outline_button.dart';
 import 'package:fusion_app/features/shared/presentation/widgets/common/divider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/fusion_lib.dart' hide FusionContainer;
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/constants/semantics/features/mobile/auth/auth_keys.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 int loggedInUserId = 0;
 class FusionLoginScreen extends StatelessWidget {
@@ -130,13 +134,16 @@ class _LoginBottomPanel extends StatelessWidget {
               //     )
               //   ),
               // ),
-              CustomButton(
-                backGroundColor: context.colorScheme.primary,
-                padding: EdgeInsetsGeometry.zero,
-                bottomPadding: 0,
-                enabled: ValueNotifier(true),
-                buttonText: 'Login',
-                onPressed: () => _handleAuthAction(context, isAuthenticated),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.loginButton),
+                child: CustomButton(
+                  backGroundColor: context.colorScheme.primary,
+                  padding: EdgeInsetsGeometry.zero,
+                  bottomPadding: 0,
+                  enabled: ValueNotifier(true),
+                  buttonText: 'Login',
+                  onPressed: () => _handleAuthAction(context, isAuthenticated),
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -180,15 +187,17 @@ class _LoginBottomPanel extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              CustomButton(
-                padding: EdgeInsetsGeometry.zero,
-                bottomPadding: 0,
-                enabled: ValueNotifier(true),
-                buttonText: 'Scan QR for Wall Controllers',
-                onPressed: () {
-                  loggedInUserId = 1;
-                  Navigator.pushNamed(context, Routes.qrScannerPage);
-                },
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.scanQRButton),
+                child: CustomOutlineIconButton(
+                  icon: LucideIcons.scanLine,
+                  enabled: ValueNotifier(true),
+                  buttonText: 'Scan QR for Wall Controllers',
+                  onPressed: () {
+                    loggedInUserId = 1;
+                    Navigator.pushNamed(context, Routes.qrScannerPage);
+                  },
+                )
               ),
             ],
           ),

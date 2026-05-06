@@ -4,8 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/mix_scenes.dart';
-import 'package:meta/meta.dart';
 
 import '../../../projects/view_model/block_data/block_data_viewmodel.dart';
 
@@ -97,7 +95,7 @@ class SourceMixViewModel extends Cubit<SourceMixViewModelState> {
         final int index = function.sourceIndex != null && function.sourceIndex!.containsKey(sourceId) ? function.sourceIndex![sourceId]! : 0;
 
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'input_gain',
           dimension: index,
           value: gain,
@@ -125,7 +123,7 @@ class SourceMixViewModel extends Cubit<SourceMixViewModelState> {
         final int index = function.sourceIndex != null && function.sourceIndex!.containsKey(sourceId) ? function.sourceIndex![sourceId]! : 0;
 
         serviceLocator<BlockDataViewmodel>().updateBlockParameterViaAPi(
-          blockId: function.id,
+          blockId: function.paramName,
           parameter: 'input_mute',
           dimension: index,
           value: isMuted,
@@ -153,7 +151,7 @@ class SourceMixViewModel extends Cubit<SourceMixViewModelState> {
         return;
       }
 
-      final Map<String, dynamic>? data = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: function.id);
+      final Map<String, dynamic>? data = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: function.paramName);
       if (data == null) return;
 
       final List<MixSettings>? mixSettings = function.mixSettings;
