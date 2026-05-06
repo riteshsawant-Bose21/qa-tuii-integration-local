@@ -90,17 +90,19 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
             ],
           ],
 
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () {
-              final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
-              vm.toggleAddNewListeningArea(!vm.state.shouldAddNewListeningArea);
-            },
-            child: FusionAppText(
-              text: speakerSelection.state.shouldAddNewListeningArea ? "Cancel" : "+ Add new listening area",
-              style: context.textTheme.l1Regular,
+          if (!isFromBuildingPage) ...<Widget>[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () {
+                final SpeakerSelectionViewModel vm = context.read<SpeakerSelectionViewModel>();
+                vm.toggleAddNewListeningArea(!vm.state.shouldAddNewListeningArea);
+              },
+              child: FusionAppText(
+                text: speakerSelection.state.shouldAddNewListeningArea ? "Cancel" : "+ Add new listening area",
+                style: context.textTheme.l1Regular,
+              ),
             ),
-          ),
+          ],
 
           ///
           /// ======== Listener Height Selection =======
