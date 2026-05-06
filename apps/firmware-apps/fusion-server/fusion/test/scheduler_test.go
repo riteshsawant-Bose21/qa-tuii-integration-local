@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -50,6 +51,10 @@ func enableTaskURL(id string) string {
 
 func disableTaskURL(id string) string {
 	return scheduleTasksURL(strings.Replace(routes.TasksIdDisableEndpoint, "{id}", id, 1))
+}
+
+func scheduledMessageURL(id string) string {
+	return scheduleTasksURL(strings.Replace(routes.PAVAScheduleIDEndpoint, "{id}", id, 1))
 }
 
 // clearAllTasks removes all existing tasks via REST so each test runs from a clean slate.
@@ -190,6 +195,140 @@ func TestTasksHistoryEndpoints(t *testing.T) {
 	var history []map[string]any
 	require.NoError(t, json.Unmarshal(body, &history))
 	// Not asserting length, since history depends on live task execution.
+}
+
+func TestScheduledMessageEmptyZonesRoundTrip(t *testing.T) {
+	clearAllTasks(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	meta := uploadAudio(t, ctx, audioServerAddr, "scheduled_empty_zones.wav", wav, "Scheduled Empty Zones")
+	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
+
+	taskMessage := api.TaskMessage{
+		ID:          "scheduled-message-empty-zones",
+		Description: "Scheduled message with implicit all zones",
+		CronExpr:    "@every 1m",
+		MessageID:   meta.Id,
+		Priority:    100,
+		Zones:       []string{},
+	}
+
+	payload, err := json.Marshal(taskMessage)
+	require.NoError(t, err)
+
+	resp, err := http.Post(scheduleTasksURL(routes.PAVAScheduleEndpoint), api.JsonMIMEType, bytes.NewReader(payload))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	listResp, err := http.Get(scheduleTasksURL(routes.PAVAScheduleEndpoint))
+	require.NoError(t, err)
+	defer listResp.Body.Close()
+	require.Equal(t, http.StatusOK, listResp.StatusCode)
+
+	var scheduled []api.TaskMessage
+	require.NoError(t, json.NewDecoder(listResp.Body).Decode(&scheduled))
+
+	found := false
+	for _, message := range scheduled {
+		if message.ID == taskMessage.ID {
+			found = true
+			assert.Empty(t, message.Zones)
+			assert.Equal(t, meta.Id, message.MessageID)
+		}
+	}
+	require.True(t, found, "expected scheduled message to be listed")
+
+	zone := []string{"Lobby"}
+	patch := api.TaskMessagePatch{
+		Zones: &zone,
+	}
+	patchBody, err := json.Marshal(patch)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, scheduledMessageURL(taskMessage.ID), bytes.NewReader(patchBody))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	patchResp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	patchResp.Body.Close()
+	require.Equal(t, http.StatusOK, patchResp.StatusCode)
+
+	clearZone := []string{}
+	patch = api.TaskMessagePatch{
+		Zones: &clearZone,
+	}
+	patchBody, err = json.Marshal(patch)
+	require.NoError(t, err)
+
+	req, err = http.NewRequest(http.MethodPatch, scheduledMessageURL(taskMessage.ID), bytes.NewReader(patchBody))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	patchResp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	patchResp.Body.Close()
+	require.Equal(t, http.StatusOK, patchResp.StatusCode)
+
+	listResp, err = http.Get(scheduleTasksURL(routes.PAVAScheduleEndpoint))
+	require.NoError(t, err)
+	defer listResp.Body.Close()
+	require.Equal(t, http.StatusOK, listResp.StatusCode)
+
+	scheduled = nil
+	require.NoError(t, json.NewDecoder(listResp.Body).Decode(&scheduled))
+
+	found = false
+	for _, message := range scheduled {
+		if message.ID == taskMessage.ID {
+			found = true
+			assert.Empty(t, message.Zones)
+		}
+	}
+	require.True(t, found, "expected scheduled message to remain listed after clearing zones")
+}
+
+func TestScheduledMessageEmitsZonesPayloadLocal(t *testing.T) {
+	clearAllTasks(t)
+	defer clearAllTasks(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	baseURL := localAudioBaseURL(t)
+	listener := listenForMessageTrigger(t)
+	defer listener.Close()
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	meta := uploadAudio(t, ctx, baseURL, "scheduled_zones_payload.wav", wav, "Scheduled Zones Payload")
+	defer deleteAudio(t, ctx, baseURL, meta.Id)
+
+	taskMessage := api.TaskMessage{
+		ID:          "scheduled-message-zones-payload",
+		Description: "Scheduled message with explicit zones",
+		CronExpr:    "@every 1s",
+		MessageID:   meta.Id,
+		Priority:    55,
+		Zones:       []string{"lobby", "gym"},
+	}
+
+	payload, err := json.Marshal(taskMessage)
+	require.NoError(t, err)
+
+	resp, err := http.Post(scheduleTasksURL(routes.PAVAScheduleEndpoint), api.JsonMIMEType, bytes.NewReader(payload))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	trigger := awaitMessageTriggerPayload(t, listener, 4*time.Second)
+	assert.Equal(t, meta.Id, trigger.ID)
+	assert.Equal(t, 55, trigger.Priority)
+	assert.Equal(t, []string{"lobby", "gym"}, trigger.Zones)
+	assert.NotZero(t, trigger.Timestamp)
 }
 
 // ----------------------------------------------------------------------

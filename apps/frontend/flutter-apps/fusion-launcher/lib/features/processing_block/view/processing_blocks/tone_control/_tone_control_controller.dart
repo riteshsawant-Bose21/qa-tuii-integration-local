@@ -17,12 +17,12 @@ class ToneController {
   }
 
   // Low gain controls
-  num? get currentLowGain {
+  num get currentLowGain {
     final dynamic gainValue = allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'low_gain' && e.dimension == null)?.value;
     if (gainValue == null) {
-      return null;
+      return 0.0;
     }
-    return DeserializationUtil.numDeserializer.deserialize(gainValue);
+    return DeserializationUtil.numDeserializer.deserialize(gainValue)??0.0;
   }
 
   void updateLowGain(num value) {
@@ -38,12 +38,12 @@ class ToneController {
   }
 
   // Mid gain controls
-  num? get currentMidGain {
+  num get currentMidGain {
     final dynamic gainValue = allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'mid_gain' && e.dimension == null)?.value;
     if (gainValue == null) {
-      return null;
+      return 0.0;
     }
-    return DeserializationUtil.numDeserializer.deserialize(gainValue);
+    return DeserializationUtil.numDeserializer.deserialize(gainValue)??0.0;
   }
 
   void updateMidGain(num value) {
@@ -59,12 +59,12 @@ class ToneController {
   }
 
   // High gain controls
-  num? get currentHighGain {
+  num get currentHighGain {
     final dynamic gainValue = allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'high_gain' && e.dimension == null)?.value;
     if (gainValue == null) {
-      return null;
+      return 0.0;
     }
-    return DeserializationUtil.numDeserializer.deserialize(gainValue);
+    return DeserializationUtil.numDeserializer.deserialize(gainValue)??0.0;
   }
 
   void updateHighGain(num value) {
