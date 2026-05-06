@@ -35,6 +35,16 @@ class FusionNetworkClient {
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
 
+  String getApiUrl(
+    FusionApiEndpoint api, {
+    String? baseUrlToOverride,
+    bool isSecure = true,
+  }) => geApiUrl(
+    api,
+    baseUrlToOverride: baseUrlToOverride,
+    isSecure: isSecure,
+  );
+
   String geApiUrl(
     FusionApiEndpoint api, {
     String? baseUrlToOverride,
@@ -853,8 +863,10 @@ enum FusionApiEndpoint {
   sceneSets('/scene-sets', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
+  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer),
   sceneSetsActivate('/scene-sets/activate', FusionApiType.fusionServer),
   snapshotsActivate('/snapshots/activate', FusionApiType.fusionServer),
+  clusterReboot('/cluster/reboot', FusionApiType.fusionServer),
   tasks('/tasks', FusionApiType.fusionServer);
 
   final String path;
@@ -873,7 +885,9 @@ extension ApiEndpointTypeCheckExtension on String {
         contains(FusionApiEndpoint.audioSettings.path) ||
         contains(FusionApiEndpoint.snapshots.path) ||
         contains(FusionApiEndpoint.sceneSets.path) ||
-        contains(FusionApiEndpoint.sapSessions.path);
+        contains(FusionApiEndpoint.sapSessions.path) ||
+        contains(FusionApiEndpoint.softwareUpdateUpload.path) ||
+        contains(FusionApiEndpoint.clusterReboot.path);
   }
 
   bool isDroServerEndpoint() {

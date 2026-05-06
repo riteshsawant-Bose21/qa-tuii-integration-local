@@ -429,10 +429,6 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  serviceLocator.registerLazySingleton<GuideShowCaseController>(
-    () => GuideShowCaseController(globalNavigatorKey.currentContext!),
-  );
-
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
   await setupFusionLib(serviceLocator);
 }

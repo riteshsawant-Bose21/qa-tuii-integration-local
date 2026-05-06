@@ -39,8 +39,29 @@ class SoftwareUpdateCubit extends Cubit<UpdateState> {
   static SoftwareUpdateService _ensureServiceInitialized(
     FusionNetworkClient networkClient,
   ) {
+    final String virtualIp =
+        serviceLocator<ProjectViewModel>().virtualIP?.trim() ?? '';
+    if (virtualIp.isEmpty) {
+      throw StateError(
+        'Project virtual IP is not configured for software updates.',
+      );
+    }
+    SoftwareUpdateService.init(
+      SoftwareUpdateConfig(virtualIp: virtualIp),
+      networkClient,
+    );
     return SoftwareUpdateService.instance;
   }
+
+  Future<void> checkForUpdates() => _svc.checkForUpdates();
+
+  void confirmDownload() => _svc.confirmDownload();
+
+  void confirmInstall() => _svc.confirmInstall();
+
+  Future<void> retryPhase() => _svc.retryPhase();
+
+  Future<void> rollback() => _svc.rollback();
 
   @override
   Future<void> close() async {
