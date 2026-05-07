@@ -409,18 +409,11 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
                                         SNDRV_DMA_TYPE_DEV,
                                         &g_pdev->dev,
                                         0, 0);
-        if (err < 0)
-        {
-            pr_err("fusion_cn_alsa: set_managed_buffer failed (%d)\n", err);
+        if (err < 0) {
+            pr_err("fusion_cn_alsa: set_managed_buffer failed for stream %s (%d), reserved OCRAM pool may be exhausted\n",
+                   stream_name, err);
             return err;
         }
-
-        printk(KERN_DEBUG "fusion_cn_alsa: FC ALSA dma_buffer: stream=%s area=%p addr=%pad bytes=%zu type=%d\n",
-               stream_name,
-               substream->dma_buffer.area,
-               &substream->dma_buffer.addr,
-               substream->dma_buffer.bytes,
-               substream->dma_buffer.dev.type);
     }
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
@@ -471,8 +464,6 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     spin_unlock_irq(&stream->lock);
 
     printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
-    printk(KERN_DEBUG "fusion_cn_alsa: FC runtime buffer: stream=%s dma_area=%p dma_addr=%pad dma_bytes=%zu\n",
-           stream->stream_name, runtime->dma_area, &runtime->dma_addr, runtime->dma_bytes);
 
     return 0;
 }
