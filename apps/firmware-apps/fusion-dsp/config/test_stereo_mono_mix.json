@@ -1,0 +1,96 @@
+{
+    "session": {
+        "property_settings": [
+            { "name": "frame_size", "value": 32},
+            { "name": "sample_rate", "value": 48000 }
+        ]
+    },
+    "audio_tasks": [
+        {
+            "name": "task1",
+            "property_settings": [
+                { "name": "is_jack_client", "value": false },
+                { "name": "frame_size", "value": 32},
+                { "name": "sample_rate", "value": 48000 }
+            ],
+            "blocks": [
+                {
+                    "name": "infile",
+                    "algorithm": "wav_read",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32},
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "in_stereo.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "out", "channels": 2 }
+                    ]
+                },
+                {
+                    "name": "mono_mix",
+                    "algorithm": "stereo_mono_mix",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 }
+                    ]
+                },
+                {
+                    "name": "outfile",
+                    "algorithm": "wav_write",
+                    "property_settings": [
+                        { "name": "frame_size", "value": 32 },
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "filename", "value": "out_3ch.wav" }
+                    ],
+                    "terminal_channels": [
+                        { "name": "in", "channels": 3 }
+                    ]
+                }
+            ],
+            "block_connections": [
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "mono_mix",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "infile",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "mono_mix",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                },
+                {
+                    "source_block": "mono_mix",
+                    "output_terminal": "out",
+                    "output_channel": 1,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 1
+                },
+                {
+                    "source_block": "mono_mix",
+                    "output_terminal": "out",
+                    "output_channel": 2,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 2
+                },
+                {
+                    "source_block": "mono_mix",
+                    "output_terminal": "out",
+                    "output_channel": 3,
+                    "destination_block": "outfile",
+                    "input_terminal": "in",
+                    "input_channel": 3
+                }
+            ]
+        }
+    ],
+    "parameter_settings": [
+    ]
+}

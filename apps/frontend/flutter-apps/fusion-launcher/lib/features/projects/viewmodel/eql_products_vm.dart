@@ -208,6 +208,8 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         floorId: floorId,
       ),
       isFromBuildingPage: true,
+    ).copyWith(
+      pos: position,
     );
 
     final HardwareComponent hardware = projectViewModel.assignPortData(
