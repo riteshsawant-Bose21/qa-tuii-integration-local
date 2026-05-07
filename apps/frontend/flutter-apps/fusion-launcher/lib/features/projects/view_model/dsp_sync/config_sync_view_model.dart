@@ -104,9 +104,9 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
     };
 
     //add wall controller config to settings if not null
-    // config.addAll(wallControllerConfig.toJson());
-    //
-    // config.addAll(touchUIZoneConfig.toJson());
+    config.addAll(wallControllerConfig.toJson());
+
+    config.addAll(touchUIZoneConfig.toJson());
 
     final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
       config: config,
