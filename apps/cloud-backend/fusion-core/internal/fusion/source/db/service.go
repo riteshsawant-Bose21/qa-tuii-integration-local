@@ -13,7 +13,6 @@ import (
 // Service provides database operations for the source table.
 type Service struct {
 	db     *sql.DB
-	logger *zap.Logger
 }
 
 // NewService creates a new source database service.
@@ -25,8 +24,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 		panic("logger cannot be nil")
 	}
 	return &Service{
-		db:     db,
-		logger: logger,
+		db: db,
 	}
 }
 

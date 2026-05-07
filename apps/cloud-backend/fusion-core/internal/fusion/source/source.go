@@ -17,7 +17,6 @@ type DatabaseService interface {
 type Service struct {
 	dbService     DatabaseService
 	sourceBaseURL string
-	logger        *zap.Logger
 }
 
 // NewService creates a new source service.
@@ -31,7 +30,6 @@ func NewService(dbService DatabaseService, sourceBaseURL string, logger *zap.Log
 	return &Service{
 		dbService:     dbService,
 		sourceBaseURL: strings.TrimRight(sourceBaseURL, "/"),
-		logger:        logger,
 	}
 }
 
