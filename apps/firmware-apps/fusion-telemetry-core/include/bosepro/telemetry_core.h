@@ -10,6 +10,7 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <variant>
+#include <unordered_set>
 #include <zmq.h>
 #include <zmq.hpp>
 
@@ -254,6 +255,8 @@ private:
 
 class telemetryManager {
 public:
+  using FilterSet = std::unordered_set<std::string>;
+
   telemetryManager() {
     init_success = false;
     meter_update_frame_count = 0;
@@ -771,6 +774,20 @@ public:
   /// Cleanup dead endpoints that are unreachable.
   void cleanup_dead_endpoints(void);
 
+  /// Set the active telemetry filter. Thread-safe atomic swap.
+  ///
+  /// @param new_filter  Shared pointer to the new filter set.
+  void set_filter(std::shared_ptr<const FilterSet> new_filter) {
+    std::atomic_store(&filter_ptr, std::move(new_filter));
+  }
+
+  /// Get the active telemetry filter. Thread-safe.
+  ///
+  /// @param current_filter  Output parameter to hold the current filter set.
+  void get_filter(std::shared_ptr<const FilterSet> &current_filter) {
+    current_filter = std::atomic_load(&filter_ptr);
+  }
+
 private:
   // Publisher list
   std::map<std::string, std::unique_ptr<telemetryPublisher>> publishers;
@@ -801,6 +818,8 @@ private:
   uint32_t report_period_factor[TELM_METER_CTGRY_MAX];
 
   uint32_t publisher_count[TELM_CONN_TYPE_MAX];
+
+  std::shared_ptr<const FilterSet> filter_ptr{std::make_shared<const FilterSet>()};
 
   std::string subscriber_port_address; // Socket address for subscribers
   std::string core_sock_path;          // UNIX sockeet path

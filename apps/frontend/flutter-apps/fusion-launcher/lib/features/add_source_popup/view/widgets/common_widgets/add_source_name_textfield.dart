@@ -49,9 +49,9 @@ class _SourceNameTextfieldState extends State<SourceNameTextfield> {
           child: FusionTextField(
             focusNode: _focusNode,
             semanticFieldId: 'scheduler_form_name_field',
-            hintText: "Enter schedule name",
+            hintText: "Enter source name",
             decoration: InputDecoration(
-              hintText: "Enter schedule name",
+              hintText: "Enter source name",
               hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),
               counterText: '',
               fillColor: _isFocused ? context.colorScheme.elevation2 : Colors.transparent,

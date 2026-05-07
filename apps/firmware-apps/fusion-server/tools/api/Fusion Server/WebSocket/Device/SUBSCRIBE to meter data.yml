@@ -1,0 +1,47 @@
+info:
+  name: SUBSCRIBE to meter data
+  type: websocket
+  seq: 5
+
+websocket:
+  url: ws://{{api_url}}/ws
+  message:
+    type: json
+    data: |
+      {
+        "id": "req-1",
+        "version": 1,
+        "type": "subscribe_meter_data"
+      }
+  auth: inherit
+
+runtime:
+  variables:
+    - name: api_url
+      value: 192.168.2.100:8080
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
+
+docs: |
+  Get a specific device by ID and automatically subscribe to device updates.
+
+  **Response (3000 OK):**
+  ```json
+  {
+    "id": "device-001",
+    "version": 1,
+    "type": "device",
+    "code": 3000,
+    "status": "success",
+    "message": "OK",
+    "data": {
+      "id": "fusion-1",
+      "name": "Device 1",
+      "address": "192.168.1.100",
+      "location": "Building A"
+    },
+    "timestamp": "2026-03-24T10:00:00Z"
+  }
+  ```

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/schematics/presentation/widgets/filter_section.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_amplifier_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_fusion_dsp_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_hardware_rack_viewmodel.dart';
@@ -64,6 +65,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               spacing: 6,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                // const FilterSection(),
+
                 ///------------------------------------------------------------------------------------------------------------------------------------------
                 ///
                 /// 1. Sources & Endpoints
@@ -309,79 +312,79 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 /// 5. Accessories
                 ///
                 ///------------------------------------------------------------------------------------------------------------------------------------------
-                Expanded(
-                  flex: 2,
-                  child: SchematicListingSection(
-                    sectionTitle: "Accessories",
-                    action: AddDeviceExpandablePopupMenuWidget(
-                      sectionTitle: "Accessories",
-                      listeningAreas: _projectViewModel.listeningAreas,
-                      onTapAddDevice: (
-                        dynamic item,
-                        String areaId,
-                        String floorId,
-                      ) {
-                        if (item is RackData) {
-                          final HardwareRack hardwareRack = HardwareRack(
-                            locationEntity: LocationModel(
-                              listeningAreaId: areaId,
-                              floorId: floorId,
-                            ),
-                            name: item.name,
-                            image: item.assetPath,
-                            price: item.price,
-                            hardwareName: item.name,
-                            addedFromBuildingPage: false,
-                          );
-                          serviceLocator<ProjectViewModel>().addHardware(
-                            hardware: hardwareRack,
-                          );
-                          FusionToast.success(
-                            context,
-                            message: "Hardware Rack \"${item.name}\" added",
-                          );
-                        } else if (item is SwitchData) {
-                          final NetworkSwitch networkSwitch = NetworkSwitch(
-                            locationEntity: LocationModel(
-                              listeningAreaId: areaId,
-                              floorId: floorId,
-                            ),
-                            addedFromBuildingPage: false,
-                            name: item.name,
-                            image: item.assetPath,
-                            price: item.price,
-                            hardwareName: item.name,
-                          );
-                          serviceLocator<ProjectViewModel>().addHardware(
-                            hardware: networkSwitch,
-                          );
-                          FusionToast.success(
-                            context,
-                            message: "Switch \"${item.name}\" added",
-                          );
-                        }
-                      },
-                    ),
-                    sections: <Widget>[
-                      SchematicHardwareListing<HardwareRack, SchematicHardwareRacksViewModel>(
-                        create: (BuildContext context) {
-                          return SchematicHardwareRacksViewModel();
-                        },
-                        title: "Racks",
-                      ),
-
-                      const SizedBox(height: 12),
-                      SchematicHardwareListing<NetworkSwitch, SchematicNetworkSwitchesViewModel>(
-                        create: (BuildContext context) {
-                          return SchematicNetworkSwitchesViewModel();
-                        },
-                        title: "Switches",
-                      ),
-
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-                ),
+                // Expanded(
+                //   flex: 2,
+                //   child: SchematicListingSection(
+                //     sectionTitle: "Accessories",
+                //     action: AddDeviceExpandablePopupMenuWidget(
+                //       sectionTitle: "Accessories",
+                //       listeningAreas: _projectViewModel.listeningAreas,
+                //       onTapAddDevice: (
+                //         dynamic item,
+                //         String areaId,
+                //         String floorId,
+                //       ) {
+                //         if (item is RackData) {
+                //           final HardwareRack hardwareRack = HardwareRack(
+                //             locationEntity: LocationModel(
+                //               listeningAreaId: areaId,
+                //               floorId: floorId,
+                //             ),
+                //             name: item.name,
+                //             image: item.assetPath,
+                //             price: item.price,
+                //             hardwareName: item.name,
+                //             addedFromBuildingPage: false,
+                //           );
+                //           serviceLocator<ProjectViewModel>().addHardware(
+                //             hardware: hardwareRack,
+                //           );
+                //           FusionToast.success(
+                //             context,
+                //             message: "Hardware Rack \"${item.name}\" added",
+                //           );
+                //         } else if (item is SwitchData) {
+                //           final NetworkSwitch networkSwitch = NetworkSwitch(
+                //             locationEntity: LocationModel(
+                //               listeningAreaId: areaId,
+                //               floorId: floorId,
+                //             ),
+                //             addedFromBuildingPage: false,
+                //             name: item.name,
+                //             image: item.assetPath,
+                //             price: item.price,
+                //             hardwareName: item.name,
+                //           );
+                //           serviceLocator<ProjectViewModel>().addHardware(
+                //             hardware: networkSwitch,
+                //           );
+                //           FusionToast.success(
+                //             context,
+                //             message: "Switch \"${item.name}\" added",
+                //           );
+                //         }
+                //       },
+                //     ),
+                //     sections: <Widget>[
+                //       SchematicHardwareListing<HardwareRack, SchematicHardwareRacksViewModel>(
+                //         create: (BuildContext context) {
+                //           return SchematicHardwareRacksViewModel();
+                //         },
+                //         title: "Racks",
+                //       ),
+                //
+                //       const SizedBox(height: 12),
+                //       SchematicHardwareListing<NetworkSwitch, SchematicNetworkSwitchesViewModel>(
+                //         create: (BuildContext context) {
+                //           return SchematicNetworkSwitchesViewModel();
+                //         },
+                //         title: "Switches",
+                //       ),
+                //
+                //       const SizedBox(height: 12),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),

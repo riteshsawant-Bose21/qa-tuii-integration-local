@@ -19,7 +19,6 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
               label: "Listening area name",
               semanticId: 'listening_area_name',
               child: FusionBorderedTextField(
-                controller: speakerSelection.ceilingHeightController,
                 semanticId: 'listening_area_name_textfield',
                 hintText: 'Enter listening area name',
                 contentPadding: const EdgeInsets.all(16),
@@ -140,7 +139,7 @@ class SpeakerSelectionLeftContent extends StatelessWidget {
                       contentPadding: const EdgeInsets.all(16),
                       inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))],
                       onChanged: (String value) {
-                        final double height = double.tryParse(value) ?? 1.1;
+                        final double? height = double.tryParse(value);
                         context.read<SpeakerSelectionViewModel>().setFloorHeight(height);
                       },
                     ),
