@@ -1,5 +1,6 @@
 #include "telemetry_core.h"
 #include <sys/stat.h>
+#include <boost/property_tree/json_parser.hpp>
 #include "telemetry_msg_handler.h"
 
 #define  UPDATE_REQ_TIMEOUT_NS (1000000000L * 10)
@@ -54,7 +55,22 @@ int bosepro::telemetryManager::process_rx_packet(std::string& packet)
     bosepro::HandlerContext handler_ctx;  // Shared req/rsp typed context.
 
     std::stringstream pkt_strm(packet);
-    bosepro::Telemetry_configuration packet_navi(pkt_strm);
+    std::unique_ptr<bosepro::Telemetry_configuration> packet_navi_ptr;
+    try
+    {
+        packet_navi_ptr = std::make_unique<bosepro::Telemetry_configuration>(pkt_strm);
+    }
+    catch (const boost::property_tree::json_parser::json_parser_error& e)
+    {
+        SPDLOG_ERROR("Failed to parse incoming packet JSON: {} at line {}", e.what(), e.line());
+        return -1;
+    }
+    catch (const std::exception& e)
+    {
+        SPDLOG_ERROR("Exception parsing incoming packet: {}", e.what());
+        return -1;
+    }
+    auto& packet_navi = *packet_navi_ptr;
 
     if ( packet_navi.get_value("message_name", msg_name) &&
          packet_navi.get_value("packet_id", pkt_id) )
@@ -219,7 +235,10 @@ void bosepro::telemetryManager::send_update_request()
 
 int bosepro::telemetryManager::send_meter_data(std::ostringstream& meter_data)
 {
-
+    if (meter_data.str().empty())
+    {
+        return 0;
+    }
     return subscriber_channel.send(meter_data.str());
 }
 
