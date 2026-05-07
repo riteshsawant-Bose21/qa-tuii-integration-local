@@ -3,9 +3,11 @@
 /// -------------------
 enum RelationshipType {
   floorAreas,
+  floorWalls,
   zoneAreas,
   zoneSourceSet,
   zoneSources,
+  zoneEndpoints,
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,
@@ -31,6 +33,7 @@ enum RelationshipType {
   messageMediaMapping,
   aes67InputStreams,
   aes67OutputStreams,
+  sourceStreamMapping,
 
   // /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
   // /// Mirrors the [messageZones] pattern used by the message player.

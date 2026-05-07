@@ -24,10 +24,8 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
       Aes67Config stream;
 
       if (existingStream != null) {
-        // Editing existing stream
         stream = existingStream;
       } else if (_streamId != null) {
-        // Load from ProjectViewModel
         final Aes67Config? loadedStream = _projectViewModel.getAes67OutputStreamById(_streamId!);
         if (loadedStream == null) {
           emit(const OutputStreamError(message: 'Stream not found'));
@@ -35,7 +33,6 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
         }
         stream = loadedStream;
       } else {
-        // Create new stream with defaults
         stream = Aes67Config(
           name: 'New Output Stream',
           streamType: Aes67StreamType.output,
@@ -44,12 +41,7 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
         );
       }
 
-      emit(
-        OutputStreamLoaded(
-          stream: stream,
-          isAdvancedExpanded: false,
-        ),
-      );
+      emit(OutputStreamLoaded(stream: stream, isAdvancedExpanded: false));
     } catch (e) {
       emit(OutputStreamError(message: e.toString()));
     }
@@ -140,10 +132,8 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
 
     try {
       if (_streamId != null) {
-        // Update existing stream
         _projectViewModel.updateAes67OutputStream(stream: s.stream);
       } else {
-        // Add new stream
         _projectViewModel.addAes67OutputStream(stream: s.stream);
       }
     } catch (e) {
@@ -151,14 +141,10 @@ class OutputStreamViewmodel extends Cubit<OutputStreamState> {
     }
   }
 
-  // ── Get current stream ────────────────────────────────────────────────────
-
   Aes67Config? getCurrentStream() {
     final OutputStreamLoaded? s = _loaded;
     return s?.stream;
   }
-
-  // ── Private helper ────────────────────────────────────────────────────────
 
   OutputStreamLoaded? get _loaded {
     final OutputStreamState s = state;

@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
+
 import '../../../fusion_lib.dart';
 import '../../../models/project_entities/controller_page_model.dart';
 
@@ -74,6 +76,8 @@ abstract class Repository<T> {
 class FloorRepository extends Repository<FloorModel> {}
 
 class ListeningAreaRepository extends Repository<ListeningArea> {}
+
+class WallRepository extends Repository<Wall> {}
 
 class ZoneRepository extends Repository<Zone> {
   ZoneRepository copyWith(Map<String, Zone> items) {

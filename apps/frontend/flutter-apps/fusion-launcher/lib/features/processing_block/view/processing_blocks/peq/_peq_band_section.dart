@@ -120,8 +120,8 @@ class _PeqBandSection extends StatelessWidget {
                               BuildContext context,
                               _BandType option,
                             ) {
-                              return Text(
-                                option.label,
+                              return FusionAppText(
+                                text: option.label,
                                 style: context.textTheme.bodySmall,
                               );
                             },
@@ -178,8 +178,8 @@ class _PeqBandSection extends StatelessWidget {
                                         BuildContext context,
                                         _CutType option,
                                       ) {
-                                        return Text(
-                                          option.label,
+                                        return FusionAppText(
+                                          text: option.label,
                                           style: context.textTheme.bodySmall,
                                         );
                                       },
@@ -209,18 +209,25 @@ class _PeqBandSection extends StatelessWidget {
                             width: 60,
                             height: 35,
                             onChanged: (bool value) {
-                              controller.updateBypass(index, value);
+                              controller.updateBypass(index, !value);
                             },
                           ),
                         ),
-                        InkWell(
-                          onTap: () {
-                            controller.removeBand(index);
-                          },
-                          child: Icon(
-                            LucideIcons.trash200,
-                            size: 16,
-                            color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                        SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "peq_band_delete_button_$index",
+                          ),
+                          isEnabled: controller.canDelete,
+                          child: InkWell(
+                            onTap: () {
+                              controller.removeBand(index);
+                            },
+                            child: Icon(
+                              LucideIcons.trash200,
+                              size: 16,
+                              color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                            ),
                           ),
                         ),
                       ],

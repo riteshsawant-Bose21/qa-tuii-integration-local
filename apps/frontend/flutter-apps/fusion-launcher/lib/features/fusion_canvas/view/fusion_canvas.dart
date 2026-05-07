@@ -39,6 +39,7 @@ class FusionCanvas extends StatelessWidget {
     this.selectedIds,
     this.cursorBuilder,
     this.onCanvasPainterReady,
+    this.selectionToolParam,
     this.tools = const <FusionCanvasTool<FusionToolState>>[
       FusionCanvasTool.measureTool,
       FusionCanvasTool.penTool,
@@ -51,7 +52,7 @@ class FusionCanvas extends StatelessWidget {
   final FusionCanvasEvents? toolbarEvents;
   final List<FusionCanvasTool<FusionToolState>> tools;
   final ValueChanged<FusionCanvasPainter>? onCanvasPainterReady;
-
+  final SelectionToolPainterParam? selectionToolParam;
   final CursorBuilder? cursorBuilder;
 
   /// Set of selected layer IDs to sync with selection state
@@ -101,6 +102,7 @@ class FusionCanvas extends StatelessWidget {
                         FusionSnapState snapState,
                       ) {
                         final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
+
                         final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
                           state: state,
                           context: context,
@@ -116,6 +118,7 @@ class FusionCanvas extends StatelessWidget {
                               SelectionToolPainter(
                                 state: toolState,
                                 allPainters: elements,
+                                param: selectionToolParam ?? const SelectionToolPainterParam(),
                               ),
 
                             if (toolState is! IdleSelectToolState)
@@ -287,7 +290,9 @@ class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
   final FusionCanvasInputEvents? inputEvents;
   final ValueChanged<List<FusionBasePainter>?>? onLayerSelected;
+  final ValueChanged<List<FusionBasePainter>>? onLayerDragStart;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
+  final void Function(FusionBasePainter painter, Offset offset)? onMoveLayerDuringDrag;
   final bool Function(FusionBasePainter painter, FusionCanvasElement? element)? onElementClicked;
 
   final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line)? onAddPoints;
@@ -300,7 +305,9 @@ class FusionCanvasEvents {
   FusionCanvasEvents({
     this.penToolEvents,
     this.onLayerSelected,
+    this.onLayerDragStart,
     this.onMoveLayer,
+    this.onMoveLayerDuringDrag,
     this.onAddPoints,
     this.onRemovePoints,
     this.onDeleteLayer,
@@ -313,8 +320,9 @@ class FusionCanvasEvents {
 class FusionPenToolEvents {
   final ValueChanged<List<FusionCanvasPoint>>? onPointsChanged;
   final ValueChanged<List<FusionCanvasPoint>>? onPathClosed;
+  final ValueChanged<List<FusionCanvasPoint>>? onPathCancelled;
 
-  FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
+  FusionPenToolEvents({this.onPointsChanged, this.onPathClosed, this.onPathCancelled});
 }
 
 ///

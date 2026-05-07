@@ -18,6 +18,13 @@ PODS:
   - flutter_blue_plus_darwin (0.0.2):
     - Flutter
     - FlutterMacOS
+  - flutter_inappwebview_ios (0.0.1):
+    - Flutter
+    - flutter_inappwebview_ios/Core (= 0.0.1)
+    - OrderedSet (~> 6.0.3)
+  - flutter_inappwebview_ios/Core (0.0.1):
+    - Flutter
+    - OrderedSet (~> 6.0.3)
   - flutter_secure_storage (6.0.0):
     - Flutter
   - just_audio (0.0.1):
@@ -29,6 +36,7 @@ PODS:
   - mobile_scanner (7.0.0):
     - Flutter
     - FlutterMacOS
+  - OrderedSet (6.0.3)
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -48,6 +56,7 @@ DEPENDENCIES:
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_blue_plus_darwin (from `.symlinks/plugins/flutter_blue_plus_darwin/darwin`)
+  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - just_audio (from `.symlinks/plugins/just_audio/darwin`)
   - light (from `.symlinks/plugins/light/ios`)
@@ -61,6 +70,7 @@ SPEC REPOS:
   trunk:
     - Auth0
     - JWTDecode
+    - OrderedSet
     - SimpleKeychain
 
 EXTERNAL SOURCES:
@@ -76,6 +86,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_blue_plus_darwin:
     :path: ".symlinks/plugins/flutter_blue_plus_darwin/darwin"
+  flutter_inappwebview_ios:
+    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   just_audio:
@@ -101,11 +113,13 @@ SPEC CHECKSUMS:
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_blue_plus_darwin: 20a08bfeaa0f7804d524858d3d8744bcc1b6dbc3
+  flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
   JWTDecode: 7dae24cb9bf9b608eae61e5081029ec169bb5527
   light: 6490592116da81837a414ef49387bbea7a5ed375
   mobile_scanner: 9157936403f5a0644ca3779a38ff8404c5434a93
+  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb

@@ -8,6 +8,7 @@ require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
 	github.com/go-ping/ping v1.2.0
+	github.com/go-zeromq/zmq4 v0.17.0
 	github.com/goccy/go-json v0.10.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -16,8 +17,13 @@ require (
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.11.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
+)
+
+require (
+	github.com/go-zeromq/goczmq/v4 v4.2.2 // indirect
+	github.com/vishvananda/netlink v1.3.1 // indirect
+	golang.org/x/text v0.23.0 // indirect
 )
 
 replace github.com/go-ble/ble => ../third-party/go-ble
@@ -46,7 +52,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
@@ -70,5 +76,5 @@ require (
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	golang.org/x/net v0.38.0
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.31.0
 )

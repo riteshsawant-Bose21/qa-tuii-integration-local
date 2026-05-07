@@ -41,36 +41,130 @@ class WallControllerConfig {
 class WallController {
   final String id;
   final String name;
+
+  /// Controller type: 'pro' or 'lt'.
+  final String type;
   final List<String> zoneIds;
+  final List<WallPages> pages;
+  final List<WallMessagePlayer> messagePlayer;
+  final WallSchedule? schedule;
 
   const WallController({
     required this.id,
     required this.name,
+    this.type = 'lt',
     this.zoneIds = const [],
+    this.pages = const [],
+    this.messagePlayer = const [],
+    this.schedule,
   });
 
   WallController copyWith({
     String? id,
     String? name,
+    String? type,
     List<String>? zoneIds,
+    List<WallPages>? pages,
+    List<WallMessagePlayer>? messages,
+    WallSchedule? schedule,
   }) {
     return WallController(
       id: id ?? this.id,
       name: name ?? this.name,
+      type: type ?? this.type,
       zoneIds: zoneIds ?? this.zoneIds,
+      pages: pages ?? this.pages,
+      messagePlayer: messages ?? this.messagePlayer,
+      schedule: schedule ?? this.schedule,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
+    'type': type,
     'zoneIds': zoneIds,
+    'pages': pages.map((p) => p.toJson()).toList(),
+    'messages': messagePlayer.map((m) => m.toJson()).toList(),
+    'schedule': schedule?.toJson(),
   };
 
   factory WallController.fromJson(Map<String, dynamic> json) => WallController(
     id: json['id'] as String,
     name: json['name'] as String,
+    type: json['type'] as String? ?? 'lt',
     zoneIds: (json['zoneIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+    pages: (json['pages'] as List<dynamic>?)?.map((e) => WallPages.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+    messagePlayer: (json['messages'] as List<dynamic>?)?.map((e) => WallMessagePlayer.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+    schedule: json['schedule'] != null ? WallSchedule.fromJson(Map<String, dynamic>.from(json['schedule'] as Map)) : const WallSchedule(),
+  );
+}
+
+class WallMessagePlayer {
+  final String id;
+  final String name;
+  final List<WallMessage> messages;
+  WallMessagePlayer({
+    required this.id,
+    required this.name,
+    this.messages = const [],
+  });
+
+  WallMessagePlayer copyWith({
+    String? id,
+    String? name,
+    List<WallMessage>? messages,
+  }) {
+    return WallMessagePlayer(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      messages: messages ?? this.messages,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'messages': messages.map((m) => m.toJson()).toList(),
+  };
+
+  factory WallMessagePlayer.fromJson(Map<String, dynamic> json) => WallMessagePlayer(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    messages: (json['messages'] as List<dynamic>?)?.map((e) => WallMessage.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+  );
+}
+
+class WallMessage {
+  final String id;
+  final String name;
+  final String? trigger;
+  WallMessage({
+    required this.id,
+    required this.name,
+    this.trigger,
+  });
+  WallMessage copyWith({
+    String? id,
+    String? name,
+    String? trigger,
+  }) {
+    return WallMessage(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      trigger: trigger ?? this.trigger,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'trigger': trigger,
+  };
+  factory WallMessage.fromJson(Map<String, dynamic> json) => WallMessage(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    trigger: json['trigger'] != null ? json['trigger'] as String : null,
   );
 }
 
@@ -87,7 +181,7 @@ class WallZone {
   final List<WallZoneSource> sources;
   final List<WallSubZone> subZones;
 
-  const WallZone({
+  WallZone({
     required this.id,
     required this.name,
     required this.gain,
@@ -116,6 +210,8 @@ class WallZone {
       subZones: subZones ?? this.subZones,
     );
   }
+
+  int sourceSelected = 0;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
@@ -306,10 +402,10 @@ class WallGainConfig {
 
   const WallGainConfig({
     required this.gainID,
-    this.defaultGainValue = '50',
-    this.defaultMuteValue = '50',
-    this.minValue = '0',
-    this.maxValue = '100',
+    this.defaultGainValue = '0',
+    this.defaultMuteValue = '0',
+    this.minValue = '-60',
+    this.maxValue = '12',
   });
 
   WallGainConfig copyWith({
@@ -428,5 +524,181 @@ class WallSubZone {
     name: json['name'] as String,
     gain: WallGainConfig.fromJson(Map<String, dynamic>.from(json['gain'] as Map)),
     ono: WallSubZoneOno.fromJson(Map<String, dynamic>.from(json['ono'] as Map)),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallScheduleItem – a single selected schedule entry inside WallSchedule
+// ---------------------------------------------------------------------------
+
+class WallScheduleItem {
+  final String id;
+  final String name;
+  final bool isDisabled;
+  final String color;
+  final DateTime date;
+  final DateTime time;
+
+  const WallScheduleItem({
+    required this.id,
+    required this.name,
+    this.isDisabled = false,
+    required this.color,
+    required this.date,
+    required this.time,
+  });
+
+  WallScheduleItem copyWith({
+    String? id,
+    String? name,
+    String? eventName,
+    bool? isDisabled,
+    String? color,
+    DateTime? date,
+    DateTime? time,
+  }) {
+    return WallScheduleItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isDisabled: isDisabled ?? this.isDisabled,
+      color: color ?? this.color,
+      date: date ?? this.date,
+      time: time ?? this.time,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+    'isDisabled': isDisabled,
+    'color': color,
+    'date': date.toIso8601String(),
+    'time': time.toIso8601String(),
+  };
+
+  factory WallScheduleItem.fromJson(Map<String, dynamic> json) => WallScheduleItem(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    isDisabled: json['isDisabled'] as bool? ?? false,
+    color: json['color'] as String,
+    date: DateTime.parse(json['date'] as String),
+    time: json['time'] != null ? DateTime.parse(json['time'] as String) : DateTime.now(),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallSchedule – schedule config embedded in WallController
+// ---------------------------------------------------------------------------
+
+class WallSchedule {
+  /// Whether "Show upcoming items" is enabled.
+  final bool showUpcoming;
+
+  /// Selected schedule items for this controller.
+  final List<WallScheduleItem> selectedScheduleData;
+
+  const WallSchedule({
+    this.showUpcoming = false,
+    this.selectedScheduleData = const [],
+  });
+
+  WallSchedule copyWith({
+    bool? showUpcoming,
+    List<WallScheduleItem>? selectedScheduleData,
+  }) {
+    return WallSchedule(
+      showUpcoming: showUpcoming ?? this.showUpcoming,
+      selectedScheduleData: selectedScheduleData ?? this.selectedScheduleData,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'showUpcoming': showUpcoming,
+    'selectedScheduleData': selectedScheduleData.map((s) => s.toJson()).toList(),
+  };
+
+  factory WallSchedule.fromJson(Map<String, dynamic> json) => WallSchedule(
+    showUpcoming: json['showUpcoming'] as bool? ?? false,
+    selectedScheduleData:
+        (json['selectedScheduleData'] as List<dynamic>?)?.map((e) => WallScheduleItem.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallPageSnapshot – a snapshot/scene reference inside a WallPages entry
+// ---------------------------------------------------------------------------
+
+class WallPageSnapshot {
+  final String id;
+  final String name;
+
+  const WallPageSnapshot({
+    required this.id,
+    required this.name,
+  });
+
+  WallPageSnapshot copyWith({String? id, String? name}) => WallPageSnapshot(id: id ?? this.id, name: name ?? this.name);
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'name': name,
+  };
+
+  factory WallPageSnapshot.fromJson(Map<String, dynamic> json) => WallPageSnapshot(
+    id: json['id'] as String,
+    name: json['name'] as String,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WallPages – a page entry in the wall-controller config
+//
+//   isPage: true  → snapshot page
+//   isPage: false → scene-set page
+// ---------------------------------------------------------------------------
+
+class WallPages {
+  final String pageId;
+  final String name;
+
+  /// true  = snapshot page
+  /// false = scene-set page
+  final bool isPage;
+
+  final List<WallPageSnapshot> snapshotsList;
+
+  const WallPages({
+    required this.pageId,
+    required this.name,
+    required this.isPage,
+    this.snapshotsList = const [],
+  });
+
+  WallPages copyWith({
+    String? pageId,
+    String? name,
+    bool? isPage,
+    List<WallPageSnapshot>? snapshotsList,
+  }) {
+    return WallPages(
+      pageId: pageId ?? this.pageId,
+      name: name ?? this.name,
+      isPage: isPage ?? this.isPage,
+      snapshotsList: snapshotsList ?? this.snapshotsList,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'pageId': pageId,
+    'name': name,
+    'isPage': isPage,
+    'snapshotsList': snapshotsList.map((s) => s.toJson()).toList(),
+  };
+
+  factory WallPages.fromJson(Map<String, dynamic> json) => WallPages(
+    pageId: json['pageId'] as String,
+    name: json['name'] as String,
+    isPage: json['isPage'] as bool? ?? true,
+    snapshotsList: (json['snapshotsList'] as List<dynamic>?)?.map((e) => WallPageSnapshot.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? const [],
   );
 }

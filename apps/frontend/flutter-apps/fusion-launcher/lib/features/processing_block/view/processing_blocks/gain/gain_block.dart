@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfi
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../zone_functions/widgets/neumorphic_audio_toggle_button.dart';
 import '../widgets/pb_block_layout.dart';
 
@@ -64,12 +65,12 @@ class GainBlock extends StatelessWidget {
                                 width: 80,
                                 child: PBNumberTextField(
                                   semanticId: 'gain_text_field',
-                                  value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
+                                  value: context.watch<GainController>().currentGainValue,
                                   onChanged: (num value) {
                                     context.read<GainController>().updateGainValue(value);
                                   },
-                                  min: 1,
-                                  max: 96000,
+                                  min: -60.0,
+                                  max: 12.0,
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -84,7 +85,7 @@ class GainBlock extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 12.0),
                             child: VerticalSlider(
                               semanticId: 'gain_slider',
-                              value: context.watch<GainController>().currentGainSliderValue ?? 0,
+                              value: context.watch<GainController>().currentGainValue,
                               min: -60.0,
                               max: 12.0,
                               showIntervals: true,

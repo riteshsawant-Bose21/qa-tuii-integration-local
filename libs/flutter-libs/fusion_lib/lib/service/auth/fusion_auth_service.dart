@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:auth0_flutter/auth0_flutter_web.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -47,6 +50,54 @@ class FusionAuthService {
 
     await _saveCredentials(credentials);
     return credentials;
+  }
+
+  /// Handle login success (save credentials, emit authenticated state, etc.)
+  Future<Credentials> loginByPassForIntegrationTest() async {
+    try {
+      final dio = Dio();
+      final response = await dio.get(
+        'http://fusion-nlb-internal-d31ccb43411ed411.elb.us-east-2.amazonaws.com/api/v1/auth/automation/tokens',
+        queryParameters: {
+          "username": "auth0-test@boseprofessional.com",
+        },
+      );
+
+      Map<String, dynamic>? decodeJwtPayload(String token) {
+        try {
+          final parts = token.split('.');
+          if (parts.length != 3) return null;
+          final payload = parts[1];
+          String normalized = base64Url.normalize(payload);
+          final decoded = utf8.decode(base64Url.decode(normalized));
+          return jsonDecode(decoded);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      final expireAt = DateTime.now().toUtc().add(Duration(seconds: response.data["expires_in"]));
+
+      final sub = decodeJwtPayload(response.data["id_token"])?["sub"];
+
+      final Credentials credentials = Credentials(
+        idToken: response.data["id_token"],
+        accessToken: response.data["access_token"],
+        refreshToken: response.data["refresh_token"],
+        expiresAt: expireAt,
+        user: UserProfile(
+          email: response.data["user_email"],
+          name: response.data["user_name"],
+          sub: sub,
+        ),
+        tokenType: response.data["token_type"],
+      );
+
+      await _saveCredentials(credentials);
+      return credentials;
+    } catch (e) {
+      throw Exception('Integration test login failed: ${e.toString()}');
+    }
   }
 
   /// Logout

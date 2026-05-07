@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
 	json "github.com/goccy/go-json"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/utils"
@@ -22,8 +23,9 @@ import (
 )
 
 const (
-	HistoryPath = "history.json"
-	MaxHistory  = 100
+	HistoryPath          = "history.json"
+	MaxHistory           = 100
+	historyFlushDebounce = 2 * time.Second
 )
 
 var ErrTaskNotFound = errors.New("task not found")
@@ -39,6 +41,11 @@ type ExecutionRecord struct {
 // TaskFunc is a task function that take a context
 type TaskFunc func(context.Context) error
 
+type SceneCatalogActivator interface {
+	ActivateScene(setID, sceneID string) error
+	ActivateSnapshotByID(id string) error
+}
+
 // TaskManager manages tasks and provides execution history with rotation.
 type TaskManager struct {
 	cron             *cron.Cron
@@ -48,14 +55,22 @@ type TaskManager struct {
 	node             string
 	persistence      *persistence.Persistence
 	hub              *pubsub.Hub
+	sceneCatalog     SceneCatalogActivator
 	running          bool
+	historyDirty     bool
+	historyTimer     *time.Timer
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
 	actionFactories  map[api.TaskType]func(*api.Task) func()
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
+func NewTaskManager(
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
+	hub *pubsub.Hub,
+	sceneCatalog SceneCatalogActivator,
+) *TaskManager {
 	tm := &TaskManager{
 		cron: cron.New(
 			cron.WithParser(
@@ -75,6 +90,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		node:             config.NodeName,
 		persistence:      persistence,
 		hub:              hub,
+		sceneCatalog:     sceneCatalog,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -85,6 +101,12 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence,
 		},
 		api.TaskTypeMessage: func(t *api.Task) func() {
 			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
+		},
+		api.TaskTypeSceneSnapshot: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneSnapshotFunc(t))
+		},
+		api.TaskTypeSceneActivate: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskActivateSceneFunc(t))
 		},
 	}
 	return tm
@@ -197,10 +219,7 @@ func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 	if len(tm.executionHistory) > MaxHistory {
 		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-MaxHistory:]
 	}
-
-	if err := tm.saveHistory(); err != nil {
-		logging.GetLogger().Error("Error saving history: %v", err)
-	}
+	tm.scheduleHistoryFlushLocked()
 }
 
 // GetExecutionHistory retrieves the execution history.
@@ -248,7 +267,7 @@ func (tm *TaskManager) Start() {
 
 // Stop stops the TaskManager's scheduler.
 func (tm *TaskManager) Stop() {
-
+	tm.flushHistory()
 	tm.cron.Stop()
 	tm.running = false
 }
@@ -335,6 +354,7 @@ func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 	tm.mu.Lock()
 	tm.executionHistory = make([]ExecutionRecord, 0)
+	tm.scheduleHistoryFlushLocked()
 	tm.mu.Unlock()
 
 	w.WriteHeader(http.StatusNoContent)
@@ -464,30 +484,38 @@ func (tm *TaskManager) saveTasks() error {
 
 // LoadTasks loads tasks from the persistence file and schedules them.
 func (tm *TaskManager) LoadTasks() error {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-
 	tasks, err := tm.persistence.LoadTasks()
 	if err != nil {
 		return err
 	}
 
+	var dirty bool
+	for _, task := range tasks {
+		if !task.Enabled {
+			continue
+		}
+		if _, err := tm.makeTaskFunc(task); err != nil {
+			logging.GetLogger().Warn("[TASKS] Disabling invalid persisted task %q: %v", task.ID, err)
+			task.Enabled = false
+			task.CronEntryID = 0
+			dirty = true
+		}
+	}
+
+	if dirty {
+		if err := tm.persistence.SaveTasks(tasks); err != nil {
+			return fmt.Errorf("failed to persist sanitized tasks: %w", err)
+		}
+	}
+
+	tm.mu.Lock()
 	tm.tasks = tasks
+	tm.mu.Unlock()
 
 	return nil
 }
 
-// saveHistory saves the execution history to a file.
-func (tm *TaskManager) saveHistory() error {
-	data, err := json.MarshalIndent(tm.executionHistory, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(tm.historyFilePath, data, 0644)
-}
-
-// loadHistory loads the execution history from a file.
+// loadHistory loads the persisted failure history from disk.
 func (tm *TaskManager) loadHistory() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -507,6 +535,76 @@ func (tm *TaskManager) loadHistory() error {
 	}
 
 	return json.Unmarshal(data, &tm.executionHistory)
+}
+
+func (tm *TaskManager) scheduleHistoryFlushLocked() {
+	tm.historyDirty = true
+	if tm.historyTimer != nil {
+		tm.historyTimer.Reset(historyFlushDebounce)
+		logging.GetLogger().Debug("[TASKS] History flush rescheduled in %s", historyFlushDebounce)
+		return
+	}
+
+	tm.historyTimer = time.AfterFunc(historyFlushDebounce, tm.flushHistory)
+	logging.GetLogger().Debug("[TASKS] History flush scheduled in %s", historyFlushDebounce)
+}
+
+func (tm *TaskManager) flushHistory() {
+	tm.mu.Lock()
+	if tm.historyTimer != nil {
+		tm.historyTimer.Stop()
+		tm.historyTimer = nil
+	}
+	if !tm.historyDirty {
+		tm.mu.Unlock()
+		return
+	}
+
+	historyCopy := append([]ExecutionRecord(nil), tm.persistedFailureHistoryLocked()...)
+	historyPath := tm.historyFilePath
+	tm.historyDirty = false
+	tm.mu.Unlock()
+
+	data, err := json.MarshalIndent(historyCopy, "", "  ")
+	if err != nil {
+		logging.GetLogger().Error("Error marshaling history: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+
+	tmpPath := historyPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		logging.GetLogger().Error("Error writing history temp file: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+	if err := os.Rename(tmpPath, historyPath); err != nil {
+		_ = os.Remove(tmpPath)
+		logging.GetLogger().Error("Error rotating history file: %v", err)
+		tm.markHistoryDirty()
+		return
+	}
+
+	logging.GetLogger().Debug("[TASKS] History flushed to disk")
+}
+
+func (tm *TaskManager) markHistoryDirty() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.historyDirty = true
+}
+
+func (tm *TaskManager) persistedFailureHistoryLocked() []ExecutionRecord {
+	failures := make([]ExecutionRecord, 0, len(tm.executionHistory))
+	for _, record := range tm.executionHistory {
+		if record.Status == "failed" {
+			failures = append(failures, record)
+		}
+	}
+	if len(failures) > MaxHistory {
+		failures = failures[len(failures)-MaxHistory:]
+	}
+	return failures
 }
 
 // registerEnabledTasks registers enabled tasks
@@ -542,22 +640,58 @@ func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 }
 
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
+	requiredStringParam := func(key string) error {
+		value, ok := task.Params[key]
+		if !ok {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		stringValue, ok := value.(string)
+		if !ok || strings.TrimSpace(stringValue) == "" {
+			return fmt.Errorf("missing '%s'", key)
+		}
+
+		return nil
+	}
+
 	switch task.Type {
 
 	case api.TaskTypeMessage:
-		id := task.Params[api.MessageIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		if err := requiredStringParam(api.MessageIDKey); err != nil {
+			return nil, err
 		}
 
 		return tm.taskTriggerMessageFunc(task), nil
 
 	case api.TaskTypeSnapshot:
-		id := task.Params[api.SnapshotIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
+		if err := requiredStringParam(api.SnapshotIDKey); err != nil {
+			return nil, err
+		}
+		snapshotId := task.Params[api.SnapshotIDKey].(string)
+		exists, err := tm.persistence.SnapshotExists(snapshotId)
+		if err != nil {
+			return nil, fmt.Errorf("check snapshot %q: %w", snapshotId, err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("snapshot %q not found", snapshotId)
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneSnapshot:
+		if err := requiredStringParam(api.SnapshotDefinitionIDKey); err != nil {
+			return nil, err
+		}
+		return tm.taskActivateSceneSnapshotFunc(task), nil
+
+	case api.TaskTypeSceneActivate:
+		if err := requiredStringParam(api.SceneSetIDKey); err != nil {
+			return nil, err
+		}
+
+		if err := requiredStringParam(api.SceneIDKey); err != nil {
+			return nil, err
+		}
+		return tm.taskActivateSceneFunc(task), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)

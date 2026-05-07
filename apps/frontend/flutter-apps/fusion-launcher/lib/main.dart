@@ -23,6 +23,10 @@ import 'package:universal_platform/universal_platform.dart';
 import 'core/config/app_config.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 // import 'features/home/presentation/pages/launcher_home_page.dart';
+import 'features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
+import 'features/configuration_events/viewModel/events_viewmodel/config_events_viewmodel.dart';
+import 'features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
+import 'features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/home/presentation/pages/launcher_home_page.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
@@ -67,8 +71,7 @@ Future<void> reportCrash(Object exception, StackTrace stack) async {
   try {
     FusionLogger.log(
       tag: LogTag.exceptions,
-      message:
-          "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
+      message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
     );
     // FirebaseCrashlytics.instance.recordError(exception, stack);
   } catch (ex) {
@@ -122,16 +125,13 @@ class MyApp extends StatelessWidget {
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
         BlocProvider<ProjectSyncViewModel>(
-          create:
-              (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
+          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
         ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
-          create:
-              (BuildContext context) =>
-                  serviceLocator<GuideShowCaseController>(),
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
         BlocProvider<ConfigSyncViewModel>(
           create: (BuildContext context) => serviceLocator<ConfigSyncViewModel>(),
@@ -141,6 +141,21 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<BlockDataViewmodel>(
           create: (BuildContext context) => serviceLocator<BlockDataViewmodel>(),
+        ),
+        BlocProvider<ConfigSnapshotsViewmodel>(
+          create: (BuildContext context) => serviceLocator<ConfigSnapshotsViewmodel>(),
+        ),
+
+        BlocProvider<ConfigSnapshotActionsViewModel>(
+          create: (BuildContext context) => serviceLocator<ConfigSnapshotActionsViewModel>(),
+        ),
+
+        BlocProvider<ConfigEventsViewmodel>(
+          create: (BuildContext context) => serviceLocator<ConfigEventsViewmodel>(),
+        ),
+
+        BlocProvider<ConfigEventActionsViewmodel>(
+          create: (BuildContext context) => serviceLocator<ConfigEventActionsViewmodel>(),
         ),
       ],
       child: FusionThemeBuilder(
@@ -186,9 +201,7 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: <NavigatorObserver>[
                       AppNavigatorObserver(),
                     ],
-                    onGenerateRoute:
-                        (RouteSettings settings) =>
-                            Routes.onGenerateRoute(settings),
+                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
                   );
                 },
               );

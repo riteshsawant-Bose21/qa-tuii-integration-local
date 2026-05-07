@@ -12,6 +12,8 @@ import 'package:fusion_launcher/features/configuration_control/widgets/empty_con
 import 'package:fusion_launcher/features/configuration_control/widgets/control_content_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../core/service_locator.dart';
+
 /// Main page for Configuration Control feature.
 ///
 /// Owns [ConfigurationControlViewmodel] (tab/controller management) and
@@ -42,6 +44,9 @@ class ConfigurationControlPage extends StatelessWidget {
         ),
         BlocProvider<SettingsViewModel>(
           create: (_) => SettingsViewModel(),
+        ),
+        BlocProvider<VirtualControllerViewModel>(
+          create: (_) => VirtualControllerViewModel(service: serviceLocator<FusionVirtualControllerService>()),
         ),
       ],
       child: const _ConfigurationControlBody(),

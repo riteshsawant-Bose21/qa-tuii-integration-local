@@ -44,25 +44,25 @@ class FusionCanvasPainter extends CustomPainter {
   }
   @override
   void paint(Canvas canvas, Size size) {
+    // print("Selected IDs in painter: ${toolState is SelectToolState ? (toolState as SelectToolState).selectedLayerIds : "N/A"}");
     context.read<FusionCanvasStateViewModel>().setCanvasSize(size);
+    final DateTime start = DateTime.now();
+    // print("*" * 100);
 
     canvas.save();
     final Offset offset = state.offset;
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(state.scale);
 
-    // DottedGridPainter(color: Colors.grey.shade300).paint(
-    //   canvas,
-    //   size,
-    //   offset,
-    //   state.scale,
-    // );
-
     for (final FusionBasePainter painter in layers) {
+      final DateTime startLayer = DateTime.now();
+
       painter.paint(canvas, size, this);
+      // print("Layer ${painter.runtimeType} painted in ${DateTime.now().difference(startLayer).inMilliseconds} ms");
     }
 
     canvas.restore();
+    // print("Canvas painted in ${DateTime.now().difference(start).inMilliseconds} ms with ${layers.length} layers");
   }
 
   @override

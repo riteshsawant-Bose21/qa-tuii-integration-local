@@ -2,9 +2,33 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic, paging }
+enum SourceType {
+  mic,
+  media,
+  generic,
+  paging;
 
-enum PagingSourceType { messagePlayer, messagePlayerWithZoneSelect, pagingMic, pagingMicWithZoneSelect }
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceType.generic;
+    return SourceType.values.firstWhereOrNull((SourceType e) => e.name.toLowerCase() == value.toLowerCase()) ?? SourceType.generic;
+  }
+}
+
+enum PagingSourceType {
+  messagePlayer,
+  messagePlayerWithZoneSelect,
+  pagingMic,
+  pagingMicWithZoneSelect;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static PagingSourceType? fromString(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return PagingSourceType.values.firstWhereOrNull((PagingSourceType e) => e.name.toLowerCase() == value.toLowerCase());
+  }
+}
 
 enum SourceConnectionType {
   analogInput("Wired"),
@@ -21,6 +45,14 @@ enum SourceConnectionType {
   const SourceConnectionType(this.displayName);
 
   final String displayName;
+
+  // This method is used to convert a string to a PagingSourceType enum value.
+  // It returns null if the input string is null or empty, or if it doesn't match any of the enum values.
+  static SourceConnectionType fromString(String? value) {
+    if (value == null || value.isEmpty) return SourceConnectionType.analogInput;
+    return SourceConnectionType.values.firstWhereOrNull((SourceConnectionType e) => e.name.toLowerCase() == value.toLowerCase()) ??
+        SourceConnectionType.analogInput;
+  }
 }
 
 extension SourceConnectionTypeExtension on SourceConnectionType {
@@ -56,8 +88,7 @@ class Source extends HardwareComponent {
   final SourceConnectionType connectionType;
   String? ipAddress; //for AES67 sources
   final String sku;
-  final PagingSourceType? pagingSourceType; // Only applicable for paging sources
-  final String? streamID; // for AES67 sources, to identify the stream to connect to.
+  final PagingSourceType? pagingSourceType;
 
   /// Constructor for SourceEntity
   Source({
@@ -83,7 +114,6 @@ class Source extends HardwareComponent {
     super.outputPortsData,
     required super.addedFromBuildingPage,
     this.pagingSourceType,
-    this.streamID,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -111,7 +141,6 @@ class Source extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     PagingSourceType? pagingSourceType,
-    String? streamID,
   }) {
     return Source(
       id: id ?? this.id,
@@ -134,7 +163,6 @@ class Source extends HardwareComponent {
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       pagingSourceType: pagingSourceType ?? this.pagingSourceType,
-      streamID: streamID ?? this.streamID,
     );
   }
 
@@ -175,7 +203,6 @@ class Source extends HardwareComponent {
               orElse: () => PagingSourceType.messagePlayer,
             )
           : null,
-      streamID: json['streamID'] as String?,
     );
   }
 
@@ -202,7 +229,6 @@ class Source extends HardwareComponent {
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
       'pagingSourceType': pagingSourceType?.name,
-      'streamID': streamID,
     };
   }
 }

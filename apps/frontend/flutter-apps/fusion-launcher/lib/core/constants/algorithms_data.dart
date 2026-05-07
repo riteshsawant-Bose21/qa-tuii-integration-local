@@ -6,7 +6,7 @@ import 'dart:core';
 
 const String algoMetadataJSON = '''
 {
-    "version": "0.1.15",
+    "version": "0.1.18",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1275,6 +1275,50 @@ const String algoMetadataJSON = '''
             ]
         },
         {
+            "name": "iir_filter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "bands",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 40
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["bands", 5],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
+                }
+            ]
+        },
+        {
             "name": "jack_in",
             "properties": [
                 {
@@ -1578,6 +1622,20 @@ const String algoMetadataJSON = '''
                     "default_value": false
                 },
                 {
+                    "name": "out_mute",
+                    "dimensions": ["out"],
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "out_gain",
+                    "value_type": "float",
+                    "dimensions": ["out"],
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
                     "name": "routing",
                     "value_type": "bool",
                     "dimensions": ["in", "out"],
@@ -1676,8 +1734,8 @@ const String algoMetadataJSON = '''
                     "default_value": false
                 },
                 {
-                    "name": "output_mute",
-                    "dimensions": ["in"],
+                    "name": "out_mute",
+                    "dimensions": ["out"],
                     "value_type": "bool",
                     "default_value": false
                 }
@@ -2280,6 +2338,15 @@ const String algoMetadataJSON = '''
         },
         {
             "name": "source_selector",
+            "properties": [
+                {
+                    "name": "source_channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
             "terminals": [
                 {
                     "name": "in",
@@ -2292,7 +2359,7 @@ const String algoMetadataJSON = '''
                     "name": "out",
                     "signal_type": "audio",
                     "direction": "output",
-                    "channels": 1
+                    "channels": "source_channels"
                 }
             ],
             "parameters": [
@@ -2305,7 +2372,7 @@ const String algoMetadataJSON = '''
                 },
                 {
                     "name": "out_gain",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "float",
                     "default_value": 0.0,
                     "minimum_value": -60.0,
@@ -2313,7 +2380,7 @@ const String algoMetadataJSON = '''
                 },
                 {
                     "name": "out_mute",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "bool",
                     "default_value": false
                 }
@@ -2321,7 +2388,7 @@ const String algoMetadataJSON = '''
             "telemetry": [
                 {
                     "name": "out_meter",
-                    "dimensions": [1],
+                    "dimensions": ["source_channels"],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,
@@ -2732,8 +2799,31 @@ const String algoMetadataJSON = '''
                     "period_type": "HI"
                 }
             ]
-        }
-        
+        },
+        {
+            "name": "meter",
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "minimum_channels": 1,
+                    "maximum_channels": 128
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "level",
+                    "dimensions": ["in"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        } 
     ]
 }
 ''';

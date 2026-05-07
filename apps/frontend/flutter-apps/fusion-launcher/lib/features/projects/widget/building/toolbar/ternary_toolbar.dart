@@ -14,7 +14,7 @@ class _TernaryToolbar extends StatelessWidget {
             label: "Draw",
             isSelected: currentMode is DrawingListeningAreaState,
             onTap: () {
-              context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState());
+              context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: null));
             },
           ),
           _ToolBarIcon(
@@ -26,10 +26,27 @@ class _TernaryToolbar extends StatelessWidget {
             },
           ),
         ],
+        WallToolState() => <Widget>[
+          _ToolBarIcon(
+            icon: "pencil.png",
+            label: "Draw",
+            isSelected: currentMode is DrawingWallState,
+            onTap: () {
+              context.read<BuildingPageViewModel>().setTool(DrawingWallState(wallId: null));
+            },
+          ),
+          _ToolBarIcon(
+            icon: "pointer.png",
+            label: "Select",
+            isSelected: currentMode is WallSelectToolState,
+            onTap: () {
+              context.read<BuildingPageViewModel>().setTool(WallSelectToolState());
+            },
+          ),
+        ],
         MeasuringToolState() => <Widget>[
           BlocBuilder<FusionCanvasToolViewModel, FusionToolState>(
             builder: (BuildContext context, FusionToolState state) {
-              final FusionToolState toolState = state;
               if (state is! MeasureToolState) {
                 return const SizedBox();
               }

@@ -54,12 +54,17 @@ const (
 	DeviceReloadVIPEndpoint       = DeviceReloadEndpoint + "/vip"
 	DeviceReloadVIPStatusEndpoint = DeviceReloadVIPEndpoint + "/status"
 	DeviceIDEndpoint              = DeviceEndpoint + "/{id}"
+	DebugProfileEndpoint          = "/debug/profile"
+	DebugProfileHeapEndpoint      = DebugProfileEndpoint + "/heap"
+	DebugProfileStartEndpoint     = DebugProfileEndpoint + "/start"
+	DebugProfileStatusEndpoint    = DebugProfileEndpoint + "/status"
+	DebugProfileStopEndpoint      = DebugProfileEndpoint + "/stop"
 
 	DevicesEndpoint                    = "/devices"
 	DevicesIDEndpoint                  = DevicesEndpoint + "/{id}"
 	DevicesVIPEndpoint                 = DevicesEndpoint + "/vip"
-	DevicesVIPStatusEndpoint       = DevicesVIPEndpoint + "/status"
-	DevicesVIPOperationEndpoint    = DevicesVIPEndpoint + "/operations" + "/{id}"
+	DevicesVIPStatusEndpoint           = DevicesVIPEndpoint + "/status"
+	DevicesVIPOperationEndpoint        = DevicesVIPEndpoint + "/operations" + "/{id}"
 	DevicesSetVIPEndpoint              = DevicesVIPEndpoint + "/{vip}"
 	DevicesIDVIPMasterPriorityEndpoint = DevicesIDEndpoint + "/vip/master-priority/{mode}"
 	DevicesGetCSREndpoint              = DevicesIDEndpoint + "/csr"
@@ -98,8 +103,28 @@ const (
 
 	RootEndpoint = "/"
 
+	SceneCatalogEndpoint = "/scene-catalog"
+
+	ScenesEndpoint     = "/scenes"
+	ScenesNameEndpoint = ScenesEndpoint + "/{id}"
+
+	ScenesSetsEndpoint        = "/scene-sets"
+	ScenesSetsNameEndpoint    = ScenesSetsEndpoint + "/{id}"
+	SceneSetsActivateEndpoint = ScenesSetsEndpoint + "/activate"
+	SceneSetsCurrentEndpoint  = ScenesSetsEndpoint + "/current-scene"
+
 	SessionsEndpoint   = "/sessions"
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
+
+	SnapshotsEndpoint         = "/snapshots"
+	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{id}"
+	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{id}"
+
+	TasksEndpoint          = "/tasks"
+	TasksHistoryEndpoint   = TasksEndpoint + "/history"
+	TasksIdEndpoint        = TasksEndpoint + "/{id}"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
+	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
 	TimeMachineEndpoint         = "/time-machine"
 	TimeMachineMetaEndpoint     = TimeMachineEndpoint + "/meta"
@@ -108,28 +133,16 @@ const (
 	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
 	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
 
-	SnapshotsActivateEndpoint = "/snapshots/activate"
-	SnapshotsListEndpoint     = "/snapshots/list"
-
-	ScenesListEndpoint = "/scenes/list"
-
-	SceneSetsActivateEndpoint = "/scene-sets/activate"
-	SceneSetsCurrentEndpoint  = "/scene-sets/current-scene"
-	SceneSetsListEndpoint     = "/scene-sets/list"
-
-	SceneCatalogListEndpoint = "/scene-catalog-list"
-
-	TasksEndpoint          = "/tasks"
-	TasksHistoryEndpoint   = TasksEndpoint + "/history"
-	TasksIdEndpoint        = TasksEndpoint + "/{id}"
-	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
-	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
-
 	ValueEndpoint = "/value"
 
 	VersionEndpoint = "/version"
 
 	WebsocketEndpoint = "/ws"
+
+	// Manufacturing
+
+	ManufacturingEndpoint             = "/manufacturing"
+	ManufacturingSetModelNameEndpoint = ManufacturingEndpoint + "/model-name"
 
 	//
 	// Private

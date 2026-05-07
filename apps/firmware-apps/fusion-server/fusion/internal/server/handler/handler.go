@@ -7,7 +7,7 @@ import (
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/utils"
+	"fusion/internal/scene_catalog"
 	"fusion/internal/version"
 	"net/http"
 	"reflect"
@@ -34,6 +34,7 @@ type Handler struct {
 
 	controllerManager controllers.ControllerManagerInterface
 	httpClient        *http.Client
+	sceneCatalog      *scene_catalog.Activator
 
 	// Software update sync tracking
 	syncTrackers     map[string]*api.SoftwareUpdateSyncTracker
@@ -57,6 +58,7 @@ func NewHandler(
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
 	controllerManager controllers.ControllerManagerInterface,
+	sceneCatalog *scene_catalog.Activator,
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
@@ -67,6 +69,7 @@ func NewHandler(
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
 		httpClient:        &http.Client{Timeout: api.HTTPTimeout},
+		sceneCatalog:      sceneCatalog,
 		syncTrackers:      make(map[string]*api.SoftwareUpdateSyncTracker),
 	}
 }
@@ -158,7 +161,7 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 		}, nil
 	}
 
-	if err := h.handleConfigUpdate(configUpdate, true); err != nil {
+	if err := h.handleConfigUpdate(configUpdate, nil, true); err != nil {
 		return nil, err
 	}
 
@@ -187,32 +190,35 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 		return nil, nil
 	}
 
-	// Get full state before PATCH
-	before := h.StateManager.GetStateMap()
-
-	// Apply internal patch
-	afterPtr, err := h.StateManager.Patch(configPatch)
+	// Patch returns the diff and a ready-to-broadcast ConfigUpdate with the
+	// hash and version already computed.
+	result, err := h.StateManager.Patch(configPatch)
 	if err != nil {
 		return nil, err
 	}
 
 	// No changes
-	if afterPtr == nil {
+	if result == nil {
 		if featureUpdated {
 			return map[string]any{}, nil
 		}
 		return nil, nil
 	}
 
-	after := *afterPtr
+	// Attach the observer diff so transport observers can receive only changed keys.
+	result.ConfigUpdate.ObserverData = result.Diff
 
-	diff := utils.CalculateDiff(before, after)
+	message := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.clusterTransport.LocalNode().Name,
+		api.WithConfigUpdate(result.ConfigUpdate),
+	)
 
-	if err := h.handleConfigUpdate(after, false); err != nil {
-		return nil, err
+	if err := h.hub.BroadcastToNodes(message); err != nil {
+		return nil, fmt.Errorf("failed to broadcast config update: %w", err)
 	}
 
-	return diff, nil
+	return result.Diff, nil
 }
 
 func (h *Handler) persistFeatureDefinitions(snapshots []api.SnapshotDefinition, sceneSets []api.SceneSet) error {
@@ -285,7 +291,7 @@ func (h *Handler) SplitFeaturePayload(update map[string]any) (
 
 func (h *Handler) HandleClearAllData() error {
 
-	if err := h.handleConfigUpdate(map[string]any{}, true); err != nil {
+	if err := h.handleConfigUpdate(map[string]any{}, nil, true); err != nil {
 		return err
 	}
 
@@ -323,12 +329,13 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
-func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
+func (h *Handler) handleConfigUpdate(data map[string]any, observerData map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
+	configUpdate.ObserverData = observerData
 	configUpdate.Clear = clear
 
 	if _, err := h.StateManager.ApplyUpdate(*configUpdate); err != nil {

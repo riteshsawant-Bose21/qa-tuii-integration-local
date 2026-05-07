@@ -128,7 +128,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
         }
         // print("Axis Locks Result  : $axisLocks");
         // print("\n\n\n");
-        print("Time taken Till Path Calculation: ${DateTime.now().difference(startTime).inMilliseconds} ms");
+        // print("Time taken Till Path Calculation: ${DateTime.now().difference(startTime).inMilliseconds} ms");
 
         path =
             pathStorage.getLivePath(
@@ -140,7 +140,7 @@ class WiringConnectionPainter extends FusionBasePainter with FusionCanvasInterac
             path;
         rawPoints = _buildPathPoints(path);
       }
-      print("Time taken for axis lock processing: ${DateTime.now().difference(startTime).inMilliseconds} ms");
+      // print("Time taken for axis lock processing: ${DateTime.now().difference(startTime).inMilliseconds} ms");
     }
     _connectionPaint.color = ConnectionColorUtil.getColorForConnectionType(connection.type);
 

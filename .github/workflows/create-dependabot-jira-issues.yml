@@ -1,8 +1,6 @@
 name: Update JIRA with dependabot issues
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */8 * * *'
 jobs:
   jira:
     runs-on: ubuntu-latest

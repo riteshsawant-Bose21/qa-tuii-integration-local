@@ -1,4 +1,6 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/snapshot_api/snapshots_request.dart';
+import 'package:fusion_lib/models/project_entities/sncene_set/scene_set_request.dart';
 
 extension SceneManager on ProjectManager {
   void addNewSnapshots(SnapshotsModel scene) {
@@ -257,5 +259,19 @@ extension SceneManager on ProjectManager {
       throw Exception("Project service is not initialized.");
     }
     projectService!.duplicateSceneAction(actionId);
+  }
+
+  SceneSetRequestDto? getSceneSetRequestDtoData() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getSceneSetRequestDtoData();
+  }
+
+  SnapshotsRequestDto? getSnapshotsRequestDtoData() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getSnapshotsRequestDtoData();
   }
 }

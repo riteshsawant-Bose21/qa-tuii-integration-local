@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/constants/semantics/test_keys.dart';
@@ -23,6 +26,8 @@ class SnapshotSet extends StatefulWidget {
 
 class _SnapshotSetState extends State<SnapshotSet> {
   ConfigSnapshotsViewmodel get _configSnapshotsViewmodel => context.read<ConfigSnapshotsViewmodel>();
+  ConfigSceneSetsViewmodel get _configSceneSetsViewmodel => context.read<ConfigSceneSetsViewmodel>();
+  bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +72,7 @@ class _SnapshotSetState extends State<SnapshotSet> {
                   _configSnapshotsViewmodel.handleDropOnSnapshots(
                     details.data,
                   );
+                  _configSceneSetsViewmodel.syncWithProjectViewModel(); // ← add this
                 },
                 builder: (
                   BuildContext context,
@@ -161,6 +167,26 @@ class _SnapshotSetState extends State<SnapshotSet> {
         _configSnapshotsViewmodel.endDrag();
       },
       draggingSnapshotId: state.draggingSnapshotId,
+      isInControlMode: isInControlMode,
+      onSnapshotRecall: (String sceneId) async {
+        final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
+        if (vip != null) {
+          try {
+            final ResponseCallback<bool> result = await _configSnapshotsViewmodel.recallSnapshot(vip: vip, snapshotId: sceneId);
+            if (context.mounted) {
+              if (result.success) {
+                FusionToast.success(context, message: "Snapshot recalled successfully");
+              } else {
+                FusionToast.error(context, message: "Failed to recall snapshot");
+              }
+            }
+          } catch (e) {
+            if (context.mounted) {
+              FusionToast.error(context, message: "Failed to recall snapshot");
+            }
+          }
+        }
+      },
       onRenameSave: (String value, SnapshotsModel newSnapshot) {
         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
       },

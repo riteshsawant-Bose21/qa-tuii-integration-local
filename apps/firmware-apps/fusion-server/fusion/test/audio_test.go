@@ -11,6 +11,7 @@ import (
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,63 @@ import (
 const (
 	audioServerAddr = "http://192.168.2.100:8080"
 )
+
+type messageTriggerPayload struct {
+	ID        string   `json:"id"`
+	Path      string   `json:"path"`
+	Priority  int      `json:"priority,omitempty"`
+	Zones     []string `json:"zones,omitempty"`
+	Timestamp int64    `json:"timestamp"`
+}
+
+func localAudioBaseURL(t *testing.T) string {
+	t.Helper()
+
+	if !isLocalTestMode() {
+		t.Skip("message trigger UDP payload tests require local mode with FUSION_TEST_LOCAL=1, FUSION_TEST_NODES=127.0.0.1:8080, and FUSION_TEST_VIP=127.0.0.1:8080")
+	}
+
+	if clusterConfig == nil || clusterConfig.vip == "" {
+		t.Fatal("cluster configuration not initialized")
+	}
+
+	return clusterConfig.vip
+}
+
+func listenForMessageTrigger(t *testing.T) *net.UDPConn {
+	t.Helper()
+
+	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:7949")
+	if err != nil {
+		t.Fatalf("resolve trigger listener: %v", err)
+	}
+
+	conn, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		t.Skipf("unable to listen on 127.0.0.1:7949 for message trigger payloads: %v", err)
+	}
+
+	return conn
+}
+
+func awaitMessageTriggerPayload(t *testing.T, conn *net.UDPConn, timeout time.Duration) messageTriggerPayload {
+	t.Helper()
+
+	_ = conn.SetReadDeadline(time.Now().Add(timeout))
+
+	buf := make([]byte, 4096)
+	n, _, err := conn.ReadFromUDP(buf)
+	if err != nil {
+		t.Fatalf("read message trigger payload: %v", err)
+	}
+
+	var payload messageTriggerPayload
+	if err := json.Unmarshal(buf[:n], &payload); err != nil {
+		t.Fatalf("decode message trigger payload: %v; raw=%s", err, string(buf[:n]))
+	}
+
+	return payload
+}
 
 // TestAudioUploadAndDeleteSuccess uploads a small WAV, verifies 201 + metadata,
 // then deletes it by id and expects 204.
@@ -48,23 +106,66 @@ func TestAudioUploadAndDeleteSuccess(t *testing.T) {
 		t.Errorf("unexpected size_bytes: got %d", meta.SizeBytes)
 	}
 
-	// Delete the uploaded asset
-	req, err := http.NewRequestWithContext(ctx, "DELETE",
-		fmt.Sprintf("%s%s/%s", audioServerAddr, routes.PAVAMessagesEndpoint, meta.Id), nil)
-	if err != nil {
-		t.Fatalf("creating DELETE request failed: %v", err)
+	deleteAudio(t, ctx, audioServerAddr, meta.Id)
+}
+
+// TestAudioUploadBinaryIntegrity verifies upload metadata checksum and streamed bytes
+// both match the original uploaded payload exactly.
+func TestAudioUploadBinaryIntegrity(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	filename := "binary_integrity.wav"
+	displayName := "Binary Integrity Clip"
+
+	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
+	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
+
+	expectedSum := sha256.Sum256(wav)
+	expectedChecksum := hex.EncodeToString(expectedSum[:])
+
+	if meta.Checksum != expectedChecksum {
+		t.Fatalf("unexpected checksum: got %s want %s", meta.Checksum, expectedChecksum)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	if meta.SizeBytes != int64(len(wav)) {
+		t.Fatalf("unexpected size_bytes: got %d want %d", meta.SizeBytes, len(wav))
+	}
+
+	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", meta.Id, 1)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s%s", audioServerAddr, streamEndpoint), nil)
 	if err != nil {
-		t.Fatalf("DELETE %s failed: %v", routes.PAVAMessagesEndpoint, err)
+		t.Fatalf("creating stream request failed: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET %s failed: %v", routes.PAVAMessageStreamEndpoint, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("DELETE %s returned %d, want 204; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
+		t.Fatalf("GET %s returned %d, want 200; body=%s", routes.PAVAMessageStreamEndpoint, resp.StatusCode, string(body))
+	}
+
+	if got := resp.Header.Get("Content-Type"); got != "audio/wav" {
+		t.Fatalf("unexpected content-type: got %q want %q", got, "audio/wav")
+	}
+
+	streamed, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("reading stream failed: %v", err)
+	}
+
+	if !bytes.Equal(streamed, wav) {
+		t.Fatalf("streamed payload differs from uploaded payload: got %d bytes want %d", len(streamed), len(wav))
+	}
+
+	streamedSum := sha256.Sum256(streamed)
+	if got := hex.EncodeToString(streamedSum[:]); got != expectedChecksum {
+		t.Fatalf("stream checksum mismatch: got %s want %s", got, expectedChecksum)
 	}
 }
 
@@ -173,6 +274,128 @@ func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data 
 	}
 
 	return &meta
+}
+
+func TestTriggerMessageRecordsImmediateManualHistory(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	clearHistory(t)
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	meta := uploadAudio(t, ctx, audioServerAddr, "trigger_history.wav", wav, "Trigger History Clip")
+	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
+
+	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
+	reqBody := []byte(`{"priority":100}`)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", audioServerAddr, triggerEndpoint), bytes.NewReader(reqBody))
+	if err != nil {
+		t.Fatalf("creating trigger request failed: %v", err)
+	}
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PUT %s failed: %v", routes.PAVAMessageTriggerEndpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("PUT %s returned %d, want 204; body=%s", routes.PAVAMessageTriggerEndpoint, resp.StatusCode, string(body))
+	}
+
+	history := fetchHistory(t)
+	if len(history) == 0 {
+		t.Fatalf("expected at least one history record after immediate trigger")
+	}
+
+	found := false
+	for _, rec := range history {
+		if rec.TaskID == "message_trigger_immediate" {
+			found = true
+			if rec.Description != "Immediate/manual audio message trigger" {
+				t.Fatalf("unexpected history description: got %q", rec.Description)
+			}
+			if rec.Status != "success" {
+				t.Fatalf("unexpected history status: got %q want %q", rec.Status, "success")
+			}
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected history entry for immediate/manual audio trigger, got %#v", history)
+	}
+}
+
+func TestTriggerMessageEmitsZonesPayloadLocal(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	baseURL := localAudioBaseURL(t)
+	listener := listenForMessageTrigger(t)
+	defer listener.Close()
+
+	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
+	meta := uploadAudio(t, ctx, baseURL, "trigger_zones_payload.wav", wav, "Trigger Zones Payload")
+	defer deleteAudio(t, ctx, baseURL, meta.Id)
+
+	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
+	reqBody := []byte(`{"priority":77,"zones":["lobby","gym"]}`)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", baseURL, triggerEndpoint), bytes.NewReader(reqBody))
+	if err != nil {
+		t.Fatalf("creating trigger request failed: %v", err)
+	}
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PUT %s failed: %v", routes.PAVAMessageTriggerEndpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("PUT %s returned %d, want 204; body=%s", routes.PAVAMessageTriggerEndpoint, resp.StatusCode, string(body))
+	}
+
+	payload := awaitMessageTriggerPayload(t, listener, 3*time.Second)
+	if payload.ID != meta.Id {
+		t.Fatalf("unexpected payload id: got %q want %q", payload.ID, meta.Id)
+	}
+	if payload.Priority != 77 {
+		t.Fatalf("unexpected payload priority: got %d want %d", payload.Priority, 77)
+	}
+	if strings.Join(payload.Zones, ",") != "lobby,gym" {
+		t.Fatalf("unexpected payload zones: got %v want %v", payload.Zones, []string{"lobby", "gym"})
+	}
+	if !strings.HasSuffix(payload.Path, filepath.Base(meta.Filename)) && !strings.HasSuffix(payload.Path, meta.Id+".wav") {
+		t.Fatalf("unexpected payload path: got %q", payload.Path)
+	}
+	if payload.Timestamp == 0 {
+		t.Fatal("expected non-zero payload timestamp")
+	}
+}
+
+func deleteAudio(t *testing.T, ctx context.Context, base, id string) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+		fmt.Sprintf("%s%s/%s", base, routes.PAVAMessagesEndpoint, id), nil)
+	if err != nil {
+		t.Fatalf("creating DELETE request failed: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("DELETE %s failed: %v", routes.PAVAMessagesEndpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("DELETE %s returned %d, want 204; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
+	}
 }
 
 // makeTestWAV constructs a minimal PCM RIFF/WAVE file with the given

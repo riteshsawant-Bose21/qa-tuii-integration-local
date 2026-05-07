@@ -41,7 +41,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       bottom: false,
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        appBar: CommonAppBar(title: 'Preferences'),
+        appBar: CommonMobileAppBar(title: 'Preferences'),
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

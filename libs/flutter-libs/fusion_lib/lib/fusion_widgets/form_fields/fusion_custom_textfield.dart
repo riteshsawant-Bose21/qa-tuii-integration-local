@@ -568,7 +568,7 @@ class _FusionCustomTextFieldState extends State<FusionCustomTextField> {
                 width: widget.width,
                 key: _fieldKey,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
+                  horizontal: 10,
                 ),
                 decoration: _getDecoration(),
                 child: Row(

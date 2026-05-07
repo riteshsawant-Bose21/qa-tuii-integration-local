@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/wall_model.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'ffi_constants.dart';
@@ -108,13 +109,15 @@ class IsolatedMaceCalculationManager {
   Future<void> calculateSpl({
     required List<HardwareComponent> speakers,
     required List<ListeningArea> surfaces,
+    required List<Wall> walls,
     required double resolutionSpacing,
   }) async {
     _calcByFph.clear();
-    debugPrint('[isolate] calculateSpl(speakers=${speakers.length}, surfaces=${surfaces.length}, resolutionSpacing=$resolutionSpacing)');
+    debugPrint('[isolate] calculateSpl(speakers=${speakers.length}, surfaces=${surfaces.length}, walls=${walls.length}, resolutionSpacing=$resolutionSpacing)');
     await _call<void>('calculateSpl', <String, dynamic>{
       'speakers': speakers,
       'surfaces': surfaces,
+      'walls': walls,
       'resolutionSpacing': resolutionSpacing,
     });
     debugPrint('[isolate] calculateSpl() finished');
@@ -205,9 +208,10 @@ void _isolateMain(_IsolateInit init) async {
               debugPrint('[isolate] calculateSpl handler called');
               final List<HardwareComponent> speakers = (args['speakers'] as List<dynamic>).cast<HardwareComponent>();
               final List<ListeningArea> surfaces = (args['surfaces'] as List<dynamic>).cast<ListeningArea>();
+              final List<Wall> walls = (args['walls'] as List<dynamic>?)?.cast<Wall>() ?? <Wall>[];
               final double resolutionSpacing = (args['resolutionSpacing'] as num).toDouble();
 
-              await SPLCalculationManager.calculateSpl(engine, speakers, surfaces, resolutionSpacing);
+              await SPLCalculationManager.calculateSpl(engine, speakers, surfaces, walls, resolutionSpacing);
               debugPrint('[isolate] calculateSpl handler completed');
               init.mainSendPort.send(<String, dynamic>{'id': id, 'ok': true, 'result': null});
               break;
