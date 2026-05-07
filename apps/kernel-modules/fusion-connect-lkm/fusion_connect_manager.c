@@ -125,12 +125,11 @@ static void fusion_cn_prof_maybe_log(void)
 #endif
 
 
-/* === Audio Frame Process deferral to kthread_worker (PREEMPT_RT-friendly) === */
-static struct kthread_worker *process_worker;
+/* === Audio Frame Process deferral to dedicated RT thread === */
 static struct task_struct    *process_thread;
-static struct kthread_work    process_work;
-static atomic_t               process_pending;
-static struct delayed_work    metrics_work;
+static wait_queue_head_t     process_wq;
+static atomic_t              pending_ticks;
+static struct delayed_work   metrics_work;
 
 static struct fusion_cn_manager *g_fusion_cn_mgr;
 
@@ -591,21 +590,6 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
     return fusion_cn_alsa_driver_init(mgr, &fusion_cn_alsa_ops);
 }
 
-/* --- Tick queue helper --- */
-static inline void fusion_cn_queue_process(struct fusion_cn_manager *mgr)
-{
-    struct kthread_worker *worker = READ_ONCE(process_worker);
-
-    /* Ignore ticks until worker is created and work item initialized */
-    if (!worker)
-        return;
-
-    /* Coalesce: only queue if not already pending */
-    if (atomic_cmpxchg(&process_pending, 0, 1) == 0) {
-        kthread_queue_work(worker, &process_work);
-    } 
-}
-
 /* --- GPT client callback --- */
 static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
 {
@@ -614,7 +598,9 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
     WRITE_ONCE(mgr->tick_ns, tick_ns);
     WRITE_ONCE(mgr->timing_ready, true);
 
-    fusion_cn_queue_process(mgr);
+    atomic_inc(&pending_ticks);
+    if (READ_ONCE(process_thread))
+        wake_up(&process_wq);
 }
 
 static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
@@ -717,29 +703,39 @@ enum mgr_start_errno {
     MGR_START_ERRNO_RUNNING
 };
 
-/* kthread worker routine: drains coalesced ticks */
-static void audio_frame_process_work(struct kthread_work *work)
+static int fusion_cn_process_thread_fn(void *arg)
 {
-    int n = atomic_xchg(&process_pending, 0);
-    bool profiling = READ_ONCE(profile);
+    struct fusion_cn_manager *mgr = arg;
 
-    while (n-- > 0) {
-        u64 t0 = profiling ? ktime_get_ns() : 0;
+    while (!kthread_should_stop()) {
+        bool profiling;
+        u64 t0;
 
-        fusion_cn_refresh_runtime_params(g_fusion_cn_mgr);
-        audio_frame_process(g_fusion_cn_mgr);
+        wait_event_interruptible(process_wq,
+                                 kthread_should_stop() || atomic_read(&pending_ticks) > 0);
+        if (kthread_should_stop())
+            break;
+
+        if (atomic_dec_if_positive(&pending_ticks) < 0)
+            continue;
+
+        profiling = READ_ONCE(profile);
+        t0 = profiling ? ktime_get_ns() : 0;
+
+        fusion_cn_refresh_runtime_params(mgr);
+        audio_frame_process(mgr);
 
         if (profiling) {
             fusion_cn_prof_add(&fusion_cn_worker_prof.total, ktime_get_ns() - t0);
             fusion_cn_prof_maybe_log();
         }
     }
+
+    return 0;
 }
 
 int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
-    struct kthread_worker *worker;
-
     if (atomic_read(&mgr->state.is_started)) {
         printk(KERN_DEBUG "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
@@ -747,23 +743,19 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 
     WRITE_ONCE(mgr->timing_ready, false);
     
-    /* Initialize PREEMPT_RT-friendly TX worker once */
-    if (!process_worker) {
-        worker = kthread_create_worker(0, "fusion-cn");
-        if (IS_ERR(worker)) {
-            int err = PTR_ERR(worker);
-            pr_err("fusion_cn: failed to create fusion-cn worker: %d\n", err);
+    if (!process_thread) {
+        init_waitqueue_head(&process_wq);
+        atomic_set(&pending_ticks, 0);
+        INIT_DELAYED_WORK(&metrics_work, fusion_cn_metrics_workfn);
+        process_thread = kthread_run(fusion_cn_process_thread_fn, mgr, "fusion-cn");
+        if (IS_ERR(process_thread)) {
+            int err = PTR_ERR(process_thread);
+            process_thread = NULL;
+            pr_err("fusion_cn: failed to create fusion-cn thread: %d\n", err);
             return err;
         }
-        process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
         /* RT prio set from userspace (irq-affinity.sh) */
-        kthread_init_work(&process_work, audio_frame_process_work);
-        INIT_DELAYED_WORK(&metrics_work, fusion_cn_metrics_workfn);
-        atomic_set(&process_pending, 0);
-        /* Publish the worker only after fully initialized */
-        smp_wmb();
-        process_worker = worker;
     }
     g_fusion_cn_mgr = mgr;
     rwlock_init(&mgr->active_streams_lock);
@@ -786,15 +778,12 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
 
     fusion_gpt_unregister_client();
     
-    /* Flush and destroy TX worker on stop */
     cancel_delayed_work_sync(&metrics_work);
 
-    if (process_worker) {
-        kthread_flush_worker(process_worker);
-        kthread_destroy_worker(process_worker);
-        process_worker = NULL;
+    if (process_thread) {
+        kthread_stop(process_thread);
         process_thread = NULL;
-        atomic_set(&process_pending, 0);
+        atomic_set(&pending_ticks, 0);
         g_fusion_cn_mgr = NULL;
     }
     
