@@ -331,7 +331,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     spin_unlock_irqrestore(&stream->lock, flags);
 
     hw.info = SNDRV_PCM_INFO_INTERLEAVED |
-              SNDRV_PCM_INFO_BLOCK_TRANSFER;
+              SNDRV_PCM_INFO_BLOCK_TRANSFER |
+              SNDRV_PCM_INFO_MMAP |
+              SNDRV_PCM_INFO_MMAP_VALID;
     switch (stream->format) {
     case SNDRV_PCM_FORMAT_S16_BE:
         hw.formats = SNDRV_PCM_FMTBIT_S16_BE;
@@ -541,6 +543,7 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .pointer = fusion_cn_pcm_pointer,
     .copy = fusion_cn_pcm_copy,
     .fill_silence = fusion_cn_pcm_fill_silence,
+    .mmap = snd_pcm_lib_default_mmap,
 };
 
 inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)

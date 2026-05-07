@@ -100,6 +100,11 @@ private:
         DEVICE_STATE_UNKNOWN,
     } State;
 
+    typedef enum {
+        ACCESS_RW_INTERLEAVED,
+        ACCESS_MMAP_INTERLEAVED,
+    } AccessMode;
+
     static void convert_read_float_le(const uint8_t *src, float *dst,
                                       int channels, int samples);
     static void convert_write_float_le(const float *src, uint8_t *dst,
@@ -154,6 +159,7 @@ private:
     bool is_input;
     int playback_start_threshold_frames;
     State current_state = DEVICE_STATE_CLOSED;
+    AccessMode access_mode = ACCESS_RW_INTERLEAVED;
     snd_pcm_uframes_t negotiated_buffer_size = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
@@ -398,6 +404,7 @@ void AlsaDevice::close_device()
         sw_params = nullptr;
     }
 
+    access_mode = ACCESS_RW_INTERLEAVED;
     negotiated_buffer_size = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
@@ -426,7 +433,9 @@ int AlsaDevice::get_buffer_depth()
         return -1;
     }
 
-    int depth = snd_pcm_avail(alsa);
+    int depth = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_avail_update(alsa)
+                  : snd_pcm_avail(alsa);
 
     if (depth < 0)
     {
@@ -548,7 +557,9 @@ int AlsaDevice::read(float *buffer, int samples)
         return samples;
     }
 
-    int res = snd_pcm_readi(alsa, sample_buffer.get(), samples);
+    int res = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_mmap_readi(alsa, sample_buffer.get(), samples)
+                  : snd_pcm_readi(alsa, sample_buffer.get(), samples);
 
     if (res == -EAGAIN)
     {
@@ -643,7 +654,9 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
-    int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
+    int res = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_mmap_writei(alsa, sample_buffer.get(), samples)
+                  : snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
     if (res == -EAGAIN)
     {
@@ -713,13 +726,30 @@ void AlsaDevice::set_hw_params()
                      snd_strerror(error));
     }
 
-    // Choose between non-/interleaved and read/write vs. mmap.
+    // Prefer mmap interleaved and fall back to read/write interleaved.
     error = snd_pcm_hw_params_set_access(alsa, hw_params,
-            SND_PCM_ACCESS_RW_INTERLEAVED);
-    if (error < 0)
+            SND_PCM_ACCESS_MMAP_INTERLEAVED);
+    if (error == 0)
     {
-        SPDLOG_ERROR("Failed to set ALSA access type: {}",
-                    snd_strerror(error));
+        access_mode = ACCESS_MMAP_INTERLEAVED;
+        SPDLOG_INFO("Using ALSA access MMAP_INTERLEAVED for {}",
+                    device_name.c_str());
+    }
+    else
+    {
+        error = snd_pcm_hw_params_set_access(alsa, hw_params,
+                SND_PCM_ACCESS_RW_INTERLEAVED);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to set ALSA access type: {}",
+                        snd_strerror(error));
+        }
+        else
+        {
+            access_mode = ACCESS_RW_INTERLEAVED;
+            SPDLOG_INFO("Using ALSA access RW_INTERLEAVED for {}",
+                        device_name.c_str());
+        }
     }
 
     // Choose between float, s32, s24, s16, etc.
