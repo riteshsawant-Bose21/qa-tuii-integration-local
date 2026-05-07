@@ -17,6 +17,7 @@ class Speaker extends HardwareComponent {
   final MountingType? mountingType;
   final double? horizontalCoverageAngle; // in degrees
   final String color; // black, white, etc.
+  final bool isSubwoofer; // To differentiate between full-range speakers and subwoofers
 
   Speaker({
     String? id,
@@ -48,6 +49,7 @@ class Speaker extends HardwareComponent {
     this.mountingType,
     this.horizontalCoverageAngle,
     this.color = 'black',
+    this.isSubwoofer = false,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -83,6 +85,7 @@ class Speaker extends HardwareComponent {
     MountingType? mountingType,
     double? horizontalCoverageAngle,
     String? color,
+    bool? isSubwoofer,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -112,6 +115,7 @@ class Speaker extends HardwareComponent {
       mountingType: mountingType ?? this.mountingType,
       horizontalCoverageAngle: horizontalCoverageAngle ?? this.horizontalCoverageAngle,
       color: color ?? this.color,
+      isSubwoofer: isSubwoofer ?? this.isSubwoofer,
     );
   }
 
@@ -254,6 +258,8 @@ class Speaker extends HardwareComponent {
       'equipmentLocationPosition': equipmentLocationPosition,
       "mountingType": mountingType?.name,
       "horizontalCoverageAngle": horizontalCoverageAngle,
+      "color": color,
+      "isSubwoofer": isSubwoofer,
     };
   }
 
@@ -287,6 +293,8 @@ class Speaker extends HardwareComponent {
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
       mountingType: MountingType.fromJson(json['mountingType'] as String?),
       horizontalCoverageAngle: (json['horizontalCoverageAngle'] as num?)?.toDouble(),
+      color: json['color'] as String? ?? 'black',
+      isSubwoofer: json['isSubwoofer'] as bool? ?? false,
     );
   }
 }
