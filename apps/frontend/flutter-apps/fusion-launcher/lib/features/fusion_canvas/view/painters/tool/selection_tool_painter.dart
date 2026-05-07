@@ -12,22 +12,30 @@ import '../elements/fusion_canvas_line_painter.dart';
 import '../elements/fusion_rect_painter.dart';
 import '../fusion_canvas_painter.dart';
 
-/// Painter that draws selection highlights and drag handles for selected elements
-class SelectionToolPainter extends FusionBasePainter {
-  final SelectToolState state;
-  final List<FusionBasePainter> allPainters;
+class SelectionToolPainterParam {
   final Color selectionColor;
   final Color handleColor;
   final double handleRadius;
   final double strokeWidth;
-
-  SelectionToolPainter({
-    required this.state,
-    required this.allPainters,
+  final bool drawOverallBounding;
+  const SelectionToolPainterParam({
     this.selectionColor = Colors.blue,
     this.handleColor = Colors.blue,
     this.handleRadius = 5.0,
     this.strokeWidth = 2.0,
+    this.drawOverallBounding = true,
+  });
+}
+
+/// Painter that draws selection highlights and drag handles for selected elements
+class SelectionToolPainter extends FusionBasePainter {
+  final SelectToolState state;
+  final List<FusionBasePainter> allPainters;
+  final SelectionToolPainterParam param;
+  SelectionToolPainter({
+    required this.state,
+    required this.allPainters,
+    this.param = const SelectionToolPainterParam(),
   });
 
   @override
@@ -38,15 +46,15 @@ class SelectionToolPainter extends FusionBasePainter {
         canvas.drawRect(
           marqueeRect,
           Paint()
-            ..color = selectionColor.withValues(alpha: 0.15)
+            ..color = param.selectionColor.withValues(alpha: 0.15)
             ..style = PaintingStyle.fill,
         );
         canvas.drawRect(
           marqueeRect,
           Paint()
-            ..color = selectionColor.withValues(alpha: 0.9)
+            ..color = param.selectionColor.withValues(alpha: 0.9)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = nonScaling(strokeWidth, painter),
+            ..strokeWidth = nonScaling(param.strokeWidth, painter),
         );
       }
     }
@@ -66,14 +74,14 @@ class SelectionToolPainter extends FusionBasePainter {
       }
     }
 
-    if (state.selectedLayerIds.length > 1 && rect != null && rect.width > 0 && rect.height > 0) {
+    if (state.selectedLayerIds.length > 1 && rect != null && rect.width > 0 && rect.height > 0 && param.drawOverallBounding) {
       // Draw overall bounding box for selection
       canvas.drawRect(
         rect, //.inflate(nonScaling(10, painter)),
         Paint()
-          ..color = selectionColor.withValues(alpha: 0.5)
+          ..color = param.selectionColor.withValues(alpha: 0.5)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = nonScaling(strokeWidth, painter),
+          ..strokeWidth = nonScaling(param.strokeWidth, painter),
       );
     }
   }
@@ -86,8 +94,8 @@ class SelectionToolPainter extends FusionBasePainter {
         getEffectivePosition(element.start, painter, layer.id ?? ""),
         getEffectivePosition(element.end, painter, layer.id ?? ""),
         Paint()
-          ..color = selectionColor
-          ..strokeWidth = nonScaling(strokeWidth * 2, painter)
+          ..color = param.selectionColor
+          ..strokeWidth = nonScaling(param.strokeWidth * 2, painter)
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
         painter,
@@ -96,12 +104,12 @@ class SelectionToolPainter extends FusionBasePainter {
       );
     } else if (element is FusionCanvasPoint) {
       final Offset effectivePosition = getEffectivePosition(element, painter, layer.id ?? "");
-      final double nonScaling2 = nonScaling(handleRadius * 2, painter);
+      final double nonScaling2 = nonScaling(param.handleRadius * 2, painter);
       canvas.drawCircle(
         effectivePosition,
         nonScaling2,
         Paint()
-          ..color = selectionColor.withValues(alpha: 0.75)
+          ..color = param.selectionColor.withValues(alpha: 0.75)
           ..style = PaintingStyle.fill,
       );
       canvas.drawCircle(
@@ -109,7 +117,7 @@ class SelectionToolPainter extends FusionBasePainter {
         nonScaling2 * 0.5,
         Paint()
           ..color = Colors.white
-          ..strokeWidth = nonScaling(strokeWidth, painter)
+          ..strokeWidth = nonScaling(param.strokeWidth, painter)
           ..style = PaintingStyle.stroke,
       );
     }
@@ -145,9 +153,9 @@ class SelectionToolPainter extends FusionBasePainter {
         Radius.circular(rect.shortestSide * 0.15),
       ),
       Paint()
-        ..color = selectionColor
+        ..color = param.selectionColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = nonScaling(strokeWidth, painter),
+        ..strokeWidth = nonScaling(param.strokeWidth, painter),
     );
     canvas.restore();
   }
@@ -156,9 +164,9 @@ class SelectionToolPainter extends FusionBasePainter {
     canvas.drawRect(
       rect,
       Paint()
-        ..color = selectionColor
+        ..color = param.selectionColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = nonScaling(strokeWidth, painter),
+        ..strokeWidth = nonScaling(param.strokeWidth, painter),
     );
   }
 
@@ -171,7 +179,7 @@ class SelectionToolPainter extends FusionBasePainter {
     // Draw highlighted line
     final FusionCanvasLinePainter selectionLinePainter = FusionCanvasLinePainter(
       line: linePainter.line,
-      thickness: strokeWidth,
+      thickness: param.strokeWidth,
       color: Colors.red,
       showPoints: true,
       layerId: linePainter.layerId,
@@ -197,8 +205,8 @@ class SelectionToolPainter extends FusionBasePainter {
       if (!state.isElementSelected(fusionCanvasLine.id)) {
         final FusionCanvasLinePainter edgePainter = FusionCanvasLinePainter(
           line: fusionCanvasLine,
-          thickness: strokeWidth,
-          color: selectionColor,
+          thickness: param.strokeWidth,
+          color: param.selectionColor,
           showPoints: true,
           layerId: polygonPainter.id ?? '',
         );

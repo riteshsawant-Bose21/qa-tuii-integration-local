@@ -8,18 +8,14 @@ import '../fusion_base_painter.dart';
 
 class FusionDottedBgPainter extends FusionBasePainter {
   final Color color;
+  // final
   FusionDottedBgPainter({required this.color});
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     final FusionCanvasState state = painter.state;
     final Offset offset = state.offset;
 
-    DottedGridPainter(color: color).paint(
-      canvas,
-      size,
-      offset,
-      state.scale,
-    );
+    DottedGridPainter(color: color).paint(canvas, size, offset, state.scale, nonScaling(2, painter));
   }
 
   @override
