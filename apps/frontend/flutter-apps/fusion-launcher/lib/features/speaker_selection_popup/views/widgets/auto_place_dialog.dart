@@ -174,8 +174,6 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   }
 
   Widget _buildSpacingSection(BuildContext context) {
-    final ColorScheme cs = context.colorScheme;
-
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final ListeningArea? selectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
     ceilingHeightController.text = selectedListeningArea?.ceilingHeight.toString() ?? '';
