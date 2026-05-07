@@ -105,6 +105,76 @@ func TestUpdateDeviceInfoNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "PATCH /devices/nonexistent should return 404")
 }
 
+// TestUpdateDeviceInfoRejectsDuplicateID verifies that PATCH /devices/{id} returns
+// an error when attempting to set a device ID that is already in use by another node.
+func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
+	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
+		t.Skip("requires at least two cluster nodes")
+	}
+
+	nodeA := clusterConfig.nodes[0]
+	nodeB := clusterConfig.nodes[1]
+
+	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+
+	// Attempt to set node A's device ID to the same value as node B's.
+	patch := api.DevicePatch{Id: ptrString(infoB.Id)}
+	body, err := json.Marshal(patch)
+	require.NoError(t, err)
+
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.Id))
+	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode,
+		"PATCH /devices/{id} with duplicate ID should return 409 Conflict")
+
+	// Verify node A's ID was not changed.
+	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	assert.Equal(t, infoA.Id, afterA.Id, "node A device ID must remain unchanged")
+}
+
+// TestUpdateDeviceInfoRejectsDuplicateName verifies that PATCH /devices/{id} returns
+// an error when attempting to set a device name that is already in use by another node.
+func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
+	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
+		t.Skip("requires at least two cluster nodes")
+	}
+
+	nodeA := clusterConfig.nodes[0]
+	nodeB := clusterConfig.nodes[1]
+
+	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+
+	// Attempt to set node A's name to the same value as node B's.
+	patch := api.DevicePatch{Name: ptrString(infoB.Name)}
+	body, err := json.Marshal(patch)
+	require.NoError(t, err)
+
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.Id))
+	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode,
+		"PATCH /devices/{id} with duplicate name should return 409 Conflict")
+
+	// Verify node A's name was not changed.
+	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	assert.Equal(t, infoA.Name, afterA.Name, "node A device name must remain unchanged")
+}
+
 // TestDeviceInfoErrorCases groups wrong-method and malformed-JSON scenarios.
 func TestDeviceInfoErrorCases(t *testing.T) {
 	cases := []struct {
