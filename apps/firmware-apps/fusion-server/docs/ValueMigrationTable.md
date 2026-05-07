@@ -16,6 +16,12 @@
 | Audio/settings clear | `DELETE /value` or patching generic state | `DELETE /settings/audio` | Public typed settings endpoint. |
 | Audio/settings scalar update | `PATCH /value` with settings subtree | `PATCH /settings/audio/{blockId}/{param}` | Request body: `{ "value": ... }`. |
 | Audio/settings indexed update | `PATCH /value` with settings subtree | `PATCH /settings/audio/{blockId}/{param}/{index}` | Request body: `{ "value": ... }`. |
+| Read full TouchUI zone config subtree | `GET /value?key=touchui_zone_config` | `GET /settings/touchui_zone_config` | Public read API for the TouchUI zone config subtree. |
+| Replace full TouchUI zone config subtree | `PATCH /value` with `{"touchui_zone_config": {...}}` | `PATCH /settings/touchui_zone_config` | Request body: `{ "value": ... }`. Replaces the full subtree. |
+| Clear full TouchUI zone config subtree | `DELETE /value` or patching generic state | `DELETE /settings/touchui_zone_config` | Clears the full TouchUI zone config subtree. |
+| Read full wall controller config subtree | `GET /value?key=wall_controller_config` | `GET /settings/wall_controller_config` | Public read API for the wall controller config subtree. |
+| Replace full wall controller config subtree | `PATCH /value` with `{"wall_controller_config": {...}}` | `PATCH /settings/wall_controller_config` | Request body: `{ "value": ... }`. Replaces the full subtree. |
+| Clear full wall controller config subtree | `DELETE /value` or patching generic state | `DELETE /settings/wall_controller_config` | Clears the full wall controller config subtree. |
 | Dynamic config/test fixture writes | `PATCH /value` with nested audio/config blobs | `PATCH /state` | Internal/admin only. This is what launcher/test tooling now uses instead of public `/value`. |
 | WebSocket generic config patch | raw JSON `patch_config` payloads | protobuf `WebSocketRequest` / `WebSocketResponse` with `patch_config` | Transport is now protobuf-typed even if payload content may still be config-shaped. |
 
@@ -51,6 +57,38 @@ PATCH /value
 ```http
 PATCH /settings/audio/GAIN528578446/gain
 {"value":-12.0}
+```
+
+### Old
+```http
+GET /value?key=touchui_zone_config
+```
+
+### New
+```http
+GET /settings/touchui_zone_config
+```
+
+### Old
+```http
+PATCH /value
+{"touchui_zone_config":{"zones":[{"zoneId":"FUNC135425261/selector","gain":{"Max":80}}]}}
+```
+
+### New
+```http
+PATCH /settings/touchui_zone_config
+{"value":{"zones":[{"zoneId":"FUNC135425261/selector","gain":{"Max":80}}]}}
+```
+
+### Old
+```http
+GET /value?key=wall_controller_config
+```
+
+### New
+```http
+GET /settings/wall_controller_config
 ```
 
 ### Old
