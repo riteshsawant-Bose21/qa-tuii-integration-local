@@ -89,12 +89,13 @@ type PatchResult struct {
 // It supports versioning, and nested key access.
 type StateManager struct {
 	sync.RWMutex
-	state      VersionedState
-	version    api.Version
-	httpClient *http.Client
-	memberlist *memberlist.Memberlist
-	verbose    bool
-	dataRepair dataRepairState
+	state               VersionedState
+	version             api.Version
+	httpClient          *http.Client
+	memberlist          *memberlist.Memberlist
+	verbose             bool
+	dataRepair          dataRepairState
+	stateMismatchStreak map[string]int
 	// checksumDirty tracks whether state.Checksum must be recomputed from the
 	// current full state before it can be treated as authoritative.
 	checksumDirty bool
@@ -105,11 +106,12 @@ type StateManager struct {
 // NewStateManager creates and initializes a new StateManager for the given node.
 func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
-		state:         *NewVersionedState(),
-		version:       api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient:    &http.Client{Timeout: api.HTTPTimeout},
-		verbose:       config.Verbose,
-		checksumDirty: true,
+		state:               *NewVersionedState(),
+		version:             api.Version{Counter: 0, NodeID: config.NodeName},
+		httpClient:          &http.Client{Timeout: api.HTTPTimeout},
+		verbose:             config.Verbose,
+		stateMismatchStreak: make(map[string]int),
+		checksumDirty:       true,
 	}
 }
 
@@ -253,14 +255,14 @@ func (sm *StateManager) Get(key string) (any, bool) {
 		keyPart := firstPart[:strings.Index(firstPart, "[")]
 		entry, exists := sm.state.State[keyPart]
 		if !exists || entry == nil {
-			logger.Warn("%s not found.", keyPart)
+			logger.Debug("%s not found.", keyPart)
 			return nil, false
 		}
 		current = entry.Data
 	} else {
 		entry, exists := sm.state.State[firstPart]
 		if !exists || entry == nil {
-			logger.Warn("%s not found.", firstPart)
+			logger.Debug("%s not found.", firstPart)
 			return nil, false
 		}
 		current = entry.Data
@@ -280,7 +282,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 				value, exists := nestedMap[keyPart]
 				if !exists {
-					logger.Warn("%s not found.", keyPart)
+					logger.Debug("%s not found.", keyPart)
 					return nil, false
 				}
 
@@ -335,7 +337,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 			value, exists := nestedMap[part]
 			if !exists {
-				logger.Warn("%s not found.", part)
+				logger.Debug("%s not found.", part)
 				return nil, false
 			}
 
@@ -840,14 +842,28 @@ func (sm *StateManager) validateState() {
 		}
 
 		if checksum != remoteState.Checksum {
-			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			sm.Lock()
+			sm.stateMismatchStreak[member.Name]++
+			streak := sm.stateMismatchStreak[member.Name]
+			sm.Unlock()
+
+			if streak >= 2 {
+				logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			} else {
+				logger.Debug("[STATE] Transient state mismatch detected with node %s", member.Name)
+			}
 			if sm.verbose {
 				logger.Debug("[STATE] Local checksum:  %s", checksum)
 				logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
 			}
 
 			consistent = false
+			continue
 		}
+
+		sm.Lock()
+		delete(sm.stateMismatchStreak, member.Name)
+		sm.Unlock()
 	}
 
 	if consistent {

@@ -20,6 +20,9 @@ protoc \
   "$PROTOBUF_INCLUDE/google/protobuf/timestamp.proto" \
   "$PROTO_ROOT/fusion/controllers.proto" \
   "$PROTO_ROOT/fusion/device_config.proto" \
+  "$PROTO_ROOT/fusion/device_config_audio.proto" \
+  "$PROTO_ROOT/fusion/device_config_dro.proto" \
+  "$PROTO_ROOT/fusion/device_config_static.proto" \
   "$PROTO_ROOT/fusion/devices.proto" \
   "$PROTO_ROOT/fusion/health.proto" \
   "$PROTO_ROOT/fusion/metadata.proto" \

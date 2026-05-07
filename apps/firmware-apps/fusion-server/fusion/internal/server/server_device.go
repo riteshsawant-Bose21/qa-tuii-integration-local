@@ -162,13 +162,9 @@ func projectAudioSettings(settings *model.FusionConnectAudioSettings) (map[strin
 			continue
 		}
 
-		projectedBlock := make(map[string]any, len(block.Parameters))
-		for param, value := range block.Parameters {
-			if value == nil {
-				projectedBlock[param] = nil
-				continue
-			}
-			projectedBlock[param] = value.AsInterface()
+		projectedBlock, err := projectAudioBlockSettings(block)
+		if err != nil {
+			return nil, fmt.Errorf("project block %s: %w", blockID, err)
 		}
 		audio[blockID] = projectedBlock
 	}
@@ -176,6 +172,105 @@ func projectAudioSettings(settings *model.FusionConnectAudioSettings) (map[strin
 	return map[string]any{
 		"audio": audio,
 	}, nil
+}
+
+func projectAudioBlockSettings(block *model.AudioBlockSettings) (map[string]any, error) {
+	if block == nil {
+		return map[string]any{}, nil
+	}
+
+	switch typed := block.Kind.(type) {
+	case *model.AudioBlockSettings_Gain:
+		projected := map[string]any{}
+		if typed.Gain != nil {
+			if typed.Gain.Gain != nil {
+				projected["gain"] = typed.Gain.GetGain()
+			}
+			if typed.Gain.Mute != nil {
+				projected["mute"] = typed.Gain.GetMute()
+			}
+		}
+		return projected, nil
+	case *model.AudioBlockSettings_Peq:
+		projected := map[string]any{}
+		if typed.Peq != nil {
+			projected["band_enable"] = boolSliceToAny(typed.Peq.GetBandEnable())
+			projected["frequency"] = float64SliceToAny(typed.Peq.GetFrequency())
+			projected["gain"] = float64SliceToAny(typed.Peq.GetGain())
+			projected["q"] = float64SliceToAny(typed.Peq.GetQ())
+			projected["type"] = stringSliceToAny(typed.Peq.GetFilterType())
+		}
+		return projected, nil
+	case *model.AudioBlockSettings_Compressor:
+		projected := map[string]any{}
+		if typed.Compressor != nil {
+			if typed.Compressor.Threshold != nil {
+				projected["threshold"] = typed.Compressor.GetThreshold()
+			}
+			if typed.Compressor.Ratio != nil {
+				projected["ratio"] = typed.Compressor.GetRatio()
+			}
+			if typed.Compressor.Attack != nil {
+				projected["attack"] = typed.Compressor.GetAttack()
+			}
+			if typed.Compressor.Release != nil {
+				projected["release"] = typed.Compressor.GetRelease()
+			}
+			if typed.Compressor.MakeupGain != nil {
+				projected["makeup_gain"] = typed.Compressor.GetMakeupGain()
+			}
+			if typed.Compressor.Bypass != nil {
+				projected["bypass"] = typed.Compressor.GetBypass()
+			}
+		}
+		return projected, nil
+	case *model.AudioBlockSettings_Selector:
+		projected := map[string]any{}
+		if typed.Selector != nil && typed.Selector.SelectedIndex != nil {
+			projected["selected_index"] = typed.Selector.GetSelectedIndex()
+		}
+		return projected, nil
+	case *model.AudioBlockSettings_Generic:
+		projected := map[string]any{}
+		if typed.Generic != nil {
+			for param, value := range typed.Generic.Parameters {
+				if value == nil {
+					projected[param] = nil
+					continue
+				}
+				projected[param] = value.AsInterface()
+			}
+		}
+		return projected, nil
+	case nil:
+		return map[string]any{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported audio block settings kind %T", typed)
+	}
+}
+
+func boolSliceToAny(values []bool) []any {
+	out := make([]any, len(values))
+	for i, value := range values {
+		out[i] = value
+	}
+	return out
+}
+
+func float64SliceToAny(values []float64) []any {
+	out := make([]any, len(values))
+	for i, value := range values {
+		out[i] = value
+	}
+	return out
+}
+
+func stringSliceToAny(values []string) []any {
+	out := make([]any, len(values))
+	for i, value := range values {
+		out[i] = value
+	}
+	return out
 }
 
 func encodeTypedJSON(value any) (any, error) {

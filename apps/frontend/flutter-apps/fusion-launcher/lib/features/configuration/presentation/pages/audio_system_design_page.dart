@@ -1,13 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/dro_json_mapper.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/generated/proto/fusion/device_config_audio.pb.dart';
 import 'package:fusion_lib/generated/proto/fusion/device_config.pb.dart';
 
 import '../../../../core/constants.dart';
@@ -752,7 +752,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
       final ResponseCallback<dynamic> fusionServerResponse =
           await serviceLocator<FusionNetworkClient>().put(
             api: FusionApiEndpoint.fusionDeviceConfig,
-            data: jsonDecode(deviceConfigPackage.writeToJson()),
+            data: deviceConfigPackage,
           );
 
       _showProvisioningSnackBar(
@@ -784,20 +784,48 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
     conditionedOutput.remove("image_input");
     conditionedOutput.remove("image_output");
 
-    final Map<String, dynamic> packageJson = <String, dynamic>{
-      "droConditionedOutput": conditionedOutput,
-      "fusionConnectAdditions": <String, dynamic>{
-        ...JsonFormatConverter.getAudioStreamsData(droResponse),
-        "settings": <String, dynamic>{
-          "audio": <String, dynamic>{},
-        },
-      },
-    };
+    final DroConditionedOutput droConditionedOutput =
+        DroConditionedOutput()
+          ..mergeFromProto3Json(
+            conditionedOutput,
+            ignoreUnknownFields: true,
+          );
 
-    return DeviceConfigurationPackage()..mergeFromProto3Json(
-      packageJson,
-      ignoreUnknownFields: true,
-    );
+    final FusionConnectAdditions fusionConnectAdditions =
+        FusionConnectAdditions()
+          ..audioStreams.addAll(_buildFusionConnectAudioStreams(droResponse))
+          ..settings = (FusionConnectAudioSettings()
+            ..audio.addAll(<String, AudioBlockSettings>{}));
+
+    return DeviceConfigurationPackage()
+      ..droConditionedOutput = droConditionedOutput
+      ..fusionConnectAdditions = fusionConnectAdditions;
+  }
+
+  List<FusionConnectAudioStream> _buildFusionConnectAudioStreams(
+    Map<String, dynamic> droResponse,
+  ) {
+    final List<dynamic> audioStreamJson =
+        (JsonFormatConverter.getAudioStreamsData(
+              droResponse,
+            )["audio_streams"]
+            as List<dynamic>? ??
+            <dynamic>[]);
+
+    return audioStreamJson
+        .map<FusionConnectAudioStream>((dynamic stream) {
+          final Map<String, dynamic> streamMap = Map<String, dynamic>.from(
+            stream as Map<dynamic, dynamic>,
+          );
+          final FusionConnectAudioStream typedStream =
+              FusionConnectAudioStream()
+                ..mergeFromProto3Json(
+                  streamMap,
+                  ignoreUnknownFields: true,
+                );
+          return typedStream;
+        })
+        .toList(growable: false);
   }
 
   void _showProvisioningSnackBar({

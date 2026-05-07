@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gibson042/canonicaljson-go"
 	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
@@ -57,6 +58,8 @@ var antiEntropyBuckets = []string{
 	bucketTasks,
 	bucketSnapshotDefs,
 	bucketSceneSets,
+	bucketAudio,
+	bucketDevice,
 }
 
 type saveState struct {
@@ -806,27 +809,28 @@ func (p *Persistence) computeHash() (string, error) {
 
 func computeHashTx(tx *bbolt.Tx) (string, error) {
 	hash := sha256.New()
-	if err := tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-		bucketName := string(name)
-		hash.Write(name)
+	for _, bucketName := range antiEntropyBuckets {
+		b := tx.Bucket([]byte(bucketName))
+		if b == nil {
+			continue
+		}
+
+		hash.Write([]byte(bucketName))
 		cursor := b.Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			hash.Write(k)
 
-			sanitized, err := sanitizeHashValue(bucketName, string(k), v)
+			sanitized, err := normalizeBucketValueForHash(bucketName, string(k), v)
 			if err != nil {
-				return err
+				return "", err
 			}
 			hash.Write(sanitized)
 		}
-		return nil
-	}); err != nil {
-		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
+func normalizeBucketValueForHash(bucketName, key string, value []byte) ([]byte, error) {
 	switch bucketName {
 	case bucketFusion:
 		if key != keyMetadata {
@@ -838,7 +842,7 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		}
 		metadata.Hash = ""
 		metadata.Version = nil
-		normalized, err := json.Marshal(metadata)
+		normalized, err := canonicaljson.Marshal(metadata)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal normalized metadata for hashing: %w", err)
 		}
@@ -856,9 +860,16 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		}
 		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
-		normalized, err := json.Marshal(state)
+		normalized, err := canonicaljson.Marshal(state)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal normalized persistent state for hashing (bucket=%s key=%s): %w", bucketName, key, err)
+		}
+		return normalized, nil
+
+	case bucketTasks, bucketSnapshotDefs, bucketSceneSets, bucketAudio, bucketDevice:
+		normalized, err := canonicalizeHashJSONValue(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to canonicalize JSON for hashing (bucket=%s key=%s): %w", bucketName, key, err)
 		}
 		return normalized, nil
 
@@ -867,31 +878,25 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 	}
 }
 
-func normalizeAntiEntropyValue(bucketName string, value any) (any, error) {
-	switch bucketName {
-	case bucketSnapshots, bucketActive:
-		raw, err := json.Marshal(value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal persistent state for normalization (bucket=%s): %w", bucketName, err)
-		}
-		var state PersistentState
-		if err := json.Unmarshal(raw, &state); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal persistent state for normalization (bucket=%s): %w", bucketName, err)
-		}
-		state.Version = api.Version{}
-		state.Timestamp = time.Time{}
-		return state, nil
-	default:
-		return value, nil
+func canonicalizeHashJSONValue(value []byte) ([]byte, error) {
+	var decoded any
+	if err := json.Unmarshal(value, &decoded); err != nil {
+		return nil, err
 	}
+	return canonicaljson.Marshal(decoded)
 }
 
 func antiEntropyValueChecksum(bucketName string, value any) (string, error) {
-	normalized, err := normalizeAntiEntropyValue(bucketName, value)
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal value for anti-entropy checksum (bucket=%s): %w", bucketName, err)
+	}
+	normalized, err := normalizeBucketValueForHash(bucketName, "", raw)
 	if err != nil {
 		return "", err
 	}
-	return utils.JSONChecksum(normalized)
+	sum := sha256.Sum256(normalized)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func mapStringAny(value any) map[string]any {

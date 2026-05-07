@@ -79,5 +79,50 @@ docs {
     "cron_expr": "*/5 * * * *",
     "description": "Task description"
   }
+
+  ---
+
+  ## 🎛️ Settings
+
+  ### `GET /settings/audio`
+  Returns the full runtime audio settings subtree.
+
+  ### `GET /settings/audio/{blockId}`
+  Returns the runtime settings object for one audio block.
+
+  ### `GET /settings/audio/{blockId}/{param}`
+  Returns one runtime setting value as:
+  ```json
+  { "value": ... }
+  ```
+
+  ### `GET /settings/audio/{blockId}/{param}/{index}`
+  Returns one indexed runtime setting value as:
+  ```json
+  { "value": ... }
+  ```
+
+  ### `PATCH /settings/audio/{blockId}/{param}`
+  Updates one scalar runtime setting.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": -12.0
+  }
+  ```
+
+  ### `PATCH /settings/audio/{blockId}/{param}/{index}`
+  Updates one indexed runtime setting.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": 1000.0
+  }
+  ```
+
+  ### `DELETE /settings/audio`
+  Clears the entire runtime audio settings subtree.
   
 }

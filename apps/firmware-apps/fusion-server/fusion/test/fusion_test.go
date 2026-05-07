@@ -142,6 +142,79 @@ func TestPatchArrayElement(t *testing.T) {
 	}
 }
 
+func TestGetAudioSettingsRoot(t *testing.T) {
+	const blockID = "get_audio_settings_root_test"
+
+	if err := patchAudioSetting(serverAddr, blockID, "frequencies", []float64{100.0, 200.0, 300.0}); err != nil {
+		t.Fatalf("Failed to seed audio settings: %v", err)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/settings/audio", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to GET audio settings root: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+
+	var settings map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		t.Fatalf("Failed to decode audio settings root response: %v", err)
+	}
+
+	block, ok := settings[blockID].(map[string]any)
+	if !ok {
+		t.Fatalf("Expected block %q in root settings response, got %T", blockID, settings[blockID])
+	}
+
+	frequencies, ok := block["frequencies"].([]any)
+	if !ok {
+		t.Fatalf("Expected frequencies array in block settings, got %T", block["frequencies"])
+	}
+
+	expected := []any{100.0, 200.0, 300.0}
+	if !reflect.DeepEqual(frequencies, expected) {
+		t.Errorf("Unexpected frequencies array. Expected %v, got %v", expected, frequencies)
+	}
+}
+
+func TestGetAudioSettingsBlock(t *testing.T) {
+	const blockID = "get_audio_settings_block_test"
+
+	if err := patchAudioSetting(serverAddr, blockID, "frequencies", []float64{400.0, 500.0, 600.0}); err != nil {
+		t.Fatalf("Failed to seed audio block settings: %v", err)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/settings/audio/%s", serverAddr, blockID))
+	if err != nil {
+		t.Fatalf("Failed to GET audio block settings: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+
+	var block map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&block); err != nil {
+		t.Fatalf("Failed to decode audio block response: %v", err)
+	}
+
+	frequencies, ok := block["frequencies"].([]any)
+	if !ok {
+		t.Fatalf("Expected frequencies array in block response, got %T", block["frequencies"])
+	}
+
+	expected := []any{400.0, 500.0, 600.0}
+	if !reflect.DeepEqual(frequencies, expected) {
+		t.Errorf("Unexpected block frequencies. Expected %v, got %v", expected, frequencies)
+	}
+}
+
 // TestPatchDiffOutput sets an initial configuration, performs PATCH updates,
 // and asserts that the diff output preserves the updated array shape.
 func TestPatchDiffOutput(t *testing.T) {
@@ -243,6 +316,62 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	expected := []any{100.0, nil, 300.0}
 	if !reflect.DeepEqual(frequencies, expected) {
 		t.Errorf("Expected updated array %v, got %v", expected, frequencies)
+	}
+}
+
+func TestGetAudioSettingsNotFound(t *testing.T) {
+	t.Run("Missing block returns 404", func(t *testing.T) {
+		resp, err := http.Get(fmt.Sprintf("%s/settings/audio/%s", serverAddr, "missing_audio_block"))
+		if err != nil {
+			t.Fatalf("Failed to GET missing block: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 404 for missing block, got %d response: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Missing param returns 404", func(t *testing.T) {
+		const blockID = "missing_param_test"
+		if err := patchAudioSetting(serverAddr, blockID, "gain", 1.5); err != nil {
+			t.Fatalf("Failed to seed block for missing param test: %v", err)
+		}
+
+		resp, err := http.Get(fmt.Sprintf("%s/settings/audio/%s/%s", serverAddr, blockID, "missing_param"))
+		if err != nil {
+			t.Fatalf("Failed to GET missing param: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 404 for missing param, got %d response: %s", resp.StatusCode, string(body))
+		}
+	})
+}
+
+func TestPatchAudioSettingInvalidBody(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		fmt.Sprintf("%s/settings/audio/%s/%s", serverAddr, "invalid_body_test", "gain"),
+		bytes.NewBufferString(`{"value":`),
+	)
+	if err != nil {
+		t.Fatalf("Failed to create invalid PATCH request: %v", err)
+	}
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send invalid PATCH request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 400 for invalid PATCH body, got %d response: %s", resp.StatusCode, string(body))
 	}
 }
 
@@ -515,6 +644,18 @@ func TestStateConsistency(t *testing.T) {
 		err := setValueOnNode(testNodes[td.nodeIndex], td.key, td.value)
 		if err != nil {
 			t.Fatalf("Failed to set test data on node %d: %v", td.nodeIndex, err)
+		}
+
+		if !waitForSync(testTimeout, func() bool {
+			for _, node := range testNodes {
+				value, exists, err := getValueFromNode(node, td.key)
+				if err != nil || !exists || !valueEquals(value, td.value) {
+					return false
+				}
+			}
+			return true
+		}) {
+			t.Fatalf("Failed to converge key %s across cluster after write", td.key)
 		}
 	}
 

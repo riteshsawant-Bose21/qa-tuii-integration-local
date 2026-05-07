@@ -12,7 +12,6 @@ import (
 	json "github.com/goccy/go-json"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	"fusion/internal/api"
 	model "fusion/internal/gen/proto/fusion"
@@ -192,13 +191,15 @@ func TestPutDSPDeploymentPackage(t *testing.T) {
 	assert.Equal(t, payload.FusionConnectAdditions.AudioStreams[0].SourceDeviceUid, got.FusionConnectAdditions.AudioStreams[0].SourceDeviceUid)
 	assert.Equal(t, payload.FusionConnectAdditions.AudioStreams[0].DestDeviceUid, got.FusionConnectAdditions.AudioStreams[0].DestDeviceUid)
 	require.Contains(t, got.FusionConnectAdditions.Settings.Audio, blockID)
-	assert.Equal(
-		t,
-		payload.FusionConnectAdditions.Settings.Audio[blockID].Parameters["frequencies"].AsInterface(),
-		got.FusionConnectAdditions.Settings.Audio[blockID].Parameters["frequencies"].AsInterface(),
-	)
+	require.NotNil(t, got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetAlgorithm(), got.FusionConnectAdditions.Settings.Audio[blockID].GetAlgorithm())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFrequency(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFrequency())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFilterType(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFilterType())
 
-	projectedFrequencies, err := getClusterAudioSettingArray(clusterServerURL, blockID, "frequencies")
+	projectedFrequencies, err := getClusterAudioSettingArray(clusterServerURL, blockID, "frequency")
 	require.NoError(t, err)
 	assert.Equal(t, []any{100.0, 200.0, 300.0}, projectedFrequencies)
 }
@@ -383,8 +384,6 @@ func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPac
 	deviceID := "provisioned-device-" + suffix
 	sinkID := "sink-device-" + suffix
 	blockID := "device_config_eq_" + suffix
-	frequencies, err := structpb.NewList([]any{100.0, 200.0, 300.0})
-	require.NoError(t, err)
 
 	return &model.DeviceConfigurationPackage{
 		DroConditionedOutput: &model.DroConditionedOutput{
@@ -400,7 +399,7 @@ func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPac
 								Blocks: []*model.Block{
 									{
 										Name:      blockID,
-										Algorithm: "eq",
+										Algorithm: "peq",
 									},
 								},
 							},
@@ -423,8 +422,15 @@ func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPac
 			Settings: &model.FusionConnectAudioSettings{
 				Audio: map[string]*model.AudioBlockSettings{
 					blockID: {
-						Parameters: map[string]*structpb.Value{
-							"frequencies": structpb.NewListValue(frequencies),
+						Algorithm: "peq",
+						Kind: &model.AudioBlockSettings_Peq{
+							Peq: &model.PeqBlockSettings{
+								BandEnable: []bool{true, false, true},
+								Frequency:  []float64{100.0, 200.0, 300.0},
+								Gain:       []float64{1.0, 2.0, 3.0},
+								Q:          []float64{0.7, 1.1, 1.5},
+								FilterType: []string{"peq", "peq", "peq"},
+							},
 						},
 					},
 				},

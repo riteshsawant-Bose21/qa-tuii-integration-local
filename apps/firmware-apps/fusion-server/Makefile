@@ -15,7 +15,25 @@ PROTO_GO_OUT=fusion/internal/gen/proto
 GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin
 PROTOC_GEN_GO := $(GO_BIN_DIR)/protoc-gen-go
 PROTOC_GEN_GO_VERSION ?= v1.36.6
-PROTO_FILES=$(PROTO_SRC_DIR)/fusion/device_config.proto $(PROTO_SRC_DIR)/fusion/tasks.proto $(PROTO_SRC_DIR)/fusion/time_machine.proto $(PROTO_SRC_DIR)/fusion/devices.proto $(PROTO_SRC_DIR)/fusion/websocket.proto $(PROTO_SRC_DIR)/fusion/controllers.proto $(PROTO_SRC_DIR)/fusion/pava.proto $(PROTO_SRC_DIR)/fusion/sessions.proto $(PROTO_SRC_DIR)/fusion/metadata.proto $(PROTO_SRC_DIR)/fusion/software_update.proto $(PROTO_SRC_DIR)/fusion/vip.proto $(PROTO_SRC_DIR)/fusion/health.proto $(PROTO_SRC_DIR)/fusion/udp.proto $(PROTO_SRC_DIR)/fusion/version.proto
+PROTO_FUSION_DIR=$(PROTO_SRC_DIR)/fusion
+PROTO_FILES=\
+	$(PROTO_FUSION_DIR)/device_config.proto \
+	$(PROTO_FUSION_DIR)/device_config_audio.proto \
+	$(PROTO_FUSION_DIR)/device_config_dro.proto \
+	$(PROTO_FUSION_DIR)/device_config_static.proto \
+	$(PROTO_FUSION_DIR)/tasks.proto \
+	$(PROTO_FUSION_DIR)/time_machine.proto \
+	$(PROTO_FUSION_DIR)/devices.proto \
+	$(PROTO_FUSION_DIR)/websocket.proto \
+	$(PROTO_FUSION_DIR)/controllers.proto \
+	$(PROTO_FUSION_DIR)/pava.proto \
+	$(PROTO_FUSION_DIR)/sessions.proto \
+	$(PROTO_FUSION_DIR)/metadata.proto \
+	$(PROTO_FUSION_DIR)/software_update.proto \
+	$(PROTO_FUSION_DIR)/vip.proto \
+	$(PROTO_FUSION_DIR)/health.proto \
+	$(PROTO_FUSION_DIR)/udp.proto \
+	$(PROTO_FUSION_DIR)/version.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -64,8 +82,9 @@ tidy:
 	cd fusion && $(GOMOD) tidy
 
 proto: proto-tools
-	mkdir -p $(PROTO_GO_OUT)
-	$(PROTOC) \
+	@echo "Generating Go protobufs..."
+	@mkdir -p $(PROTO_GO_OUT)
+	@$(PROTOC) \
 		-I $(PROTO_SRC_DIR) \
 		--plugin=protoc-gen-go=$(PROTOC_GEN_GO) \
 		--go_out=$(PROTO_GO_OUT) \
@@ -80,6 +99,9 @@ proto-tools:
 
 proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/device_config.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_audio.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_dro.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_static.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/tasks.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/time_machine.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/devices.pb.go
