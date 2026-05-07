@@ -811,6 +811,8 @@ class FusionNetworkClient {
     // to preserve existing behaviour.
     final dynamic decoded = json is String ? _tryJsonDecode(json) : json;
 
+    // Top-level array → wrap under the message's first repeated field name and
+    // parse as canonical proto3 JSON.
     if (decoded is List) {
       final String? repeatedFieldName = _firstRepeatedFieldName(message);
       if (repeatedFieldName != null) {
@@ -820,6 +822,24 @@ class FusionNetworkClient {
         );
         return message;
       }
+    }
+
+    // Top-level object → choose the dialect by inspecting the keys.
+    // Field-name keys (e.g. "devices") → mergeFromProto3Json.
+    // Tag-number keys (e.g. "1")        → mergeFromJson.
+    if (decoded is Map) {
+      final bool hasFieldNameKeys = decoded.keys.any(
+        (dynamic k) => k is String && int.tryParse(k) == null,
+      );
+      if (hasFieldNameKeys) {
+        message.mergeFromProto3Json(
+          Map<String, dynamic>.from(decoded),
+          ignoreUnknownFields: true,
+        );
+        return message;
+      }
+      message.mergeFromJson(jsonEncode(decoded));
+      return message;
     }
 
     if (decoded is String) {

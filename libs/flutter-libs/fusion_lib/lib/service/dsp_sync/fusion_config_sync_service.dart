@@ -10,7 +10,7 @@ class FusionConfigSyncService {
     required String vip,
   }) async {
     try {
-      final ResponseCallback<dynamic> response = await networkClient.post(
+      final ResponseCallback<dynamic> response = await networkClient.patch(
         api: FusionApiEndpoint.fusionState,
         data: config,
         baseUrlToOverride: vip,
