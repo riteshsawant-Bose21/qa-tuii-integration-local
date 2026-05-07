@@ -182,9 +182,6 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
   /// Raw (unsnapped) 0→1 ratio that drives smooth thumb movement while dragging.
   late double _rawRatio;
 
-  /// Whether user is actively dragging the thumb.
-  bool _isDragging = false;
-
   /// Last interval index crossed by thumb center (used for haptic trigger).
   late int _lastCrossedStepIndex;
 
@@ -259,7 +256,6 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
 
   void _onDragEnd() {
     final double rawValue = widget.min + _rawRatio * (widget.max - widget.min);
-    setState(() => _isDragging = false);
     widget.onChangeEnd?.call(rawValue);
   }
 
@@ -297,32 +293,28 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         );
+    final TextStyle effectiveThumbValueTextStyle = effectiveIndicatorTextStyle.copyWith(
+      color: Colors.black87,
+      fontSize: (effectiveIndicatorTextStyle.fontSize ?? 11).clamp(5, 8.0),
+    );
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double totalWidth = constraints.maxWidth;
-        final double usable = totalWidth - _effectivePadding * 2;
-        final double thumbCX = _effectivePadding + _rawRatio * usable;
         final double currentValue = widget.min + _rawRatio * (widget.max - widget.min);
         final String valueText = widget.labelFormatter != null ? widget.labelFormatter!(currentValue) : currentValue.toStringAsFixed(0);
-        final bool showIndicator = widget.showValueIndicatorOnDrag && _isDragging;
-        final double indicatorHeight = showIndicator ? 28 : 0;
-        final double indicatorAreaHeight = showIndicator ? (indicatorHeight + widget.valueIndicatorBottomSpacing) : 0;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
+            SizedBox(
               width: totalWidth,
-              height: widget.trackHeight + indicatorAreaHeight,
+              height: widget.trackHeight,
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onHorizontalDragStart: (DragStartDetails d) {
-                    setState(() => _isDragging = true);
                     _onDrag(d.localPosition.dx, totalWidth);
                   },
                   onHorizontalDragUpdate: (DragUpdateDetails d) => _onDrag(d.localPosition.dx, totalWidth),
@@ -359,32 +351,11 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
                             tickColorActive: widget.tickColorActive,
                             tickColorInactive: widget.tickColorInactive,
                             showEdgeTicks: widget.showEdgeTicks,
+                            thumbValueText: valueText,
+                            thumbValueTextStyle: effectiveThumbValueTextStyle,
                           ),
                         ),
                       ),
-                      if (showIndicator)
-                        Positioned(
-                          left: thumbCX,
-                          bottom: widget.trackHeight + widget.valueIndicatorBottomSpacing,
-                          child: FractionalTranslation(
-                            translation: const Offset(-0.5, 0),
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 140),
-                              curve: Curves.easeOut,
-                              opacity: showIndicator ? 1 : 0,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: widget.valueIndicatorBackgroundColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Padding(
-                                  padding: widget.valueIndicatorPadding,
-                                  child: Text(valueText, style: effectiveIndicatorTextStyle),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -428,6 +399,8 @@ class _SliderPainter extends CustomPainter {
 
   final double thumbDiameter, thumbElevation;
   final Color thumbColor, thumbShadowColor;
+  final String thumbValueText;
+  final TextStyle thumbValueTextStyle;
   final double tickHeight, tickWidth;
   final Color tickColorActive, tickColorInactive;
   final bool showEdgeTicks;
@@ -446,6 +419,8 @@ class _SliderPainter extends CustomPainter {
     required this.thumbElevation,
     required this.thumbColor,
     required this.thumbShadowColor,
+    required this.thumbValueText,
+    required this.thumbValueTextStyle,
     required this.tickHeight,
     required this.tickWidth,
     required this.tickColorActive,
@@ -533,6 +508,17 @@ class _SliderPainter extends CustomPainter {
       Offset(thumbCX, trackCY),
       thumbR,
       Paint()..color = thumbColor,
+    );
+
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: thumbValueText, style: thumbValueTextStyle),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: thumbDiameter - 6);
+    textPainter.paint(
+      canvas,
+      Offset(thumbCX - textPainter.width / 2, trackCY - textPainter.height / 2),
     );
   }
 

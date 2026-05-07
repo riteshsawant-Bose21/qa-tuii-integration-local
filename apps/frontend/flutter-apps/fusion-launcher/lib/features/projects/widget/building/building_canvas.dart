@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/selection_tool_params.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/tool/selection_tool_painter.dart';
 import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/projects/widget/building/toolbar/canvas_toolbar.dart';
@@ -114,7 +115,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                           final List<ListeningAreaPainter> listeningAreaPainters = <ListeningAreaPainter>[
                             for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
                               ListeningAreaPainter(
-                                backgoundColor: serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id),
+                                backgoundColor:
+                                    buildingPageViewModel.state.toolbarMode == ToolbarMode.system
+                                        ? serviceLocator<ProjectViewModel>().getZoneColorForLA(areaId: area.id)
+                                        : null,
                                 listeningArea: area,
                                 isShowingSpl: buildingPageViewModel.isSplMode,
                               ),
@@ -161,6 +165,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                     ),
                                   ),
                                 ],
+                                selectionToolParam: const SelectionToolPainterParam(drawOverallBounding: false),
                                 elements: <FusionBasePainter>[
                                   FusionDottedBgPainter(
                                     color: Colors.grey.shade300,

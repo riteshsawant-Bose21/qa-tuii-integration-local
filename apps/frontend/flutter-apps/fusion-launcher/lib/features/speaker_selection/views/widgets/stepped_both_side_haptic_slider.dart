@@ -207,9 +207,6 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
   late double _startRawRatio;
   late double _endRawRatio;
 
-  /// Whether user is actively dragging a thumb.
-  bool _isDragging = false;
-
   _ActiveThumb _activeThumb = _ActiveThumb.start;
 
   /// Last interval index crossed by each thumb center (used for haptic trigger).
@@ -292,7 +289,6 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
 
   void _onDragStart(double localDx, double totalWidth) {
     setState(() {
-      _isDragging = true;
       _activeThumb = _thumbForDx(localDx, totalWidth);
     });
     _onDrag(localDx, totalWidth);
@@ -338,7 +334,6 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
   }
 
   void _onDragEnd() {
-    setState(() => _isDragging = false);
     widget.onRangeChangeEnd?.call(
       RangeValues(
         widget.min + _startRawRatio * (widget.max - widget.min),
@@ -384,22 +379,19 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
           fontSize: 11,
           fontWeight: FontWeight.w600,
         );
+    final TextStyle effectiveThumbValueTextStyle = effectiveIndicatorTextStyle.copyWith(
+      color: Colors.black87,
+      fontSize: (effectiveIndicatorTextStyle.fontSize ?? 11).clamp(5.0, 8.0),
+      fontWeight: FontWeight.w700,
+    );
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double totalWidth = constraints.maxWidth;
-        final double usable = totalWidth - _effectivePadding * 2;
-        final double startThumbCx = _effectivePadding + _startRawRatio * usable;
-        final double endThumbCx = _effectivePadding + _endRawRatio * usable;
-        final double activeValue =
-            _activeThumb == _ActiveThumb.start
-                ? widget.min + _startRawRatio * (widget.max - widget.min)
-                : widget.min + _endRawRatio * (widget.max - widget.min);
-        final double activeThumbCx = _activeThumb == _ActiveThumb.start ? startThumbCx : endThumbCx;
-        final String valueText = widget.labelFormatter != null ? widget.labelFormatter!(activeValue) : activeValue.toStringAsFixed(0);
-        final bool showIndicator = widget.showValueIndicatorOnDrag && _isDragging;
-        final double indicatorHeight = showIndicator ? 28 : 0;
-        final double indicatorAreaHeight = showIndicator ? (indicatorHeight + widget.valueIndicatorBottomSpacing) : 0;
+        final double startValue = widget.min + _startRawRatio * (widget.max - widget.min);
+        final double endValue = widget.min + _endRawRatio * (widget.max - widget.min);
+        final String startValueText = widget.labelFormatter != null ? widget.labelFormatter!(startValue) : startValue.toStringAsFixed(0);
+        final String endValueText = widget.labelFormatter != null ? widget.labelFormatter!(endValue) : endValue.toStringAsFixed(0);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -417,11 +409,9 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
               ),
               SizedBox(height: widget.topBandSpacing),
             ],
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
+            SizedBox(
               width: totalWidth,
-              height: widget.trackHeight + indicatorAreaHeight,
+              height: widget.trackHeight,
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
@@ -463,32 +453,14 @@ class _SteppedBothSideHapticSliderState extends State<SteppedBothSideHapticSlide
                             tickColorActive: widget.tickColorActive,
                             tickColorInactive: widget.tickColorInactive,
                             showEdgeTicks: widget.showEdgeTicks,
+                            startThumbValueText: startValueText,
+                            endThumbValueText: endValueText,
+                            thumbValueTextStyle: effectiveThumbValueTextStyle,
+                            activeThumb: _activeThumb,
+                            emphasizeActiveThumbValue: widget.showValueIndicatorOnDrag,
                           ),
                         ),
                       ),
-                      if (showIndicator)
-                        Positioned(
-                          left: activeThumbCx,
-                          bottom: widget.trackHeight + widget.valueIndicatorBottomSpacing,
-                          child: FractionalTranslation(
-                            translation: const Offset(-0.5, 0),
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 140),
-                              curve: Curves.easeOut,
-                              opacity: showIndicator ? 1 : 0,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: widget.valueIndicatorBackgroundColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Padding(
-                                  padding: widget.valueIndicatorPadding,
-                                  child: Text(valueText, style: effectiveIndicatorTextStyle),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -533,6 +505,11 @@ class _SliderPainter extends CustomPainter {
 
   final double thumbDiameter, thumbElevation;
   final Color thumbColor, thumbShadowColor;
+  final String startThumbValueText;
+  final String endThumbValueText;
+  final TextStyle thumbValueTextStyle;
+  final _ActiveThumb activeThumb;
+  final bool emphasizeActiveThumbValue;
   final double tickHeight, tickWidth;
   final Color tickColorActive, tickColorInactive;
   final bool showEdgeTicks;
@@ -552,6 +529,11 @@ class _SliderPainter extends CustomPainter {
     required this.thumbElevation,
     required this.thumbColor,
     required this.thumbShadowColor,
+    required this.startThumbValueText,
+    required this.endThumbValueText,
+    required this.thumbValueTextStyle,
+    required this.activeThumb,
+    required this.emphasizeActiveThumbValue,
     required this.tickHeight,
     required this.tickWidth,
     required this.tickColorActive,
@@ -655,6 +637,39 @@ class _SliderPainter extends CustomPainter {
       Offset(endThumbCX, trackCY),
       thumbR,
       Paint()..color = thumbColor,
+    );
+
+    void paintThumbValue({
+      required String value,
+      required Offset center,
+      required bool isActive,
+    }) {
+      final TextStyle style =
+          isActive && emphasizeActiveThumbValue
+              ? thumbValueTextStyle.copyWith(color: Colors.black)
+              : thumbValueTextStyle.copyWith(color: Colors.black87.withOpacity(0.78));
+      final TextPainter textPainter = TextPainter(
+        text: TextSpan(text: value, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: thumbDiameter - 6);
+
+      textPainter.paint(
+        canvas,
+        Offset(center.dx - textPainter.width / 2, center.dy - textPainter.height / 2),
+      );
+    }
+
+    paintThumbValue(
+      value: startThumbValueText,
+      center: Offset(startThumbCX, trackCY),
+      isActive: activeThumb == _ActiveThumb.start,
+    );
+    paintThumbValue(
+      value: endThumbValueText,
+      center: Offset(endThumbCX, trackCY),
+      isActive: activeThumb == _ActiveThumb.end,
     );
   }
 
