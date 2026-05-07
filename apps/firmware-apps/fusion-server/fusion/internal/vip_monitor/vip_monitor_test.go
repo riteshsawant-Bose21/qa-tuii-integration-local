@@ -66,9 +66,9 @@ func (s *stubClusterTransport) UpdateDeviceInfo(deviceID string, patch *model.De
 
 func (s *stubClusterTransport) UpdateDeviceInfoLocal(patch *model.DevicePatch) error { return nil }
 
-func (s *stubClusterTransport) GetAllSwUpdateInfo() []api.SwUpdateInfo { return nil }
+func (s *stubClusterTransport) GetAllSwUpdateInfo() []*model.SwUpdateInfo { return nil }
 
-func (s *stubClusterTransport) GetAllSoftwareUpdateList() []api.SoftwareUpdateSync { return nil }
+func (s *stubClusterTransport) GetAllSoftwareUpdateList() []*model.SoftwareUpdateBundle { return nil }
 
 func TestHandleReloadVIPReturnsAcceptedOperation(t *testing.T) {
 	ensureTestLogger()
