@@ -507,10 +507,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     if (state.listeningAreaId == null) return;
     final ListeningArea la = selectedListeningArea;
 
-    final MountingType mountingType =
-        state.speakerSelectionMode == SpeakerSelectionMode.suggest
-            ? state.suggestModeArgs.mountingType
-            : (state.selectModeArgs.mountingTypes.firstOrNull ?? la.mountingType);
+    final SpeakerProduct? targetSpeaker = state.selectedSpeakers.firstWhereOrNull((SpeakerProduct element) => !element.isSubwoofer);
 
     final LowFrequency lowFrequency =
         state.speakerSelectionMode == SpeakerSelectionMode.suggest
@@ -520,7 +517,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     projectViewModel.updateListeningArea(
       area: la.copyWith(
         speakerSelectionMode: state.speakerSelectionMode,
-        mountingType: mountingType,
+        mountingType: MountingType.fromJson(targetSpeaker?.mountType),
         wiringType: state.selectModeArgs.wiringType,
         lowFrequency: lowFrequency,
         speakerSelectModeArgs: state.selectModeArgs,
