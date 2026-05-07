@@ -1190,9 +1190,6 @@ static void fusion_cn_reset_runtime_timing(struct fusion_cn_manager *mgr)
 
     WRITE_ONCE(mgr->timing_ready, false);
 
-    if (process_worker)
-        kthread_flush_worker(process_worker);
-
     read_lock_irqsave(&mgr->rtp.lock, flags);
     hash_for_each(mgr->rtp.streams, bkt, stream, hnode) {
         struct fusion_cn_substream *alsa_stream = NULL;
