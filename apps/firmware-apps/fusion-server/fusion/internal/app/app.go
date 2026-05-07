@@ -397,6 +397,12 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPATCH(routes.SettingsAudioIndexedParamEndpoint, app.Server.PatchAudioSetting)
 	app.registerPublicPATCH(routes.SettingsAudioParamEndpoint, app.Server.PatchAudioSetting)
 	app.registerPublicDELETE(routes.SettingsAudioEndpoint, app.Server.ClearAudioSettings)
+	app.registerPublicGET(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.GetTouchUIZoneConfig)
+	app.registerPublicPATCH(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.PatchTouchUIZoneConfig)
+	app.registerPublicDELETE(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.ClearTouchUIZoneConfig)
+	app.registerPublicGET(routes.SettingsWallControllerConfigEndpoint, app.Server.GetWallControllerConfig)
+	app.registerPublicPATCH(routes.SettingsWallControllerConfigEndpoint, app.Server.PatchWallControllerConfig)
+	app.registerPublicDELETE(routes.SettingsWallControllerConfigEndpoint, app.Server.ClearWallControllerConfig)
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)

@@ -375,6 +375,92 @@ func TestPatchAudioSettingInvalidBody(t *testing.T) {
 	}
 }
 
+func TestTouchUIZoneConfigLifecycle(t *testing.T) {
+	expected := map[string]any{
+		"zones": []any{
+			map[string]any{
+				"zoneId": "FUNC135425261/selector",
+				"gain": map[string]any{
+					"Max":     100.0,
+					"Min":     0.0,
+					"DefGain": 50.0,
+					"DefMute": false,
+					"Id":      "GAIN653367066",
+				},
+			},
+		},
+	}
+
+	if err := patchSettingsSection(serverAddr, "touchui_zone_config", expected); err != nil {
+		t.Fatalf("Failed to patch touchui zone config: %v", err)
+	}
+
+	actual, err := getSettingsSection(serverAddr, "touchui_zone_config")
+	if err != nil {
+		t.Fatalf("Failed to get touchui zone config: %v", err)
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("Unexpected touchui zone config. Expected %#v, got %#v", expected, actual)
+	}
+
+	if err := deleteSettingsSection(serverAddr, "touchui_zone_config"); err != nil {
+		t.Fatalf("Failed to clear touchui zone config: %v", err)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/settings/touchui_zone_config", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to GET cleared touchui zone config: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 404 after clear, got %d response: %s", resp.StatusCode, string(body))
+	}
+}
+
+func TestWallControllerConfigLifecycle(t *testing.T) {
+	expected := map[string]any{
+		"zones": []any{
+			map[string]any{
+				"id": "FUNC546470292/selector",
+				"gain": map[string]any{
+					"default_gain_value": "0",
+					"default_mute_value": "0",
+					"gainID":             "GAIN528578446",
+					"max_value":          "12",
+					"min_value":          "-60",
+				},
+			},
+		},
+	}
+
+	if err := patchSettingsSection(serverAddr, "wall_controller_config", expected); err != nil {
+		t.Fatalf("Failed to patch wall controller config: %v", err)
+	}
+
+	actual, err := getSettingsSection(serverAddr, "wall_controller_config")
+	if err != nil {
+		t.Fatalf("Failed to get wall controller config: %v", err)
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("Unexpected wall controller config. Expected %#v, got %#v", expected, actual)
+	}
+
+	if err := deleteSettingsSection(serverAddr, "wall_controller_config"); err != nil {
+		t.Fatalf("Failed to clear wall controller config: %v", err)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/settings/wall_controller_config", serverAddr))
+	if err != nil {
+		t.Fatalf("Failed to GET cleared wall controller config: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 404 after clear, got %d response: %s", resp.StatusCode, string(body))
+	}
+}
+
 // TestConcurrentPatchRequests tests multiple concurrent PATCH requests
 func TestConcurrentPatchRequests(t *testing.T) {
 	if err := patchAudioSetting(serverAddr, "eq", "bands", []float64{100.0, 200.0, 300.0}); err != nil {
@@ -1243,6 +1329,62 @@ func getAudioSettingArray(baseURL, blockID, param string) ([]any, error) {
 		return nil, fmt.Errorf("value is not an array: %T", value)
 	}
 	return array, nil
+}
+
+func patchSettingsSection(baseURL, section string, value any) error {
+	body, err := json.Marshal(map[string]any{"value": value})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/settings/%s", baseURL, section), bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
+func getSettingsSection(baseURL, section string) (map[string]any, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/settings/%s", baseURL, section))
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+	var response map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+	return response, nil
+}
+
+func deleteSettingsSection(baseURL, section string) error {
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/settings/%s", baseURL, section), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 func findSyncedNonVIPNode(t *testing.T, key string, want any, timeout time.Duration) (clusterNode, bool) {

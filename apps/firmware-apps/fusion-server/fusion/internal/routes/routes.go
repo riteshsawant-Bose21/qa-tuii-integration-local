@@ -124,11 +124,13 @@ const (
 	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
-	SettingsEndpoint                  = "/settings"
-	SettingsAudioEndpoint             = SettingsEndpoint + "/audio"
-	SettingsAudioBlockEndpoint        = SettingsAudioEndpoint + "/{blockId}"
-	SettingsAudioParamEndpoint        = SettingsAudioBlockEndpoint + "/{param}"
-	SettingsAudioIndexedParamEndpoint = SettingsAudioParamEndpoint + "/{index}"
+	SettingsEndpoint                     = "/settings"
+	SettingsAudioEndpoint                = SettingsEndpoint + "/audio"
+	SettingsAudioBlockEndpoint           = SettingsAudioEndpoint + "/{blockId}"
+	SettingsAudioParamEndpoint           = SettingsAudioBlockEndpoint + "/{param}"
+	SettingsAudioIndexedParamEndpoint    = SettingsAudioParamEndpoint + "/{index}"
+	SettingsTouchUIZoneConfigEndpoint    = SettingsEndpoint + "/touchui_zone_config"
+	SettingsWallControllerConfigEndpoint = SettingsEndpoint + "/wall_controller_config"
 
 	TimeMachineEndpoint         = "/time-machine"
 	TimeMachineMetaEndpoint     = TimeMachineEndpoint + "/meta"

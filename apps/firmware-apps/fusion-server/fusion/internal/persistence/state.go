@@ -387,6 +387,16 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
+	for key, value := range update {
+		if value != nil {
+			continue
+		}
+		if strings.ContainsAny(key, ".[") {
+			continue
+		}
+		existing[key] = nil
+	}
+
 	// Calculate the difference between the original and updated configuration.
 	diff := utils.CalculateDiff(before, existing)
 	if diff == nil {
@@ -576,6 +586,14 @@ func (sm *StateManager) applyWhileLocked(
 				localEntry.Version.Epoch,
 				localEntry.Version.Counter,
 			)
+			continue
+		}
+
+		if rawValue == nil {
+			if exists {
+				delete(sm.state.State, key)
+				dirty = true
+			}
 			continue
 		}
 

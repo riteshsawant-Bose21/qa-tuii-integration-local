@@ -160,6 +160,17 @@ func (s *FusionServer) GetAudioSettings(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(value)
 }
 
+func (s *FusionServer) getSettingsSection(w http.ResponseWriter, key string, notFoundMessage string) {
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists {
+		http.Error(w, notFoundMessage, http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(value)
+}
+
 // GetAudioSetting handles HTTP GET requests for a single audio setting value.
 func (s *FusionServer) GetAudioSetting(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -231,6 +242,44 @@ func (s *FusionServer) PatchAudioSetting(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (s *FusionServer) patchSettingsSection(w http.ResponseWriter, r *http.Request, key string) {
+	type patchResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var update map[string]any
+	if err := json.Unmarshal(body, &update); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: update["value"]})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := patchResponse{}
+	if diff == nil {
+		resp.Status = "noop"
+		resp.Updates = nil
+	} else {
+		resp.Status = "success"
+		resp.Updates = diff
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(resp)
+}
+
 // ClearAudioSettings handles HTTP DELETE requests to clear audio settings.
 func (s *FusionServer) ClearAudioSettings(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireDelete(w, r) {
@@ -249,6 +298,69 @@ func (s *FusionServer) ClearAudioSettings(w http.ResponseWriter, r *http.Request
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]any{"status": "success"})
+}
+
+func (s *FusionServer) clearSettingsSection(w http.ResponseWriter, key string) {
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: nil})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if diff == nil {
+		json.NewEncoder(w).Encode(map[string]any{"status": "noop"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"status": "success"})
+}
+
+func (s *FusionServer) GetTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	s.getSettingsSection(w, "touchui_zone_config", "touchui zone config not found")
+}
+
+func (s *FusionServer) PatchTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	s.patchSettingsSection(w, r, "touchui_zone_config")
+}
+
+func (s *FusionServer) ClearTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.clearSettingsSection(w, "touchui_zone_config")
+}
+
+func (s *FusionServer) GetWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	s.getSettingsSection(w, "wall_controller_config", "wall controller config not found")
+}
+
+func (s *FusionServer) PatchWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	s.patchSettingsSection(w, r, "wall_controller_config")
+}
+
+func (s *FusionServer) ClearWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.clearSettingsSection(w, "wall_controller_config")
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.

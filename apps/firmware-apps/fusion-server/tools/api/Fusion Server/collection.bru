@@ -124,5 +124,41 @@ docs {
 
   ### `DELETE /settings/audio`
   Clears the entire runtime audio settings subtree.
+
+  ### `GET /settings/touchui_zone_config`
+  Returns the full TouchUI zone config subtree.
+
+  ### `PATCH /settings/touchui_zone_config`
+  Replaces the full TouchUI zone config subtree.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": {
+      "zones": []
+    }
+  }
+  ```
+
+  ### `DELETE /settings/touchui_zone_config`
+  Clears the full TouchUI zone config subtree.
+
+  ### `GET /settings/wall_controller_config`
+  Returns the full wall controller config subtree.
+
+  ### `PATCH /settings/wall_controller_config`
+  Replaces the full wall controller config subtree.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": {
+      "zones": []
+    }
+  }
+  ```
+
+  ### `DELETE /settings/wall_controller_config`
+  Clears the full wall controller config subtree.
   
 }
