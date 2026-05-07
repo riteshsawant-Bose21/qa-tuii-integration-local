@@ -176,7 +176,7 @@ class _WiringPageState extends State<WiringPage> {
               FusionCanvasTool.multiSelectionTool,
             ],
             elements: <FusionBasePainter>[
-              // FusionDottedBgPainter(color: Colors.grey.withValues(alpha: 0.2)),
+              // FusionDottedBgPainter(color: Colors.red,),//.withValues(alpha: 0.2)
               for (HardwareComponent source in projectViewModel.hardwareComponents)
                 if (source is Source) ...<WiringSourcePainter>{
                   if (source.type != SourceType.paging) WiringSourcePainter(source: source, connectionManager: connectionManager),

@@ -359,7 +359,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
             child: InkWell(
-              onTap: () => _toggleZoneExpansion(zone.id),
+              onTap: () {
+                serviceLocator<ProjectViewModel>().selectZone(zone.id);
+                setState(() {});
+              },
               child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                 builder: (BuildContext context, ProjectViewModelState state) {
                   return Row(
@@ -521,7 +524,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  static Color hexToColor(String hexString) {
+  Color hexToColor(String hexString) {
     final StringBuffer buffer = StringBuffer();
     if (hexString.startsWith('#')) hexString = hexString.substring(1);
     if (hexString.length == 6) buffer.write('FF');
@@ -529,7 +532,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return Color(int.parse(buffer.toString(), radix: 16));
   }
 
-  static String colorToHex(Color color, {bool includeAlpha = false}) {
+  String colorToHex(Color color, {bool includeAlpha = false}) {
     String twoHex(int v) => v.toRadixString(16).padLeft(2, '0');
 
     final int a = (color.a * 255.0).round() & 0xff;
@@ -1281,7 +1284,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: InkWell(
-                        onTap: () => _toggleSubZoneExpansion(subZone.id),
+                        onTap: () {
+                          serviceLocator<ProjectViewModel>().selectSubZone(subZone.id);
+                        },
                         child: Row(
                           children: <Widget>[
                             // Expand/Collapse icon
