@@ -27,7 +27,7 @@ type EnvironmentS3Variables struct {
 	ProjectBucket        string
 	ProductBucket        string
 	FirmwareBundleBucket string
-	SourceBucket         string
+	SourceBaseURL        string
 }
 
 // EnvironmentAWSVariables holds configuration variables for AWS services.

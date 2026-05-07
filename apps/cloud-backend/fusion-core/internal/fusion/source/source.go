@@ -2,10 +2,9 @@ package source
 
 import (
 	"context"
+	"strings"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"go.uber.org/zap"
 )
 
@@ -16,13 +15,13 @@ type DatabaseService interface {
 
 // Service provides source business logic.
 type Service struct {
-	dbService DatabaseService
-	presigner cloudfs.PresignHandle
-	logger    *zap.Logger
+	dbService     DatabaseService
+	sourceBaseURL string
+	logger        *zap.Logger
 }
 
 // NewService creates a new source service.
-func NewService(dbService DatabaseService, presigner cloudfs.PresignHandle, logger *zap.Logger) *Service {
+func NewService(dbService DatabaseService, sourceBaseURL string, logger *zap.Logger) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
@@ -30,9 +29,9 @@ func NewService(dbService DatabaseService, presigner cloudfs.PresignHandle, logg
 		panic("logger cannot be nil")
 	}
 	return &Service{
-		dbService: dbService,
-		presigner: presigner,
-		logger:    logger,
+		dbService:     dbService,
+		sourceBaseURL: strings.TrimRight(sourceBaseURL, "/"),
+		logger:        logger,
 	}
 }
 
@@ -46,22 +45,14 @@ func (s *Service) GetAllSources(ctx context.Context, logger *zap.Logger) ([]type
 		return []types.SourceItemResponse{}, nil
 	}
 
-	// Generate presigned URLs for asset paths
-	if s.presigner != nil {
+	// Build full public URLs from asset paths
+	if s.sourceBaseURL != "" {
 		for i := range sources {
 			for j, assetMap := range sources[i].Assets {
 				for color, paths := range assetMap {
 					for k, path := range paths {
 						if path != "" {
-							url, err := s.presigner.PresignGet(ctx, path, constants.S3PresignedUrlTTL, logger)
-							if err != nil {
-								logger.Error("failed to generate presigned URL for source asset",
-									zap.String("source_id", sources[i].SourceID),
-									zap.String("asset_path", path),
-									zap.Error(err))
-								continue
-							}
-							sources[i].Assets[j][color][k] = url
+							sources[i].Assets[j][color][k] = s.sourceBaseURL + "/" + strings.TrimLeft(path, "/")
 						}
 					}
 				}

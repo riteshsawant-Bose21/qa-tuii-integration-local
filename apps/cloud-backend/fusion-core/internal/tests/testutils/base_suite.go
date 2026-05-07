@@ -213,7 +213,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	sourceDBSvc := sourcedb.NewService(suite.DB, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source DB Service.")
 
-	sourceSVC := source.NewService(sourceDBSvc, nil, loggers.AppLogger)
+	sourceSVC := source.NewService(sourceDBSvc, "", loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
 	validationCfg := &config.Validation{
