@@ -10,7 +10,7 @@ class FusionConfigSyncService {
     required String vip,
   }) async {
     try {
-      final ResponseCallback<dynamic> response = await networkClient.patch(
+      final ResponseCallback<dynamic> response = await networkClient.post(
         api: FusionApiEndpoint.fusionState,
         data: config,
         baseUrlToOverride: vip,
@@ -34,8 +34,7 @@ class FusionConfigSyncService {
     required String vip,
   }) async {
     try {
-      final ResponseCallback<FusionStateSnapshot> response = await networkClient
-          .getStateSnapshot(baseUrlToOverride: vip, isSecure: false);
+      final ResponseCallback<FusionStateSnapshot> response = await networkClient.getStateSnapshot(baseUrlToOverride: vip, isSecure: false);
 
       if (!response.success || response.data == null) {
         return ResponseCallback<Map<String, dynamic>>.failure(

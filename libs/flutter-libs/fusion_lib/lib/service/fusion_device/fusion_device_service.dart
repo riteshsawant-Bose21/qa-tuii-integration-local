@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -17,30 +18,28 @@ class FusionDeviceService {
     required String jenkinsBuildNumber,
   }) async {
     try {
-      final ResponseCallback<FirmwareUpdateCheckResult> response =
-          await networkClient.get<FirmwareUpdateCheckResult>(
-            api: FusionApiEndpoint.firmwareUpdateCheck,
-            urlParameters: <String, dynamic>{
-              'current_firmware_version': currentFirmwareVersion,
-              'current_desktop_app_version': currentDesktopAppVersion,
-            },
-            fromJson: (dynamic json) {
-              if (json is! Map<String, dynamic>) {
-                throw Exception(
-                  'Unexpected firmware update check response format.',
-                );
-              }
-              return FirmwareUpdateCheckResult.fromJson(json);
-            },
-          );
+      final ResponseCallback<FirmwareUpdateCheckResult> response = await networkClient.get<FirmwareUpdateCheckResult>(
+        api: FusionApiEndpoint.firmwareUpdateCheck,
+        urlParameters: <String, dynamic>{
+          'current_firmware_version': currentFirmwareVersion,
+          'current_desktop_app_version': currentDesktopAppVersion,
+        },
+        fromJson: (dynamic json) {
+          if (json is! Map<String, dynamic>) {
+            throw Exception(
+              'Unexpected firmware update check response format.',
+            );
+          }
+          return FirmwareUpdateCheckResult.fromJson(json);
+        },
+      );
       return response;
     } catch (e) {
       return ResponseCallback<FirmwareUpdateCheckResult>.failure(e.toString());
     }
   }
 
-  Future<ResponseCallback<BundleDownloadUrlResult>>
-  requestFirmwareBundleDownloadUrl({required String version}) async {
+  Future<ResponseCallback<BundleDownloadUrlResult>> requestFirmwareBundleDownloadUrl({required String version}) async {
     try {
       if (version.isEmpty) {
         return ResponseCallback<BundleDownloadUrlResult>.failure(
@@ -48,19 +47,18 @@ class FusionDeviceService {
         );
       }
 
-      final ResponseCallback<BundleDownloadUrlResult> response =
-          await networkClient.get<BundleDownloadUrlResult>(
-            api: FusionApiEndpoint.firmwareBundleDownloadUrl,
-            additionalPath: '$version/request-download-url',
-            fromJson: (dynamic json) {
-              if (json is! Map<String, dynamic>) {
-                throw Exception(
-                  'Unexpected firmware bundle download response format.',
-                );
-              }
-              return BundleDownloadUrlResult.fromJson(json);
-            },
-          );
+      final ResponseCallback<BundleDownloadUrlResult> response = await networkClient.get<BundleDownloadUrlResult>(
+        api: FusionApiEndpoint.firmwareBundleDownloadUrl,
+        additionalPath: '$version/request-download-url',
+        fromJson: (dynamic json) {
+          if (json is! Map<String, dynamic>) {
+            throw Exception(
+              'Unexpected firmware bundle download response format.',
+            );
+          }
+          return BundleDownloadUrlResult.fromJson(json);
+        },
+      );
 
       return response;
     } catch (e) {
@@ -76,19 +74,18 @@ class FusionDeviceService {
     required String status,
   }) async {
     try {
-      final ResponseCallback<dynamic> response = await networkClient
-          .post<dynamic>(
-            api: FusionApiEndpoint.firmwareUpdateStatus,
-            data: <String, dynamic>{
-              'update_id': const Uuid().v4(),
-              'project_id': projectId,
-              'bundle_version': bundleVersion,
-              'previous_version': previousVersion,
-              'status': status,
-              'launcher_version': launcherVersion,
-              'installed_at': DateTime.now().toUtc().toIso8601String(),
-            },
-          );
+      final ResponseCallback<dynamic> response = await networkClient.post<dynamic>(
+        api: FusionApiEndpoint.firmwareUpdateStatus,
+        data: <String, dynamic>{
+          'update_id': const Uuid().v4(),
+          'project_id': projectId,
+          'bundle_version': bundleVersion,
+          'previous_version': previousVersion,
+          'status': status,
+          'launcher_version': launcherVersion,
+          'installed_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
 
       if (response.success) {
         return ResponseCallback<void>.success(null);
@@ -169,8 +166,7 @@ class FusionDeviceService {
   }) async {
     try {
       final String host = _normalizeFusionHost(vip);
-      final ResponseCallback<void> response = await networkClient
-          .connectWebSocket<void>(url: 'ws://$host/ws');
+      final ResponseCallback<void> response = await networkClient.connectWebSocket<void>(url: 'ws://$host/ws');
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
@@ -181,14 +177,13 @@ class FusionDeviceService {
     required String bundleId,
   }) async {
     try {
-      final ResponseCallback<void> response = await networkClient
-          .sendWebSocketRequest<void>(
-            model.WebSocketRequest(
-              id: bundleId,
-              version: 1,
-              type: 'start_update',
-            ),
-          );
+      final ResponseCallback<void> response = await networkClient.sendWebSocketRequest<void>(
+        model.WebSocketRequest(
+          id: bundleId,
+          version: 1,
+          type: 'start_update',
+        ),
+      );
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
@@ -199,24 +194,21 @@ class FusionDeviceService {
     required String bundleId,
   }) async {
     try {
-      final ResponseCallback<void> response = await networkClient
-          .sendWebSocketRequest<void>(
-            model.WebSocketRequest(
-              id: bundleId,
-              version: 1,
-              type: 'sw_update_info',
-            ),
-          );
+      final ResponseCallback<void> response = await networkClient.sendWebSocketRequest<void>(
+        model.WebSocketRequest(
+          id: bundleId,
+          version: 1,
+          type: 'sw_update_info',
+        ),
+      );
       return response;
     } catch (e) {
       return ResponseCallback<void>.failure(e.toString());
     }
   }
 
-  Stream<ResponseCallback<FirmwareUpdateProgressEvent>>
-  listenFirmwareUpdateProgressEvents() async* {
-    await for (final ResponseCallback<model.WebSocketResponse> message
-        in networkClient.webSocketResponseMessages) {
+  Stream<ResponseCallback<FirmwareUpdateProgressEvent>> listenFirmwareUpdateProgressEvents() async* {
+    await for (final ResponseCallback<model.WebSocketResponse> message in networkClient.webSocketResponseMessages) {
       if (!message.success || message.data == null) {
         yield ResponseCallback<FirmwareUpdateProgressEvent>.failure(
           message.message,
@@ -224,8 +216,7 @@ class FusionDeviceService {
         continue;
       }
 
-      final FirmwareUpdateProgressEvent event =
-          FirmwareUpdateProgressEvent.fromWebSocketResponse(message.data!);
+      final FirmwareUpdateProgressEvent event = FirmwareUpdateProgressEvent.fromWebSocketResponse(message.data!);
       if (!event.isUpdateProgress) {
         continue;
       }
@@ -248,20 +239,22 @@ class FusionDeviceService {
     }
   }
 
-  Future<ResponseCallback<List<FusionNetworkDevice>>>
-  getAvailableDevicesOnNetwork({required String ip}) async {
+  Future<ResponseCallback<List<FusionNetworkDevice>>> getAvailableDevicesOnNetwork({required String ip}) async {
     try {
-      ResponseCallback<List<FusionNetworkDevice>> responseCallback =
-          await networkClient.get(
-            api: FusionApiEndpoint.fusionDevice,
-            baseUrlToOverride: ip,
-            isSecure: false,
-            fromJson: (dynamic json) => List<FusionNetworkDevice>.from(
-              (json as List<dynamic>).map(
-                (e) => FusionNetworkDevice.fromJson(e as Map<String, dynamic>),
-              ),
-            ),
+      ResponseCallback<List<FusionNetworkDevice>> responseCallback = await networkClient.get(
+        api: FusionApiEndpoint.fusionDevice,
+        baseUrlToOverride: ip,
+        isSecure: false,
+        fromJson: (dynamic json) {
+          print("Raw response from Fusion device scan: $json");
+          // Dio may return the body as a raw String when the server's
+          // Content-Type is not strictly application/json. Decode it first.
+          final List<dynamic> list = json is String ? jsonDecode(json) as List<dynamic> : json as List<dynamic>;
+          return List<FusionNetworkDevice>.from(
+            list.map((e) => FusionNetworkDevice.fromJson(e as Map<String, dynamic>)),
           );
+        },
+      );
 
       return responseCallback;
     } catch (e) {
@@ -297,10 +290,8 @@ class FusionDeviceService {
       final payload = <String, dynamic>{
         'client_device_id': device.id,
         'csr': csrCertificate,
-        'device_location':
-            'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
-        'device_zone':
-            'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
+        'device_location': 'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
+        'device_zone': 'device.location', // TODO: SHARTH - REMOVE this hardcoded value.
         'device_name': device.name,
         'is_primary': device.isPrimary,
         'mac_address': device.macAddress,
@@ -310,14 +301,13 @@ class FusionDeviceService {
         "firmware_version": device.softwareUpdateVersion,
       };
 
-      final ResponseCallback<CloudDeviceRegisterResult> response =
-          await networkClient.post(
-            api: FusionApiEndpoint.devicesCloud,
-            fromJson: (dynamic json) => CloudDeviceRegisterResult.fromJson(
-              json as Map<String, dynamic>,
-            ),
-            data: payload,
-          );
+      final ResponseCallback<CloudDeviceRegisterResult> response = await networkClient.post(
+        api: FusionApiEndpoint.devicesCloud,
+        fromJson: (dynamic json) => CloudDeviceRegisterResult.fromJson(
+          json as Map<String, dynamic>,
+        ),
+        data: payload,
+      );
 
       return response;
     } catch (e) {
@@ -355,14 +345,13 @@ class FusionDeviceService {
     required String vip,
   }) async {
     try {
-      final ResponseCallback<dynamic> responseCallback = await networkClient
-          .patch(
-            api: FusionApiEndpoint.fusionDevice,
-            additionalPath: currentDeviceId,
-            data: {'id': newDeviceId, 'name': name, 'location': location},
-            baseUrlToOverride: vip,
-            isSecure: false,
-          );
+      final ResponseCallback<dynamic> responseCallback = await networkClient.patch(
+        api: FusionApiEndpoint.fusionDevice,
+        additionalPath: currentDeviceId,
+        data: {'id': newDeviceId, 'name': name, 'location': location},
+        baseUrlToOverride: vip,
+        isSecure: false,
+      );
       if (responseCallback.success) {
         return ResponseCallback<bool>.success(true);
       } else {

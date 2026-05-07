@@ -57,9 +57,7 @@ class FusionNetworkClient {
               FusionApiType.fusionAdminServer => '$baseUrlToOverride:9090',
               _ => '$baseUrlToOverride:8080',
             };
-      return isSecure
-          ? "https://$baseUrlToOverride${api.path}"
-          : "http://$host${api.path}";
+      return isSecure ? "https://$baseUrlToOverride${api.path}" : "http://$host${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
       return "http://localhost:8080${api.path}";
@@ -77,15 +75,13 @@ class FusionNetworkClient {
   // return token fro shared preferences only if FusionApiEndpoint api == FusionApiType.backendServer
   Future<String?> getAccessTokenForApi(FusionApiEndpoint api) async {
     if (api.type == FusionApiType.backendServer) {
-      final String? storedAccessToken = await fusionAuthService
-          .getValidAccessToken();
+      final String? storedAccessToken = await fusionAuthService.getValidAccessToken();
       return storedAccessToken;
     }
     return null;
   }
 
-  bool canCallCloudApis(FusionApiType api) =>
-      api == FusionApiType.backendServer && !HAS_CLOUD_ACCESS;
+  bool canCallCloudApis(FusionApiType api) => api == FusionApiType.backendServer && !HAS_CLOUD_ACCESS;
 
   Future<ResponseCallback<T>> get<T>({
     required FusionApiEndpoint api,
@@ -111,8 +107,7 @@ class FusionNetworkClient {
               isSecure: isSecure,
             );
 
-      final Map<String, dynamic> headers =
-          httpClient.dioInstance.options.headers;
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -206,8 +201,7 @@ class FusionNetworkClient {
               isSecure: isSecure,
             );
 
-      final Map<String, dynamic> headers =
-          httpClient.dioInstance.options.headers;
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -269,8 +263,7 @@ class FusionNetworkClient {
               isSecure: isSecure,
             );
 
-      final Map<String, dynamic> headers =
-          httpClient.dioInstance.options.headers;
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -280,10 +273,7 @@ class FusionNetworkClient {
       final Options options = Options(
         headers: <String, dynamic>{
           ...headers,
-          if (data is FormData)
-            'Content-Type': 'multipart/form-data'
-          else
-            'Content-Type': 'application/json',
+          if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json',
         },
       );
 
@@ -335,8 +325,7 @@ class FusionNetworkClient {
       );
 
     try {
-      final Map<String, dynamic> headers =
-          httpClient.dioInstance.options.headers;
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -346,10 +335,7 @@ class FusionNetworkClient {
       final Options options = Options(
         headers: <String, dynamic>{
           ...headers,
-          if (data is FormData)
-            'Content-Type': 'multipart/form-data'
-          else
-            'Content-Type': 'application/json',
+          if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json',
         },
       );
 
@@ -412,8 +398,7 @@ class FusionNetworkClient {
       baseUrlToOverride: baseUrlToOverride,
       isSecure: isSecure,
       urlParameters: <String, dynamic>{'key': key},
-      fromJson: (dynamic json) =>
-          FusionStateValue<T>.fromJson(json, decodeValue),
+      fromJson: (dynamic json) => FusionStateValue<T>.fromJson(json, decodeValue),
     );
   }
 
@@ -441,8 +426,7 @@ class FusionNetworkClient {
               isSecure: isSecure,
             );
 
-      final Map<String, dynamic> headers =
-          httpClient.dioInstance.options.headers;
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -463,9 +447,7 @@ class FusionNetworkClient {
           data,
           statusCode: response.statusCode,
         );
-      } else if (response.statusCode == 204 ||
-          response.statusCode == 200 ||
-          response.statusCode == 202) {
+      } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
         return ResponseCallback<T>(
           success: true,
           message: "Resource deleted successfully",
@@ -499,8 +481,7 @@ class FusionNetworkClient {
     required CancelToken cancelToken,
     required void Function(int received, int total) onProgress,
   }) async {
-    final isNetworkUrl =
-        url.startsWith('http://') || url.startsWith('https://');
+    final isNetworkUrl = url.startsWith('http://') || url.startsWith('https://');
     if (isNetworkUrl && !HAS_CLOUD_ACCESS)
       return ResponseCallback<T>(
         success: false,
@@ -686,9 +667,7 @@ class FusionNetworkClient {
       }
 
       // If the message isn't a string (e.g., a Map), JSON encode it
-      final dynamic payload = message is String
-          ? message
-          : jsonEncode(_normalizeRequestBody(message));
+      final dynamic payload = message is String ? message : jsonEncode(_normalizeRequestBody(message));
       webSocketService.sendMessage(payload);
 
       FusionLogger.log(tag: LogTag.dspConfig, message: "WS Payload $payload");
@@ -701,14 +680,12 @@ class FusionNetworkClient {
     } catch (ex) {
       FusionLogger.log(
         tag: LogTag.exceptions,
-        message:
-            "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
+        message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
         logLevel: LogLevel.error,
       );
       return ResponseCallback<T>(
         success: false,
-        message:
-            "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
+        message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
         statusCode: null,
       );
     }
@@ -784,8 +761,7 @@ class FusionNetworkClient {
     }
   }
 
-  Stream<ResponseCallback<wsmodel.WebSocketResponse>>
-  get webSocketResponseMessages async* {
+  Stream<ResponseCallback<wsmodel.WebSocketResponse>> get webSocketResponseMessages async* {
     await for (final ResponseCallback<dynamic> message in webSocketMessages) {
       if (!message.success || message.data == null) {
         yield ResponseCallback<wsmodel.WebSocketResponse>.failure(
@@ -821,12 +797,54 @@ class FusionNetworkClient {
     T Function() create,
   ) {
     final T message = create();
-    if (json is String) {
-      message.mergeFromJson(json);
+
+    // proto-dart exposes two JSON dialects:
+    //   • mergeFromJson      — legacy *internal* format; keys are tag numbers
+    //                          (e.g. "1": ...). Used by Dart writeToJson.
+    //   • mergeFromProto3Json — canonical proto3 JSON; keys are field names
+    //                          (e.g. "devices": ...). Used by most servers.
+    //
+    // Some Fusion endpoints (e.g. GET /devices) return a top-level JSON array
+    // for what the proto models as a wrapper message with one repeated field.
+    // We detect that case and route through mergeFromProto3Json, wrapping the
+    // list under the field's *name*. Everything else stays on the legacy path
+    // to preserve existing behaviour.
+    final dynamic decoded = json is String ? _tryJsonDecode(json) : json;
+
+    if (decoded is List) {
+      final String? repeatedFieldName = _firstRepeatedFieldName(message);
+      if (repeatedFieldName != null) {
+        message.mergeFromProto3Json(
+          <String, dynamic>{repeatedFieldName: decoded},
+          ignoreUnknownFields: true,
+        );
+        return message;
+      }
+    }
+
+    if (decoded is String) {
+      message.mergeFromJson(decoded);
     } else {
-      message.mergeFromJson(jsonEncode(json));
+      message.mergeFromJson(jsonEncode(decoded));
     }
     return message;
+  }
+
+  dynamic _tryJsonDecode(String s) {
+    try {
+      return jsonDecode(s);
+    } catch (_) {
+      return s;
+    }
+  }
+
+  /// Returns the *name* of the first repeated field on [message], or `null`
+  /// when no such field exists.
+  String? _firstRepeatedFieldName($pb.GeneratedMessage message) {
+    for (final $pb.FieldInfo f in message.info_.byIndex) {
+      if (f.isRepeated) return f.name;
+    }
+    return null;
   }
 
   dynamic _normalizeRequestBody(dynamic data) {
@@ -895,9 +913,7 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.getProfile.path) ||
-        contains(FusionApiEndpoint.projects.path) ||
-        contains(FusionApiEndpoint.devicesCloud.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path) || contains(FusionApiEndpoint.devicesCloud.path);
   }
 
   bool isTokenRequired() {
