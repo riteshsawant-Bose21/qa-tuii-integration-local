@@ -377,4 +377,10 @@ class PanelDataSourceImpl implements PanelDataSource {
   void disconnectMeteringStream() {
     fusionNetworkClient.disconnect();
   }
+
+  @override
+  Future<bool> clearAudioSettings() {
+    // TODO: implement clearAudioSettings
+    throw UnimplementedError();
+  }
 }

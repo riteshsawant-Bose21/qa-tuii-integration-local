@@ -503,6 +503,7 @@ enum FusionApiEndpoint {
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
+  fusionControllers('/controllers', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),

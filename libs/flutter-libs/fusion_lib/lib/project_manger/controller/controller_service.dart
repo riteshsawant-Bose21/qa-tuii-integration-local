@@ -336,7 +336,7 @@ extension ControllerService on ProjectService {
             getAssignedZoneIds(controller.id).toList().map((String id) => getZoneFunction(zoneOrSubZoneId: id)?.paramName).whereType<String>().toList() ?? [];
 
         return WallController(
-          id: type == "lt" ? "CONTROLLER350958744" : controller.id,
+          id: controller.assignedNetworkDeviceId ?? controller.id,
           name: controller.name,
           type: type,
           // zoneIds: getAssignedZoneIds(controller.id).toList(),

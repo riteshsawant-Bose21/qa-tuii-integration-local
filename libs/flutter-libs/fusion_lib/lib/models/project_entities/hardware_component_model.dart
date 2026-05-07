@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
 
+import 'controller.dart';
+
 class HardwarePortData {
   final int inputPorts;
   final int outputPorts;
@@ -93,6 +95,7 @@ abstract class HardwareComponent {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! HardwareComponent) return false;
+    if (other is FusionController) return false;
     return id == other.id &&
         name == other.name &&
         equipmentLocationPosition == other.equipmentLocationPosition &&
