@@ -352,8 +352,11 @@ void AlsaDevice::open_device()
         full_device_name = "hw:FusionConnect," + std::to_string(device_number);
     }
 
-    for (AccessMode requested_access_mode :
-         {ACCESS_MMAP_INTERLEAVED, ACCESS_RW_INTERLEAVED})
+    std::vector<AccessMode> access_modes = is_bluealsa_device_name(full_device_name)
+        ? std::vector<AccessMode>{ACCESS_RW_INTERLEAVED}
+        : std::vector<AccessMode>{ACCESS_MMAP_INTERLEAVED, ACCESS_RW_INTERLEAVED};
+
+    for (AccessMode requested_access_mode : access_modes)
     {
         const char *requested_name =
             requested_access_mode == ACCESS_MMAP_INTERLEAVED ? "MMAP_INTERLEAVED"

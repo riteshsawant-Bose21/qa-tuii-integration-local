@@ -13,6 +13,7 @@
 #include <linux/math64.h>
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
+#include <linux/swait.h>
 #include <linux/netlink.h>
 #include <linux/if.h>
 #include <net/netlink.h>
@@ -127,7 +128,7 @@ static void fusion_cn_prof_maybe_log(void)
 
 /* === Audio Frame Process deferral to dedicated RT thread === */
 static struct task_struct    *process_thread;
-static wait_queue_head_t     process_wq;
+static struct swait_queue_head process_wq;
 static atomic_t              pending_ticks;
 static struct delayed_work   metrics_work;
 
@@ -600,7 +601,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
 
     atomic_inc(&pending_ticks);
     if (READ_ONCE(process_thread))
-        wake_up(&process_wq);
+        swake_up_one(&process_wq);
 }
 
 static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
@@ -711,8 +712,8 @@ static int fusion_cn_process_thread_fn(void *arg)
         bool profiling;
         u64 t0;
 
-        wait_event_interruptible(process_wq,
-                                 kthread_should_stop() || atomic_read(&pending_ticks) > 0);
+        swait_event_interruptible_exclusive(process_wq,
+                                           kthread_should_stop() || atomic_read(&pending_ticks) > 0);
         if (kthread_should_stop())
             break;
 
@@ -744,7 +745,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     WRITE_ONCE(mgr->timing_ready, false);
     
     if (!process_thread) {
-        init_waitqueue_head(&process_wq);
+        init_swait_queue_head(&process_wq);
         atomic_set(&pending_ticks, 0);
         INIT_DELAYED_WORK(&metrics_work, fusion_cn_metrics_workfn);
         process_thread = kthread_run(fusion_cn_process_thread_fn, mgr, "fusion-cn");
