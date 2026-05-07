@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/common/panel_section_header.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/controller/controller_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/touch_ui_zone_config/touch_ui_zone_config.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:qr/qr.dart';
@@ -165,7 +166,9 @@ class VirtualControlSection extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
-                final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+                final TouchUIZoneConfig touchUiConfig = serviceLocator<ProjectViewModel>().getTouchUIZoneConfig();
+                // final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
+                final String prettyJson = const JsonEncoder.withIndent('  ').convert(touchUiConfig.toJson());
                 debugPrint('─── WallControllerConfig JSON ───');
                 debugPrint(prettyJson);
               },

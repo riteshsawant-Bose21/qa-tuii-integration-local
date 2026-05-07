@@ -1,37 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_app/features/snapshots/widgets/snapshot_card.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/appbar/mobile_app_bar.dart';
 
-class SnapshotsScreen extends StatelessWidget {
 
-  const SnapshotsScreen({super.key});
+class MobileSnapshotsScreen extends StatefulWidget {
+  final String title;
+  final List<SnapshotsModel> snapshots;
+  const MobileSnapshotsScreen({super.key,required this.title,this.snapshots=const []});
+
+  @override
+  State<MobileSnapshotsScreen> createState() => _MobileSnapshotsScreenState();
+}
+
+class _MobileSnapshotsScreenState extends State<MobileSnapshotsScreen> {
+  int? selectedIndex;
+
+  @override
+  void initState() {
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<String> items = [
-      'Snapshot\nGroup 1',
-      'Snapshot\nGroup 2',
-      'Snapshot\nGroup 3',
-      'Snapshot\nGroup 4',
-      'Snapshot\nGroup 5',
-      'Snapshot\nGroup 6',
-      'Snapshot\nGroup 7',
-    ];
-
-    return GridView.builder(
-      padding: EdgeInsets.only(left: 16,right: 16),
-      itemCount: items.length,
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.3
-      ),
-      itemBuilder: (context, index) {
-        return  SnapshotCard(title: items[index]);
-      },
+    return Scaffold(
+      backgroundColor: context.colorScheme.primaryBlack,
+      appBar: CommonMobileAppBar(title: 'Snapshot Group 1'),
+      body: SnapshotsScreen(snapshots: widget.snapshots,),
     );
-
   }
-
 }

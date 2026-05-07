@@ -62,7 +62,12 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
   Widget build(BuildContext context) {
     context.watch<ProjectViewModel>();
 
-    return Column(
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "zone_control",
+      ),
+      child: Column(
       children: <Widget>[
         if (isSubZonesAvailable) ...<Widget>[
           Padding(
@@ -200,6 +205,7 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
           ),
         ),
       ],
+    ),
     );
   }
 }
