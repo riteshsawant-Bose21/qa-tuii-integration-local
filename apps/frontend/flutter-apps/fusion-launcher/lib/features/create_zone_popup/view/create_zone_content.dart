@@ -30,11 +30,13 @@ part 'widgets/create_subzone_widget.dart';
 class CreateZoneContent extends StatefulWidget {
   final bool isFromBuildingPage;
   final ValueNotifier<bool> saveEnabledNotifier;
+  final bool autoOpenSubzone;
 
   const CreateZoneContent({
     super.key,
     required this.isFromBuildingPage,
     required this.saveEnabledNotifier,
+    this.autoOpenSubzone = false,
   });
 
   @override
@@ -78,6 +80,7 @@ class _CreateZoneContentState extends State<CreateZoneContent> {
                 ),
                 const SizedBox(height: 20),
                 _CreateSubzoneWidget(
+                  autoOpenSubzone: widget.autoOpenSubzone,
                   saveEnabledNotifier: widget.saveEnabledNotifier,
                   onRevalidate: () => _revalidate(context.read<CreateZoneViewModel>().state), // ← pass revalidate down
                 ),
