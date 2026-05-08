@@ -463,7 +463,7 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
 
-    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u\n", stream->stream_name, stream->interrupts_per_period);
 
     return 0;
 }
