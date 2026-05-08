@@ -107,7 +107,7 @@ func init() {
 	}
 
 	sourceDBSvc := sourcedb.NewService(pgs, logger.JobSyncLog())
-	sourceSVC := source.NewService(sourceDBSvc, logger.JobSyncLog())
+	sourceSVC := source.NewService(sourceDBSvc, "", logger.JobSyncLog())
 	outputDBSvc := outputdb.NewService(pgs, logger.JobSyncLog())
 	outputSVC := output.NewService(outputDBSvc, logger.JobSyncLog())
 

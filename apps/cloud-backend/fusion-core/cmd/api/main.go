@@ -163,7 +163,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Source DB Service.")
 
 	// Initialize Source Service
-	sourceSVC := source.NewService(sourceDBSvc, loggers.AppLogger)
+	sourceSVC := source.NewService(sourceDBSvc, cfg.Cloud.AssetBaseURL, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
 	// Initialize Output DB Service

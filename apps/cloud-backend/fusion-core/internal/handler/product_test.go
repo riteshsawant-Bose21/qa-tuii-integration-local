@@ -165,7 +165,21 @@ func TestGetAllProducts(t *testing.T) {
 				expectedResponse := &types.ProductResponse{
 					Version: "1.0",
 					Source: []types.SourceItemResponse{
-						{SourceID: "media_player", Name: "Media Player", AssetPath: "assets/images/products/dvdplayer.png", SourceType: "media", ConnectionType: "analogInput", Price: 100},
+						{
+							SourceID:    "media_player",
+							ModelName:   "Media Player",
+							ModelFamily: "Source",
+							Assets: []types.SourceAsset{
+								{
+									Black: []string{"assets/images/products/dvdplayer.png"},
+								},
+							},
+							Specifications: types.SourceSpecifications{
+								PrimaryConnection:    "analogInput",
+								SupportedConnections: []string{"analogInput", "usbInput"},
+							},
+							IsFusionCompatible: true,
+						},
 					},
 					Output: []types.OutputItemResponse{
 						{OutputID: 1, Name: "Media Recorder", Type: "media", Images: "assets/images/outputs/media_recorder.png", Specifications: types.OutputSpecifications{PrimaryConnection: "analogOutput", SupportedConnections: []string{"analogOutput", "usbOutput"}}},
@@ -193,7 +207,9 @@ func TestGetAllProducts(t *testing.T) {
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
 				assert.Equal(t, "1.0", resp.Version)
 				assert.Len(t, resp.Source, 1)
-				assert.Equal(t, "Media Player", resp.Source[0].Name)
+				assert.Equal(t, "Media Player", resp.Source[0].ModelName)
+				assert.Equal(t, "analogInput", resp.Source[0].Specifications.PrimaryConnection)
+				assert.ElementsMatch(t, []string{"analogInput", "usbInput"}, resp.Source[0].Specifications.SupportedConnections)
 				assert.Len(t, resp.Output, 1)
 				assert.Equal(t, "Media Recorder", resp.Output[0].Name)
 				assert.Equal(t, "media", resp.Output[0].Type)

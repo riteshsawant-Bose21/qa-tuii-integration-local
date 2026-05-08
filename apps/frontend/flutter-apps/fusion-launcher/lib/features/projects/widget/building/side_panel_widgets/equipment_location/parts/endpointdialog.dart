@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
+
 import '../../../../../../../core/models/products_data.dart';
 import '../../../../../../../core/service_locator.dart';
 import '../../../../../../add_source_popup/view/widgets/add_source_dropdown_list.dart';
@@ -62,11 +63,11 @@ enum EndpointLocationType {
 
 class EndpointFormData {
   final String endpointName;
-  final dynamic product; // your actual type
-  final dynamic locationType; // your actual type
+  final dynamic product;
+  final dynamic locationType;
   final String locationId;
-  final String? floorId; // ← add
-  final Offset? position; // ← add (or whatever position type you use)
+  final String? floorId;
+  final Offset? position;
   final bool addConnectedSource;
   final List<SourceData> selectedSources;
 
@@ -75,8 +76,8 @@ class EndpointFormData {
     required this.product,
     required this.locationType,
     required this.locationId,
-    this.floorId, // ← add
-    this.position, // ← add
+    this.floorId,
+    this.position,
     required this.addConnectedSource,
     required this.selectedSources,
   });
@@ -87,7 +88,8 @@ class EndpointFormData {
 class _LocationItem {
   final String id;
   final String name;
-  const _LocationItem({required this.id, required this.name});
+  final Color? color; // ← added
+  const _LocationItem({required this.id, required this.name, this.color});
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -180,6 +182,56 @@ class _EndpointFormState extends State<_EndpointForm> {
     _sourceNameCtrl.addListener(_revalidate);
   }
 
+  // ── Product → connection type mapping ─────────────────────
+
+  SourceConnectionType? _connectionTypeForProduct(EQLProduct? product) {
+    if (product == null) return null;
+
+    const Map<String, SourceConnectionType> productConnectionMap = <String, SourceConnectionType>{
+      '1467': SourceConnectionType.xlr, // XLRPal
+      '1472': SourceConnectionType.bluetooth, // BluePal
+    };
+
+    final SourceConnectionType? result = productConnectionMap[product.productId.toString()]; // ← .toString()
+
+    return result;
+  }
+
+  // ── Filtered getters — uses supportedConnectionTypes.contains() ──
+
+  List<SourceSectionType> get _filteredSourceSectionTypes {
+    final SourceConnectionType? connType = _connectionTypeForProduct(_selectedProduct);
+
+    if (connType == null) {
+      return SourceSectionType.values;
+    }
+
+    final List<SourceSectionType> result =
+        SourceSectionType.values.where((SourceSectionType section) {
+          final List<String> matchingIds =
+              section.items.where((SourceData src) => src.supportedConnectionTypes.contains(connType)).map((SourceData src) => src.id).toList();
+
+          return matchingIds.isNotEmpty;
+        }).toList();
+
+    return result;
+  }
+
+  List<SourceData> get _filteredSourceItems {
+    final SourceConnectionType? connType = _connectionTypeForProduct(_selectedProduct);
+    final List<SourceData> all = _selectedSourceSectionType.items;
+
+    if (connType == null) {
+      return all;
+    }
+
+    final List<SourceData> result = all.where((SourceData src) => src.supportedConnectionTypes.contains(connType)).toList();
+
+    return result;
+  }
+
+  // ── Validation ────────────────────────────────────────────
+
   bool get _canSave {
     if (_nameCtrl.text.trim().isEmpty) return false;
     if (_selectedProduct == null) return false;
@@ -195,13 +247,14 @@ class _EndpointFormState extends State<_EndpointForm> {
     widget.saveEnabledNotifier.value = _canSave;
   }
 
+  // ── Save ──────────────────────────────────────────────────
+
   void save() {
     if (!_canSave || !mounted) return;
 
     final EqlProductsVm vm = BlocProvider.of<EqlProductsVm>(context);
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
-    // ── Equipment Location flow ──────────────────────────────────────
     if (_locationType == EndpointLocationType.equipmentLocation) {
       vm.addProductToLocation(
         equipLocationId: _selectedLocation!.id,
@@ -225,13 +278,11 @@ class _EndpointFormState extends State<_EndpointForm> {
           selectedSources: _addConnectedSource ? _selectedSources.whereType<SourceData>().toList() : const <SourceData>[],
         ),
       );
-
-      // ── Zone flow ────────────────────────────────────────────────────
     } else if (_locationType == EndpointLocationType.zone) {
       final List<ListeningArea> areasInZone = projectViewModel.getListeningAreasForZone(zoneId: _selectedLocation!.id);
       final ListeningArea? selectedArea = areasInZone.firstOrNull;
       if (selectedArea == null) {
-        FusionToast.error(context, message: "No listening area found in this zone");
+        FusionToast.error(context, message: 'No listening area found in this zone');
         return;
       }
 
@@ -247,6 +298,7 @@ class _EndpointFormState extends State<_EndpointForm> {
       if (_addConnectedSource) {
         _addSourceForZone(
           projectViewModel: projectViewModel,
+          zoneId: _selectedLocation!.id, // ← actual zone ID for addSourceToZone
           listeningAreaId: selectedArea.id,
           floorId: floorData?.id,
           position: selectedArea.getCenterPositionOfVertices(),
@@ -272,6 +324,21 @@ class _EndpointFormState extends State<_EndpointForm> {
 
   // ── Source helpers ────────────────────────────────────────────
 
+  PortType _portTypeForConnectionType(SourceConnectionType connectionType) {
+    return switch (connectionType) {
+      SourceConnectionType.analogInput => PortType.analogOutput,
+      SourceConnectionType.aes67input => PortType.networkSwitchOut,
+      SourceConnectionType.bluetooth => PortType.bleOut,
+      SourceConnectionType.usb => PortType.usbOut,
+      SourceConnectionType.audioJack => PortType.audioJackOutput,
+      SourceConnectionType.xlr => PortType.xlrOutput,
+      SourceConnectionType.hdmi => PortType.hdmiOut,
+      SourceConnectionType.rca => PortType.rcaOutput,
+      SourceConnectionType.endpoint => PortType.analogOutput,
+      SourceConnectionType.messagePlayer => PortType.messagePlayer,
+    };
+  }
+
   void _addSourceForEquipLocation({
     required ProjectViewModel projectViewModel,
     required String equipLocationId,
@@ -279,12 +346,15 @@ class _EndpointFormState extends State<_EndpointForm> {
     final SourceData? sourceData = _selectedSources.whereType<SourceData>().firstOrNull;
     if (sourceData == null) return;
 
+    final SourceConnectionType connectionType = _connectionTypeForProduct(_selectedProduct) ?? SourceConnectionType.endpoint;
+    final PortType portType = _portTypeForConnectionType(connectionType);
+
     final Source source = Source(
       name: _sourceNameCtrl.text.trim(),
       pos: null,
       type: sourceData.type,
       addedFromBuildingPage: false,
-      connectionType: SourceConnectionType.endpoint,
+      connectionType: connectionType,
       image: sourceData.assetPath,
       locationEntity: LocationModel(),
       sku: sourceData.id,
@@ -294,12 +364,13 @@ class _EndpointFormState extends State<_EndpointForm> {
         inputPorts: 0,
         outputPorts: 1,
         inputPortType: PortType.analogInput,
-        outputPortType: PortType.analogOutput,
+        outputPortType: portType,
         portPosition: PortPosition.topLeft,
       ),
     );
 
     projectViewModel.addHardware(hardware: source);
+    projectViewModel.setCurrentSelectedHardware(source.id);
     projectViewModel.addHardwareToEquipLocation(
       equipLocationId: equipLocationId,
       hardwareId: source.id,
@@ -308,6 +379,7 @@ class _EndpointFormState extends State<_EndpointForm> {
 
   void _addSourceForZone({
     required ProjectViewModel projectViewModel,
+    required String zoneId,
     required String listeningAreaId,
     required String? floorId,
     required Offset? position,
@@ -315,12 +387,15 @@ class _EndpointFormState extends State<_EndpointForm> {
     final SourceData? sourceData = _selectedSources.whereType<SourceData>().firstOrNull;
     if (sourceData == null) return;
 
+    final SourceConnectionType connectionType = _connectionTypeForProduct(_selectedProduct) ?? SourceConnectionType.endpoint;
+    final PortType portType = _portTypeForConnectionType(connectionType);
+
     final Source source = Source(
       name: _sourceNameCtrl.text.trim(),
       pos: position,
       type: sourceData.type,
       addedFromBuildingPage: false,
-      connectionType: SourceConnectionType.endpoint,
+      connectionType: connectionType,
       image: sourceData.assetPath,
       locationEntity: LocationModel(
         listeningAreaId: listeningAreaId,
@@ -333,12 +408,13 @@ class _EndpointFormState extends State<_EndpointForm> {
         inputPorts: 0,
         outputPorts: 1,
         inputPortType: PortType.analogInput,
-        outputPortType: PortType.analogOutput,
+        outputPortType: portType, // ← dynamic
         portPosition: PortPosition.topLeft,
       ),
     );
 
-    projectViewModel.addHardware(hardware: source);
+    projectViewModel.addHardware(hardware: source); // ← register first
+    projectViewModel.addSourceToZone(zoneId: zoneId, sourceId: source.id);
   }
 
   void _scrollToConnectedSource() {
@@ -358,8 +434,8 @@ class _EndpointFormState extends State<_EndpointForm> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    super.dispose();
     _sourceNameCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -371,10 +447,8 @@ class _EndpointFormState extends State<_EndpointForm> {
 
     final ProjectViewModel pvm = BlocProvider.of<ProjectViewModel>(context);
 
-    final List<_LocationItem> zones = pvm.zones.map((Zone z) => _LocationItem(id: z.id, name: z.name)).toList();
-
+    final List<_LocationItem> zones = pvm.zones.map((Zone z) => _LocationItem(id: z.id, name: z.name, color: z.color)).toList();
     final List<_LocationItem> equipmentLocations = pvm.equipLocations.map((EquipLocation e) => _LocationItem(id: e.id, name: e.name)).toList();
-
     final List<_LocationItem> currentLocations = _locationType == EndpointLocationType.zone ? zones : equipmentLocations;
 
     return Padding(
@@ -383,7 +457,7 @@ class _EndpointFormState extends State<_EndpointForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          // ── Endpoint Name ──────────────────────────────────
+          // ── Endpoint Name ────────────────────────────────
           FusionLabeledField(
             label: 'Endpoint Name',
             semanticId: 'endpoint_name_label',
@@ -395,7 +469,7 @@ class _EndpointFormState extends State<_EndpointForm> {
             ),
           ),
 
-          // ── Category chip selector (building page only) ────
+          // ── Category chip selector (building page only) ──
           if (widget.fromBuildingPage) ...<Widget>[
             const SizedBox(height: 20),
             FusionOutlinedDropdown<EndpointDeviceCategory>(
@@ -413,6 +487,8 @@ class _EndpointFormState extends State<_EndpointForm> {
                 setState(() {
                   _category = v;
                   _selectedProduct = null;
+                  _selectedSourceSectionType = SourceSectionType.values.first;
+                  _selectedSources = <SourceData?>[null];
                   BlocProvider.of<EqlProductsVm>(context).updateFilters(
                     BlocProvider.of<EqlProductsVm>(context).state.filters.copyWith(
                       deviceType: v.eqlDeviceType,
@@ -427,7 +503,7 @@ class _EndpointFormState extends State<_EndpointForm> {
 
           const SizedBox(height: 8),
 
-          // ── Product dropdown — from EqlProductsVm ──────────
+          // ── Product dropdown — from EqlProductsVm ────────
           BlocBuilder<EqlProductsVm, EQLProductsState>(
             builder: (BuildContext context, EQLProductsState state) {
               return switch (state.data) {
@@ -515,7 +591,26 @@ class _EndpointFormState extends State<_EndpointForm> {
                         ),
                       ),
                   onChanged: (EQLProduct v) {
-                    setState(() => _selectedProduct = v);
+                    setState(() {
+                      _selectedProduct = v;
+                      _selectedSources = <SourceData?>[null];
+
+                      final SourceConnectionType? connType = _connectionTypeForProduct(v);
+
+                      if (connType != null) {
+                        final List<SourceSectionType> validSections =
+                            SourceSectionType.values.where((SourceSectionType s) {
+                              final List<String> matchIds =
+                                  s.items.where((SourceData src) => src.supportedConnectionTypes.contains(connType)).map((SourceData src) => src.id).toList();
+
+                              return matchIds.isNotEmpty;
+                            }).toList();
+
+                        _selectedSourceSectionType = validSections.isNotEmpty ? validSections.first : SourceSectionType.values.first;
+                      } else {
+                        _selectedSourceSectionType = SourceSectionType.values.first;
+                      }
+                    });
                     _revalidate();
                   },
                 ),
@@ -561,6 +656,46 @@ class _EndpointFormState extends State<_EndpointForm> {
               value: _selectedLocation,
               items: currentLocations,
               itemLabelBuilder: (_LocationItem l) => l.name,
+              selectedItemBuilder:
+                  _selectedLocation != null && _locationType == EndpointLocationType.zone
+                      ? (BuildContext ctx, _LocationItem item) => Row(
+                        children: <Widget>[
+                          if (item.color != null) ...<Widget>[
+                            _ColorDot(color: item.color!),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child: FusionAppText(
+                              text: item.name,
+                              maxLine: 1,
+                              style: ctx.textTheme.b3Regular.copyWith(
+                                color: ctx.colorScheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                      : null,
+              itemWidgetBuilder:
+                  _locationType == EndpointLocationType.zone
+                      ? (BuildContext ctx, _LocationItem item, bool isSelected) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: <Widget>[
+                            if (item.color != null) ...<Widget>[
+                              _ColorDot(color: item.color!),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: FusionAppText(
+                                text: item.name,
+                                style: Theme.of(ctx).textTheme.l1Regular,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      : null,
               onChanged: (_LocationItem v) {
                 setState(() => _selectedLocation = v);
                 _revalidate();
@@ -595,7 +730,6 @@ class _EndpointFormState extends State<_EndpointForm> {
           ],
 
           // ── Connected source fields ────────────────────────
-          // ── Connected source fields ────────────────────────
           if (_addConnectedSource) ...<Widget>[
             const SizedBox(height: 20),
             FusionLabeledField(
@@ -613,12 +747,12 @@ class _EndpointFormState extends State<_EndpointForm> {
               label: 'Source Type',
               hint: 'Select Source Type',
               value: _selectedSourceSectionType,
-              items: SourceSectionType.values,
+              items: _filteredSourceSectionTypes,
               itemLabelBuilder: (SourceSectionType item) => item.displayName,
               onChanged: (SourceSectionType value) {
                 setState(() {
                   _selectedSourceSectionType = value;
-                  _selectedSources = <SourceData?>[null]; // reset with null entry
+                  _selectedSources = <SourceData?>[null];
                 });
               },
             ),
@@ -627,11 +761,9 @@ class _EndpointFormState extends State<_EndpointForm> {
               key: _connectedSourceKey,
               child: SourceDropdownList(
                 selectedSources: _selectedSources,
-                items: _selectedSourceSectionType.items,
+                items: _filteredSourceItems,
                 onChanged: (int index, SourceData value) {
-                  setState(() {
-                    _selectedSources[index] = value;
-                  });
+                  setState(() => _selectedSources[index] = value);
                 },
               ),
             ),
@@ -669,6 +801,24 @@ class AddEndpointDialog {
         formKey: formKey,
         fromBuildingPage: fromBuildingPage,
         onSave: onSave,
+      ),
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  final Color color;
+  const _ColorDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: context.colorScheme.zone3Stroke, width: 1),
       ),
     );
   }

@@ -340,6 +340,7 @@ CREATE TYPE bundle_update_status_enum AS ENUM (
     'INSTALL_SUCCESS',
     'INSTALL_FAIL'
 );
+
 CREATE TABLE bundle_update_status (
     id UUID PRIMARY KEY,         
     update_id UUID NOT null UNIQUE,
@@ -352,7 +353,21 @@ CREATE TABLE bundle_update_status (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic');
+CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic', 'paging');
+
+CREATE TABLE source (
+    id SERIAL PRIMARY KEY,
+
+    model_name VARCHAR(100) NOT NULL,
+    images TEXT NOT NULL,
+    model_family source_type NOT NULL,
+    description TEXT,
+    specifications JSONB,
+
+    is_fusion_compatible BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TYPE connection_type AS ENUM (
     'analogInput',
@@ -361,15 +376,6 @@ CREATE TYPE connection_type AS ENUM (
     'analogOutput',
     'usbOutput',
     'aes67output'
-);
-
-CREATE TABLE source (
-    id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    asset_path TEXT NOT NULL,
-    type source_type NOT NULL,
-    connection_type connection_type NOT NULL,
-    price NUMERIC(10,2) NOT NULL
 );
 
 CREATE TYPE output_type AS ENUM ('media', 'amplifier');
