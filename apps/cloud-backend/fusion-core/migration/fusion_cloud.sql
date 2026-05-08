@@ -378,7 +378,7 @@ CREATE TABLE output (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     type output_type NOT NULL,
-    asset_path TEXT NOT NULL,
+    images TEXT NOT NULL,
     primary_connection connection_type NOT NULL,
     supported_connections connection_type[] NOT NULL
 );

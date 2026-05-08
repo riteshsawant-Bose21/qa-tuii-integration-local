@@ -4123,7 +4123,7 @@ const docTemplate = `{
         "types.OutputItem": {
             "type": "object",
             "properties": {
-                "asset_path": {
+                "images": {
                     "type": "string"
                 },
                 "id": {

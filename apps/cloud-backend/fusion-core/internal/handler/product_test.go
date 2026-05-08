@@ -168,7 +168,7 @@ func TestGetAllProducts(t *testing.T) {
 						{SourceID: "media_player", Name: "Media Player", AssetPath: "assets/images/products/dvdplayer.png", SourceType: "media", ConnectionType: "analogInput", Price: 100},
 					},
 					Output: []types.OutputItemResponse{
-						{OutputID: 1, Name: "Media Recorder", Type: "media", AssetPath: "assets/images/outputs/media_recorder.png", Specifications: types.OutputSpecifications{PrimaryConnection: "analogOutput", SupportedConnections: []string{"analogOutput", "usbOutput"}}},
+						{OutputID: 1, Name: "Media Recorder", Type: "media", Images: "assets/images/outputs/media_recorder.png", Specifications: types.OutputSpecifications{PrimaryConnection: "analogOutput", SupportedConnections: []string{"analogOutput", "usbOutput"}}},
 					},
 					Speaker: []types.ProductItemResponse{
 						{

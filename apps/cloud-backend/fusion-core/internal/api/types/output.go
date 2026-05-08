@@ -9,6 +9,6 @@ type OutputItemResponse struct {
 	OutputID       int                  `json:"id"`
 	Name           string               `json:"name"`
 	Type           string               `json:"type"`
-	AssetPath      string               `json:"asset_path"`
+	Images         string               `json:"images"`
 	Specifications OutputSpecifications `json:"specifications"`
 }

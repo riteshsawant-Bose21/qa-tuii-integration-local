@@ -783,7 +783,7 @@ definitions:
     type: object
   types.OutputItem:
     properties:
-      asset_path:
+      images:
         type: string
       id:
         type: integer

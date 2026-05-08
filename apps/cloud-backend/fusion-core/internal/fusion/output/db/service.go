@@ -32,7 +32,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all outputs from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.OutputItemResponse, error) {
-	query := `SELECT id, name, type, asset_path, primary_connection, array_to_json(supported_connections)FROM output ORDER BY name`
+	query := `SELECT id, name, type, images, primary_connection, array_to_json(supported_connections) FROM output ORDER BY name`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.Ou
 			&item.OutputID,
 			&item.Name,
 			&item.Type,
-			&item.AssetPath,
+			&item.Images,
 			&primaryConnection,
 			&supportedConnectionsJSON,
 		); err != nil {
