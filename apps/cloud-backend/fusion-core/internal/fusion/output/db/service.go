@@ -32,7 +32,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all outputs from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.OutputItemResponse, error) {
-	query := `SELECT id, name, type, images, primary_connection, array_to_json(supported_connections) FROM output ORDER BY name`
+	query := `SELECT id, name, type, images, specifications FROM output ORDER BY name`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -44,33 +44,40 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.Ou
 
 	outputs := make([]types.OutputItemResponse, 0)
 	for rows.Next() {
-		var item types.OutputItemResponse
-		var primaryConnection string
-		var supportedConnectionsJSON []byte
+		var (
+			item               types.OutputItemResponse
+			images             sql.NullString
+			specificationsJSON []byte
+		)
 		if err := rows.Scan(
 			&item.OutputID,
 			&item.Name,
 			&item.Type,
-			&item.Images,
-			&primaryConnection,
-			&supportedConnectionsJSON,
+			&images,
+			&specificationsJSON,
 		); err != nil {
 			logger.Error("failed to scan output row", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan output row: %w", err)
 		}
 
-		supportedConnections := make([]string, 0)
-		if len(supportedConnectionsJSON) > 0 {
-			if err := json.Unmarshal(supportedConnectionsJSON, &supportedConnections); err != nil {
-				logger.Error("failed to parse output supported connections", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse output supported connections: %w", err)
+		var specs types.OutputSpecifications
+		if specificationsJSON != nil {
+			if err := json.Unmarshal(specificationsJSON, &specs); err != nil {
+				logger.Error("failed to unmarshal output specifications", zap.Error(err))
+				return nil, fmt.Errorf("failed to unmarshal output specifications: %w", err)
 			}
 		}
-
-		item.Specifications = types.OutputSpecifications{
-			PrimaryConnection:    primaryConnection,
-			SupportedConnections: supportedConnections,
+		if specs.SupportedConnections == nil {
+			specs.SupportedConnections = []string{}
 		}
+
+		imagesStr := ""
+		if images.Valid {
+			imagesStr = images.String
+		}
+
+		item.Assets = []types.OutputAsset{{Black: []string{imagesStr}}}
+		item.Specifications = specs
 
 		outputs = append(outputs, item)
 	}

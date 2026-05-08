@@ -221,7 +221,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	outputDBSvc := outputdb.NewService(suite.DB, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Output DB Service.")
 
-	outputSVC := output.NewService(outputDBSvc, loggers.AppLogger)
+	outputSVC := output.NewService(outputDBSvc, "", loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Output Service.")
 
 	validationCfg := &config.Validation{

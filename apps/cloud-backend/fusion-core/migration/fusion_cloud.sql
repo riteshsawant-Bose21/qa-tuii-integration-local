@@ -369,15 +369,6 @@ CREATE TABLE source (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TYPE connection_type AS ENUM (
-    'analogInput',
-    'hdmi',
-    'usb',
-    'analogOutput',
-    'usbOutput',
-    'aes67output'
-);
-
 CREATE TYPE output_type AS ENUM ('media', 'amplifier');
 
 CREATE TABLE output (
@@ -385,6 +376,6 @@ CREATE TABLE output (
     name VARCHAR(100) NOT NULL,
     type output_type NOT NULL,
     images TEXT NOT NULL,
-    primary_connection connection_type NOT NULL,
-    supported_connections connection_type[] NOT NULL
+    specifications JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

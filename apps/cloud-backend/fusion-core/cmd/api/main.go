@@ -171,7 +171,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Output DB Service.")
 
 	// Initialize Output Service
-	outputSVC := output.NewService(outputDBSvc, loggers.AppLogger)
+	outputSVC := output.NewService(outputDBSvc, cfg.Cloud.AssetBaseURL, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Output Service.")
 
 	//Initialize Product Service (now includes sync functionality)

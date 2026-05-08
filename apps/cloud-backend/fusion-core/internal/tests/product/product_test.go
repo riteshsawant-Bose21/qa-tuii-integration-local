@@ -90,10 +90,7 @@ func (suite *ProductIntegrationTestSuite) TestGetAllProducts() {
 
 // TestGetAllProducts_WithOutputData verifies output entries are included in GET /products.
 func (suite *ProductIntegrationTestSuite) TestGetAllProducts_WithOutputData() {
-	_, err := suite.DB.Exec(`
-		INSERT INTO output (name, type, images, primary_connection, supported_connections)
-		VALUES ('Media Recorder', 'media', 'assets/images/outputs/media_recorder.png', 'analogOutput', ARRAY['analogOutput','usbOutput']::connection_type[])
-	`)
+	_, err := suite.DB.Exec(`INSERT INTO output (name, type, images, specifications) VALUES ('Media Recorder', 'media', 'assets/images/outputs/media_recorder.png', '{"primary_connection": "analogOutput", "supported_connections": ["analogOutput", "usbOutput"], "paging_type": null}'::jsonb)`)
 	require.NoError(suite.T(), err)
 
 	resp, err := suite.MakeRequest("GET", "/api/v1/products", nil)
@@ -110,7 +107,8 @@ func (suite *ProductIntegrationTestSuite) TestGetAllProducts_WithOutputData() {
 			outputFound = true
 			assert.Equal(suite.T(), "media", output.Type)
 			assert.Equal(suite.T(), "Media Recorder", output.Name)
-			assert.Equal(suite.T(), "assets/images/outputs/media_recorder.png", output.Images)
+			require.Len(suite.T(), output.Assets, 1)
+			assert.ElementsMatch(suite.T(), []string{"assets/images/outputs/media_recorder.png"}, output.Assets[0].Black)
 			assert.Equal(suite.T(), "analogOutput", output.Specifications.PrimaryConnection)
 			assert.ElementsMatch(suite.T(), []string{"analogOutput", "usbOutput"}, output.Specifications.SupportedConnections)
 			break
