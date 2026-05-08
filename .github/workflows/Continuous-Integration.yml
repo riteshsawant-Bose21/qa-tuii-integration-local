@@ -133,10 +133,10 @@ jobs:
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
           nexus_url: ${{ secrets.NEXUS_BASE_URL }}
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-          AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-          AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_QA }}
+          AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA }}
           AWS_REGION_DEV: ${{ vars.AWS_DEFAULT_REGION }}
-          AMPLIFY_APP_ID: ${{ secrets.AWS_AMPLIFY_APP_ID_DEV }}
+          AMPLIFY_APP_ID: ${{ secrets.AWS_AMPLIFY_APP_ID_QA }}
 
   cloud-web-backend-build:
     needs: buildChecks
