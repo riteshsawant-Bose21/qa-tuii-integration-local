@@ -90,8 +90,6 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     printk(KERN_DEBUG "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
            runtime->buffer_size, runtime->period_size, runtime->periods, stream->stream_name);
 
-    stream->pcm_indirect.hw_buffer_size = buffer_bytes;
-    stream->pcm_indirect.sw_buffer_size = buffer_bytes;
     atomic_set(&stream->dma_offset, 0);
 
     spin_unlock_irq(&stream->lock);
@@ -148,6 +146,8 @@ void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_o
 void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer)
 {
     unsigned long flags;
+    struct snd_pcm_substream *ss = NULL;
+    struct snd_pcm_runtime *rt = NULL;
 
     if (!stream)
         return;
@@ -155,13 +155,20 @@ void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool
     spin_lock_irqsave(&stream->lock, flags);
     stream->buffer_pos = 0;
     stream->interrupt_idx = 0;
-    stream->pcm_indirect.hw_data = 0;
-    stream->pcm_indirect.sw_data = 0;
     atomic_set(&stream->dma_offset, 0);
-    if (clear_buffer && stream->substream && stream->substream->runtime && stream->substream->runtime->dma_area)
-        memset(stream->substream->runtime->dma_area, 0,
-               snd_pcm_lib_buffer_bytes(stream->substream));
+    ss = stream->substream;
+    if (ss)
+        rt = ss->runtime;
     spin_unlock_irqrestore(&stream->lock, flags);
+
+    if (ss && rt) {
+        snd_pcm_stream_lock_irq(ss);
+        rt->status->hw_ptr = 0;
+        rt->control->appl_ptr = 0;
+        if (clear_buffer && rt->dma_area)
+            memset(rt->dma_area, 0, snd_pcm_lib_buffer_bytes(ss));
+        snd_pcm_stream_unlock_irq(ss);
+    }
 
     printk(KERN_DEBUG "fusion_cn_alsa: reset_stream_timing stream %s clear_buffer=%u\n",
            stream->stream_name, clear_buffer ? 1 : 0);
@@ -429,11 +436,6 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
 
     spin_lock_irqsave(&stream->lock, flags);
     if (stream->substream) {
-        snd_pcm_stream_lock_irq(stream->substream);
-        stream->substream->runtime->status->hw_ptr = 0;
-        stream->substream->runtime->control->appl_ptr = 0;
-        stream->substream->runtime->boundary = 0;
-        snd_pcm_stream_unlock_irq(stream->substream);
         stream->substream = NULL;
     }
     spin_unlock_irqrestore(&stream->lock, flags);
@@ -457,10 +459,6 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     if (stream->interrupts_per_period == 0) stream->interrupts_per_period = 1;
     stream->interrupt_idx = 0;
     stream->buffer_pos = 0;
-    stream->pcm_indirect.hw_data = 0;
-    stream->pcm_indirect.sw_data = 0;
-    stream->pcm_indirect.hw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
-    stream->pcm_indirect.sw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
     atomic_set(&stream->dma_offset, 0);
     memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
