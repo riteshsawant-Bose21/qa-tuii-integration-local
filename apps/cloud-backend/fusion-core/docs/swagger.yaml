@@ -781,6 +781,28 @@ definitions:
         type: integer
       specifications: {}
     type: object
+  types.OutputItem:
+    properties:
+      asset_path:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      specifications:
+        $ref: '#/definitions/types.OutputSpecifications'
+      type:
+        type: string
+    type: object
+  types.OutputSpecifications:
+    properties:
+      primary_connection:
+        type: string
+      supported_connections:
+        items:
+          type: string
+        type: array
+    type: object
   types.ProductResponse:
     properties:
       accessory:
@@ -802,6 +824,10 @@ definitions:
       io_endpoint:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      output:
+        items:
+          $ref: '#/definitions/types.OutputItem'
         type: array
       source:
         items:

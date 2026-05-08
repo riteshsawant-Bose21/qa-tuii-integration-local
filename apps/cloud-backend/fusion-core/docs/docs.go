@@ -4120,6 +4120,40 @@ const docTemplate = `{
                 "specifications": {}
             }
         },
+        "types.OutputItem": {
+            "type": "object",
+            "properties": {
+                "asset_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "specifications": {
+                    "$ref": "#/definitions/types.OutputSpecifications"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.OutputSpecifications": {
+            "type": "object",
+            "properties": {
+                "primary_connection": {
+                    "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "types.ProductResponse": {
             "type": "object",
             "properties": {
@@ -4151,6 +4185,12 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "output": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputItem"
                     }
                 },
                 "source": {

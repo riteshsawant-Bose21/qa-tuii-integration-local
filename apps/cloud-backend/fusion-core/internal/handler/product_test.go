@@ -164,6 +164,12 @@ func TestGetAllProducts(t *testing.T) {
 			setupMock: func(m *MockProductService) {
 				expectedResponse := &types.ProductResponse{
 					Version: "1.0",
+					Source: []types.SourceItemResponse{
+						{SourceID: "media_player", Name: "Media Player", AssetPath: "assets/images/products/dvdplayer.png", SourceType: "media", ConnectionType: "analogInput", Price: 100},
+					},
+					Output: []types.OutputItemResponse{
+						{OutputID: 1, Name: "Media Recorder", Type: "media", AssetPath: "assets/images/outputs/media_recorder.png", Specifications: types.OutputSpecifications{PrimaryConnection: "analogOutput", SupportedConnections: []string{"analogOutput", "usbOutput"}}},
+					},
 					Speaker: []types.ProductItemResponse{
 						{
 							ProductID:          1,
@@ -186,6 +192,13 @@ func TestGetAllProducts(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
 				assert.Equal(t, "1.0", resp.Version)
+				assert.Len(t, resp.Source, 1)
+				assert.Equal(t, "Media Player", resp.Source[0].Name)
+				assert.Len(t, resp.Output, 1)
+				assert.Equal(t, "Media Recorder", resp.Output[0].Name)
+				assert.Equal(t, "media", resp.Output[0].Type)
+				assert.Equal(t, "analogOutput", resp.Output[0].Specifications.PrimaryConnection)
+				assert.ElementsMatch(t, []string{"analogOutput", "usbOutput"}, resp.Output[0].Specifications.SupportedConnections)
 				assert.Len(t, resp.Speaker, 1)
 				assert.Equal(t, "Test Speaker", resp.Speaker[0].ModelName)
 				assert.Len(t, resp.Amplifier, 1)
@@ -203,6 +216,8 @@ func TestGetAllProducts(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
 				assert.Equal(t, "1.0", resp.Version)
+				assert.Empty(t, resp.Source)
+				assert.Empty(t, resp.Output)
 				assert.Empty(t, resp.Speaker)
 				assert.Empty(t, resp.Amplifier)
 				assert.Empty(t, resp.Controller)

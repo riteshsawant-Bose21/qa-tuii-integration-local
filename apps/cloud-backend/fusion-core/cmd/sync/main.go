@@ -19,6 +19,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output"
+	outputdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source"
@@ -106,10 +108,13 @@ func init() {
 
 	sourceDBSvc := sourcedb.NewService(pgs, logger.JobSyncLog())
 	sourceSVC := source.NewService(sourceDBSvc, logger.JobSyncLog())
+	outputDBSvc := outputdb.NewService(pgs, logger.JobSyncLog())
+	outputSVC := output.NewService(outputDBSvc, logger.JobSyncLog())
 
 	productSVC = product.NewService(
 		productDBSvc,
 		sourceSVC,
+		outputSVC,
 		validationCfg.DefaultVersion,
 		validationCfg,
 		processingCfg,

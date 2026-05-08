@@ -357,7 +357,10 @@ CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic');
 CREATE TYPE connection_type AS ENUM (
     'analogInput',
     'hdmi',
-    'usb'
+    'usb',
+    'analogOutput',
+    'usbOutput',
+    'aes67output'
 );
 
 CREATE TABLE source (
@@ -367,4 +370,15 @@ CREATE TABLE source (
     type source_type NOT NULL,
     connection_type connection_type NOT NULL,
     price NUMERIC(10,2) NOT NULL
+);
+
+CREATE TYPE output_type AS ENUM ('media', 'amplifier');
+
+CREATE TABLE output (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type output_type NOT NULL,
+    asset_path TEXT NOT NULL,
+    primary_connection connection_type NOT NULL,
+    supported_connections connection_type[] NOT NULL
 );

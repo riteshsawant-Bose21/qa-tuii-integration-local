@@ -88,6 +88,38 @@ func (suite *ProductIntegrationTestSuite) TestGetAllProducts() {
 	assert.True(suite.T(), amplifierFound, "Expected amplifier product not found in response")
 }
 
+// TestGetAllProducts_WithOutputData verifies output entries are included in GET /products.
+func (suite *ProductIntegrationTestSuite) TestGetAllProducts_WithOutputData() {
+	_, err := suite.DB.Exec(`
+		INSERT INTO output (name, type, asset_path, primary_connection, supported_connections)
+		VALUES ('Media Recorder', 'media', 'assets/images/outputs/media_recorder.png', 'analogOutput', ARRAY['analogOutput','usbOutput']::connection_type[])
+	`)
+	require.NoError(suite.T(), err)
+
+	resp, err := suite.MakeRequest("GET", "/api/v1/products", nil)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), http.StatusOK, resp.Code)
+
+	var productResponse types.ProductResponse
+	err = json.Unmarshal(resp.Body.Bytes(), &productResponse)
+	require.NoError(suite.T(), err)
+
+	outputFound := false
+	for _, output := range productResponse.Output {
+		if output.Name == "Media Recorder" {
+			outputFound = true
+			assert.Equal(suite.T(), types.OutputTypeMedia, output.Type)
+			assert.Equal(suite.T(), "Media Recorder", output.Name)
+			assert.Equal(suite.T(), "assets/images/outputs/media_recorder.png", output.AssetPath)
+			assert.Equal(suite.T(), "analogOutput", output.Specifications.PrimaryConnection)
+			assert.ElementsMatch(suite.T(), []string{"analogOutput", "usbOutput"}, output.Specifications.SupportedConnections)
+			break
+		}
+	}
+
+	assert.True(suite.T(), outputFound, "Expected output item not found in response")
+}
+
 // TestGetProductByID tests the GET /api/v1/products/{id} endpoint.
 func (suite *ProductIntegrationTestSuite) TestGetProductByID() {
 	testProducts := testutils.GetDefaultTestProducts()
