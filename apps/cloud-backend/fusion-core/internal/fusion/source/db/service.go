@@ -3,10 +3,11 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -30,7 +31,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all sources from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error) {
-	query := `SELECT id, model_name, asset_path, model_family, primary_connection_type, description, paging_source_type, supported_connection_types, is_fusion_compatible FROM source ORDER BY model_name`
+	query := `SELECT id, model_name, asset_path, model_family, description, specifications, is_fusion_compatible FROM source ORDER BY model_name`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -43,14 +44,12 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 	sources := make([]types.SourceItemResponse, 0)
 	for rows.Next() {
 		var (
-			sourceID           string
+			sourceID           int
 			modelName          string
 			assetPath          sql.NullString
 			modelFamily        string
-			primaryConnection  string
 			description        sql.NullString
-			pagingSourceType   sql.NullString
-			supportedConns     []string
+			specificationsJSON []byte
 			isFusionCompatible bool
 		)
 
@@ -59,18 +58,12 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 			&modelName,
 			&assetPath,
 			&modelFamily,
-			&primaryConnection,
 			&description,
-			&pagingSourceType,
-			pq.Array(&supportedConns),
+			&specificationsJSON,
 			&isFusionCompatible,
 		); err != nil {
 			logger.Error("failed to scan source row", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan source row: %w", err)
-		}
-
-		if supportedConns == nil {
-			supportedConns = []string{}
 		}
 
 		var descPtr *string
@@ -78,9 +71,15 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 			descPtr = &description.String
 		}
 
-		var pagingTypePtr *string
-		if pagingSourceType.Valid {
-			pagingTypePtr = &pagingSourceType.String
+		var specs types.SourceSpecifications
+		if specificationsJSON != nil {
+			if err := json.Unmarshal(specificationsJSON, &specs); err != nil {
+				logger.Error("failed to unmarshal specifications", zap.Error(err))
+				return nil, fmt.Errorf("failed to unmarshal specifications: %w", err)
+			}
+		}
+		if specs.SupportedConnections == nil {
+			specs.SupportedConnections = []string{}
 		}
 
 		assetPathStr := ""
@@ -89,16 +88,12 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		}
 
 		item := types.SourceItemResponse{
-			SourceID:    sourceID,
-			Assets:      []types.SourceAsset{{Black: []string{assetPathStr}}},
-			ModelName:   modelName,
-			ModelFamily: modelFamily,
-			Description: descPtr,
-			Specifications: types.SourceSpecifications{
-				PrimaryConnection:    primaryConnection,
-				SupportedConnections: supportedConns,
-				PagingType:           pagingTypePtr,
-			},
+			SourceID:           strconv.Itoa(sourceID),
+			Assets:             []types.SourceAsset{{Black: []string{assetPathStr}}},
+			ModelName:          modelName,
+			ModelFamily:        modelFamily,
+			Description:        descPtr,
+			Specifications:     specs,
 			IsFusionCompatible: isFusionCompatible,
 		}
 

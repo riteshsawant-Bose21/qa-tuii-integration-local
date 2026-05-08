@@ -355,38 +355,17 @@ CREATE TABLE bundle_update_status (
 
 CREATE TYPE source_type AS ENUM ('mic', 'media', 'generic', 'paging');
 
-CREATE TYPE connection_type AS ENUM (
-    'analogInput',
-    'hdmi',
-    'usb',
-    'audioJack',
-    'rca',
-    'xlr',
-    'bluetooth',
-    'endpoint',
-    'aes67input',
-    'messagePlayer'
-);
-
-CREATE TYPE paging_source_type AS ENUM (
-    'messagePlayer',
-    'messagePlayerWithZoneSelect',
-    'pagingMic',
-    'pagingMicWithZoneSelect'
-);
-
 CREATE TABLE source (
-    id VARCHAR(50) PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
 
     model_name VARCHAR(100) NOT NULL,
     asset_path TEXT NOT NULL,
     model_family source_type NOT NULL,
-    primary_connection_type connection_type NOT NULL,
     description TEXT,
-    paging_source_type paging_source_type,
-    supported_connection_types connection_type[] NOT NULL DEFAULT '{}',
+    specifications JSONB,
 
     is_fusion_compatible BOOLEAN DEFAULT FALSE,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+ 
