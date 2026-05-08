@@ -359,7 +359,7 @@ CREATE TABLE source (
     id SERIAL PRIMARY KEY,
 
     model_name VARCHAR(100) NOT NULL,
-    asset_path TEXT NOT NULL,
+    images TEXT NOT NULL,
     model_family source_type NOT NULL,
     description TEXT,
     specifications JSONB,

@@ -31,7 +31,7 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all sources from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error) {
-	query := `SELECT id, model_name, asset_path, model_family, description, specifications, is_fusion_compatible FROM source ORDER BY model_name`
+	query := `SELECT id, model_name, images, model_family, description, specifications, is_fusion_compatible FROM source ORDER BY model_name`
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		var (
 			sourceID           int
 			modelName          string
-			assetPath          sql.NullString
+			images             sql.NullString
 			modelFamily        string
 			description        sql.NullString
 			specificationsJSON []byte
@@ -56,7 +56,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		if err := rows.Scan(
 			&sourceID,
 			&modelName,
-			&assetPath,
+			&images,
 			&modelFamily,
 			&description,
 			&specificationsJSON,
@@ -82,14 +82,14 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 			specs.SupportedConnections = []string{}
 		}
 
-		assetPathStr := ""
-		if assetPath.Valid {
-			assetPathStr = assetPath.String
+		imagesStr := ""
+		if images.Valid {
+			imagesStr = images.String
 		}
 
 		item := types.SourceItemResponse{
 			SourceID:           strconv.Itoa(sourceID),
-			Assets:             []types.SourceAsset{{Black: []string{assetPathStr}}},
+			Assets:             []types.SourceAsset{{Black: []string{imagesStr}}},
 			ModelName:          modelName,
 			ModelFamily:        modelFamily,
 			Description:        descPtr,

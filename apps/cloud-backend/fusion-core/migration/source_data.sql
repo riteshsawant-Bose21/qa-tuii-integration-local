@@ -1,4 +1,4 @@
-INSERT INTO source (model_name, asset_path, model_family, description, specifications, is_fusion_compatible) VALUES
+INSERT INTO source (model_name, images, model_family, description, specifications, is_fusion_compatible) VALUES
 -- Microphones
 ('Gooseneck',         'assets/images/products/mic1.png',        'mic', NULL, '{"primary_connection": "analogInput", "supported_connections": ["analogInput","endpoint","xlr","aes67input"], "paging_type": null}', TRUE),
 ('Hanging',          'assets/images/products/hanging_mic.png', 'mic', NULL, '{"primary_connection": "analogInput", "supported_connections": ["analogInput","endpoint","xlr","aes67input"], "paging_type": null}', TRUE),
