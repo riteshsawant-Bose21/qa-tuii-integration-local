@@ -6,12 +6,17 @@ type SourceSpecifications struct {
 	PagingType           *string  `json:"paging_type"`
 }
 
+type SourceAsset struct {
+	Black []string `json:"black,omitempty"`
+	White []string `json:"white,omitempty"`
+}
+
 type SourceItemResponse struct {
-	SourceID           string                `json:"source_id"`
-	Assets             []map[string][]string `json:"assets"`
-	ModelName          string                `json:"model_name"`
-	ModelFamily        string                `json:"model_family"`
-	Description        *string               `json:"description"`
-	Specifications     SourceSpecifications  `json:"specifications"`
-	IsFusionCompatible bool                  `json:"is_fusion_compatible"`
+	SourceID           string               `json:"source_id"`
+	Assets             []SourceAsset        `json:"assets"`
+	ModelName          string               `json:"model_name"`
+	ModelFamily        string               `json:"model_family"`
+	Description        *string              `json:"description"`
+	Specifications     SourceSpecifications `json:"specifications"`
+	IsFusionCompatible bool                 `json:"is_fusion_compatible"`
 }

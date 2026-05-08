@@ -12,7 +12,7 @@ import (
 
 // Service provides database operations for the source table.
 type Service struct {
-	db     *sql.DB
+	db *sql.DB
 }
 
 // NewService creates a new source database service.
@@ -90,7 +90,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 
 		item := types.SourceItemResponse{
 			SourceID:    sourceID,
-			Assets:      []map[string][]string{{"black": {assetPathStr}}},
+			Assets:      []types.SourceAsset{{Black: []string{assetPathStr}}},
 			ModelName:   modelName,
 			ModelFamily: modelFamily,
 			Description: descPtr,

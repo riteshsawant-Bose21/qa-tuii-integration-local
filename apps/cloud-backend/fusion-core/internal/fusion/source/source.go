@@ -15,7 +15,7 @@ type DatabaseService interface {
 
 // Service provides source business logic.
 type Service struct {
-	dbService     DatabaseService
+	dbService    DatabaseService
 	AssetBaseURL string
 }
 
@@ -28,7 +28,7 @@ func NewService(dbService DatabaseService, assetBaseURL string, logger *zap.Logg
 		panic("logger cannot be nil")
 	}
 	return &Service{
-		dbService:     dbService,
+		dbService:    dbService,
 		AssetBaseURL: strings.TrimRight(assetBaseURL, "/"),
 	}
 }
@@ -46,13 +46,13 @@ func (s *Service) GetAllSources(ctx context.Context, logger *zap.Logger) ([]type
 	// Build full public URLs from asset paths
 	if s.AssetBaseURL != "" {
 		for i := range sources {
-			for j, assetMap := range sources[i].Assets {
-				for color, paths := range assetMap {
-					for k, path := range paths {
-						if path != "" {
-							sources[i].Assets[j][color][k] = s.AssetBaseURL + "/" + strings.TrimLeft(path, "/")
-						}
-					}
+			if len(sources[i].Assets) > 0 {
+				asset := &sources[i].Assets[0]
+				if len(asset.Black) > 0 && asset.Black[0] != "" {
+					asset.Black[0] = s.AssetBaseURL + "/" + strings.TrimLeft(asset.Black[0], "/")
+				}
+				if len(asset.White) > 0 && asset.White[0] != "" {
+					asset.White[0] = s.AssetBaseURL + "/" + strings.TrimLeft(asset.White[0], "/")
 				}
 			}
 		}
