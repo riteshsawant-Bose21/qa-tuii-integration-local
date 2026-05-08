@@ -615,8 +615,17 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
-            // If we haven't seen an SSRC for this stream yet, or if the packet's SSRC differs from the stashed one, stash it and reset timing state
+            // If we haven't seen an SSRC for this stream yet, or if the packet's SSRC differs from the
+            // stashed one, reset RTP scheduling state but preserve ALSA ring position. playback_slot is
+            // derived from the current ALSA buffer position so packet playout stays aligned to the live ring.
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
+                u32 playback_slot = 0;
+
+                if (alsa_stream && stream->info.frames_per_packet && stream->buf_size_in_packets)
+                    playback_slot = (READ_ONCE(alsa_stream->buffer_pos) /
+                                     stream->info.frames_per_packet) %
+                                    stream->buf_size_in_packets;
+
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
                 atomic_set(&stream->playback_armed, false);
@@ -625,19 +634,21 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
                            sizeof(u64) * stream->buf_size_in_packets);
-                stream->playback_slot = 0;
-                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s\n",
-                       stream->ssrc, stream->info.stream_name);
+                stream->playback_slot = playback_slot;
+                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s playback_slot=%u\n",
+                       stream->ssrc, stream->info.stream_name, stream->playback_slot);
             }
 
             // We use the incoming packet's sequence number to determine where it should go in the buffer
             write_slot = seq_num % stream->buf_size_in_packets;
 
-             // To keep playback aligned with write_slot, we wait for a packet to land in slot 0 before arming playback
+            // To keep playback aligned with ALSA, wait for a packet to land in the current playback slot
+            // before re-arming after SSRC/timing discontinuities.
             if (!atomic_read(&stream->playback_armed)) {
-                if (write_slot == 0) {
+                if (write_slot == stream->playback_slot) {
                     atomic_set(&stream->playback_armed, true);
-                    printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s\n", stream->info.stream_name);
+                    printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s slot=%u\n",
+                           stream->info.stream_name, stream->playback_slot);
                 } else {
                     spin_unlock(&stream->lock);
                     read_unlock_irqrestore(&rtp_mgr->lock, flags);

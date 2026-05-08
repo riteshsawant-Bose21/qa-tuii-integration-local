@@ -1194,14 +1194,22 @@ static void fusion_cn_reset_runtime_timing(struct fusion_cn_manager *mgr)
     read_lock_irqsave(&mgr->rtp.lock, flags);
     hash_for_each(mgr->rtp.streams, bkt, stream, hnode) {
         struct fusion_cn_substream *alsa_stream = NULL;
+        u32 playback_slot = 0;
+
+        alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
+        if (!stream->info.is_source && alsa_stream &&
+            stream->info.frames_per_packet && stream->buf_size_in_packets) {
+            playback_slot = (READ_ONCE(alsa_stream->buffer_pos) /
+                             stream->info.frames_per_packet) %
+                            stream->buf_size_in_packets;
+        }
 
         spin_lock(&stream->lock);
-        alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source) {
-            stream->playback_slot = 0;
+            stream->playback_slot = playback_slot;
             atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,
@@ -1209,7 +1217,7 @@ static void fusion_cn_reset_runtime_timing(struct fusion_cn_manager *mgr)
         }
         spin_unlock(&stream->lock);
 
-        if (alsa_stream)
+        if (!stream->info.is_source && alsa_stream)
             fusion_cn_alsa_reset_stream_timing(alsa_stream, true);
     }
     read_unlock_irqrestore(&mgr->rtp.lock, flags);

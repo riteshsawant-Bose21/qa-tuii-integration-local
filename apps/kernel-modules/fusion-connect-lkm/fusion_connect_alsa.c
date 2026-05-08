@@ -153,19 +153,14 @@ void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool
         return;
 
     spin_lock_irqsave(&stream->lock, flags);
-    stream->buffer_pos = 0;
-    stream->interrupt_idx = 0;
-    atomic_set(&stream->dma_offset, 0);
     ss = stream->substream;
     if (ss)
         rt = ss->runtime;
     spin_unlock_irqrestore(&stream->lock, flags);
 
-    if (ss && rt) {
+    if (clear_buffer && ss && rt) {
         snd_pcm_stream_lock_irq(ss);
-        rt->status->hw_ptr = 0;
-        rt->control->appl_ptr = 0;
-        if (clear_buffer && rt->dma_area)
+        if (rt->dma_area)
             memset(rt->dma_area, 0, snd_pcm_lib_buffer_bytes(ss));
         snd_pcm_stream_unlock_irq(ss);
     }
