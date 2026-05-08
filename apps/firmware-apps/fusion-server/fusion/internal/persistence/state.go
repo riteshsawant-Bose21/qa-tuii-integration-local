@@ -693,16 +693,18 @@ func (sm *StateManager) GetStateMap() map[string]any {
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
-func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
+func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) bool {
 	sm.Lock()
 	defer sm.Unlock()
 
+	changed := false
 	for key, remoteEntry := range remoteState {
 
 		localEntry, exists := sm.state.State[key]
 
 		if !exists || localEntry.Version.Less(remoteEntry.Version) {
 			sm.state.State[key] = deepCopyEntry(remoteEntry)
+			changed = true
 
 			if sm.version.Less(remoteEntry.Version) {
 				sm.version = remoteEntry.Version
@@ -710,7 +712,10 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 		}
 	}
 
-	sm.markChecksumDirtyUnsafe()
+	if changed {
+		sm.markChecksumDirtyUnsafe()
+	}
+	return changed
 }
 
 // ReplaceFullState does a global replacement of all state data

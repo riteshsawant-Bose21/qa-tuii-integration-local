@@ -84,3 +84,7 @@ int process_update_report_period_rsp(bosepro::telemetryManager& telm_mgr,
                              uint64_t pkt_id, bool ok_nok,
                              std::ostringstream& message,
                              bosepro::HandlerContext& unused);
+int process_update_filter_req(bosepro::telemetryManager& telm_mgr,
+                             const bosepro::Telemetry_configuration& proc_pkt,
+                             uint64_t& pkt_id, std::string& req_name,
+                             bosepro::HandlerContext& unused);

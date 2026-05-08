@@ -11,11 +11,16 @@ endif
 .PHONY: clean  all
 
 LIBS += -lstdc++ -lrt -lpthread -lboost_program_options \
-	-lspdlog -lfmt -lzmq -std=c++17 -ljsoncpp -lzmq
+	-lspdlog -lfmt -lzmq -std=c++17 -ljsoncpp -lzmq \
+	-L ../../../libs/firmware-libs/fusion-embedded-interface/build \
+	-L ../../../libs/firmware-libs/fusion-embedded-framework/build \
+	-lfusion_embedded_interface -lfusion_embedded_framework
 
 CXX_CFLAGS += -Wall \
 	      -I ./include \
 	      -I ./include/bosepro \
+	      -I ../fusion-server/tools \
+	      -I ../../../libs/firmware-libs/fusion-embedded-interface/include \
 	      -DSPDLOG_FMT_EXTERNAL -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 
 SRCDIR = src
