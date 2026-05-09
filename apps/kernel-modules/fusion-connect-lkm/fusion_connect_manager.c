@@ -221,21 +221,31 @@ static inline u64 fusion_cn_fc_advance_time(u64 action_time)
     return action_time + TIMER_BASE_INTERVAL_NS;
 }
 
+static inline u32 fusion_cn_current_playback_slot(const struct fusion_cn_substream *a,
+                                                  const struct fusion_cn_rtp_stream *s)
+{
+    if (!a || !s->info.frames_per_packet || !s->buf_size_in_packets)
+        return 0;
+
+    return (READ_ONCE(a->buffer_pos) / s->info.frames_per_packet) %
+           s->buf_size_in_packets;
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
 {
     int count = 0;
+    u32 slot = fusion_cn_current_playback_slot(a, s);
 
     spin_lock(&s->lock);
     if (atomic_read(&s->playback_armed)) {
         // we may want to catch up and playback a bunch of frames, up to buf_size_in_packets worth
-        // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
-        // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
+        // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases
+        // Policy: if next_action_times[slot] is 0, we want to playback silence.
         //         to playback silence in packet_time, we keep time with next_action_time instead
         //         played_action_time tracks the latest action time actually consumed--we won't play packets scheduled before that
         //         EARLY_SLACK_NS is a window after the tick to still play back the packet
         while (count < s->buf_size_in_packets) {
-            u32 slot = s->playback_slot;
             u64 slot_action_time = s->next_action_times[slot];
             bool stale_packet = (slot_action_time != 0 && slot_action_time <= s->played_action_time);
             bool playing_silence;
@@ -249,16 +259,11 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
 
             playing_silence = (slot_action_time == 0);
             action_time = playing_silence ? s->next_action_time : slot_action_time;
-
-            // use the appropriate action time for delta
             delta = (s64)tick_ns - (s64)action_time;
 
-            // Play packets that are up to EARLY_SLACK_NS after tick
-            if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS) {
+            if (delta < 0 && (u64)-(delta) > EARLY_SLACK_NS)
                 break;
-            }
 
-            // if we have no packet, play silence based on next_action_time
             if (playing_silence) {
                 fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
                                             s->info.frames_per_packet);
@@ -281,8 +286,8 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             }
 
             s->next_action_times[slot] = 0;
-            if (++s->playback_slot >= s->buf_size_in_packets)
-                s->playback_slot = 0;
+            if (++slot >= s->buf_size_in_packets)
+                slot = 0;
             count++;
         }
     }
@@ -1228,22 +1233,14 @@ static void fusion_cn_reset_runtime_timing(struct fusion_cn_manager *mgr)
     read_lock_irqsave(&mgr->rtp.lock, flags);
     hash_for_each(mgr->rtp.streams, bkt, stream, hnode) {
         struct fusion_cn_substream *alsa_stream = NULL;
-        u32 playback_slot = 0;
 
         alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
-        if (!stream->info.is_source && alsa_stream &&
-            stream->info.frames_per_packet && stream->buf_size_in_packets) {
-            playback_slot = (READ_ONCE(alsa_stream->buffer_pos) /
-                             stream->info.frames_per_packet) %
-                            stream->buf_size_in_packets;
-        }
 
         spin_lock(&stream->lock);
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;
         if (!stream->info.is_source) {
-            stream->playback_slot = playback_slot;
             atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)
                 memset(stream->next_action_times, 0,
