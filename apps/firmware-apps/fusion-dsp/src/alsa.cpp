@@ -225,6 +225,11 @@ static bool is_bluealsa_device_name(const std::string &device_name)
     return device_name.compare(0, 9, "bluealsa:") == 0;
 }
 
+static bool is_uac_device_name(const std::string &device_name)
+{
+    return device_name.find("UAC1_PCM") != std::string::npos;
+}
+
 static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
 {
     return is_fusion_connect_stream_name(device_name) && !use_asrc;
@@ -352,9 +357,11 @@ void AlsaDevice::open_device()
         full_device_name = "hw:FusionConnect," + std::to_string(device_number);
     }
 
-    std::vector<AccessMode> access_modes = is_bluealsa_device_name(full_device_name)
-        ? std::vector<AccessMode>{ACCESS_RW_INTERLEAVED}
-        : std::vector<AccessMode>{ACCESS_MMAP_INTERLEAVED, ACCESS_RW_INTERLEAVED};
+    std::vector<AccessMode> access_modes =
+        (is_bluealsa_device_name(full_device_name) ||
+         is_uac_device_name(full_device_name))
+            ? std::vector<AccessMode>{ACCESS_RW_INTERLEAVED}
+            : std::vector<AccessMode>{ACCESS_MMAP_INTERLEAVED, ACCESS_RW_INTERLEAVED};
 
     for (AccessMode requested_access_mode : access_modes)
     {
