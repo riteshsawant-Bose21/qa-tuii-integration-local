@@ -1576,7 +1576,7 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     else if (use_low_latency_fc_depths(device_name, use_asrc))
     {
         max_write_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), 3 * period_size);
+        min_depth = std::max(get_frame_size(), 2 * period_size);
         target_depth = min_depth + 2 * period_size;
         max_depth = target_depth + 2 * period_size;
     }
