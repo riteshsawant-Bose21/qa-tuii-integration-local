@@ -268,17 +268,15 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
       ),
     );
 
-    final double parsedCeiling = double.tryParse(la.ceilingHeight) ?? 0.0;
-    ceilingHeightController.text = parsedCeiling > 0 ? la.ceilingHeight : '4';
-    floorHeightController.text = la.floorHeight > 0 ? la.floorHeight.toString() : '4';
+    ceilingHeightController.text = la.ceilingHeight.toString();
+    floorHeightController.text = la.floorHeight.toString();
     customListenerHeightController.text = la.listeningHeight.toString();
 
     _recalculateIfSuggestMode();
   }
 
-  void setCeilingHeight(double? height) {
-    final double safe = (height ?? 4.0).clamp(0.0, double.infinity);
-    projectViewModel.updateListeningArea(area: selectedListeningArea.copyWith(ceilingHeight: safe.toString()));
+  void setCeilingHeight(double height) {
+    projectViewModel.updateListeningArea(area: selectedListeningArea.copyWith(ceilingHeight: height));
     _recalculateIfSuggestMode();
   }
 
@@ -399,7 +397,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
 
       final SplInput input = SplInput(
         mountingType: <String>[suggestArgs.mountingType.name],
-        speakerHeight: double.tryParse(listeningArea.ceilingHeight) ?? 0.0,
+        speakerHeight: listeningArea.ceilingHeight,
         listenerHeight: listeningArea.listeningHeight,
         environment: listeningArea.environmentType.name,
         targetSplRange: <double>[suggestArgs.splRange.start, suggestArgs.splRange.end],
@@ -610,11 +608,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     final ListeningArea la = selectedListeningArea;
     if (la.listeningHeight <= 0) {
       FusionToast.error(context, message: 'Please enter a valid listening height for this area.');
-      return false;
-    }
-
-    if (la.ceilingHeight.isEmpty || double.tryParse(la.ceilingHeight) == null) {
-      FusionToast.error(context, message: 'Please enter a valid ceiling height for this area.');
       return false;
     }
 

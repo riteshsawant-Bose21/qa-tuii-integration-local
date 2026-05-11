@@ -86,10 +86,12 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
     final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
-    final SizedBox child = SizedBox(
-      width: 600,
-      child: Row(
-        children: <Widget>[
+    final Widget child = SemanticHelper.container(
+      testId: 'ctr_priority_selection',
+      child: SizedBox(
+        width: 600,
+        child: Row(
+          children: <Widget>[
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,7 +616,8 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
             ),
           ),
           VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-        ],
+          ],
+        ),
       ),
     );
 

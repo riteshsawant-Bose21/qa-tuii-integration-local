@@ -369,7 +369,7 @@ class ListeningArea {
   final SpeakerEnvironmentType environmentType;
   final double listeningHeight;
   final double floorHeight;
-  final String ceilingHeight;
+  final double ceilingHeight;
   final double minSPL;
   final double maxSPL;
   final bool isDrawn;
@@ -399,7 +399,7 @@ class ListeningArea {
     this.environmentType = SpeakerEnvironmentType.indoor,
     this.listeningHeightOption = ListeningHeightOption.sitting,
     this.listeningHeight = 1.1, // Default to sitting height (1.1 m)
-    this.ceilingHeight = '4.0',
+    this.ceilingHeight = 2.5, // Default to 2.5 meters
     this.floorHeight = 0.0,
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
@@ -510,7 +510,7 @@ class ListeningArea {
     ListeningHeightOption? listeningHeightOption,
     double? listeningHeight,
     double? floorHeight,
-    String? ceilingHeight,
+    double? ceilingHeight,
 
     double? minSPL,
     double? maxSPL,
@@ -610,7 +610,7 @@ class ListeningArea {
       name: json['name'] as String,
       environmentType: SpeakerEnvironmentType.fromJson(json['environmentType']) ?? SpeakerEnvironmentType.indoor,
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
-      ceilingHeight: json['ceilingHeight'],
+      ceilingHeight: double.tryParse("${json['ceilingHeight']}") ?? 2.5,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
@@ -1006,6 +1006,17 @@ enum AudioChannel {
     AudioChannel.mono => 'Mono',
     AudioChannel.stereo => 'Stereo',
   };
+
+  static AudioChannel? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'mono':
+        return AudioChannel.mono;
+      case 'stereo':
+        return AudioChannel.stereo;
+      default:
+        return null;
+    }
+  }
 }
 
 enum SpeakerMaxSplRange {

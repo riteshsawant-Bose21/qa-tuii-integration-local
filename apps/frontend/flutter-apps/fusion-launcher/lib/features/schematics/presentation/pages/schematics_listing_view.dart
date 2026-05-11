@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/schematics/presentation/widgets/filter_section.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_amplifier_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_fusion_dsp_viewmodel.dart';
-import 'package:fusion_launcher/features/schematics/viewmodel/schematic_hardware_rack_viewmodel.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/schematic_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
 import '../../../add_source_popup/view/add_source_popup.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -22,14 +19,11 @@ import '../../../projects/widget/building/side_panel_widgets/equipment_location/
 import '../../state/device_listing_state.dart';
 import '../../viewmodel/endpoints_viewmodel.dart';
 import '../../viewmodel/schematic_fusion_controller_viewmodel.dart';
-import '../../viewmodel/schematic_network_switch_viewmodel.dart';
 import '../../viewmodel/schematic_sources_viewmodel.dart';
 import '../../viewmodel/search_control_viewmodel.dart';
-// import '../../views/widgets/filter_section.dart';
 import '../../views/widgets/schematic_hardware_listing.dart';
 import '../../views/widgets/schematic_listing_section.dart';
 import '../../views/widgets/schematic_section.dart';
-import '../widgets/add_device_expandable_popup_menu_widget.dart';
 import '../widgets/expandable_zone_widget.dart';
 
 class SchematicsListingview extends StatefulWidget {

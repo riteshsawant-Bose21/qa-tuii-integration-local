@@ -3,7 +3,11 @@ part of '../speaker_selection_popup.dart';
 class SpeakerSelectionRightContent extends StatelessWidget {
   const SpeakerSelectionRightContent({super.key});
 
-  static const List<String> _suggestOrder = <String>['Maximum SPL', 'Target SPL', 'Minimum SPL'];
+  static const List<String> _suggestOrder = <String>[
+    'Maximum SPL',
+    'Target SPL',
+    'Minimum SPL',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -45,33 +49,37 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                             );
                           }
 
-                          final List<SpeakerProduct> selectedFullRangeSpeakers =
-                              state.selectedSpeakers.where((SpeakerProduct spkr) => !spkr.isSubwoofer).toList();
+                          final List<SpeakerProduct> fullRangeSpeakers = state.selectedSpeakers.where((SpeakerProduct spkr) => !spkr.isSubwoofer).toList();
+                          final List<SpeakerProduct> subwooferSpeakers = state.selectedSpeakers.where((SpeakerProduct spkr) => spkr.isSubwoofer).toList();
 
-                          final List<SpeakerProduct> selectedSubwooferSpeakers =
-                              state.selectedSpeakers.where((SpeakerProduct spkr) => spkr.isSubwoofer).toList();
+                          final bool isSubwooferMode = state.selectModeArgs.useSubwoofer && state.speakerSelectionMode == SpeakerSelectionMode.select;
 
                           return Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                if (selectedFullRangeSpeakers.isNotEmpty) ...<Widget>[
-                                  FusionAppText(
-                                    text: "MID-HIGH",
-                                    style: context.textTheme.l2SemiBold.copyWith(
-                                      color: context.colorScheme.textSecondary,
+                                if (fullRangeSpeakers.isNotEmpty) ...<Widget>[
+                                  if (isSubwooferMode) ...<Widget>[
+                                    FusionAppText(
+                                      text: "MID-HIGH",
+                                      style: context.textTheme.l2SemiBold.copyWith(
+                                        color: context.colorScheme.textSecondary,
+                                      ),
                                     ),
-                                  ),
+                                  ],
 
-                                  ListView.builder(
-                                    itemCount: selectedFullRangeSpeakers.length,
+                                  const SizedBox(height: 8),
+                                  ListView.separated(
+                                    itemCount: fullRangeSpeakers.length,
                                     shrinkWrap: true,
+                                    padding: EdgeInsets.zero,
                                     physics: const ClampingScrollPhysics(),
+                                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                                     itemBuilder: (BuildContext context, int index) {
                                       return _SpeakerCard(
                                         index: index,
-                                        product: selectedFullRangeSpeakers[index],
+                                        product: fullRangeSpeakers[index],
                                         showSpecs: false,
                                         shouldRemove: true,
                                       );
@@ -79,10 +87,9 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                                   ),
                                 ],
 
-                                if (selectedFullRangeSpeakers.isNotEmpty && selectedSubwooferSpeakers.isNotEmpty)
-                                  Divider(color: context.colorScheme.strokeLight),
+                                if (fullRangeSpeakers.isNotEmpty && subwooferSpeakers.isNotEmpty) Divider(color: context.colorScheme.strokeLight),
 
-                                if (selectedSubwooferSpeakers.isNotEmpty) ...<Widget>[
+                                if (subwooferSpeakers.isNotEmpty) ...<Widget>[
                                   FusionAppText(
                                     text: "SUBWOOFER",
                                     style: context.textTheme.l2SemiBold.copyWith(
@@ -90,14 +97,17 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                                     ),
                                   ),
 
-                                  ListView.builder(
-                                    itemCount: selectedSubwooferSpeakers.length,
+                                  const SizedBox(height: 8),
+                                  ListView.separated(
+                                    itemCount: subwooferSpeakers.length,
                                     shrinkWrap: true,
+                                    padding: EdgeInsets.zero,
                                     physics: const ClampingScrollPhysics(),
+                                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                                     itemBuilder: (BuildContext context, int index) {
                                       return _SpeakerCard(
                                         index: index,
-                                        product: selectedSubwooferSpeakers[index],
+                                        product: subwooferSpeakers[index],
                                         showSpecs: false,
                                         shouldRemove: true,
                                       );
@@ -116,6 +126,7 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                         const SizedBox(height: 20),
                         FusionContainer(
                           borderRadius: 8,
+                          height: 52,
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Row(
@@ -189,7 +200,12 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                                         itemCount: speakers.length,
                                         physics: const ClampingScrollPhysics(),
                                         padding: const EdgeInsets.only(),
-                                        separatorBuilder: (_, __) => Divider(height: 1, color: context.colorScheme.strokeLight),
+                                        separatorBuilder: (_, __) {
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            child: Divider(height: 0, color: context.colorScheme.strokeLight),
+                                          );
+                                        },
                                         itemBuilder: (BuildContext context, int index) {
                                           final SpeakerProduct product = speakers[index];
 
@@ -258,31 +274,35 @@ class SpeakerSelectionRightContent extends StatelessWidget {
                             return ListView.separated(
                               physics: const ClampingScrollPhysics(),
                               itemCount: groupedItems.length,
-                              separatorBuilder: (_, __) => Divider(height: 1, color: context.colorScheme.strokeLight),
+                              separatorBuilder: (_, __) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Divider(height: 0, color: context.colorScheme.strokeLight),
+                                );
+                              },
                               itemBuilder: (BuildContext context, int index) {
                                 final _SuggestGroupItem item = groupedItems[index];
                                 final String mergedTitle = item.titles.map((String t) => t.toUpperCase()).join(' / ');
 
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      FusionAppText(
-                                        text: mergedTitle,
-                                        style: context.textTheme.l3Caps.copyWith(
-                                          color: context.colorScheme.textBody,
-                                          letterSpacing: 0,
-                                        ),
+                                return Column(
+                                  spacing: 8,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    FusionAppText(
+                                      text: mergedTitle,
+                                      style: context.textTheme.l3Caps.copyWith(
+                                        color: context.colorScheme.textBody,
+                                        letterSpacing: 0,
                                       ),
-                                      _SpeakerCard(
-                                        index: index,
-                                        product: item.product,
-                                        showSpecs: false,
-                                        showCompactSuggestSpecs: true,
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+
+                                    _SpeakerCard(
+                                      index: index,
+                                      product: item.product,
+                                      showSpecs: false,
+                                      showCompactSuggestSpecs: true,
+                                    ),
+                                  ],
                                 );
                               },
                             );
@@ -384,187 +404,187 @@ class _SpeakerCard extends StatelessWidget {
     final double productPrice = productsVm.getPrice(product.productId);
     final String? selectedColorImagePath = _imageForSelectedColor(product: product, selectedColor: selectedColor, productsVm: productsVm);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 64,
-                height: 64,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: FusionImageAuto(
-                  path: selectedColorImagePath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-                    return Icon(
-                      LucideIcons.speaker200,
-                      size: 30,
-                      color: context.colorScheme.iconDefault,
-                    );
-                  },
-                  fallbackIcon: Icon(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              width: 64,
+              height: 64,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: FusionImageAuto(
+                path: selectedColorImagePath,
+                fit: BoxFit.contain,
+                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+                  return Icon(
                     LucideIcons.speaker200,
                     size: 30,
                     color: context.colorScheme.iconDefault,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    FusionAppText(
-                      semanticId: 'speaker_name_$index',
-                      text: product.modelName,
-                      style: context.textTheme.b3Medium.copyWith(
-                        color: context.colorScheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    FusionAppText(
-                      text: _formatUsd(productPrice),
-                      style: context.textTheme.l1Bold.copyWith(
-                        color: context.colorScheme.textPrimary,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-                    Row(
-                      children: <Widget>[
-                        _ColorModeChip(
-                          label: 'BLACK',
-                          selected: selectedColor == SpeakerColorOption.black,
-                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerColor(SpeakerColorOption.black),
-                        ),
-                        const SizedBox(width: 8),
-                        _ColorModeChip(
-                          label: 'WHITE',
-                          selected: selectedColor == SpeakerColorOption.white,
-                          onTap: () => context.read<SpeakerSelectionViewModel>().setSpeakerColor(SpeakerColorOption.white),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-                builder: (BuildContext context, SpeakerSelectionVmState state) {
-                  final bool isSelected = state.selectedSpeakers.isNotEmpty;
-
-                  return FusionNeumorphicButton(
-                    onTap: () {
-                      if (shouldRemove) {
-                        context.read<SpeakerSelectionViewModel>().removeSpeaker(speaker: product);
-                      } else {
-                        context.read<SpeakerSelectionViewModel>().addSpeaker(speaker: product);
-                      }
-                    },
-                    height: 32,
-                    width: 90,
-                    semanticId: 'speaker_select_btn_$index',
-                    text:
-                        shouldRemove
-                            ? 'Remove'
-                            : isSelected
-                            ? "Replace"
-                            : 'Select',
-                    borderRadius: 8,
-                    textStyle: context.textTheme.l1Medium.copyWith(
-                      color: context.colorScheme.textPrimary,
-                    ),
                   );
                 },
+                fallbackIcon: Icon(
+                  LucideIcons.speaker200,
+                  size: 30,
+                  color: context.colorScheme.iconDefault,
+                ),
               ),
-            ],
-          ),
-          if (showSpecs) ...<Widget>[
-            const SizedBox(height: 8),
-            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
-              buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) => previous.expandSpeakerSpecs != current.expandSpeakerSpecs,
-              builder: (BuildContext context, SpeakerSelectionVmState state) {
-                final SpeakerSelectionViewModel speakerVm = context.read<SpeakerSelectionViewModel>();
-                final bool isSpecsExpanded = state.expandSpeakerSpecs.contains(product.productId);
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(
+                    semanticId: 'speaker_name_$index',
+                    text: product.modelName,
+                    style: context.textTheme.b3Medium.copyWith(
+                      color: context.colorScheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FusionAppText(
+                    text: _formatUsd(productPrice),
+                    style: context.textTheme.l1Bold.copyWith(
+                      color: context.colorScheme.textPrimary,
+                    ),
+                  ),
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    GestureDetector(
-                      onTap: () => speakerVm.toggleSpeakerSpecs(product.productId),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            FusionAppText(
-                              text: isSpecsExpanded ? 'Hide Specifications' : 'Show Specifications',
-                              style: context.textTheme.labelSmall?.copyWith(
-                                color: context.colorScheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            AnimatedRotation(
-                              turns: isSpecsExpanded ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                              child: Icon(
-                                LucideIcons.chevronDown,
-                                size: 14,
-                                color: context.colorScheme.iconDefault,
-                              ),
-                            ),
-                          ],
-                        ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      _ColorModeChip(
+                        label: 'BLACK',
+                        selected: selectedColor == SpeakerColorOption.black,
                       ),
-                    ),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 260),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: ClipRect(
-                        child: Builder(
-                          builder: (BuildContext context) {
-                            if (isSpecsExpanded) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  const SizedBox(height: 10),
-                                  Divider(height: 1, color: context.colorScheme.strokeLight),
-                                  const SizedBox(height: 10),
-                                  _SpecGrid(product: product),
-                                ],
-                              );
-                            } else {
-                              return const SizedBox.shrink();
-                            }
-                          },
-                        ),
+                      const SizedBox(width: 10),
+                      _ColorModeChip(
+                        label: 'WHITE',
+                        selected: selectedColor == SpeakerColorOption.white,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+              builder: (BuildContext context, SpeakerSelectionVmState state) {
+                final bool isSelectedForSection;
+                if (state.selectModeArgs.useSubwoofer && state.speakerSelectionMode == SpeakerSelectionMode.select) {
+                  isSelectedForSection = state.selectedSpeakers.any((SpeakerProduct sp) => sp.isSubwoofer == product.isSubwoofer);
+                } else {
+                  isSelectedForSection = state.selectedSpeakers.isNotEmpty;
+                }
+
+                return FusionNeumorphicButton(
+                  onTap: () {
+                    if (shouldRemove) {
+                      context.read<SpeakerSelectionViewModel>().removeSpeaker(speaker: product);
+                    } else {
+                      context.read<SpeakerSelectionViewModel>().addSpeaker(speaker: product);
+                    }
+                  },
+                  height: 32,
+                  width: 90,
+                  semanticId: 'speaker_select_btn_$index',
+                  text:
+                      shouldRemove
+                          ? 'Remove'
+                          : isSelectedForSection
+                          ? "Replace"
+                          : 'Select',
+                  borderRadius: 8,
+                  textStyle: context.textTheme.l1Medium.copyWith(
+                    color: context.colorScheme.textPrimary,
+                  ),
                 );
               },
             ),
           ],
-          if (showCompactSuggestSpecs) ...<Widget>[
-            const SizedBox(height: 8),
-            FusionAppText(
-              text: _compactSuggestSpecText(),
-              style: context.textTheme.l1Regular.copyWith(
-                color: context.colorScheme.textPrimary,
-              ),
-            ),
-          ],
+        ),
+        if (showSpecs) ...<Widget>[
+          const SizedBox(height: 8),
+          BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
+            buildWhen: (SpeakerSelectionVmState previous, SpeakerSelectionVmState current) => previous.expandSpeakerSpecs != current.expandSpeakerSpecs,
+            builder: (BuildContext context, SpeakerSelectionVmState state) {
+              final SpeakerSelectionViewModel speakerVm = context.read<SpeakerSelectionViewModel>();
+              final bool isSpecsExpanded = state.expandSpeakerSpecs.contains(product.productId);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: () => speakerVm.toggleSpeakerSpecs(product.productId),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          FusionAppText(
+                            text: isSpecsExpanded ? 'Hide Specifications' : 'Show Specifications',
+                            style: context.textTheme.labelSmall?.copyWith(
+                              color: context.colorScheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          AnimatedRotation(
+                            turns: isSpecsExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            child: Icon(
+                              LucideIcons.chevronDown,
+                              size: 14,
+                              color: context.colorScheme.iconDefault,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: ClipRect(
+                      child: Builder(
+                        builder: (BuildContext context) {
+                          if (isSpecsExpanded) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const SizedBox(height: 10),
+                                Divider(height: 1, color: context.colorScheme.strokeLight),
+                                const SizedBox(height: 10),
+                                _SpecGrid(product: product),
+                              ],
+                            );
+                          } else {
+                            return const SizedBox.shrink();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ],
-      ),
+        if (showCompactSuggestSpecs) ...<Widget>[
+          const SizedBox(height: 8),
+          FusionAppText(
+            text: _compactSuggestSpecText(),
+            style: context.textTheme.l1Regular.copyWith(
+              color: context.colorScheme.textBody,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -572,31 +592,26 @@ class _SpeakerCard extends StatelessWidget {
 class _ColorModeChip extends StatelessWidget {
   final String label;
   final bool selected;
-  final VoidCallback? onTap;
 
   const _ColorModeChip({
     required this.label,
     required this.selected,
-    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected ? context.colorScheme.elevation2 : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: context.colorScheme.elevation2, width: 2),
-        ),
-        child: FusionAppText(
-          text: label,
-          style: context.textTheme.l3Caps.copyWith(
-            color: context.colorScheme.textBody,
-            letterSpacing: 0,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: selected ? context.colorScheme.elevation2 : Colors.transparent,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: context.colorScheme.elevation2, width: 2),
+      ),
+      child: FusionAppText(
+        text: label,
+        style: context.textTheme.l3Caps.copyWith(
+          color: context.colorScheme.textBody,
+          letterSpacing: 0,
         ),
       ),
     );
@@ -609,18 +624,59 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NeumorphicDarkTextField(
-      controller: controller,
-      hintText: "Search speakers",
-      // variant: FusionFieldVariant.neumorphic,
-      prefix: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Icon(
-          LucideIcons.search200,
-          color: context.colorScheme.iconDefault,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100),
+      width: double.infinity,
+      height: 48,
+      padding: const EdgeInsets.all(12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        // color: context.colorScheme.shadowDark,
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 1, offset: const Offset(-2, -2), blurStyle: BlurStyle.inner),
+          BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 1, offset: const Offset(2, 2), blurStyle: BlurStyle.inner),
+          BoxShadow(color: context.colorScheme.elevation1, blurRadius: 4, blurStyle: BlurStyle.inner),
+        ],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Row(
+          spacing: 8,
+          children: <Widget>[
+            Icon(
+              LucideIcons.search200,
+              color: context.colorScheme.iconDefault,
+            ),
+
+            Expanded(
+              child: Align(
+                alignment: AlignmentGeometry.centerLeft,
+                child: TextFormField(
+                  controller: controller,
+                  style: context.textTheme.labelLarge,
+                  decoration: InputDecoration(
+                    filled: false,
+                    isDense: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    hintText: "Search speakers",
+                    hoverColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.only(),
+                    hintStyle: context.textTheme.labelLarge?.copyWith(
+                      color: context.colorScheme.textPlaceholder,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ==== SORT ====
+            sortOption(context),
+          ],
         ),
       ),
-      suffix: sortOption(context),
     );
   }
 
@@ -640,7 +696,7 @@ class _SearchBar extends StatelessWidget {
               child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionVmState>(
                 builder: (BuildContext context, SpeakerSelectionVmState speakerSelectionState) {
                   return SizedBox(
-                    width: 400,
+                    width: 358,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0).copyWith(bottom: 0),
                       child: Column(
@@ -672,6 +728,7 @@ class _SearchBar extends StatelessWidget {
                                           onTap: () {
                                             speakerSelectionViewModel.setSortOption(entry);
                                             menuSetState(() {});
+                                            Navigator.of(context).pop();
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.all(14),
@@ -721,14 +778,11 @@ class _SearchBar extends StatelessWidget {
           testId: SemanticHelper.createTestId(SemanticTypes.button, "sort_products_button"),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Tooltip(
-                message: "Sort products",
-                child: Icon(
-                  LucideIcons.arrowDownUp200,
-                  color: context.colorScheme.iconDefault,
-                ),
+            child: Tooltip(
+              message: "Sort products",
+              child: Icon(
+                LucideIcons.arrowDownUp200,
+                color: context.colorScheme.iconDefault,
               ),
             ),
           ),
@@ -746,15 +800,18 @@ class _SpecGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, String> details = <String, String>{
+      // 1st column
       'Mounting': product.mountType ?? 'N/A',
-      'Frequency Response': product.frequencyResponseText,
       'Environment': product.environmentText,
-      'HF Size': 'N/A',
       'Power Handling': product.powerHandlingSummaryText,
-      'LF Size': 'N/A',
       'Sensitivity': product.sensitivityText,
-      'Max. SPL': product.maxSplText,
       'Peak Power': product.peakPowerText,
+
+      // 2nd column
+      'Frequency Response': product.frequencyResponseText,
+      'HF Sizeßßß': 'N/A',
+      'LF Size': 'N/A',
+      'Max. SPL': product.maxSplText,
       'Long Term Power': product.longTermPowerText,
     };
 
@@ -768,7 +825,14 @@ class _SpecGrid extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              ...entries.take(midpoint).map((MapEntry<String, String> entry) => _SpecItem(label: entry.key, value: entry.value)),
+              ...entries.take(midpoint).map(
+                (MapEntry<String, String> entry) {
+                  return _SpecItem(
+                    label: entry.key,
+                    value: entry.value,
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -777,7 +841,14 @@ class _SpecGrid extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              ...entries.skip(midpoint).map((MapEntry<String, String> entry) => _SpecItem(label: entry.key, value: entry.value)),
+              ...entries.skip(midpoint).map(
+                (MapEntry<String, String> entry) {
+                  return _SpecItem(
+                    label: entry.key,
+                    value: entry.value,
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -795,7 +866,7 @@ class _SpecItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

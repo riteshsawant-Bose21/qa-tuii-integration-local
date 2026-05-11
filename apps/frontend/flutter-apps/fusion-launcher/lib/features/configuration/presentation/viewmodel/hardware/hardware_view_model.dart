@@ -464,9 +464,7 @@ extension HardwareViewModel on ProjectViewModel {
 
     if (listenerHeight <= 0) throw ArgumentError('Listener height must be greater than 0.');
 
-    final double? parsedCeilingHeight = double.tryParse(listeningArea.ceilingHeight);
-
-    if (parsedCeilingHeight == null) throw ArgumentError('Ceiling height is required and must be a valid number.');
+    final double parsedCeilingHeight = listeningArea.ceilingHeight;
     if (parsedCeilingHeight <= listenerHeight) throw ArgumentError('Ceiling height must be greater than listener height.');
 
     final double ceilingHeight = parsedCeilingHeight;
@@ -492,7 +490,7 @@ extension HardwareViewModel on ProjectViewModel {
         speakerSpec: SpeakerSpec(
           coverageAngle: coverageAngle,
           type: speakerType,
-          pendantHeight: double.tryParse(listeningArea.ceilingHeight),
+          pendantHeight: listeningArea.ceilingHeight - listeningArea.listeningHeight,
         ),
         coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
         layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,

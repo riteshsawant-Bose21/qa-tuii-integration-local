@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import 'stepped_haptic_slider.dart';
 
 /// A highly customizable stepped horizontal slider with haptic feedback at each stop.
 ///
@@ -11,7 +15,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 ///
 /// Example:
 /// ```dart
-/// SteppedHapticSlider(
+/// LowFreqSelector(
 ///   min: 50,
 ///   max: 100,
 ///   interval: 10,
@@ -19,7 +23,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 ///   onChanged: (val) => print(val),
 /// )
 /// ```
-class SteppedHapticSlider extends StatefulWidget {
+class LowFreqSelector extends StatefulWidget {
   /// Minimum value of the slider.
   final double min;
 
@@ -37,6 +41,12 @@ class SteppedHapticSlider extends StatefulWidget {
 
   /// Callback fired when the user lifts their finger (continuous value).
   final ValueChanged<double>? onChangeEnd;
+
+  /// Whether the slider is interactive.
+  ///
+  /// When false, drag/tap gestures are disabled and the control is rendered
+  /// in a muted state.
+  final bool enabled;
 
   // ── Track ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +74,9 @@ class SteppedHapticSlider extends StatefulWidget {
 
   /// Diameter of the circular thumb.
   final double thumbDiameter;
+
+  /// Diameter of the outer moving circle around the thumb.
+  final double outerThumbDiameter;
 
   /// Color of the thumb.
   final Color thumbColor;
@@ -130,7 +143,7 @@ class SteppedHapticSlider extends StatefulWidget {
   /// Whether haptic feedback is enabled.
   final bool hapticEnabled;
 
-  const SteppedHapticSlider({
+  const LowFreqSelector({
     super.key,
     required this.min,
     required this.max,
@@ -138,6 +151,7 @@ class SteppedHapticSlider extends StatefulWidget {
     this.initialValue = 0,
     this.onChanged,
     this.onChangeEnd,
+    this.enabled = true,
     // Track
     this.trackHeight = 36,
     this.trackBackgroundColor = const Color(0xFF2A2A2A),
@@ -146,7 +160,8 @@ class SteppedHapticSlider extends StatefulWidget {
     this.trackInnerPadding,
     this.stepSnapWindowFactor = 0.12,
     // Thumb
-    this.thumbDiameter = 28,
+    this.thumbDiameter = 20,
+    this.outerThumbDiameter = 32,
     this.thumbColor = Colors.white,
     this.thumbElevation = 6,
     this.thumbShadowColor = Colors.black38,
@@ -176,17 +191,17 @@ class SteppedHapticSlider extends StatefulWidget {
        );
 
   @override
-  State<SteppedHapticSlider> createState() => _SteppedHapticSliderState();
+  State<LowFreqSelector> createState() => _LowFreqSelectorState();
 }
 
-class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
+class _LowFreqSelectorState extends State<LowFreqSelector> {
   /// Raw (unsnapped) 0→1 ratio that drives smooth thumb movement while dragging.
   late double _rawRatio;
 
   /// Last interval index crossed by thumb center (used for haptic trigger).
   late int _lastCrossedStepIndex;
 
-  double get _effectivePadding => widget.trackInnerPadding ?? (widget.thumbDiameter / 2 + 2);
+  double get _effectivePadding => widget.trackInnerPadding ?? (math.max(widget.thumbDiameter, widget.outerThumbDiameter) / 2 + 2);
 
   @override
   void initState() {
@@ -297,6 +312,9 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
         final double totalWidth = constraints.maxWidth;
         final double currentValue = widget.min + _rawRatio * (widget.max - widget.min);
         final String valueText = widget.labelFormatter != null ? widget.labelFormatter!(currentValue) : currentValue.toStringAsFixed(0);
+        final Color effectiveOuterThumbColor = widget.enabled ? widget.trackFillColor : context.colorScheme.elevation3;
+        final Color effectiveInnerThumbColor = widget.enabled ? widget.thumbColor : context.colorScheme.textDisabled;
+        final double effectiveThumbElevation = widget.enabled ? widget.thumbElevation : 0;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -305,18 +323,24 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
               width: totalWidth,
               height: widget.trackHeight,
               child: MouseRegion(
-                cursor: SystemMouseCursors.click,
+                cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onHorizontalDragStart: (DragStartDetails d) {
-                    _onDrag(d.localPosition.dx, totalWidth);
-                  },
-                  onHorizontalDragUpdate: (DragUpdateDetails d) => _onDrag(d.localPosition.dx, totalWidth),
-                  onHorizontalDragEnd: (_) => _onDragEnd(),
-                  onTapDown: (TapDownDetails d) {
-                    _onDrag(d.localPosition.dx, totalWidth);
-                    _onDragEnd();
-                  },
+                  onHorizontalDragStart:
+                      widget.enabled
+                          ? (DragStartDetails d) {
+                            _onDrag(d.localPosition.dx, totalWidth);
+                          }
+                          : null,
+                  onHorizontalDragUpdate: widget.enabled ? (DragUpdateDetails d) => _onDrag(d.localPosition.dx, totalWidth) : null,
+                  onHorizontalDragEnd: widget.enabled ? (_) => _onDragEnd() : null,
+                  onTapDown:
+                      widget.enabled
+                          ? (TapDownDetails d) {
+                            _onDrag(d.localPosition.dx, totalWidth);
+                            _onDragEnd();
+                          }
+                          : null,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: <Widget>[
@@ -334,11 +358,12 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
                             trackHeight: widget.trackHeight,
                             trackBorderRadius: widget.trackBorderRadius ?? widget.trackHeight / 2,
                             trackBackgroundColor: widget.trackBackgroundColor,
-                            trackFillColor: widget.trackFillColor,
+                            trackFillColor: effectiveOuterThumbColor,
                             innerPadding: _effectivePadding,
                             thumbDiameter: widget.thumbDiameter,
-                            thumbColor: widget.thumbColor,
-                            thumbElevation: widget.thumbElevation,
+                            outerThumbDiameter: widget.outerThumbDiameter,
+                            thumbColor: effectiveInnerThumbColor,
+                            thumbElevation: effectiveThumbElevation,
                             thumbShadowColor: widget.thumbShadowColor,
                             tickHeight: widget.tickHeight,
                             tickWidth: widget.tickWidth,
@@ -392,6 +417,7 @@ class _SliderPainter extends CustomPainter {
   final double innerPadding;
 
   final double thumbDiameter, thumbElevation;
+  final double outerThumbDiameter;
   final Color thumbColor, thumbShadowColor;
   final String thumbValueText;
   final TextStyle thumbValueTextStyle;
@@ -410,6 +436,7 @@ class _SliderPainter extends CustomPainter {
     required this.trackFillColor,
     required this.innerPadding,
     required this.thumbDiameter,
+    required this.outerThumbDiameter,
     required this.thumbElevation,
     required this.thumbColor,
     required this.thumbShadowColor,
@@ -444,26 +471,12 @@ class _SliderPainter extends CustomPainter {
     // Thumb center follows rawRatio continuously
     final double thumbCX = innerPadding + rawRatio * usable;
 
-    // Filled region extends slightly beyond the thumb edge so the knob feels
-    // visually embedded inside the green segment.
+    // Keep a moving green indicator around the thumb only (no progress fill
+    // from min to current position).
     final double thumbR = thumbDiameter / 2;
-    final double activeCapRadius = thumbR + 4;
-    final double fillRight = (thumbCX + activeCapRadius).clamp(0.0, size.width);
-    canvas.save();
-    canvas.clipRRect(RRect.fromRectAndRadius(bgRect, rr));
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(
-        Rect.fromLTRB(0, trackTop, fillRight, trackBottom),
-        topLeft: rr,
-        bottomLeft: rr,
-        topRight: rr,
-        bottomRight: rr,
-      ),
-      Paint()..color = trackFillColor,
-    );
-    canvas.restore();
+    final double activeCapRadius = outerThumbDiameter / 2;
 
-    // Extra cap keeps the thumb fully inside green, not touching/exceeding the edge.
+    // Circular moving indicator that follows the thumb.
     canvas.drawCircle(
       Offset(thumbCX, trackCY),
       activeCapRadius,
@@ -573,25 +586,4 @@ class _LabelsRow extends StatelessWidget {
       },
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Haptic feedback type enum
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum HapticFeedbackType {
-  /// Light tap — best for dense sliders with many stops.
-  light,
-
-  /// Medium impact.
-  medium,
-
-  /// Heavy bump.
-  heavy,
-
-  /// Selection click — mimics a mechanical detent. Recommended default.
-  selection,
-
-  /// Full device vibration.
-  vibrate,
 }
