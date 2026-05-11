@@ -20,6 +20,7 @@ import (
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
+	canonicaljson "github.com/gibson042/canonicaljson-go"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
 )
@@ -1332,6 +1333,16 @@ func readDatabaseMetadataFromDB(db *bbolt.DB) (*model.DatabaseMetadata, error) {
 	return &metadata, nil
 }
 
+// antiEntropyBucketsForTest mirrors the production antiEntropyBuckets order.
+var antiEntropyBucketsForTest = []string{
+	"snapshots",
+	"tasks",
+	"snapshot_definitions",
+	"scene_sets",
+	"audio",
+	"device",
+}
+
 func computeDatabaseHashForTest(dbPath string) (string, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
@@ -1341,22 +1352,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 
 	hash := sha256.New()
 	err = db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			if string(name) == "device" {
-				return nil
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
 			}
-			hash.Write(name)
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1368,22 +1383,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 	hash := sha256.New()
 	err := db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			if string(name) == "device" {
-				return nil
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
 			}
-			hash.Write(name)
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1405,7 +1424,7 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		}
 		metadata.Hash = ""
 		metadata.Version = nil
-		return json.Marshal(metadata)
+		return canonicaljson.Marshal(metadata)
 
 	case "snapshots", "active":
 		var state persistence.PersistentState
@@ -1414,7 +1433,14 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		}
 		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
-		return json.Marshal(state)
+		return canonicaljson.Marshal(state)
+
+	case "tasks", "snapshot_definitions", "scene_sets", "audio":
+		var decoded any
+		if err := json.Unmarshal(value, &decoded); err != nil {
+			return nil, err
+		}
+		return canonicaljson.Marshal(decoded)
 
 	default:
 		return value, nil
