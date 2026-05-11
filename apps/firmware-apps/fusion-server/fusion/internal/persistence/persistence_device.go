@@ -48,17 +48,13 @@ func (p *Persistence) SetDeviceInfo(info *model.DevicePatch) error {
 		return nil
 	}
 
-	err = p.db.Update(func(tx *bbolt.Tx) error {
+	return p.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketDevice))
 		if bucket == nil {
 			return fmt.Errorf("%w: device bucket not found", ErrNotFound)
 		}
 		return bucket.Put([]byte(keyDeviceInfo), data)
 	})
-	if err != nil {
-		return err
-	}
-	return p.updateHash(false)
 }
 
 // GetDeviceName retrieves the "name" attribute.
@@ -120,7 +116,6 @@ func (p *Persistence) getDeviceJSONField(deviceID, field string) (string, error)
 
 // setDeviceStringField updates exactly one JSON string‐valued field for the device.
 func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error {
-	var changed bool
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketDevice))
 		if b == nil {
@@ -150,7 +145,6 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 			return nil
 		}
 
-		changed = true
 		if err := b.Put(key, updated); err != nil {
 			return fmt.Errorf("failed to save updated device %q: %w", deviceID, err)
 		}
@@ -159,8 +153,5 @@ func (p *Persistence) setDeviceStringField(deviceID, field, newVal string) error
 	if err != nil {
 		return err
 	}
-	if !changed {
-		return nil
-	}
-	return p.updateHash(false)
+	return nil
 }

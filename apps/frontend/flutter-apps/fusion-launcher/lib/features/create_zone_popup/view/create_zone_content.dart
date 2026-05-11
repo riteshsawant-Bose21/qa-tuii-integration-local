@@ -43,15 +43,12 @@ class CreateZoneContent extends StatefulWidget {
 
 class _CreateZoneContentState extends State<CreateZoneContent> {
   void _revalidate(CreateZoneViewModelState state) {
-    // If any form is open (subzone draft / listening area add),
-    // saveEnabledNotifier is already false — don't override it here.
-    // Only revalidate based on data completeness.
     final bool isCreatingSubzones = state.subzones.isNotEmpty;
 
     if (!isCreatingSubzones) {
       widget.saveEnabledNotifier.value = state.zoneListeningAreas.isNotEmpty;
     } else {
-      widget.saveEnabledNotifier.value = state.subzones.every((AddListeningAreaToSubzoneModel s) => s.listeningAreas.isNotEmpty);
+      widget.saveEnabledNotifier.value = state.subzones.length >= 2 && state.subzones.every((AddListeningAreaToSubzoneModel s) => s.listeningAreas.isNotEmpty);
     }
   }
 

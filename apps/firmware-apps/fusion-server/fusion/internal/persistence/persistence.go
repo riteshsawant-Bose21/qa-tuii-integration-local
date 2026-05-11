@@ -262,6 +262,10 @@ func (p *Persistence) ExportData() (any, error) {
 		// Iterate over every bucket in the database.
 		return tx.ForEach(func(bucketName []byte, b *bbolt.Bucket) error {
 			bucket := string(bucketName)
+			// Device identity is node-local and must not be exported to peers.
+			if bucket == bucketDevice {
+				return nil
+			}
 			dbExport[bucket] = make(map[string]any)
 
 			// Iterate over each key/value pair in the bucket.
@@ -298,7 +302,6 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 		sceneSets    map[string]any
 		tasks        map[string]any
 		audio        map[string]any
-		device       map[string]any
 		ok           bool
 	)
 
@@ -351,16 +354,8 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 		update = true
 	}
 
-	if deviceData, exists := importData[bucketDevice]; exists {
-		device, ok = deviceData.(map[string]any)
-		if !ok {
-			return fmt.Errorf("device data is not in the expected format")
-		}
-		if err := validateImportedDevice(device); err != nil {
-			return err
-		}
-		update = true
-	}
+	// Device identity is node-local; ignore any device data in the import payload.
+	// This prevents anti-entropy sync from overwriting per-node identity.
 
 	if !update {
 		return nil
@@ -449,12 +444,6 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 
 		if audio != nil {
 			if err := replaceBucketDataTx(tx, bucketAudio, audio); err != nil {
-				return err
-			}
-		}
-
-		if device != nil {
-			if err := replaceBucketDataTx(tx, bucketDevice, device); err != nil {
 				return err
 			}
 		}
@@ -810,12 +799,20 @@ func (p *Persistence) computeHash() (string, error) {
 func computeHashTx(tx *bbolt.Tx) (string, error) {
 	hash := sha256.New()
 	for _, bucketName := range antiEntropyBuckets {
+
+		// Device identity is node-local and must not influence the cluster hash.
+		if bucketName == bucketDevice {
+			continue
+		}
+
 		b := tx.Bucket([]byte(bucketName))
+
 		if b == nil {
 			continue
 		}
 
 		hash.Write([]byte(bucketName))
+
 		cursor := b.Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			hash.Write(k)

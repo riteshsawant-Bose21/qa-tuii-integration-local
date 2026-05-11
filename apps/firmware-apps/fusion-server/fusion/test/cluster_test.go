@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -157,6 +158,76 @@ func TestUpdateDeviceInfoSuccess(t *testing.T) {
 	}
 	require.NotNil(t, found, "patched device should still be present in GET /devices")
 	assert.Equal(t, updatedName, found.GetName(), "public device patch should be visible via GET /devices")
+}
+
+// TestUpdateDeviceInfoRejectsDuplicateID verifies that PATCH /devices/{id} returns
+// an error when attempting to set a device ID that is already in use by another node.
+func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
+	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
+		t.Skip("requires at least two cluster nodes")
+	}
+
+	nodeA := clusterConfig.nodes[0]
+	nodeB := clusterConfig.nodes[1]
+
+	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+
+	// Attempt to set node A's device ID to the same value as node B's.
+	patch := &model.DevicePatch{Id: ptrStringValue(infoB.GetId())}
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
+	require.NoError(t, err)
+
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.GetId()))
+	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode,
+		"PATCH /devices/{id} with duplicate ID should return 409 Conflict")
+
+	// Verify node A's ID was not changed.
+	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	assert.Equal(t, infoA.GetId(), afterA.GetId(), "node A device ID must remain unchanged")
+}
+
+// TestUpdateDeviceInfoRejectsDuplicateName verifies that PATCH /devices/{id} returns
+// an error when attempting to set a device name that is already in use by another node.
+func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
+	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
+		t.Skip("requires at least two cluster nodes")
+	}
+
+	nodeA := clusterConfig.nodes[0]
+	nodeB := clusterConfig.nodes[1]
+
+	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+
+	// Attempt to set node A's name to the same value as node B's.
+	patch := &model.DevicePatch{Name: ptrStringValue(infoB.GetName())}
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
+	require.NoError(t, err)
+
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.GetId()))
+	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusConflict, resp.StatusCode,
+		"PATCH /devices/{id} with duplicate name should return 409 Conflict")
+
+	// Verify node A's name was not changed.
+	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	assert.Equal(t, infoA.GetName(), afterA.GetName(), "node A device name must remain unchanged")
 }
 
 func TestPutDSPDeploymentPackage(t *testing.T) {
@@ -541,4 +612,32 @@ func decodeProtoBody(body io.Reader, msg proto.Message) error {
 		return err
 	}
 	return protojson.Unmarshal(data, msg)
+}
+
+func getLocalDeviceInfoOnInstance(t *testing.T, nodeName string) *model.DeviceInfo {
+	t.Helper()
+	require.NotNil(t, clusterConfig, "clusterConfig must be initialized")
+
+	var nodeAddr string
+	for _, n := range clusterConfig.nodes {
+		if n.name == nodeName {
+			nodeAddr = n.address
+			break
+		}
+	}
+	require.NotEmpty(t, nodeAddr, "node %q not found in cluster config", nodeName)
+
+	parsed, err := url.Parse(nodeAddr)
+	require.NoError(t, err)
+
+	adminURL := parsed.Scheme + "://" + parsed.Hostname() + ":9090" + routes.DeviceEndpoint
+
+	resp, err := http.Get(adminURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var info model.DeviceInfo
+	require.NoError(t, decodeProtoBody(resp.Body, &info))
+	return &info
 }

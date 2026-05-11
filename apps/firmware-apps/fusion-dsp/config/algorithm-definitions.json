@@ -1643,6 +1643,16 @@
                     "default_value": false,
                     "telemetry_type": "meter",
                     "period_type": "HI"
+                },
+                {
+                    "name": "out_meter",
+                    "dimensions": ["out"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
                 }
             ]
         },
@@ -1739,6 +1749,16 @@
                     "dimensions": ["in"],
                     "value_type": "bool",
                     "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "out_meter",
+                    "dimensions": ["out"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
                     "telemetry_type": "meter",
                     "period_type": "HI"
                 }

@@ -19,6 +19,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
+	canonicaljson "github.com/gibson042/canonicaljson-go"
 	json "github.com/goccy/go-json"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
@@ -721,28 +722,29 @@ func TestImportDataRejectsMalformedAudioPayload(t *testing.T) {
 	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
 
-func TestImportDataRejectsMalformedDevicePayload(t *testing.T) {
+func TestImportDataIgnoresDevicePayload(t *testing.T) {
 	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "import_malformed_device.db")
+	dbPath := filepath.Join(tmpDir, "import_ignored_device.db")
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
 	p, err := persistence.NewPersistence(dbPath, sm)
 	require.NoError(t, err)
 	defer p.Close()
 
+	// Device data in import payload should be silently ignored (no error, no write).
 	err = p.ImportData(map[string]any{
 		"device": map[string]any{
 			"info": "not-a-device-patch",
 		},
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
 
 	_, err = p.GetStoredDeviceInfo()
 	require.Error(t, err)
 	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
 
-func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
+func TestExportImportRoundTripPreservesAudioButExcludesDeviceData(t *testing.T) {
 	tmpDir := t.TempDir()
 	srcDBPath := filepath.Join(tmpDir, "export_import_src.db")
 	dstDBPath := filepath.Join(tmpDir, "export_import_dst.db")
@@ -772,7 +774,11 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	importData, ok := exported.(map[string]map[string]any)
 	require.True(t, ok)
 
-	sm2 := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	// Device bucket must not appear in export.
+	_, hasDevice := importData["device"]
+	require.False(t, hasDevice, "device bucket should not be exported")
+
+	sm2 := persistence.NewStateManager(&api.AppConfig{NodeName: "node-b"})
 	p2, err := persistence.NewPersistence(dstDBPath, sm2)
 	require.NoError(t, err)
 	defer p2.Close()
@@ -783,17 +789,16 @@ func TestExportImportRoundTripPreservesAudioAndDeviceData(t *testing.T) {
 	}
 	require.NoError(t, p2.ImportData(importPayload))
 
+	// Audio should be preserved via import.
 	storedAudio, err := p2.GetAudioMetadata(audioMeta.Id)
 	require.NoError(t, err)
 	require.Equal(t, audioMeta.DisplayName, storedAudio.DisplayName)
 	require.Equal(t, audioMeta.Filename, storedAudio.Filename)
 
-	storedDevice, err := p2.GetStoredDeviceInfo()
-	require.NoError(t, err)
-	require.NotNil(t, storedDevice.Id)
-	require.Equal(t, "dev-1", *storedDevice.Id)
-	require.NotNil(t, storedDevice.Name)
-	require.Equal(t, "Kitchen", *storedDevice.Name)
+	// Device info on destination should remain unset (not synced from source).
+	_, err = p2.GetStoredDeviceInfo()
+	require.Error(t, err)
+	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
 
 func TestGetStoredDeviceInfoReturnsErrNotFoundWhenMissing(t *testing.T) {
@@ -1118,6 +1123,170 @@ func TestListAllTagsReturnsEmptyWithoutErrorWhenAudioBucketMissing(t *testing.T)
 	require.Empty(t, tags)
 }
 
+func TestSetDeviceInfoDoesNotChangeMetadataHash(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "device_no_hash_change.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	hashBefore, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
+		Id:   stringPtr("dev-1"),
+		Name: stringPtr("Kitchen"),
+	}))
+
+	hashAfter, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	require.Equal(t, hashBefore.Hash, hashAfter.Hash,
+		"device write must not alter the metadata hash")
+}
+
+func TestExportDataExcludesDeviceBucket(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "export_excludes_device.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
+		Id:   stringPtr("dev-1"),
+		Name: stringPtr("Living Room"),
+	}))
+
+	exported, err := p.ExportData()
+	require.NoError(t, err)
+
+	exportMap, ok := exported.(map[string]map[string]any)
+	require.True(t, ok)
+
+	_, hasDevice := exportMap["device"]
+	require.False(t, hasDevice, "export must not include device bucket")
+}
+
+func TestImportDoesNotOverwriteExistingDeviceIdentity(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "import_preserves_local_device.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	// Set local device identity.
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
+		Id:   stringPtr("local-id"),
+		Name: stringPtr("Local Node"),
+	}))
+
+	// Import a payload that includes a different device identity.
+	err = p.ImportData(map[string]any{
+		"device": map[string]any{
+			"info": map[string]any{
+				"id":   "remote-id",
+				"name": "Remote Node",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	// Local identity must be preserved.
+	stored, err := p.GetStoredDeviceInfo()
+	require.NoError(t, err)
+	require.Equal(t, "local-id", *stored.Id)
+	require.Equal(t, "Local Node", *stored.Name)
+}
+
+func TestImportWithDeviceKeyDoesNotAffectHash(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "import_device_no_hash.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+	defer p.Close()
+
+	hashBefore, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	// Import containing only device data — should be a no-op.
+	err = p.ImportData(map[string]any{
+		"device": map[string]any{
+			"info": map[string]any{
+				"id":   "injected-id",
+				"name": "Injected",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	hashAfter, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, p))
+	require.NoError(t, err)
+
+	require.Equal(t, hashBefore.Hash, hashAfter.Hash,
+		"importing device-only payload must not change hash")
+}
+
+func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPathA := filepath.Join(tmpDir, "node_a.db")
+	dbPathB := filepath.Join(tmpDir, "node_b.db")
+
+	// Node A
+	smA := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	pA, err := persistence.NewPersistence(dbPathA, smA)
+	require.NoError(t, err)
+	defer pA.Close()
+
+	require.NoError(t, pA.SetDeviceInfo(&model.DevicePatch{
+		Id:   stringPtr("id-a"),
+		Name: stringPtr("Node A"),
+	}))
+
+	// Node B
+	smB := persistence.NewStateManager(&api.AppConfig{NodeName: "node-b"})
+	pB, err := persistence.NewPersistence(dbPathB, smB)
+	require.NoError(t, err)
+	defer pB.Close()
+
+	require.NoError(t, pB.SetDeviceInfo(&model.DevicePatch{
+		Id:   stringPtr("id-b"),
+		Name: stringPtr("Node B"),
+	}))
+
+	// Export from A and import into B (simulating anti-entropy sync).
+	exported, err := pA.ExportData()
+	require.NoError(t, err)
+
+	exportMap, ok := exported.(map[string]map[string]any)
+	require.True(t, ok)
+
+	importPayload := make(map[string]any, len(exportMap))
+	for key, value := range exportMap {
+		importPayload[key] = value
+	}
+	require.NoError(t, pB.ImportData(importPayload))
+
+	// Node B must retain its own identity.
+	storedB, err := pB.GetStoredDeviceInfo()
+	require.NoError(t, err)
+	require.Equal(t, "id-b", *storedB.Id)
+	require.Equal(t, "Node B", *storedB.Name)
+
+	// Node A identity also untouched.
+	storedA, err := pA.GetStoredDeviceInfo()
+	require.NoError(t, err)
+	require.Equal(t, "id-a", *storedA.Id)
+	require.Equal(t, "Node A", *storedA.Name)
+}
+
 func readDatabaseMetadata(dbPath string) (*model.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
@@ -1164,6 +1333,16 @@ func readDatabaseMetadataFromDB(db *bbolt.DB) (*model.DatabaseMetadata, error) {
 	return &metadata, nil
 }
 
+// antiEntropyBucketsForTest mirrors the production antiEntropyBuckets order.
+var antiEntropyBucketsForTest = []string{
+	"snapshots",
+	"tasks",
+	"snapshot_definitions",
+	"scene_sets",
+	"audio",
+	"device",
+}
+
 func computeDatabaseHashForTest(dbPath string) (string, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
@@ -1173,19 +1352,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 
 	hash := sha256.New()
 	err = db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			hash.Write(name)
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
+			}
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1197,19 +1383,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 	hash := sha256.New()
 	err := db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			hash.Write(name)
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
+			}
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1231,7 +1424,7 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		}
 		metadata.Hash = ""
 		metadata.Version = nil
-		return json.Marshal(&metadata)
+		return canonicaljson.Marshal(&metadata)
 
 	case "snapshots", "active":
 		var state persistence.PersistentState
@@ -1240,7 +1433,14 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		}
 		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
-		return json.Marshal(state)
+		return canonicaljson.Marshal(&state)
+
+	case "tasks", "snapshot_definitions", "scene_sets", "audio", "device":
+		var decoded any
+		if err := json.Unmarshal(value, &decoded); err != nil {
+			return nil, err
+		}
+		return canonicaljson.Marshal(decoded)
 
 	default:
 		return value, nil
