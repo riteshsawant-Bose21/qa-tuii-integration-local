@@ -29,10 +29,10 @@ import (
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source"
 	sourcedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
+	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/gin-gonic/gin"
@@ -213,7 +213,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	sourceDBSvc := sourcedb.NewService(suite.DB, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source DB Service.")
 
-	sourceSVC := source.NewService(sourceDBSvc, loggers.AppLogger)
+	sourceSVC := source.NewService(sourceDBSvc, "", loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
 	validationCfg := &config.Validation{
