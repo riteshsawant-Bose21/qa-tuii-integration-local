@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_element_painter.dart';
 import '../mixin/fusion_canvas_interactable_mixin.dart';
+import 'hardware_painter/hardware_painter.dart';
 import 'hardware_painter/source_painter.dart';
 import 'hardware_painter/speaker_painter.dart';
 
@@ -20,7 +21,7 @@ class HardwareComponentPainter extends FusionCanvasElementPainter {
     } else if (hardware is Source) {
       painter = SourcePainter(hardware: hardware as Source);
     } else {
-      painter = null;
+      painter = HardwarePainter(hardware: hardware);
     }
   }
 

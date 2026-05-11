@@ -358,7 +358,11 @@ func (c *FusionServer) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := c.handler.HandleUpdateDeviceInfo(deviceId, patchProto); err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		if strings.Contains(err.Error(), "duplicate") {
+			http.Error(w, err.Error(), http.StatusConflict)
+		} else {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		}
 		return
 	}
 
