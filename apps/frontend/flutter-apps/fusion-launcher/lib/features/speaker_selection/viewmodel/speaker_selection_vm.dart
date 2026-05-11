@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +21,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     if (isFromBuildingPage) {
       final String? areaId = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea()?.id;
       if (areaId != null) setListeningArea(areaId);
+    } else {
+      final String? defaultAreaId = getListeningAreas().firstOrNull?.id;
+      setListeningArea(defaultAreaId);
     }
   }
 
@@ -42,34 +47,34 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
     return allListeningAreas;
   }
 
-  void toggleAddNewListeningArea(bool value) {
-    emit(
-      state.copyWith(
-        shouldAddNewListeningArea: () => value,
-        listeningAreaId: () => value ? null : state.listeningAreaId,
-      ),
-    );
-  }
+  // void toggleAddNewListeningArea(bool value) {
+  //   emit(
+  //     state.copyWith(
+  //       shouldAddNewListeningArea: () => value,
+  //       listeningAreaId: () => value ? null : state.listeningAreaId,
+  //     ),
+  //   );
+  // }
 
-  void setNewListeningAreaName(String? value) => emit(state.copyWith(newListeningAreaName: () => value));
-  void setNewListeningAreaFloorId(String? value) => emit(state.copyWith(floorId: () => value));
+  // void setNewListeningAreaName(String? value) => emit(state.copyWith(newListeningAreaName: () => value));
+  // void setNewListeningAreaFloorId(String? value) => emit(state.copyWith(floorId: () => value));
 
-  void addNewListeningArea(BuildContext context) {
-    if (state.newListeningAreaName?.isEmpty ?? false) return FusionToast.error(context, message: "Please enter listening area name");
-    if (state.floorId?.isEmpty ?? true) return FusionToast.error(context, message: "Please select floor");
+  // void addNewListeningArea(BuildContext context) {
+  // if (state.newListeningAreaName?.isEmpty ?? false) return FusionToast.error(context, message: "Please enter listening area name");
+  // if (state.floorId?.isEmpty ?? true) return FusionToast.error(context, message: "Please select floor");
 
-    final ListeningArea newArea = ListeningArea(name: state.newListeningAreaName!, vertices: <FusionCanvasPoint>[], isDrawn: false);
+  // final ListeningArea newArea = ListeningArea(name: state.newListeningAreaName!, vertices: <FusionCanvasPoint>[], isDrawn: false);
 
-    projectViewModel.addListeningArea(area: newArea, floorId: state.floorId!);
+  // projectViewModel.addListeningArea(area: newArea, floorId: state.floorId!);
 
-    if (subZoneId != null) {
-      projectViewModel.addListeningAreaToSubZone(areaId: newArea.id, subZoneId: subZoneId!);
-    } else {
-      projectViewModel.addListeningAreaToZone(listeningAreaId: newArea.id, zoneId: zoneId!);
-    }
+  // if (subZoneId != null) {
+  //   projectViewModel.addListeningAreaToSubZone(areaId: newArea.id, subZoneId: subZoneId!);
+  // } else {
+  //   projectViewModel.addListeningAreaToZone(listeningAreaId: newArea.id, zoneId: zoneId!);
+  // }
 
-    emit(state.copyWith(listeningAreaId: () => newArea.id, shouldAddNewListeningArea: () => false));
-  }
+  // emit(state.copyWith(listeningAreaId: () => newArea.id, shouldAddNewListeningArea: () => false));
+  // }
 
   /// ----------------------------------- GET PRODUCTS ------------------------------------
   // Show here products based on criterias.
@@ -509,6 +514,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionVmState> {
 
     final SpeakerProduct? targetSpeaker = state.selectedSpeakers.firstWhereOrNull((SpeakerProduct element) => !element.isSubwoofer);
 
+    log("MOUNTING TYPE TO SAVE: ${targetSpeaker?.mountType}.  === ${MountingType.fromJson(targetSpeaker?.mountType)}");
     final LowFrequency lowFrequency =
         state.speakerSelectionMode == SpeakerSelectionMode.suggest
             ? state.suggestModeArgs.lowFrequency

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_selector.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -14,6 +13,7 @@ import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_
 import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
 import '../../speaker_selection_popup/views/widgets/constant_enums.dart';
 import '../viewmodel/speaker_selection_vm.dart';
+import 'widgets/low_freq_selector.dart';
 import 'widgets/stepped_both_side_haptic_slider.dart';
 import 'widgets/stepped_haptic_slider.dart';
 

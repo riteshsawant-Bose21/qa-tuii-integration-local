@@ -22,6 +22,9 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   late AutoPlacementResult _result;
   final TextEditingController ceilingHeightController = TextEditingController();
   SpeakerPlacementAlgorithmResult? algorithmResult;
+
+  final ValueNotifier<String?> errorNotifier = ValueNotifier<String?>(null);
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +34,7 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
   @override
   void dispose() {
     ceilingHeightController.dispose();
+    errorNotifier.dispose();
     super.dispose();
   }
 
@@ -138,6 +142,27 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
             ),
           ),
           const SizedBox(height: 10),
+
+          ValueListenableBuilder<String?>(
+            valueListenable: errorNotifier,
+            builder: (BuildContext context, String? value, Widget? child) {
+              if (value == null || value.isEmpty) return const SizedBox();
+
+              return Row(
+                children: <Widget>[
+                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: FusionAppText(
+                      text: value,
+                      style: context.textTheme.l1Regular.copyWith(color: Colors.redAccent),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(
@@ -148,9 +173,11 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                   final ResponseCallback<SpeakerPlacementAlgorithmResult> response = projectViewModel.runAutoPlacementForCurrentListeningArea(
                     autoPlacementResult: _result,
                   );
+
                   if (!response.success) {
-                    FusionToast.error(context, message: response.message);
+                    errorNotifier.value = response.message;
                   } else {
+                    errorNotifier.value = null;
                     FusionToast.success(context, message: 'Auto-placement completed successfully');
                     setState(() {
                       algorithmResult = response.data;
