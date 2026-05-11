@@ -288,8 +288,9 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 
 	authSvc := &MockAuthService{}
 	authMiddleware := &MockMiddleware{}
+	bsfSvc := &MockBSFService{}
 
-	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, suite.OrganizationSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, loggers)
+	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, suite.OrganizationSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, bsfSvc, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

@@ -95,4 +95,7 @@ const (
 	EndpointFirmwareUpdateCheck   = EndpointFirmware + "/updates/check"
 	EndpointBundleDownload        = EndpointFirmwareBundles + "/:version/request-download-url"
 	EndpointLogBundleUpdateStatus = EndpointFirmware + "/updates/status"
+
+	EndpointBSF         = "/bsf"
+	EndpointBSFGenerate = EndpointBSF + "/generate"
 )

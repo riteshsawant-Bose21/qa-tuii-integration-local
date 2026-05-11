@@ -38,6 +38,7 @@ import (
 	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
+	bsfservice "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/bsf"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
@@ -258,11 +259,15 @@ func main() {
 	//Initialize Device Service
 	deviceSVC := device.NewService(deviceDbSvc, projectDBSvc, iothandler, *cfg.Cloud)
 
+	// Initialize BSF Service
+	bsfSVC := bsfservice.NewService(s3Handler.Bucket(cfg.Cloud.AssetS3Bucket), cfg.Cloud.AssetBaseURL)
+	loggers.AppLogger.Info("Initialized BSF Service.")
+
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, deviceSVC, loggers)
+	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, deviceSVC, bsfSVC, loggers)
 
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
