@@ -1350,6 +1350,10 @@ func (p *Persistence) RemoveAudioFile(id string) error {
 
 // SyncAudioFile retrieves an audio file from another node and stores metadata.
 func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
+	if update == nil || update.Metadata == nil {
+		return fmt.Errorf("audio sync update missing metadata")
+	}
+
 	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
 
 	// Attempt to open a temp file with O_CREATE|O_EXCL
@@ -1362,7 +1366,7 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 		if os.IsExist(err) {
 			if _, statErr := os.Stat(finalPath); statErr == nil {
 				// The file is already present; ensure metadata is present as well.
-				return p.SaveAudioMeta(&update.Metadata)
+				return p.SaveAudioMeta(update.Metadata)
 			}
 			// If .part exists but final doesn't, someone else is writing it — treat as in progress
 			return nil
@@ -1412,7 +1416,7 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 		return fmt.Errorf("rename %s → %s: %w", tmpPath, finalPath, err)
 	}
 
-	if err := p.SaveAudioMeta(&update.Metadata); err != nil {
+	if err := p.SaveAudioMeta(update.Metadata); err != nil {
 		return fmt.Errorf("SaveAudioMeta: %w", err)
 	}
 

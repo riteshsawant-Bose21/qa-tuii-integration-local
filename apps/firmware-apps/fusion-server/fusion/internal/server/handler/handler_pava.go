@@ -283,7 +283,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	// Background the audio sync update
 	go func() {
 		update := &api.AudioSyncUpdate{
-			Metadata: *meta,
+			Metadata: meta,
 			URL:      h.appConfig.SelfUrl(),
 		}
 

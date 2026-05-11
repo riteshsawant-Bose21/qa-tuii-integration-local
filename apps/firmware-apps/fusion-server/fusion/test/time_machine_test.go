@@ -29,6 +29,7 @@ const (
 	idParam                   = "{id}"
 	snapshotDefaultBucketName = "fusion"
 	snapshotSyncTime          = 5 * time.Second
+	clusterSnapshotSyncTime   = 15 * time.Second
 
 	defaultSnapshotTestVIP   = "http://192.168.2.100:8080"
 	defaultSnapshotTestAdmin = "http://192.168.2.100:9090"
@@ -335,7 +336,7 @@ func TestTimeMachinePropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes have the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
 		return snapshotExistsOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -362,7 +363,7 @@ func TestTimeMachinePropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes remove the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
 		return snapshotRemovedOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -617,7 +618,10 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 //  2. epoch > baseline
 func epochsConverged(t *testing.T, baseline int64) bool {
 	t.Helper()
-	epochs := getClusterEpochs(t)
+	epochs, err := tryGetClusterEpochs()
+	if err != nil {
+		return false
+	}
 	if len(epochs) == 0 {
 		return false
 	}
@@ -640,12 +644,10 @@ func epochsConverged(t *testing.T, baseline int64) bool {
 	return true
 }
 
-func getClusterEpochs(t *testing.T) []int64 {
-	t.Helper()
-
+func tryGetClusterEpochs() ([]int64, error) {
 	nodes, err := getLiveNodeAddresses()
 	if err != nil {
-		t.Fatalf("Failed to list cluster nodes: %v", err)
+		return nil, err
 	}
 
 	epochs := make([]int64, 0, len(nodes))
@@ -654,24 +656,37 @@ func getClusterEpochs(t *testing.T) []int64 {
 		url := fmt.Sprintf("%s/metadata", addr)
 		resp, err := http.Get(url)
 		if err != nil {
-			t.Fatalf("Failed to GET %s: %v", url, err)
+			return nil, err
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("Metadata returned %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
+			return nil, fmt.Errorf("metadata returned %d from %s: %s", resp.StatusCode, url, string(body))
 		}
 
 		var metaResp model.DatabaseMetadataResponse
 		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
-			t.Fatalf("Failed to decode metadata JSON: %v", err)
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode metadata JSON from %s: %w", url, err)
 		}
+		resp.Body.Close()
 		if metaResp.GetMetadata() == nil || metaResp.GetMetadata().GetVersion() == nil {
-			t.Fatalf("Metadata response missing version payload from %s", url)
+			return nil, fmt.Errorf("metadata response missing version payload from %s", url)
 		}
 
 		epochs = append(epochs, int64(metaResp.GetMetadata().GetVersion().GetEpoch()))
+	}
+
+	return epochs, nil
+}
+
+func getClusterEpochs(t *testing.T) []int64 {
+	t.Helper()
+
+	epochs, err := tryGetClusterEpochs()
+	if err != nil {
+		t.Fatalf("Failed to get cluster epochs: %v", err)
 	}
 
 	return epochs
@@ -1157,6 +1172,33 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 	}) {
 		t.Fatalf("Epochs did not converge after restart + activation; initial=%d, epochs=%v",
 			initialEpoch, getClusterEpochs(t))
+	}
+
+	// Snapshot activation metadata can converge slightly before the restored state
+	// is readable again through the admin API after a full restart. Wait for the
+	// concrete restored values rather than assuming epoch convergence is sufficient.
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+		nv := getStateValue(t, nestedKey)
+		nested, ok := nv.(map[string]any)
+		if !ok {
+			return false
+		}
+
+		bSlice, ok := nested["b"].([]any)
+		if !ok {
+			return false
+		}
+
+		return asInt(getStateValue(t, fooKey)) == 111 &&
+			asInt(getStateValue(t, barKey)) == 222 &&
+			asInt(getStateValue(t, removedKey)) == 999 &&
+			asInt(nested["a"]) == 1 &&
+			len(bSlice) == 2 &&
+			asInt(bSlice[0]) == 10 &&
+			asInt(bSlice[1]) == 20
+	}) {
+		t.Fatalf("Restored state did not converge after restart + activation: foo=%v bar=%v nested=%v removed=%v",
+			getStateValue(t, fooKey), getStateValue(t, barKey), getStateValue(t, nestedKey), getStateValue(t, removedKey))
 	}
 
 	// foo restored

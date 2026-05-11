@@ -55,8 +55,8 @@ type AudioRemoveUpdate struct {
 
 // AudioSyncUpdate represents an audio file to sync across nodes
 type AudioSyncUpdate struct {
-	Metadata model.AudioMetadata `json:"metadata"`
-	URL      string              `json:"url"`
+	Metadata *model.AudioMetadata `json:"metadata"`
+	URL      string               `json:"url"`
 }
 
 // SoftwareUpdateSyncAck carries acknowledgment information when a node

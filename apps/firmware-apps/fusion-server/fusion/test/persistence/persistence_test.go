@@ -229,7 +229,7 @@ func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testin
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := model.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Test Audio",
 		Filename:    "sync-audio-existing.bin",
@@ -1231,7 +1231,7 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		}
 		metadata.Hash = ""
 		metadata.Version = nil
-		return json.Marshal(metadata)
+		return json.Marshal(&metadata)
 
 	case "snapshots", "active":
 		var state persistence.PersistentState

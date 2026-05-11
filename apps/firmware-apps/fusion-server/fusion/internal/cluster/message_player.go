@@ -60,13 +60,13 @@ func (c *Cluster) initialAudioSyncFromPeer(peer *hashicorpMemberlist.Node) error
 
 	peerURL := fmt.Sprintf("http://%s:%s", peer.Addr, api.HTTPPort)
 
-	for _, meta := range metas {
+	for i := range metas {
 		update := api.AudioSyncUpdate{
-			Metadata: meta,
+			Metadata: &metas[i],
 			URL:      peerURL,
 		}
 		if err := c.delegate.persistence.SyncAudioFile(&update); err != nil {
-			logger.Error("initial sync failed for %s: %v", meta.Filename, err)
+			logger.Error("initial sync failed for %s: %v", metas[i].Filename, err)
 		}
 	}
 
