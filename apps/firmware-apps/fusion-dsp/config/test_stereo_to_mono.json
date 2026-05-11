@@ -28,7 +28,7 @@
                 },
                 {
                     "name": "mono_mix",
-                    "algorithm": "mono_mix",
+                    "algorithm": "stereo_to_mono",
                     "property_settings": [
                         { "name": "frame_size", "value": 32 },
                         { "name": "sample_rate", "value": 48000 }
@@ -76,11 +76,5 @@
         }
     ],
     "parameter_settings": [
-        {
-            "target": "mono_mix/mixer",
-            "name": "input_gain",
-            "index": [1],
-            "value": -20.0
-        }
     ]
 }

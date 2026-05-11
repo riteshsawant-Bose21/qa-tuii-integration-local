@@ -30,6 +30,7 @@ var (
 		ProjectBucket:        "S3_PROJECT_BUCKET",
 		ProductBucket:        "S3_PRODUCT_BUCKET",
 		FirmwareBundleBucket: "S3_FIRMWARE_BUNDLE_BUCKET",
+		AssetBaseURL:        "S3_ASSET_BASE_URL",
 	}
 
 	AWS = types.EnvironmentAWSVariables{
@@ -37,7 +38,7 @@ var (
 	}
 
 	IOT = types.EnvironmentIoTVariables{
-		Endpoint: "IOT_ENDPOINT",
+		Endpoint:     "IOT_ENDPOINT",
 		CommandTopic: "IOT_COMMAND_TOPIC",
 		DevicePolicy: "IOT_DEVICE_POLICY",
 	}
