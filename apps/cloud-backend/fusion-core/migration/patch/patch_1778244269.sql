@@ -6,5 +6,5 @@ CREATE TABLE output (
     type output_type NOT NULL,
     images TEXT NOT NULL,
     specifications JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -726,6 +726,43 @@ definitions:
         example: 1
         type: integer
     type: object
+  types.OutputAsset:
+    properties:
+      black:
+        items:
+          type: string
+        type: array
+      white:
+        items:
+          type: string
+        type: array
+    type: object
+  types.OutputItemResponse:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/types.OutputAsset'
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+      specifications:
+        $ref: '#/definitions/types.OutputSpecifications'
+      type:
+        type: string
+    type: object
+  types.OutputSpecifications:
+    properties:
+      paging_type:
+        type: string
+      primary_connection:
+        type: string
+      supported_connections:
+        items:
+          type: string
+        type: array
+    type: object
   types.PermissionUpdateRequest:
     properties:
       access_level_id:
@@ -781,28 +818,6 @@ definitions:
         type: integer
       specifications: {}
     type: object
-  types.OutputItem:
-    properties:
-      images:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      specifications:
-        $ref: '#/definitions/types.OutputSpecifications'
-      type:
-        type: string
-    type: object
-  types.OutputSpecifications:
-    properties:
-      primary_connection:
-        type: string
-      supported_connections:
-        items:
-          type: string
-        type: array
-    type: object
   types.ProductResponse:
     properties:
       accessory:
@@ -827,11 +842,11 @@ definitions:
         type: array
       output:
         items:
-          $ref: '#/definitions/types.OutputItem'
+          $ref: '#/definitions/types.OutputItemResponse'
         type: array
       source:
         items:
-          $ref: '#/definitions/types.SourceItem'
+          $ref: '#/definitions/types.SourceItemResponse'
         type: array
       speaker:
         items:
@@ -1093,20 +1108,46 @@ definitions:
       version:
         type: string
     type: object
-  types.SourceItem:
+  types.SourceAsset:
     properties:
-      asset_path:
+      black:
+        items:
+          type: string
+        type: array
+      white:
+        items:
+          type: string
+        type: array
+    type: object
+  types.SourceItemResponse:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/types.SourceAsset'
+        type: array
+      description:
         type: string
-      connection_type:
+      is_fusion_compatible:
+        type: boolean
+      model_family:
         type: string
-      name:
+      model_name:
         type: string
-      price:
-        type: number
-      product_id:
+      source_id:
         type: string
-      type:
+      specifications:
+        $ref: '#/definitions/types.SourceSpecifications'
+    type: object
+  types.SourceSpecifications:
+    properties:
+      paging_type:
         type: string
+      primary_connection:
+        type: string
+      supported_connections:
+        items:
+          type: string
+        type: array
     type: object
   types.StatusOkForCreateUserProfile:
     properties:

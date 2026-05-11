@@ -4040,6 +4040,63 @@ const docTemplate = `{
                 }
             }
         },
+        "types.OutputAsset": {
+            "type": "object",
+            "properties": {
+                "black": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "white": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.OutputItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputAsset"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "specifications": {
+                    "$ref": "#/definitions/types.OutputSpecifications"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.OutputSpecifications": {
+            "type": "object",
+            "properties": {
+                "paging_type": {
+                    "type": "string"
+                },
+                "primary_connection": {
+                    "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "types.PermissionUpdateRequest": {
             "type": "object",
             "required": [
@@ -4120,40 +4177,6 @@ const docTemplate = `{
                 "specifications": {}
             }
         },
-        "types.OutputItem": {
-            "type": "object",
-            "properties": {
-                "images": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "specifications": {
-                    "$ref": "#/definitions/types.OutputSpecifications"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.OutputSpecifications": {
-            "type": "object",
-            "properties": {
-                "primary_connection": {
-                    "type": "string"
-                },
-                "supported_connections": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "types.ProductResponse": {
             "type": "object",
             "properties": {
@@ -4190,13 +4213,13 @@ const docTemplate = `{
                 "output": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.OutputItem"
+                        "$ref": "#/definitions/types.OutputItemResponse"
                     }
                 },
                 "source": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.SourceItem"
+                        "$ref": "#/definitions/types.SourceItemResponse"
                     }
                 },
                 "speaker": {
@@ -4578,26 +4601,66 @@ const docTemplate = `{
                 }
             }
         },
-        "types.SourceItem": {
+        "types.SourceAsset": {
             "type": "object",
             "properties": {
-                "asset_path": {
+                "black": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "white": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.SourceItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SourceAsset"
+                    }
+                },
+                "description": {
                     "type": "string"
                 },
-                "connection_type": {
+                "is_fusion_compatible": {
+                    "type": "boolean"
+                },
+                "model_family": {
                     "type": "string"
                 },
-                "name": {
+                "model_name": {
                     "type": "string"
                 },
-                "price": {
-                    "type": "number"
-                },
-                "product_id": {
+                "source_id": {
                     "type": "string"
                 },
-                "type": {
+                "specifications": {
+                    "$ref": "#/definitions/types.SourceSpecifications"
+                }
+            }
+        },
+        "types.SourceSpecifications": {
+            "type": "object",
+            "properties": {
+                "paging_type": {
                     "type": "string"
+                },
+                "primary_connection": {
+                    "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
