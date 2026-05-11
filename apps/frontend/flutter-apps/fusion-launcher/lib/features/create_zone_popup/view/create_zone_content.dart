@@ -21,6 +21,7 @@ import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/service_locator.dart';
+import '../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../view_model/create_zone_viewmodel.dart';
 import '../view_model/create_zone_viewmodel_state.dart';
