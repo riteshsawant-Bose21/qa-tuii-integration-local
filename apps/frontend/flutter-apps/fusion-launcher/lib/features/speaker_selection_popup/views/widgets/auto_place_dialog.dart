@@ -12,20 +12,20 @@ import '../../../home/presentation/widgets/algorithms/ceiling_pendant_speaker_la
 class AutoPlaceDialog extends StatefulWidget {
   const AutoPlaceDialog({super.key, this.result});
 
-  final AutoPlacementResult? result;
+  final AutoPlacementParam? result;
 
   @override
   State<AutoPlaceDialog> createState() => _AutoPlaceDialogState();
 }
 
 class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
-  late AutoPlacementResult _result;
+  late AutoPlacementParam _result;
   final TextEditingController ceilingHeightController = TextEditingController();
   SpeakerPlacementAlgorithmResult? algorithmResult;
   @override
   void initState() {
     super.initState();
-    _result = widget.result ?? const AutoPlacementResult();
+    _result = widget.result ?? const AutoPlacementParam();
   }
 
   @override

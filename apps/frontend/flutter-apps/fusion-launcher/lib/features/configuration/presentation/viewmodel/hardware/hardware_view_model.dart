@@ -310,7 +310,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementParam autoPlacementResult}) {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
       if (listeningAreaId == null) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Select a listening area first.');
@@ -443,7 +443,7 @@ extension HardwareViewModel on ProjectViewModel {
     required ListeningArea listeningArea,
     required List<SpeakerProduct> catalogSpeakers,
     required List<Speaker> targetSpeakers,
-    required AutoPlacementResult autoPlacementResult,
+    required AutoPlacementParam autoPlacementResult,
   }) {
     // take mounting type from listening area if set, else from first speaker (they should all be the same since we filter by productId before)
     final MountingType mountingType = listeningArea.mountingType;
@@ -515,10 +515,18 @@ extension HardwareViewModel on ProjectViewModel {
         ),
       );
     } else {
+      final List<Offset> geometry = <Offset>[
+        ...listeningArea.vertices.map(
+          (FusionCanvasPoint point) => Offset(
+            (point.position.dx - bounds.minX) / 100,
+            (point.position.dy - bounds.minY) / 100,
+          ),
+        ),
+      ];
+
       final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
         room: SurfaceRoom(
-          length: roomLength,
-          width: roomWidth,
+          corners: geometry,
           ceilingHeight: ceilingHeight,
           listenerHeight: listenerHeight,
         ),
