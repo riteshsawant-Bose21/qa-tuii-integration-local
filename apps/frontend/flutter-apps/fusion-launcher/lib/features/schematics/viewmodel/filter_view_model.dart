@@ -1,6 +1,13 @@
+import 'dart:async';
+// ── Add these imports at the top of the file ──────────────────────────────
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_lib/fusion_lib.dart'; // for Zone, SubZone, ListeningArea
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/models/project_entities/equip_location.dart';
+import 'package:fusion_lib/models/project_entities/floor_model.dart';
 
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/filter_state.dart';
 
 class FilterViewModel extends Cubit<FilterViewModelState> {
@@ -136,5 +143,62 @@ class FilterViewModel extends Cubit<FilterViewModelState> {
     _areaControllers.clear();
     _locationControllers.clear();
     return super.close();
+  }
+
+  bool areAllSelected(
+    List<FloorModel> floors,
+    List<Zone> zones,
+    List<EquipLocation> locations,
+  ) {
+    return floors.every((FloorModel f) => state.isFloorChecked(f.id)) &&
+        zones.every((Zone z) => state.isZoneChecked(z.id)) &&
+        locations.every((EquipLocation l) => state.isLocationChecked(l.id));
+  }
+
+  void selectAll({
+    required List<FloorModel> floors,
+    required List<Zone> zones,
+    required List<EquipLocation> locations,
+  }) {
+    final ProjectViewModel projectVm = serviceLocator<ProjectViewModel>();
+
+    // Map<String, bool> with all entries set to true
+    final Map<String, bool> floorChecked = <String, bool>{for (final FloorModel f in floors) f.id: true};
+
+    final Map<String, bool> areaChecked = <String, bool>{
+      for (final FloorModel f in floors)
+        for (final ListeningArea a in projectVm.getListeningAreasForFloor(floorId: f.id)) a.id: true,
+    };
+
+    final Map<String, bool> zoneChecked = <String, bool>{for (final Zone z in zones) z.id: true};
+
+    final Map<String, bool> subZoneChecked = <String, bool>{
+      for (final Zone z in zones)
+        for (final SubZone s in projectVm.getSubZonesForZone(parentZoneId: z.id)) s.id: true,
+    };
+
+    final Map<String, bool> locationChecked = <String, bool>{for (final EquipLocation l in locations) l.id: true};
+
+    emit(
+      state.copyWith(
+        floorChecked: floorChecked,
+        areaChecked: areaChecked,
+        zoneChecked: zoneChecked,
+        subZoneChecked: subZoneChecked,
+        locationChecked: locationChecked,
+      ),
+    );
+  }
+
+  void deselectAll() {
+    emit(
+      state.copyWith(
+        floorChecked: const <String, bool>{},
+        areaChecked: const <String, bool>{},
+        zoneChecked: const <String, bool>{},
+        subZoneChecked: const <String, bool>{},
+        locationChecked: const <String, bool>{},
+      ),
+    );
   }
 }
