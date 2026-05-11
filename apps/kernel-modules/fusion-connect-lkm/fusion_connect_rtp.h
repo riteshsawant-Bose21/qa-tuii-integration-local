@@ -78,6 +78,7 @@ struct fusion_cn_rtp_stream {
     struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
     atomic_t is_running;
     atomic_t playback_armed;
+    atomic_t metrics_pending;
     u32 buf_size_in_frames;
     u32 buf_size_in_packets;
     u32 ssrc;

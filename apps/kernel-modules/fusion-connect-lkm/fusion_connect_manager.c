@@ -415,7 +415,6 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     /* execute */
     for (int i = 0; i < fc_work_cnt; i++) {
-        struct stream_node *sn = fc_work[i].rtp->stream_node;
         bool is_source = fc_work[i].rtp->info.is_source;
         if (profiling)
             t0 = ktime_get_ns();
@@ -430,7 +429,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (is_source) {
             if (profiling)
                 source_exec_ns += dt_ns;
-            atomic_set(&sn->metrics_pending, 1);
+            atomic_set(&fc_work[i].rtp->metrics_pending, 1);
         } else if (profiling) {
             sink_exec_ns += dt_ns;
         }
@@ -487,7 +486,6 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
     /* execute */
     for (int i = 0; i < aes67_work_cnt; i++) {
-        struct stream_node *sn = aes67_work[i].rtp->stream_node;
         bool is_source = aes67_work[i].rtp->info.is_source;
         if (profiling)
             t0 = ktime_get_ns();
@@ -502,7 +500,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (is_source) {
             if (profiling)
                 source_exec_ns += dt_ns;
-            atomic_set(&sn->metrics_pending, 1);
+            atomic_set(&aes67_work[i].rtp->metrics_pending, 1);
         } else if (profiling) {
             sink_exec_ns += dt_ns;
         }
@@ -547,19 +545,19 @@ static void do_metrics(struct fusion_cn_manager *mgr)
         struct fusion_cn_rtp_stream *r = node->rtp_stream;                     \
         struct fusion_cn_substream  *a = node->alsa_stream;                    \
         if (!r || !r->metrics) continue;                                       \
-        if (!atomic_xchg(&node->metrics_pending, 0)) continue;                 \
+        if (!atomic_xchg(&r->metrics_pending, 0)) continue;                    \
         if (todo_cnt >= FUSION_CN_MAX_STREAMS) {                               \
-            atomic_set(&node->metrics_pending, 1);                             \
+            atomic_set(&r->metrics_pending, 1);                                \
             continue;                                                         \
         }                                                                      \
         if (!kref_get_unless_zero(&r->ref)) {                                  \
-            atomic_set(&node->metrics_pending, 1);                             \
+            atomic_set(&r->metrics_pending, 1);                                \
             continue;                                                         \
         }                                                                      \
         if (!r->info.is_source) {                                              \
             if (!a || !kref_get_unless_zero(&a->ref)) {                        \
                 kref_put(&r->ref, fusion_cn_rtp_stream_release);               \
-                atomic_set(&node->metrics_pending, 1);                         \
+                atomic_set(&r->metrics_pending, 1);                            \
                 continue;                                                     \
             }                                                                  \
         }                                                                      \
@@ -866,6 +864,13 @@ static int remove_stream(struct fusion_cn_manager *mgr,
     if (ret < 0)
         pr_warn("fusion_cn: remove_stream: stop_interrupts (%s) = %d\n", stream_name, ret);
 
+    if (!rtp_stream->info.is_source) {
+        fusion_cn_alsa_reset_stream_timing(alsa_stream, true);
+        ret = fusion_cn_alsa_remove_substream(alsa_stream);
+        if (ret < 0)
+            pr_warn("fusion_cn: remove_stream: alsa_remove_substream (%s) failed with %d\n", stream_name, ret);
+    }
+
     /* Unlink node from active lists and clear back-pointer */
     write_lock_irqsave(&mgr->active_streams_lock, flags);
     sn = rtp_stream->stream_node;
@@ -887,7 +892,8 @@ static int remove_stream(struct fusion_cn_manager *mgr,
 
     /* Metrics are released with the RTP stream refcount */
 
-    ret = fusion_cn_alsa_remove_substream(alsa_stream);
+    if (rtp_stream->info.is_source)
+        ret = fusion_cn_alsa_remove_substream(alsa_stream);
 
     return ret;
 }
