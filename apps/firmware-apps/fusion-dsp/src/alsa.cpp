@@ -227,7 +227,14 @@ static bool is_bluealsa_device_name(const std::string &device_name)
 
 static bool is_uac_device_name(const std::string &device_name)
 {
-    return device_name.find("UAC1_PCM") != std::string::npos;
+    std::string base = device_name;
+
+    if (base.rfind("hw:", 0) == 0)
+    {
+        base = base.substr(3);
+    }
+
+    return base.rfind("UAC", 0) == 0;
 }
 
 static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
