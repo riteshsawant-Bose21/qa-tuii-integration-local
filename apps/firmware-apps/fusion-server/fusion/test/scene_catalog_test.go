@@ -232,6 +232,71 @@ func TestSceneCatalogSnapshotDefUpsertViaPatch(t *testing.T) {
 	}
 }
 
+func TestSceneCatalogSnapshotDefinitionValidation(t *testing.T) {
+	t.Run("Create snapshot missing id", func(t *testing.T) {
+		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SnapshotDefinition{
+			Name: "Missing ID",
+			Data: structPB(map[string]any{"foo": "bar"}),
+		})
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		resp, err := http.Post(snapshotDefsListURL, api.JsonMIMEType, bytes.NewBuffer(payload))
+		if err != nil {
+			t.Fatalf("POST /snapshots failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for missing snapshot id, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Create snapshot malformed json", func(t *testing.T) {
+		resp, err := http.Post(snapshotDefsListURL, api.JsonMIMEType, bytes.NewBufferString(`{"id":`))
+		if err != nil {
+			t.Fatalf("POST /snapshots failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for malformed snapshot json, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Upsert snapshot mismatched path and body id", func(t *testing.T) {
+		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(snapshotDef("body-id", "Mismatch", map[string]any{}))
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		req, _ := http.NewRequest(http.MethodPut, snapshotDefsListURL+"/path-id", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			t.Fatalf("PUT /snapshots/{id} failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for mismatched snapshot id, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Upsert snapshot malformed json", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPut, snapshotDefsListURL+"/bad-json", bytes.NewBufferString(`{"id":`))
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			t.Fatalf("PUT /snapshots/{id} failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for malformed snapshot upsert json, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+}
+
 func TestSceneCatalogActivateSnapshotDefMissingName(t *testing.T) {
 	activateURL := strings.Replace(snapshotDefsActivateURL, nameParam, "", 1)
 	activateURL = strings.Replace(activateURL, idParam, "", 1)
@@ -339,6 +404,139 @@ func TestSceneCatalogSceneSetUpsertViaPost(t *testing.T) {
 	if !found {
 		t.Errorf("Scene set %s not found in /scene-sets/list", setID)
 	}
+}
+
+func TestSceneCatalogSceneSetUpsertViaPut(t *testing.T) {
+	setID := fmt.Sprintf("set-put-%d", time.Now().UnixNano())
+	sceneAID := setID + "-scene-a"
+	sceneBID := setID + "-scene-b"
+	set := &model.SceneSet{
+		SetId:          setID,
+		Name:           "Test Set (PUT)",
+		DefaultScene:   sceneAID,
+		CurrentSceneId: sceneBID,
+		Scenes: []*model.Scene{
+			scene(sceneAID, "Scene A", map[string]any{sceneAID + "_gain": -3.0}),
+			scene(sceneBID, "Scene B", map[string]any{sceneBID + "_gain": -6.0}),
+		},
+	}
+
+	payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(set)
+	if err != nil {
+		t.Fatalf("failed to marshal scene set: %v", err)
+	}
+	req, _ := http.NewRequest(http.MethodPut, sceneSetsListURL+"/"+setID, bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("PUT /scene-sets/{id} failed: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected 200 from PUT /scene-sets/{id}, got %d: %s", resp.StatusCode, string(body))
+	}
+
+	resp, err = http.Get(sceneSetsListURL)
+	if err != nil {
+		t.Fatalf("GET /scene-sets/list failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var listResp model.SceneSetListResponse
+	if err := decodeProtoResponse(resp.Body, &listResp); err != nil {
+		t.Fatalf("Failed to decode scene set list response: %v", err)
+	}
+
+	var found *model.SceneSet
+	for _, candidate := range listResp.SceneSets {
+		if candidate.GetSetId() == setID {
+			found = candidate
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("Scene set %s not found after PUT", setID)
+	}
+	if found.GetName() != "Test Set (PUT)" {
+		t.Fatalf("Expected scene set name to persist after PUT, got %q", found.GetName())
+	}
+	if found.GetDefaultScene() != sceneAID {
+		t.Fatalf("Expected default_scene=%s, got %s", sceneAID, found.GetDefaultScene())
+	}
+	if found.GetCurrentSceneId() != sceneBID {
+		t.Fatalf("Expected current_scene_id=%s, got %s", sceneBID, found.GetCurrentSceneId())
+	}
+	if len(found.GetScenes()) != 2 {
+		t.Fatalf("Expected 2 scenes after PUT, got %d", len(found.GetScenes()))
+	}
+}
+
+func TestSceneCatalogSceneSetValidation(t *testing.T) {
+	t.Run("Create scene set missing set_id", func(t *testing.T) {
+		payload, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SceneSet{
+			Name: "Missing Set ID",
+		})
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		resp, err := http.Post(sceneSetsListURL, api.JsonMIMEType, bytes.NewBuffer(payload))
+		if err != nil {
+			t.Fatalf("POST /scene-sets failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for missing scene set id, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Create scene set malformed json", func(t *testing.T) {
+		resp, err := http.Post(sceneSetsListURL, api.JsonMIMEType, bytes.NewBufferString(`{"set_id":`))
+		if err != nil {
+			t.Fatalf("POST /scene-sets failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for malformed scene-set json, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Upsert scene set mismatched path and body set_id", func(t *testing.T) {
+		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&model.SceneSet{
+			SetId: "body-set-id",
+			Name:  "Mismatch",
+		})
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		req, _ := http.NewRequest(http.MethodPut, sceneSetsListURL+"/path-set-id", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			t.Fatalf("PUT /scene-sets/{id} failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for mismatched scene set id, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("Upsert scene set malformed json", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPut, sceneSetsListURL+"/bad-json", bytes.NewBufferString(`{"set_id":`))
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			t.Fatalf("PUT /scene-sets/{id} failed: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			body, _ := io.ReadAll(resp.Body)
+			t.Fatalf("Expected 400 for malformed scene-set upsert json, got %d: %s", resp.StatusCode, string(body))
+		}
+	})
 }
 
 func TestSceneCatalogActivateSceneMissingFields(t *testing.T) {

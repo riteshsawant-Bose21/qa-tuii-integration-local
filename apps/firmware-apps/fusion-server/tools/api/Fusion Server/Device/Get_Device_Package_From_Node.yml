@@ -1,5 +1,5 @@
 info:
-  name: Get Device info
+  name: Get Device Package From Node
   type: http
   seq: 5
 

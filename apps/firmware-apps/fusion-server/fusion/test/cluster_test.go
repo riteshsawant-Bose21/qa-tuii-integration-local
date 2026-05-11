@@ -204,6 +204,25 @@ func TestPutDSPDeploymentPackage(t *testing.T) {
 	assert.Equal(t, []any{100.0, 200.0, 300.0}, projectedFrequencies)
 }
 
+func TestGetDSPDeploymentPackage(t *testing.T) {
+	resp, err := http.Get(helperURL(routes.DeviceEndpoint))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on standalone GET /device")
+
+	var got model.DeviceConfigurationPackage
+	require.NoError(t, decodeProtoBody(resp.Body, &got), "Expected valid JSON from GET /device")
+
+	// Standalone GET /device should always return a valid typed envelope, even if
+	// one or both subtrees are currently absent from state.
+	if got.DroConditionedOutput != nil {
+		assert.NotNil(t, got.DroConditionedOutput.Devices)
+	}
+	if got.FusionConnectAdditions != nil {
+		assert.NotNil(t, got.FusionConnectAdditions.AudioStreams)
+	}
+}
+
 func TestPutDSPDeploymentPackageNoop(t *testing.T) {
 	payload, _ := testDeviceConfigurationPackage(t)
 
@@ -232,6 +251,39 @@ func TestDeviceProtoStrictness(t *testing.T) {
 
 	t.Run("PutDSPDeploymentPackage invalid typed field", func(t *testing.T) {
 		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]},"fusion_connect_additions":{"audio_streams":[{"source_device_uid":"device-a","dest_device_uid":"device-b","properties":{"channels":"two"}}],"settings":{"audio":{}}}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing dro_conditioned_output", func(t *testing.T) {
+		body := strings.NewReader(`{"fusion_connect_additions":{"settings":{"audio":{}}}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing fusion_connect_additions", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing fusion_connect_additions.settings", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]},"fusion_connect_additions":{}}`)
 		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", api.JsonMIMEType)

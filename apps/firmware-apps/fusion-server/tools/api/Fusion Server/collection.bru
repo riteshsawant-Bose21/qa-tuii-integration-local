@@ -84,6 +84,18 @@ docs {
 
   ## 🎛️ Settings
 
+  ### `GET /device`
+  Returns the current typed device deployment package.
+
+  ### `PUT /device`
+  Replaces the typed device deployment package. Use this when migrating old `/value`
+  payloads that used to push `audio_streams` and `devices`.
+
+  Required top-level fields:
+  - `dro_conditioned_output`
+  - `fusion_connect_additions`
+  - `fusion_connect_additions.settings`
+
   ### `GET /settings/audio`
   Returns the full runtime audio settings subtree.
 

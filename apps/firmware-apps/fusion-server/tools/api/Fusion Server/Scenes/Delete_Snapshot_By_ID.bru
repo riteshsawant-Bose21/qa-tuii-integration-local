@@ -1,0 +1,15 @@
+meta {
+  name: Delete Snapshot By ID
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{api_url}}/snapshots/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: snapshot-test-01
+}

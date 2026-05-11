@@ -1,7 +1,7 @@
 info:
   name: Get Current Scene
   type: http
-  seq: 8
+  seq: 15
 
 http:
   method: POST
