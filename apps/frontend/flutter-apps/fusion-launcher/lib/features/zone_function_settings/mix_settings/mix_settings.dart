@@ -72,16 +72,18 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Container(
-                margin: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  color: context.colorScheme.elevation1,
-                  border: Border.all(color: context.colorScheme.strokeLight),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Stack(
-                  fit: StackFit.loose,
-                  children: <Widget>[
+              child: SemanticHelper.container(
+                testId: 'additional_settings_container',
+                child: Container(
+                  margin: const EdgeInsets.all(24.0),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation1,
+                    border: Border.all(color: context.colorScheme.strokeLight),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Stack(
+                    fit: StackFit.loose,
+                    children: <Widget>[
                     // TITLTE
                     Positioned(
                       top: 0,
@@ -322,7 +324,8 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                         ),
                       ),
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

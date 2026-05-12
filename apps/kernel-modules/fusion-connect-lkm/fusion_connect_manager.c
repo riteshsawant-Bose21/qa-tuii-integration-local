@@ -1146,8 +1146,9 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
         if (phc_ns_at_pps) {
             status_rc = fusion_gpt_get_timing_status(&timing_status);
             if (!status_rc) {
-                pr_info("fusion_cn: timing status at set_phc_anchor discipline_ready=%d epoch_valid=%d aligned=%d pps_seq=%u\n",
-                        timing_status.discipline_ready,
+                pr_info("fusion_cn: timing status at set_phc_anchor continuity=%d gm_locked=%d epoch_valid=%d aligned=%d pps_seq=%u\n",
+                        timing_status.discipline_continuity_ready,
+                        timing_status.discipline_gm_locked,
                         timing_status.epoch_valid, timing_status.aligned,
                         timing_status.pps_seq);
             }
@@ -1159,7 +1160,8 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
 
 struct fc_get_timing_status_reply
 {
-    bool discipline_ready;
+    bool discipline_continuity_ready;
+    bool discipline_gm_locked;
     bool epoch_valid;
     bool aligned;
     u32  pps_seq;
@@ -1176,7 +1178,8 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     if (rc)
         return reply->err = rc;
 
-    r.discipline_ready = status.discipline_ready;
+    r.discipline_continuity_ready = status.discipline_continuity_ready;
+    r.discipline_gm_locked = status.discipline_gm_locked;
     r.epoch_valid = status.epoch_valid;
     r.aligned = status.aligned;
     r.pps_seq = status.pps_seq;
@@ -1190,17 +1193,11 @@ static int handle_get_timing_status(struct fusion_cn_manager *mgr,
     return 0;
 }
 
-static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
-                                     struct fusion_cn_ctrl_msg *msg,
-                                     struct fusion_cn_ctrl_msg *reply)
+static void fusion_cn_reset_runtime_timing(struct fusion_cn_manager *mgr)
 {
     struct fusion_cn_rtp_stream *stream;
     int bkt;
     unsigned long flags;
-
-    reply->err = fusion_gpt_reset_timing_state();
-    if (reply->err)
-        return 0;
 
     WRITE_ONCE(mgr->timing_ready, false);
 
@@ -1229,6 +1226,34 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
             fusion_cn_alsa_reset_stream_timing(alsa_stream, true);
     }
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
+}
+
+static int handle_reset_timing_session(struct fusion_cn_manager *mgr,
+                                       struct fusion_cn_ctrl_msg *msg,
+                                       struct fusion_cn_ctrl_msg *reply)
+{
+    (void)msg;
+
+    reply->err = fusion_gpt_reset_timing_session();
+    if (reply->err)
+        return 0;
+
+    fusion_cn_reset_runtime_timing(mgr);
+
+    return 0;
+}
+
+static int handle_reset_timing_holdover(struct fusion_cn_manager *mgr,
+                                        struct fusion_cn_ctrl_msg *msg,
+                                        struct fusion_cn_ctrl_msg *reply)
+{
+    (void)msg;
+
+    reply->err = fusion_gpt_reset_timing_state();
+    if (reply->err)
+        return 0;
+
+    fusion_cn_reset_runtime_timing(mgr);
 
     return 0;
 }
@@ -1287,9 +1312,10 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_GET_METRICS,   handle_get_metrics },
     { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
     { FUSION_CN_CTRL_CMD_GET_TIMING_STATUS, handle_get_timing_status },
-    { FUSION_CN_CTRL_CMD_RESET_TIMING_STATE, handle_reset_timing_state },
+    { FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION, handle_reset_timing_session },
     { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
     { FUSION_CN_CTRL_CMD_SET_ETH_IFACE, handle_set_eth_iface },
+    { FUSION_CN_CTRL_CMD_RESET_TIMING_HOLDOVER, handle_reset_timing_holdover },
     { 0, NULL }
 };
 
