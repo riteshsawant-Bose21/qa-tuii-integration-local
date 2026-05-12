@@ -209,29 +209,28 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
                         final FloorModel? floor = _projectViewModel.getFloorForListeningArea(areaId: area.id);
                         return '${floor?.name ?? ''}/${area.name.isNotEmpty ? area.name : 'Unnamed'}';
                       },
-                      itemWidgetBuilder: (BuildContext context, ListeningArea area, bool _) {
+                      itemWidgetBuilder: (
+                        BuildContext context,
+                        ListeningArea area,
+                        bool _,
+                      ) {
                         final FloorModel? floor = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+
                         final bool isSelected = _isSelectedHere(vm, area.id);
 
+                        final int index = selectableAreas.indexOf(area);
                         return SemanticHelper.container(
                           testId: SemanticHelper.createTestId(
                             SemanticTypes.container,
-                            'listening_area_item_${area.id}',
+                            'listening_area_item_$index',
                           ),
                           child: Row(
                             children: <Widget>[
-                              SemanticHelper.toggle(
-                                testId: SemanticHelper.createTestId(
-                                  SemanticTypes.toggle,
-                                  'listening_area_checkbox_${area.id}',
-                                ),
+                              FusionCheckbox(
+                                semanticId: '_area_$index',
                                 value: isSelected,
-                                child: FusionCheckbox(
-                                  semanticId: '_area_${area.id}',
-                                  value: isSelected,
-                                  enabled: true,
-                                  onChanged: () => _toggleArea(vm, area),
-                                ),
+                                enabled: true,
+                                onChanged: () => _toggleArea(vm, area),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
