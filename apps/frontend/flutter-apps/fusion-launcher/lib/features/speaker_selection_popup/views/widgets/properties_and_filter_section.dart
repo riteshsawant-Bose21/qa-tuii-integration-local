@@ -531,7 +531,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                           options: WiringType.values,
                                           labelBuilder: (WiringType wiring) {
                                             return FusionAppText(
-                                              text: wiring.name,
+                                              text: wiring.displayName,
                                               style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                                             );
                                           },

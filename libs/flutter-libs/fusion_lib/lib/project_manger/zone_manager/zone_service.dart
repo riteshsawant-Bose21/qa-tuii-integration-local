@@ -1,5 +1,7 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../models/project_entities/endpoints.dart';
+
 extension ZoneService on ProjectService {
   /// Add a new Zone and establish relationships to the referenced listening areas & sourceSetes.
   void addZone(Zone zone) {
@@ -218,6 +220,34 @@ extension ZoneService on ProjectService {
   List<Source> getSourcesInZone(String zoneId) {
     final sourceIds = relationships.getChildren(RelationshipType.zoneSources, zoneId);
     return sourceIds.map((id) => hardware.get(id)).where((m) => m != null).whereType<Source>().toList();
+  }
+
+  //  add endpoint to zone
+  void addEndpointToZone(String endpointId, String zoneId) {
+    if (!hardware.exists(endpointId)) throw Exception('Endpoint $endpointId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+
+    relationships.link(RelationshipType.zoneEndpoints, zoneId, endpointId);
+  }
+
+  // remove endpoint from zone
+  void removeEndpointFromZone(String endpointId, String zoneId) {
+    if (!zones.exists(zoneId)) return;
+
+    relationships.unlink(RelationshipType.zoneEndpoints, zoneId, endpointId);
+
+    // check if this endpoint is used in any Source action, if yes, remove it
+    final endpointActions = relationships.getParents(RelationshipType.actionValueMapping, endpointId);
+    final endpointActionsCopy = List<String>.from(endpointActions);
+    for (final actionId in endpointActionsCopy) {
+      removeSceneAction(actionId);
+    }
+  }
+
+  // get endpoints in zone
+  List<FusionEndpoints> getEndpointsInZone(String zoneId) {
+    final endpointIds = relationships.getChildren(RelationshipType.zoneEndpoints, zoneId);
+    return endpointIds.map((id) => hardware.get(id)).where((m) => m != null).whereType<FusionEndpoints>().toList();
   }
 
   ///This method returns all the sources linked directly to the zone

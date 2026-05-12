@@ -17,24 +17,17 @@ class GainController {
   }
 
   /// current v peak threshold value
-  num? get currentGainSliderValue {
-    final dynamic thresholdValue = allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'gain' && e.dimension == null)?.value;
-    if (thresholdValue == null) {
-      return null;
-    }
-    return DeserializationUtil.numDeserializer.deserialize(thresholdValue);
-  }
 
   void updateGainSliderValue(num value) {
     valueHandler.updateValue(field: 'gain', value: value);
   }
 
-  num? get currentGainValue {
+  num get currentGainValue {
     final dynamic gainValue = allProperties.firstWhereOrNull((PropertySetting e) => e.name == 'gain' && e.dimension == null)?.value;
     if (gainValue == null) {
-      return null;
+      return 0.0;
     }
-    return DeserializationUtil.numDeserializer.deserialize(gainValue);
+    return DeserializationUtil.numDeserializer.deserialize(gainValue) ?? 0.0;
   }
 
   void updateGainValue(num value) {

@@ -47,9 +47,9 @@ class ZoneAndListeningAreaPanel extends StatefulWidget {
 
 class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> with TickerProviderStateMixin {
   final Set<String> _expandedZones = <String>{};
-  final Set<String> _expandedListeningAreas = <String>{};
+  // final Set<String> _expandedListeningAreas = <String>{};
   final Set<String> _expandedSubZones = <String>{};
-  final Set<String> _expandedCircuitSections = <String>{};
+  // final Set<String> _expandedCircuitSections = <String>{};
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   String? editableZoneId;
@@ -76,7 +76,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     }
 
     // Expand unassigned speakers section by default
-    _expandedCircuitSections.add('unassigned_speakers');
+    // _expandedCircuitSections.add('unassigned_speakers');
   }
 
   void _toggleZoneExpansion(String zoneId) {
@@ -86,18 +86,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       } else {
         _expandedZones.add(zoneId);
       }
+      serviceLocator<ProjectViewModel>().selectZone(zoneId);
     });
   }
 
-  void _toggleListeningAreaExpansion(String listeningAreaId) {
-    setState(() {
-      if (_expandedListeningAreas.contains(listeningAreaId)) {
-        _expandedListeningAreas.remove(listeningAreaId);
-      } else {
-        _expandedListeningAreas.add(listeningAreaId);
-      }
-    });
-  }
+  // void _toggleListeningAreaExpansion(String listeningAreaId) {
+  //   setState(() {
+  //     if (_expandedListeningAreas.contains(listeningAreaId)) {
+  //       _expandedListeningAreas.remove(listeningAreaId);
+  //     } else {
+  //       _expandedListeningAreas.add(listeningAreaId);
+  //     }
+  //   });
+  // }
 
   void _toggleSubZoneExpansion(String subZoneId) {
     setState(() {
@@ -106,18 +107,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       } else {
         _expandedSubZones.add(subZoneId);
       }
+      serviceLocator<ProjectViewModel>().selectSubZone(subZoneId);
     });
   }
 
-  void _toggleCircuitSectionExpansion(String circuitSectionId) {
-    setState(() {
-      if (_expandedCircuitSections.contains(circuitSectionId)) {
-        _expandedCircuitSections.remove(circuitSectionId);
-      } else {
-        _expandedCircuitSections.add(circuitSectionId);
-      }
-    });
-  }
+  // void _toggleCircuitSectionExpansion(String circuitSectionId) {
+  //   setState(() {
+  //     if (_expandedCircuitSections.contains(circuitSectionId)) {
+  //       _expandedCircuitSections.remove(circuitSectionId);
+  //     } else {
+  //       _expandedCircuitSections.add(circuitSectionId);
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -218,9 +220,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneCard(Zone zone, int index) {
-    final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-      zoneId: zone.id,
-    );
+    // final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+    //   zoneId: zone.id,
+    // );
     final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     // Get all listening areas that are in subzones
@@ -237,7 +239,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     // Filter out listening areas that are in subzones (unused now that we only show circuits)
     // final List<ListeningArea> listeningAreas = allListeningAreas.where((ListeningArea area) => !listeningAreasInSubZones.contains(area.id)).toList();
 
-    final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
+    final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isCollapsed = !_expandedZones.contains(zone.id);
 
     return DragTarget<ListeningArea>(
@@ -267,18 +269,28 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 250),
                 crossFadeState: isCollapsed ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                firstChild: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // Show subzones (which contain their own circuits)
-                    _buildSubZonesSection(zone),
+                firstChild: Container(
+                  margin: EdgeInsets.symmetric(horizontal: context.smallGap, vertical: context.smallGap),
+                  // decoration:
+                  //     isSelected
+                  //         ? BoxDecoration(
+                  //           borderRadius: BorderRadius.circular(context.smallRadius),
+                  //           border: Border.all(color: context.colorScheme.GreenThemeDisabled),
+                  //         )
+                  //         : null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      // Show subzones (which contain their own circuits)
+                      _buildSubZonesSection(zone, isSelected),
 
-                    // Show individual circuits directly in this zone ONLY if there are no subzones
-                    if (subZones.isEmpty) ..._buildZoneCircuits(zone),
+                      // Show individual circuits directly in this zone ONLY if there are no subzones
+                      if (subZones.isEmpty) ..._buildZoneCircuits(zone),
 
-                    _buildListeningAreaSectionForZone(zoneId: zone.id),
-                    const SizedBox(height: 2),
-                  ],
+                      _buildListeningAreaSectionForZone(zoneId: zone.id),
+                      const SizedBox(height: 2),
+                    ],
+                  ),
                 ),
                 secondChild: const SizedBox.shrink(),
               ),
@@ -332,19 +344,25 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         }
 
         return Container(
+          margin: EdgeInsets.symmetric(horizontal: context.smallGap),
           decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(context.smallRadius),
+
             color: () {
               if (hasIncomingData && canAcceptDrops) {
                 return (canAcceptDrop ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3));
               } else {
-                return (isSelected ? context.colorScheme.elevation2 : Colors.transparent);
+                return (isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent);
               }
             }(),
           ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
             child: InkWell(
-              onTap: () => _toggleZoneExpansion(zone.id),
+              onTap: () {
+                serviceLocator<ProjectViewModel>().selectZone(zone.id);
+                setState(() {});
+              },
               child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                 builder: (BuildContext context, ProjectViewModelState state) {
                   return Row(
@@ -358,7 +376,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           child: Icon(
                             !isCollapsed ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
                             size: 16,
-                            color: Colors.grey[600],
                           ),
                         ),
                       ),
@@ -507,7 +524,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  static Color hexToColor(String hexString) {
+  Color hexToColor(String hexString) {
     final StringBuffer buffer = StringBuffer();
     if (hexString.startsWith('#')) hexString = hexString.substring(1);
     if (hexString.length == 6) buffer.write('FF');
@@ -515,7 +532,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return Color(int.parse(buffer.toString(), radix: 16));
   }
 
-  static String colorToHex(Color color, {bool includeAlpha = false}) {
+  String colorToHex(Color color, {bool includeAlpha = false}) {
     String twoHex(int v) => v.toRadixString(16).padLeft(2, '0');
 
     final int a = (color.a * 255.0).round() & 0xff;
@@ -534,22 +551,22 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneTitle(Zone zone, bool isSelected) {
-    final TextEditingController controller = TextEditingController(text: zone.name);
+    // final TextEditingController controller = TextEditingController(text: zone.name);
 
-    void saveValue() {
-      FocusManager.instance.primaryFocus?.unfocus();
-      final String trimmedValue = controller.text.trim();
-      setState(() => editableZoneId = null);
+    // void saveValue() {
+    //   FocusManager.instance.primaryFocus?.unfocus();
+    //   final String trimmedValue = controller.text.trim();
+    //   setState(() => editableZoneId = null);
 
-      if (trimmedValue.isNotEmpty && trimmedValue != zone.name) {
-        final Zone updated = zone.copyWith(name: trimmedValue);
-        serviceLocator<ProjectViewModel>().updateZone(zone: updated);
-      } else if (trimmedValue.isEmpty) {
-        FusionToast.error(context, message: 'Zone name cannot be empty');
-        controller.text = zone.name; // Revert to original name
-        return;
-      }
-    }
+    //   if (trimmedValue.isNotEmpty && trimmedValue != zone.name) {
+    //     final Zone updated = zone.copyWith(name: trimmedValue);
+    //     serviceLocator<ProjectViewModel>().updateZone(zone: updated);
+    //   } else if (trimmedValue.isEmpty) {
+    //     FusionToast.error(context, message: 'Zone name cannot be empty');
+    //     controller.text = zone.name; // Revert to original name
+    //     return;
+    //   }
+    // }
 
     return Container(
       key: ValueKey<String>(zone.id),
@@ -563,34 +580,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             key: ValueKey<bool>(editableZoneId != null),
             children: <Widget>[
               Expanded(
-                child: Builder(
-                  builder: (BuildContext context) {
-                    if (editableZoneId == zone.id) {
-                      return PropertyTextField(
-                        autofocus: true,
-                        controller: controller,
-                        maxLength: 24,
-                        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-                        hintText: 'Zone Name',
-                        maxLines: 1,
-                        onTapOutside: (PointerDownEvent event) => saveValue(),
-                        onSubmitted: (String value) => saveValue(),
-                      );
-                    } else {
-                      return GestureDetector(
-                        onDoubleTap: () {
-                          if (serviceLocator<ProjectViewModel>().currentSelectedZoneId == null) setState(() => editableZoneId = zone.id);
-                        },
-                        child: FusionAppText(
-                          text: zone.name,
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textPrimary.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      );
-                    }
+                child: TitleTextFieldSwitcher(
+                  save: (String value) {
+                    final Zone updated = zone.copyWith(name: value.trim());
+                    serviceLocator<ProjectViewModel>().updateZone(zone: updated);
                   },
+                  style: context.textTheme.l1Regular,
+                  value: zone.name,
+                  hintText: "Zone Name",
                 ),
+
+                // Builder(
+                //   builder: (BuildContext context) {
+                //     if (editableZoneId == zone.id) {
+                //       return PropertyTextField(
+                //         autofocus: true,
+                //         controller: controller,
+                //         maxLength: 24,
+                //         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+                //         hintText: 'Zone Name',
+                //         maxLines: 1,
+                //         onTapOutside: (PointerDownEvent event) => saveValue(),
+                //         onSubmitted: (String value) => saveValue(),
+                //       );
+                //     } else {
+                //       return GestureDetector(
+                //         onDoubleTap: () {
+                //           if (serviceLocator<ProjectViewModel>().currentSelectedZoneId == null) setState(() => editableZoneId = zone.id);
+                //         },
+                //         child: FusionAppText(
+                //           text: zone.name,
+                //           style: context.textTheme.l1Regular.copyWith(
+                //             // color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textPrimary.withValues(alpha: 0.7),
+                //           ),
+                //         ),
+                //       );
+                //     }
+                //   },
+                // ),
               ),
             ],
           ),
@@ -600,43 +627,46 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildSubZoneTitle(SubZone subZone, bool isSelected) {
-    final TextEditingController controller = TextEditingController(text: subZone.name);
-
-    void saveValue() {
-      final String trimmedValue = controller.text.trim();
-      if (trimmedValue.isNotEmpty && trimmedValue != subZone.name) {
-        final SubZone updated = subZone.copyWith(name: trimmedValue);
-        serviceLocator<ProjectViewModel>().updateSubZone(subZone: updated);
-      } else if (trimmedValue.isEmpty) {
-        controller.text = subZone.name; // Revert to original name
-      }
-    }
-
     return Container(
       key: ValueKey<String>(subZone.id),
       constraints: const BoxConstraints(),
       child: SemanticHelper.formControl(
         testId: SemanticHelper.createTestId(SemanticTypes.textInput, "subzone_name"),
-        child: PropertyTextField(
-          controller: controller,
-          maxLength: 24,
-          enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-          hintText: 'SubZone Name',
-          maxLines: 1,
-          onTapOutside: (PointerDownEvent event) {
-            FocusManager.instance.primaryFocus?.unfocus();
-            saveValue();
-          },
-          onSubmitted: (String v) {
-            final String trimmedValue = v.trim();
-            if (trimmedValue.isEmpty) {
+        child: TitleTextFieldSwitcher(
+          value: subZone.name,
+          style: Theme.of(context).textTheme.bodySmall!,
+          save: (String value) {
+            final String trimmedValue = value.trim();
+            if (trimmedValue.isNotEmpty && trimmedValue != subZone.name) {
+              final SubZone updated = subZone.copyWith(name: trimmedValue);
+              serviceLocator<ProjectViewModel>().updateSubZone(subZone: updated);
+            } else if (trimmedValue.isEmpty) {
               FusionToast.error(context, message: 'Subzone name cannot be empty');
-              controller.text = subZone.name; // Revert to original name
               return;
             }
-            saveValue();
           },
+          hintText: 'Subzone Name',
         ),
+        // child: PropertyTextField(
+        //   controller: controller,
+        //   maxLength: 24,
+        //   enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+        //   hintText: 'SubZone Name',
+        //   maxLines: 1,
+        //   onTapOutside: (PointerDownEvent event) {
+        //     FocusManager.instance.primaryFocus?.unfocus();
+        //     saveValue();
+        //   },
+        //   onSubmitted: (String v) {
+        //     final String trimmedValue = v.trim();
+        //     if (trimmedValue.isEmpty) {
+        //       FusionToast.error(context, message: 'Subzone name cannot be empty');
+        //       controller.text = subZone.name; // Revert to original name
+        //       return;
+        //     }
+        //     saveValue();
+        //   },
+        // ),
       ),
     );
   }
@@ -699,7 +729,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         return Container(
           margin: const EdgeInsets.only(left: 24, top: 2),
           decoration: BoxDecoration(
-            color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
+            color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: InkWell(
@@ -707,7 +737,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
                 hardware.id,
               );
-              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
             },
             borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -804,8 +833,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final bool isSubZone = subZone != null;
     final double leftPadding = isSubZone ? 40.0 : 24.0;
 
-    final String circuitId = circuit.id;
-    final bool isExpanded = _expandedCircuitSections.contains(circuitId);
+    // final bool isExpanded = _expandedCircuitSections.contains(circuitId);
 
     return DragTarget<Speaker>(
       onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
@@ -847,10 +875,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
         _addSpeakerToCircuit(details.data, circuit.id);
 
-        // Auto-expand circuit when speaker is added
-        setState(() {
-          _expandedCircuitSections.add(circuitId);
-        });
+        // // Auto-expand circuit when speaker is added
+        // setState(() {
+        //   _expandedCircuitSections.add(circuitId);
+        // });
       },
       builder: (BuildContext context, List<Speaker?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
@@ -863,35 +891,42 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               _canSpeakerBeAddedToCircuit(candidateSpeaker, circuit) &&
               (circuitSpeakers.isEmpty || circuitSpeakers.first.speakerSKU == candidateSpeaker.speakerSKU);
         }
-
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedCircuitId == circuit.id;
         return Container(
           margin: EdgeInsets.only(left: leftPadding, top: 1, right: 12, bottom: 1),
           decoration: BoxDecoration(
-            color: hasIncomingData ? (canAccept ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)) : Colors.transparent,
+            color:
+                hasIncomingData
+                    ? (canAccept ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
+                    : isSelected
+                    ? context.colorScheme.GreenThemeDisabled
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // Circuit Header
-              SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "speakers"),
-                child: Padding(
-                  padding: const EdgeInsets.all(6).copyWith(right: 0),
-                  child: InkWell(
-                    onTap: () => _toggleCircuitSectionExpansion(circuit.id),
+          child: InkWell(
+            onTap: () {
+              serviceLocator<ProjectViewModel>().setCurrentSelectedCircuit(circuit.id);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // Circuit Header
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speakers"),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6).copyWith(right: 0),
                     child: Row(
                       children: <Widget>[
                         // Expand/Collapse icon
-                        InkWell(
-                          onTap: () => _toggleCircuitSectionExpansion(circuit.id),
-                          child: Icon(
-                            _expandedCircuitSections.contains(circuit.id) ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
-                            size: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
+                        // InkWell(
+                        //   onTap: () => _toggleCircuitSectionExpansion(circuit.id),
+                        //   child: Icon(
+                        //     _expandedCircuitSections.contains(circuit.id) ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
+                        //     size: 16,
+                        //     color: Colors.grey[600],
+                        //   ),
+                        // ),
+                        // const SizedBox(width: 4),
                         // Circuit icon - show actual speaker image if circuit has speakers
                         if (circuitSpeakers.isNotEmpty)
                           FusionImageAuto(
@@ -901,7 +936,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           )
                         else
                           Icon(
-                            Icons.speaker_group,
+                            LucideIcons.gitFork200,
                             size: 14,
                             color: Colors.grey[600],
                           ),
@@ -920,313 +955,96 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             ),
                           ),
                         ),
+
                         // Circuit actions menu
-                        SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: PopupMenuButton<String>(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                FusionSizes.borderRadius12,
-                              ),
-                              side: BorderSide(
-                                color: context.colorScheme.elevation4,
-                              ),
-                            ),
-                            padding: EdgeInsets.zero,
-                            color: context.colorScheme.elevation1,
-                            menuPadding: EdgeInsets.zero,
-                            shadowColor: Colors.transparent,
-                            iconSize: 12,
-                            position: PopupMenuPosition.under,
-                            icon: const Icon(
-                              Icons.more_vert,
-                              size: 12,
-                              color: Colors.grey,
-                            ),
-                            tooltip: 'Circuit actions',
-                            onSelected: (String value) {
-                              switch (value) {
-                                case 'rename':
-                                  _showRenameCircuitDialog(circuit);
-                                  break;
-                                case 'delete':
-                                  _showDeleteCircuitConfirmation(circuit);
-                                  break;
-                              }
-                            },
-                            itemBuilder: (BuildContext context) {
-                              return <PopupMenuEntry<String>>[
-                                PopupMenuItem<String>(
-                                  value: 'rename',
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.edit,
-                                        size: 14,
-                                        color: context.colorScheme.textPrimary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: 'Rename',
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          color: context.colorScheme.textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuDivider(height: 0),
-                                PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      const Icon(
-                                        LucideIcons.trash200,
-                                        size: 14,
-                                        color: Colors.red,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: 'Delete',
-                                        style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ];
-                            },
-                          ),
-                        ),
+                        // SizedBox(
+                        //   height: 24,
+                        //   width: 24,
+                        //   child: PopupMenuButton<String>(
+                        //     shape: RoundedRectangleBorder(
+                        //       borderRadius: BorderRadius.circular(
+                        //         FusionSizes.borderRadius12,
+                        //       ),
+                        //       side: BorderSide(
+                        //         color: context.colorScheme.elevation4,
+                        //       ),
+                        //     ),
+                        //     padding: EdgeInsets.zero,
+                        //     color: context.colorScheme.elevation1,
+                        //     menuPadding: EdgeInsets.zero,
+                        //     shadowColor: Colors.transparent,
+                        //     iconSize: 12,
+                        //     position: PopupMenuPosition.under,
+                        //     icon: const Icon(
+                        //       Icons.more_vert,
+                        //       size: 12,
+                        //       color: Colors.grey,
+                        //     ),
+                        //     tooltip: 'Circuit actions',
+                        //     onSelected: (String value) {
+                        //       switch (value) {
+                        //         case 'rename':
+                        //           _showRenameCircuitDialog(circuit);
+                        //           break;
+                        //         case 'delete':
+                        //           _showDeleteCircuitConfirmation(circuit);
+                        //           break;
+                        //       }
+                        //     },
+                        //     itemBuilder: (BuildContext context) {
+                        //       return <PopupMenuEntry<String>>[
+                        //         PopupMenuItem<String>(
+                        //           value: 'rename',
+                        //           child: Row(
+                        //             mainAxisSize: MainAxisSize.min,
+                        //             children: <Widget>[
+                        //               Icon(
+                        //                 Icons.edit,
+                        //                 size: 14,
+                        //                 color: context.colorScheme.textPrimary,
+                        //               ),
+                        //               const SizedBox(width: 6),
+                        //               FusionAppText(
+                        //                 text: 'Rename',
+                        //                 style: context.textTheme.bodySmall?.copyWith(
+                        //                   color: context.colorScheme.textPrimary,
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //         ),
+                        //         const PopupMenuDivider(height: 0),
+                        //         PopupMenuItem<String>(
+                        //           value: 'delete',
+                        //           child: Row(
+                        //             mainAxisSize: MainAxisSize.min,
+                        //             children: <Widget>[
+                        //               const Icon(
+                        //                 LucideIcons.trash200,
+                        //                 size: 14,
+                        //                 color: Colors.red,
+                        //               ),
+                        //               const SizedBox(width: 6),
+                        //               FusionAppText(
+                        //                 text: 'Delete',
+                        //                 style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //         ),
+                        //       ];
+                        //     },
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
                 ),
-              ),
-
-              // Expandable Speakers Section
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 250),
-                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                firstChild: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (circuitSpeakers.isNotEmpty)
-                      ...circuitSpeakers.map(
-                        (Speaker speaker) => _buildCircuitSpeakerItem(speaker, circuit),
-                      )
-                    else
-                      _buildEmptyCircuitMessage(),
-                  ],
-                ),
-                secondChild: const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Build speaker item within a circuit (draggable to other circuits)
-  Widget _buildCircuitSpeakerItem(Speaker speaker, CircuitModel circuit) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == speaker.id;
-
-        return Draggable<Speaker>(
-          data: speaker,
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.grey[300]!, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
-                    width: 12,
-                    height: 12,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    speaker.name,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          child: Container(
-            margin: const EdgeInsets.only(
-              left: 12,
-              top: 1,
-              right: 6,
-              bottom: 1,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: InkWell(
-              onTap: () {
-                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
-                  speaker.id,
-                );
-                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                child: Row(
-                  children: <Widget>[
-                    FusionImageAuto(
-                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
-                      width: 14,
-                      height: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    // Expanded(
-                    //   child: FusionAppText(
-                    //     text: speaker.name,
-                    //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    //       fontSize: 10,
-                    //       fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                    //       color: Colors.black87,
-                    //     ),
-                    //   ),
-                    // ),
-                    Expanded(
-                      child: TitleTextFieldSwitcher(
-                        value: speaker.name,
-                        hintText: "Speaker Name",
-                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          fontSize: 10,
-                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                          color: context.colorScheme.textPrimary,
-                        ),
-                        save: (String value) {
-                          if (value.isNotEmpty) {
-                            final HardwareComponent hardware = speaker.copyWith(
-                              name: value,
-                            );
-                            projectViewModel.updateHardware(hardware: hardware);
-                          }
-                        },
-                      ),
-                    ),
-                    // Remove from circuit action
-                    SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: PopupMenuButton<String>(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            FusionSizes.borderRadius12,
-                          ),
-                          side: BorderSide(
-                            color: context.colorScheme.elevation4,
-                          ),
-                        ),
-                        padding: EdgeInsets.zero,
-                        color: context.colorScheme.elevation1,
-                        menuPadding: EdgeInsets.zero,
-                        shadowColor: Colors.transparent,
-                        iconSize: 12,
-                        position: PopupMenuPosition.under,
-                        icon: const Icon(
-                          Icons.more_vert,
-                          size: 12,
-                          color: Colors.grey,
-                        ),
-                        tooltip: 'Speaker actions',
-                        onSelected: (String value) {
-                          if (value == 'remove') {
-                            _removeSpeakerFromCircuit(speaker, circuit);
-                          }
-                        },
-                        itemBuilder:
-                            (BuildContext context) => <PopupMenuEntry<String>>[
-                              PopupMenuItem<String>(
-                                value: 'remove',
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    const Icon(
-                                      Icons.remove_circle_outline,
-                                      size: 14,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    FusionAppText(
-                                      text: 'Remove from Circuit',
-                                      style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.drag_indicator,
-                      size: FusionSizes.iconSize16,
-                      color: context.colorScheme.textPlaceholder,
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         );
       },
-    );
-  }
-
-  /// Build empty circuit message
-  Widget _buildEmptyCircuitMessage() {
-    return Container(
-      margin: const EdgeInsets.only(left: 12, right: 6, top: 2, bottom: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        children: <Widget>[
-          Icon(
-            Icons.info_outline,
-            size: 10,
-            color: Colors.grey[500],
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: FusionAppText(
-              text: 'Drag speakers here to add to circuit',
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w400,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1237,9 +1055,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     if (unassignedSpeakers.isEmpty) {
       return const SizedBox.shrink();
     }
-
-    const String sectionId = 'unassigned_speakers';
-    final bool isExpanded = _expandedCircuitSections.contains(sectionId);
+    // final bool isExpanded = _expandedCircuitSections.contains(sectionId);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1252,22 +1068,22 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
             child: InkWell(
-              onTap: () => _toggleCircuitSectionExpansion(sectionId),
+              // onTap: () => _toggleCircuitSectionExpansion(sectionId),
               child: Row(
                 children: <Widget>[
                   // Expand/Collapse icon
-                  InkWell(
-                    onTap: () => _toggleCircuitSectionExpansion(sectionId),
-                    child: AnimatedRotation(
-                      duration: const Duration(milliseconds: 200),
-                      turns: isExpanded ? 0.25 : 0.0,
-                      child: Icon(
-                        Icons.keyboard_arrow_right,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ),
+                  // InkWell(
+                  //   onTap: () => _toggleCircuitSectionExpansion(sectionId),
+                  //   child: AnimatedRotation(
+                  //     duration: const Duration(milliseconds: 200),
+                  //     turns: isExpanded ? 0.25 : 0.0,
+                  //     child: Icon(
+                  //       Icons.keyboard_arrow_right,
+                  //       size: 16,
+                  //       color: Colors.grey[600],
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(width: 4),
                   Icon(
                     Icons.warning_amber_outlined,
@@ -1290,21 +1106,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             ),
           ),
         ),
-        // Expandable Speaker Items
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 250),
-          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          firstChild: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ...unassignedSpeakers.map(
-                (Speaker speaker) => _buildUnassignedSpeakerItem(speaker),
-              ),
-              const SizedBox(height: 2),
-            ],
-          ),
-          secondChild: const SizedBox.shrink(),
-        ),
       ],
     );
   }
@@ -1316,89 +1117,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     // Filter out speakers that are already in circuits
     return allSpeakers.where((Speaker speaker) => !_isSpeakerInAnyCircuit(speaker)).toList();
-  }
-
-  /// Build unassigned speaker item
-  Widget _buildUnassignedSpeakerItem(Speaker speaker) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == speaker.id;
-
-        return Draggable<Speaker>(
-          data: speaker,
-          dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation1,
-                borderRadius: BorderRadius.circular(4),
-                // border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
-                    width: 12,
-                    height: 12,
-                  ),
-                  const SizedBox(width: 4),
-                  FusionAppText(
-                    text: speaker.name,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      color: context.colorScheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          child: Container(
-            margin: const EdgeInsets.only(left: 40, top: 2),
-            decoration: BoxDecoration(
-              color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: InkWell(
-              onTap: () {
-                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
-                  speaker.id,
-                );
-                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  children: <Widget>[
-                    FusionImageAuto(
-                      path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
-                      width: 14,
-                      height: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: FusionAppText(
-                        text: speaker.name,
-                        style: context.textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                          color: context.colorScheme.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// Create a new circuit with the given speaker
@@ -1445,7 +1163,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     // Automatically expand the circuit
     setState(() {
-      _expandedCircuitSections.add(newCircuit.id);
+      // _expandedCircuitSections.add(newCircuit.id);
     });
   }
 
@@ -1462,7 +1180,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   /// Build subzones section
-  Widget _buildSubZonesSection(Zone zone) {
+  Widget _buildSubZonesSection(Zone zone, bool isZoneSelected) {
     final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     if (subZones.isEmpty) {
@@ -1498,9 +1216,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         List<dynamic> rejectedItems,
       ) {
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
-
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedSubZoneId == subZone.id;
+        final bool isZoneSelected = serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
         return Container(
-          decoration: hasIncomingData ? BoxDecoration(color: Colors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4)) : null,
+          decoration:
+              hasIncomingData
+                  ? BoxDecoration(color: Colors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4))
+                  : isZoneSelected
+                  ? BoxDecoration(
+                    border: Border.all(color: context.colorScheme.GreenThemeDisabled, width: 1.5),
+                    borderRadius: BorderRadius.circular(context.smallRadius),
+                  )
+                  : null,
+          margin: EdgeInsets.only(bottom: context.smallGap),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -1551,8 +1279,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     ),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                       child: InkWell(
-                        onTap: () => _toggleSubZoneExpansion(subZone.id),
+                        onTap: () {
+                          serviceLocator<ProjectViewModel>().selectSubZone(subZone.id);
+                        },
                         child: Row(
                           children: <Widget>[
                             // Expand/Collapse icon
@@ -1561,15 +1295,23 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                               child: Icon(
                                 isExpanded ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
                                 size: 16,
-                                color: Colors.grey[600],
                               ),
                             ),
                             const SizedBox(width: 3),
                             // Subzone icon
-                            Icon(
-                              Icons.crop_free_sharp,
-                              size: 12,
-                              color: zone.color,
+                            // Icon(
+                            //   Icons.crop_free_sharp,
+                            //   size: 12,
+                            //   color: zone.color,
+                            // ),
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: context.colorScheme.primaryWhite),
+                              ),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -1658,24 +1400,34 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 250),
                 crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                firstChild: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // Show individual circuits in subzones
-                    ..._buildSubZoneCircuits(subZone),
+                firstChild: Container(
+                  margin: EdgeInsets.symmetric(vertical: context.smallGap),
+                  decoration:
+                      isSelected
+                          ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(context.smallRadius),
+                            border: Border.all(color: context.colorScheme.GreenThemeDisabled),
+                          )
+                          : null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      // Show individual circuits in subzones
+                      ..._buildSubZoneCircuits(subZone),
 
-                    Container(
-                      margin: const EdgeInsets.only(
-                        left: 24,
-                        top: 1,
-                        right: 12,
-                        bottom: 1,
+                      Container(
+                        margin: const EdgeInsets.only(
+                          left: 24,
+                          top: 1,
+                          right: 12,
+                          bottom: 1,
+                        ),
+                        child: _buildListeningAreaSectionForZone(
+                          subZoneId: subZone.id,
+                        ),
                       ),
-                      child: _buildListeningAreaSectionForZone(
-                        subZoneId: subZone.id,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 secondChild: const SizedBox.shrink(),
               ),
@@ -1714,92 +1466,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  void _showDeleteCircuitConfirmation(CircuitModel circuit) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Circuit'),
-          content: Text('Are you sure you want to delete "${circuit.name}"?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                serviceLocator<ProjectViewModel>().removeCircuit(
-                  circuitId: circuit.id,
-                );
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showRenameCircuitDialog(CircuitModel circuit) {
-    final TextEditingController controller = TextEditingController(
-      text: circuit.name,
-    );
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Rename Circuit'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Circuit Name',
-              border: OutlineInputBorder(),
-            ),
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final String newName = controller.text.trim();
-                if (newName.isNotEmpty && newName != circuit.name) {
-                  final CircuitModel updatedCircuit = circuit.copyWith(
-                    name: newName,
-                  );
-                  serviceLocator<ProjectViewModel>().updateCircuit(
-                    circuit: updatedCircuit,
-                  );
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Rename'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addNewZone() {
-    final Zone zone = Zone(name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}');
-    serviceLocator<ProjectViewModel>().addZone(zone: zone);
-
-    // Automatically expand the newly added zone and its circuit section
-    setState(() {
-      _expandedZones.add(zone.id);
-      _expandedCircuitSections.add('zone_${zone.id}');
-    });
-    serviceLocator<GuideShowCaseController>().completeStep(
-      GuideShowCaseSteps.addZone,
-    );
-  }
-
   void _addSubZoneToZone(String zoneId) {
     final List<SubZone> existingSubZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zoneId);
     final SubZone newSubZone = SubZone(
@@ -1828,7 +1494,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     // Automatically expand the newly added subzone and its circuit section
     setState(() {
       _expandedSubZones.add(newSubZone.id);
-      _expandedCircuitSections.add('subzone_${newSubZone.id}');
+      // _expandedCircuitSections.add('subzone_${newSubZone.id}');
     });
   }
 
@@ -2020,18 +1686,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return serviceLocator<ProjectViewModel>().getCircuitsInZone(zoneId);
   }
 
-  void _showSpeakerAlreadyInCircuitError(
-    Speaker speaker,
-    CircuitModel circuit,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${speaker.name} is already in ${circuit.name}'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
   void _showSpeakerModelValidationError(
     Speaker speaker,
     Speaker existingSpeaker,
@@ -2068,44 +1722,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 3),
       ),
-    );
-  }
-
-  void _showZoneHasCircuitsWarning(String zoneId) {
-    final Zone? zone = serviceLocator<ProjectViewModel>().getZone(
-      zoneId: zoneId,
-    );
-    final List<CircuitModel> circuits = _getZoneCircuits(zoneId);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Cannot Add Subzone'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Zone "${zone?.name ?? 'Unknown'}" already has ${circuits.length} circuit(s).',
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Zones with subzones cannot have direct circuits. You can:',
-              ),
-              const SizedBox(height: 8),
-              const Text('• Delete the existing circuits first, or'),
-              const Text('• Create subzones and move circuits there'),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

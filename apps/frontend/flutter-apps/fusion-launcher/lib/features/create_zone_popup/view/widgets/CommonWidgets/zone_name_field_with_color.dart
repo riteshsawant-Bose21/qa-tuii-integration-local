@@ -9,7 +9,7 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
-import '../../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
+import '../../../../projects/widget/building/side_panel_widgets/properties/schematic_properties.dart';
 
 class ZoneNameFieldWithColor extends StatefulWidget {
   const ZoneNameFieldWithColor({
@@ -37,8 +37,7 @@ class _ZoneNameFieldWithColorState extends State<ZoneNameFieldWithColor> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final math.Random random = math.Random();
-    final String randomColor = Zone.zoneColors[random.nextInt(Zone.zoneColors.length)];
+    final String randomColor = Zone.zoneColors.first;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onColorChanged(randomColor);
     });
@@ -151,54 +150,59 @@ class _ZoneNameFieldWithColorState extends State<ZoneNameFieldWithColor> {
               curve: Curves.easeOut,
               child: SizedBox(
                 width: double.infinity,
-                child:
-                    _showColorGrid
-                        ? Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.elevation2,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: context.colorScheme.elevation4, width: 1),
-                            ),
-                            child: GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              padding: EdgeInsets.zero,
-                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 16,
-                                crossAxisSpacing: 7,
-                                mainAxisSpacing: 12,
-                              ),
-                              itemCount: Zone.zoneColors.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final String hexCode = Zone.zoneColors[index];
-                                final bool isSelected = widget.zoneColor == hexCode;
-                                return GestureDetector(
-                                  onTap: () {
-                                    widget.onColorChanged(hexCode);
-                                    setState(() => _showColorGrid = false);
-                                  },
-                                  child: SemanticHelper.container(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "create_zone_color_option_$index"),
-                                    isChecked: isSelected,
-                                    value: hexCode,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: hexToColor(hexCode),
-                                        borderRadius: BorderRadius.circular(3),
-                                        border: isSelected ? Border.all(color: context.colorScheme.primaryWhite, width: 2) : null,
-                                      ),
-                                      child: isSelected ? FusionIcon.icon(Icons.check, color: Colors.white, size: 10) : null,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                child: Builder(
+                  builder: (BuildContext context) {
+                    if (_showColorGrid) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.elevation2,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: context.colorScheme.elevation4, width: 1),
                           ),
-                        )
-                        : const SizedBox.shrink(),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 16,
+                              crossAxisSpacing: 7,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: Zone.zoneColors.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final String hexCode = Zone.zoneColors[index];
+                              final bool isSelected = widget.zoneColor == hexCode;
+                              return GestureDetector(
+                                onTap: () {
+                                  widget.onColorChanged(hexCode);
+                                  setState(() => _showColorGrid = false);
+                                },
+                                child: SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "create_zone_color_option_$index"),
+                                  isChecked: isSelected,
+                                  value: hexCode,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: hexToColor(hexCode),
+                                      borderRadius: BorderRadius.circular(3),
+                                      border: isSelected ? Border.all(color: context.colorScheme.primaryWhite, width: 2) : null,
+                                    ),
+                                    child: isSelected ? FusionIcon.icon(Icons.check, color: Colors.white, size: 10) : null,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
               ),
             ),
           ),

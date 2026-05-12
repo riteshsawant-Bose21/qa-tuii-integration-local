@@ -174,7 +174,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     if (!isSuggestMode) return;
     final ListeningArea? la = selectedListeningArea;
     if (la == null) return;
-    if (la.environmentType == null || la.splRange == null) return;
 
     try {
       final List<SpeakerProduct> speakers = serviceLocator<ProductQueryViewModel>().speakers;
@@ -182,10 +181,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         mountingType: <String>[la.mountingType.name],
         speakerHeight: double.tryParse(la.ceilingHeight) ?? 0.0,
         listenerHeight: la.listeningHeight,
-        environment: la.environmentType!.name,
+        environment: la.environmentType.name,
         targetSplRange: <double>[
-          la.splRange!.splRangeValues["min"]!,
-          la.splRange!.splRangeValues["max"]!,
+          la.splRange.splRangeValues["min"]!,
+          la.splRange.splRangeValues["max"]!,
         ],
       );
 
@@ -242,10 +241,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           mountingType: <String>[selectedListeningArea!.mountingType.name],
           speakerHeight: double.tryParse(selectedListeningArea!.ceilingHeight) ?? 0.0,
           listenerHeight: selectedListeningArea!.listeningHeight,
-          environment: selectedListeningArea!.environmentType!.name,
+          environment: selectedListeningArea!.environmentType.name,
           targetSplRange: <double>[
-            selectedListeningArea!.splRange!.splRangeValues["min"]!,
-            selectedListeningArea!.splRange!.splRangeValues["max"]!,
+            selectedListeningArea!.splRange.splRangeValues["min"]!,
+            selectedListeningArea!.splRange.splRangeValues["max"]!,
           ],
         );
 
@@ -345,7 +344,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   void setListenerHeight(ListeningHeightOption option) {
     if (selectedListeningArea == null) return;
-    final double heightValue = ListeningHeightOption.getValue(option) ?? selectedListeningArea?.customListeningAreaHeight ?? 1.1;
+    final double heightValue = ListeningHeightOption.getValue(option) ?? 1.1;
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(listeningHeight: heightValue);
     projectViewModel.updateListeningArea(area: updatedLA);
     _recalculateIfSuggestMode();
@@ -634,7 +633,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final ListeningArea? currentSelectedListeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
 
     if (currentSelectedListeningArea?.environmentType != null) {
-      final SpeakerEnvironmentType et = currentSelectedListeningArea!.environmentType!;
+      final SpeakerEnvironmentType et = currentSelectedListeningArea!.environmentType;
       if (et == SpeakerEnvironmentType.indoor) {
         filtered = filtered.where((SpeakerProduct p) {
           final String env = (p.environment ?? '').toLowerCase();
@@ -724,14 +723,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     }
     if (la.ceilingHeight.isEmpty || double.tryParse(la.ceilingHeight) == null) {
       FusionToast.error(context, message: 'Please enter a valid ceiling height for this area.');
-      return false;
-    }
-    if (la.environmentType == null) {
-      FusionToast.error(context, message: 'Please select an environment type for this area.');
-      return false;
-    }
-    if (la.splRange == null) {
-      FusionToast.error(context, message: 'Please select a target SPL range for this area.');
       return false;
     }
 

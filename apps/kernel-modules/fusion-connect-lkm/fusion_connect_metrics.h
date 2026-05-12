@@ -37,7 +37,8 @@ struct fusion_cn_metrics_pcpu {
     u64 packets_dup, packets_marked, malformed_count;
     u64 late_drop_count;
     u64 rx_queue_drop_count;
-
+    u64 kernel_silence_sub_count;
+    u64 kernel_silence_sub_frames;
     /* TX */
     u64 tx_packets_total, tx_bytes_total;
 } ____cacheline_aligned;
@@ -97,6 +98,8 @@ struct fusion_cn_metrics_snapshot
     u64 packets_marked, malformed_count;
     u64 late_drop_count;
     u64 rx_queue_drop_count;
+    u64 kernel_silence_sub_count;
+    u64 kernel_silence_sub_frames;
     u64 burst_loss_max;
 
     u32 rfc3550_jitter_ns;
@@ -188,6 +191,22 @@ static inline void fusion_cn_metrics_rx_queue_drop(struct fusion_cn_stream_metri
 
     u64_stats_update_begin(&p->syncp);
     p->rx_queue_drop_count++;
+    u64_stats_update_end(&p->syncp);
+}
+
+static inline void fusion_cn_metrics_kernel_silence_sub(struct fusion_cn_stream_metrics *m,
+                                                        u32 frames)
+{
+    struct fusion_cn_metrics_pcpu *p;
+
+    if (!m)
+        return;
+
+    p = this_cpu_ptr(m->pcpu);
+
+    u64_stats_update_begin(&p->syncp);
+    p->kernel_silence_sub_count++;
+    p->kernel_silence_sub_frames += frames;
     u64_stats_update_end(&p->syncp);
 }
 

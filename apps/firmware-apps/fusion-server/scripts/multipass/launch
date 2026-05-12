@@ -304,8 +304,8 @@ setup_instance() {
     print_step "Setting up device identity..."
     local device_id="$instance_name"
     if ! multipass exec "$instance_name" -- sudo bash -c "
-        mkdir -p /var/lib/device-identity
-        cd /var/lib/device-identity
+        mkdir -p /persist/pki
+        cd /persist/pki/
         openssl genrsa -out device.key 2048
         openssl req -new -key device.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
         chmod 600 device.key

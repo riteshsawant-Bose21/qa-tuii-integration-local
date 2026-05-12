@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -39,11 +40,41 @@ func connectWebSocket(t *testing.T, serverURL string) *websocket.Conn {
 }
 
 func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *api.WebSocketRequest) {
-	data, err := json.Marshal(req)
+	data, err := marshalWebSocketRequest(req)
 	require.NoError(t, err, "Failed to marshal request")
 
 	err = conn.WriteMessage(websocket.TextMessage, data)
 	require.NoError(t, err, "Failed to send WebSocket message")
+}
+
+func marshalWebSocketRequest(req *api.WebSocketRequest) ([]byte, error) {
+	id, err := json.Marshal(req.ID)
+	if err != nil {
+		return nil, err
+	}
+	version, err := json.Marshal(req.Version)
+	if err != nil {
+		return nil, err
+	}
+	msgType, err := json.Marshal(req.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString(`{"id":`)
+	buf.Write(id)
+	buf.WriteString(`,"version":`)
+	buf.Write(version)
+	buf.WriteString(`,"type":`)
+	buf.Write(msgType)
+	if req.Data != nil {
+		buf.WriteString(`,"data":`)
+		buf.Write(req.Data)
+	}
+	buf.WriteByte('}')
+
+	return buf.Bytes(), nil
 }
 
 func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Duration) *api.WebSocketResponse {

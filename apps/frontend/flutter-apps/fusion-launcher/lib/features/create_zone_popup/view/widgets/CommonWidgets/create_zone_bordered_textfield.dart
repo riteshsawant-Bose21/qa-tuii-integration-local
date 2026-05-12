@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
@@ -23,21 +24,23 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 class FusionBorderedTextField extends StatefulWidget {
   const FusionBorderedTextField({
     super.key,
-    required this.controller,
+    this.controller,
     required this.semanticId,
     this.hintText = 'Enter value',
     this.maxLength,
     this.onChanged,
     this.contentPadding = const EdgeInsets.all(16),
     this.leading,
+    this.inputFormatters,
   });
 
-  final TextEditingController controller;
+  final TextEditingController? controller;
   final String semanticId;
   final String hintText;
   final int? maxLength;
   final ValueChanged<String>? onChanged;
   final EdgeInsetsGeometry contentPadding;
+  final List<TextInputFormatter>? inputFormatters;
 
   /// Optional widget placed at the start of the row (e.g. a FusionColorDot).
   final Widget? leading;
@@ -75,6 +78,7 @@ class _FusionBorderedTextFieldState extends State<FusionBorderedTextField> {
                   semanticFieldId: '${widget.semanticId}_input',
                   controller: widget.controller,
                   hintText: widget.hintText,
+                  inputFormatters: widget.inputFormatters,
                   decoration: InputDecoration(
                     hintText: widget.hintText,
                     hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),

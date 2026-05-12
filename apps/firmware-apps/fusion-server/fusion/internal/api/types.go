@@ -129,6 +129,7 @@ type SoftwareUpdateProgress struct {
 // VersionUpdate represents version information to sync across nodes
 type VersionUpdate struct {
 	Version Version `json:"version"`
+	Hash    string  `json:"hash"`
 	NodeID  string  `json:"node_id"`
 }
 
@@ -243,6 +244,18 @@ type SnapshotOperation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// SceneSetOperation represents a scene-set operation broadcast across the cluster.
+type SceneSetOperation struct {
+	SetID     string    `json:"set_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// SceneOperation represents a scene operation broadcast across the cluster.
+type SceneOperation struct {
+	SceneID   string    `json:"scene_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 // SnapshotDefinition represents a stored Snapshot definition.
 type SnapshotDefinition struct {
 	ID   string         `json:"id"`
@@ -344,7 +357,7 @@ type TaskMessage struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   string           `json:"message_id"`
 	Priority    int64            `json:"priority"`
-	Zones       string           `json:"zones"`
+	Zones       []string         `json:"zones"`
 }
 
 // TaskMessagePatch represents a patchable message task
@@ -356,7 +369,7 @@ type TaskMessagePatch struct {
 	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
 	MessageID   *string          `json:"message_id,omitempty"`
 	Priority    *int64           `json:"priority"`
-	Zones       *string          `json:"zones"`
+	Zones       *[]string        `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
@@ -415,6 +428,16 @@ type WebSocketResponse struct {
 	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
 }
 
+// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
+// Clients should treat "patch" mode as a partial update that must be merged
+// into their local cached state, while "snapshot" mode replaces local state.
+type WebSocketConfigUpdateEvent struct {
+	Mode    string         `json:"mode"`              // "patch" or "snapshot"
+	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
+	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
+	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
+}
+
 // WebSocketStats represents connection and usage statistics
 type WebSocketStats struct {
 	Connections    int              `json:"connections"`                // Active connections
@@ -443,6 +466,31 @@ type SoftwareUpdateUploadResponse struct {
 	Checksum  string    `json:"checksum"`
 	SizeBytes int64     `json:"size_bytes"`
 	Uploaded  time.Time `json:"uploaded"`
+}
+
+// MeterDataSample represents a single meter measurement from the telemetry core.
+type MeterDataSample struct {
+	BlockName  string          `json:"block_name"`
+	MeterName  string          `json:"meter_name"`
+	ValueType  string          `json:"value_type"`
+	Dimensions string          `json:"dimensions"`
+	Value      json.RawMessage `json:"value"`
+}
+
+// MeterDataParameters holds the parameters section of a meter_data message.
+type MeterDataParameters struct {
+	Name   string            `json:"name"`
+	Type   string            `json:"type"`
+	Length int               `json:"length"`
+	Value  []MeterDataSample `json:"value"`
+}
+
+// MeterDataMessage is the JSON envelope published by the telemetry core over ZMQ.
+type MeterDataMessage struct {
+	MessageName string              `json:"message_name"`
+	DeviceID    string              `json:"device_id"`
+	PacketID    uint64              `json:"packet_id"`
+	Parameters  MeterDataParameters `json:"parameters"`
 }
 
 // SwUpdateInfo represents the contents of the /etc/swupdate file.
@@ -485,4 +533,25 @@ type SoftwareUpdateInfo struct {
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
 		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
+}
+
+// PAVA Messages
+
+type TriggerMessageRequest struct {
+	Priority int      `json:"priority,omitempty"`
+	Zones    []string `json:"zones,omitempty"`
+}
+
+type MessageTrigger struct {
+	ID        string   `json:"id"`
+	Path      string   `json:"path"`
+	Priority  int      `json:"priority,omitempty"`
+	Zones     []string `json:"zones"`
+	Timestamp int64    `json:"timestamp"`
+}
+
+// SetModelNameRequest is the request body for POST /manufacturing/model-name.
+// ModelName must be one of the accepted values: c1-evk, powersmart, fm6, fm8y, xlr-pal, blue-pal, som.
+type SetModelNameRequest struct {
+	ModelName string `json:"model_name"`
 }

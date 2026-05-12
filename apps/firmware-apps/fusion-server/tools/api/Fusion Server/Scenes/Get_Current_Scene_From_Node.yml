@@ -1,0 +1,25 @@
+info:
+  name: Get Current Scene From Node
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{node_url}}/scene-sets/current-scene"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "set_id": "scene-set-test-01"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Replication check. Reads current scene metadata for a set from a specific node URL.

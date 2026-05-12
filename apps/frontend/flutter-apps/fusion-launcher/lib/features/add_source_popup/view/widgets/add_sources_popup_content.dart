@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/widgets/add_source_dropdown_list.dart';
-import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/widgets/common_widgets/add_source_name_textfield.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_switch.dart';
@@ -11,20 +11,22 @@ import 'package:fusion_lib/models/project_entities/equip_location.dart';
 import 'package:fusion_lib/models/project_entities/mix_scenes.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
+
 import '../../../../core/models/products_data.dart';
+import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../configuration_aes67/viewModel/config_aes67_viewmodel.dart';
 import '../../view_model/add_source_viewmodel.dart';
-import 'add_source_connection.dart';
 import '../add_source_popup.dart';
-import 'common_widgets/add_sources_dropdown.dart';
+import 'add_source_connection.dart';
 import 'aes67_stream_section.dart';
+import 'common_widgets/add_sources_dropdown.dart';
 import 'location_dropdown.dart';
 
 class AddSourcesPopupContent extends StatefulWidget {
   final bool isFromBuildingPage;
 
-  const AddSourcesPopupContent({required this.isFromBuildingPage});
+  const AddSourcesPopupContent({super.key, required this.isFromBuildingPage});
 
   @override
   State<AddSourcesPopupContent> createState() => AddSourcesPopupContentState();
@@ -37,6 +39,29 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
   EquipLocation? _selectedEquipLocation;
   Zone? _selectedZone;
   bool _selected = false;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isFromBuildingPage) {
+      _selectedLocationType = SourceLocationType.zone;
+
+      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+      final String? currentAreaId = projectVM.currentSelectedListeningAreaId;
+
+      if (currentAreaId != null) {
+        final Zone? zone = projectVM.getZonesForListeningArea(areaId: currentAreaId);
+        if (zone != null) {
+          _selectedZone = zone;
+          // Also update the viewmodel state after first frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              context.read<AddSourceViewModel>().setzone(zone.id);
+            }
+          });
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +134,40 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                               value: _selectedZone,
                               items: zone,
                               itemLabelBuilder: (Zone item) => item.name,
+                              selectedItemBuilder:
+                                  _selectedZone != null
+                                      ? (BuildContext ctx, Zone item) => Row(
+                                        children: <Widget>[
+                                          _ColorDot(color: item.color),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: item.name,
+                                              maxLine: 1,
+                                              style: ctx.textTheme.b3Regular.copyWith(
+                                                color: ctx.colorScheme.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                      : null,
+                              itemWidgetBuilder:
+                                  (BuildContext ctx, Zone item, bool isSelected) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    child: Row(
+                                      children: <Widget>[
+                                        _ColorDot(color: item.color),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: FusionAppText(
+                                            text: item.name,
+                                            style: Theme.of(ctx).textTheme.l1Regular,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               onChanged: (Zone value) {
                                 setState(() => _selectedZone = value);
                                 addSourceViewModel.setzone(value.id);
@@ -145,9 +204,9 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                             radiusFactor: 0.4,
                             height: 24,
                             value: _selected,
-
                             onChanged: (bool value) {
                               setState(() => _selected = value);
+                              //   TODO -use only in this location yet to be implemented
                             },
                           ),
                           const SizedBox(width: 12),
@@ -160,7 +219,6 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                         ],
                       ),
                       const SizedBox(height: 20),
-
                       // ── Signal type & Connection ─────────────
                       SourceConnectionSection(
                         selectedSectionType: state.selectedSourceSectionType,
@@ -179,9 +237,23 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
                       ),
                       // ── AES67 Stream & Channel assignment ────
                       if (state.selectedConnectionType == SourceConnectionType.aes67input) ...<Widget>[
-                        Aes67StreamSection(state: state),
+                        Aes67StreamSection<AddSourceViewModelState>(
+                          state: state,
+                          selectedStreamSelector: (AddSourceViewModelState s) => s.selectedStream,
+                          onStreamSelected: addSourceViewModel.setSelectedStream,
+                        ),
                         const SizedBox(height: 20),
-                        ChannelAssignmentSection(state: state),
+                        ChannelAssignmentSection<AddSourceViewModelState>(
+                          state: state,
+                          selectedStreamSelector: (AddSourceViewModelState s) => s.selectedStream,
+                          selectedSignalTypeSelector: (AddSourceViewModelState s) => s.selectedSignalType,
+                          selectedMonoChannelSelector: (AddSourceViewModelState s) => s.selectedMonoChannel,
+                          selectedLeftChannelSelector: (AddSourceViewModelState s) => s.selectedLeftChannel,
+                          selectedRightChannelSelector: (AddSourceViewModelState s) => s.selectedRightChannel,
+                          onMonoChannelChanged: addSourceViewModel.setSelectedMonoChannel,
+                          onLeftChannelChanged: addSourceViewModel.setSelectedLeftChannel,
+                          onRightChannelChanged: addSourceViewModel.setSelectedRightChannel,
+                        ),
                       ],
                     ],
                   ),
@@ -191,6 +263,24 @@ class AddSourcesPopupContentState extends State<AddSourcesPopupContent> {
           },
         );
       },
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  final Color color;
+  const _ColorDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: context.colorScheme.zone3Stroke, width: 1),
+      ),
     );
   }
 }

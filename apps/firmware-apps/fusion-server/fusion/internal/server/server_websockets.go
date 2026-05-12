@@ -3,54 +3,68 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"sync"
 	"time"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 )
 
 const (
-	wsBufferSize     = 1024        // Increased buffer size for better performance
-	wsPingTime       = 30          // Ping interval in seconds
-	wsPongTime       = 60          // Pong timeout in seconds
-	wsTimeout        = 10          // Connection timeout in seconds
-	wsMaxMessageSize = 1024 * 1024 // Max message size (1MB)
-	wsMaxConnections = 1000        // Max concurrent connections
+	wsBufferSize           = 1024        // Increased buffer size for better performance
+	wsPingTime             = 30          // Ping interval in seconds
+	wsPongTime             = 60          // Pong timeout in seconds
+	wsTimeout              = 10          // Connection timeout in seconds
+	wsMaxMessageSize       = 1024 * 1024 // Max message size (1MB)
+	wsMaxConnections       = 1000        // Max concurrent connections
+	wsConfigUpdateDebounce = 50 * time.Millisecond
 )
 
-// safeWriteJSON safely writes JSON to a WebSocket connection using per-connection mutex
+// safeWriteJSON safely marshals with go-json and writes a text frame using the
+// per-connection mutex. This avoids gorilla/websocket's stdlib JSON path.
 func (s *FusionServer) safeWriteJSON(conn *websocket.Conn, v interface{}) error {
-	s.wsLock.RLock()
-	mutex, exists := s.wsWriteMutex[conn]
-	s.wsLock.RUnlock()
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return s.safeWriteRaw(conn, data)
+}
 
-	if !exists {
+// safeWritePrepared writes a prepared text message to a WebSocket connection.
+func (s *FusionServer) safeWritePrepared(conn *websocket.Conn, message *websocket.PreparedMessage) error {
+	client := s.getWSClient(conn)
+	if client == nil {
 		return fmt.Errorf("connection not found")
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
-	return conn.WriteJSON(v)
+	client.writeMu.Lock()
+	defer client.writeMu.Unlock()
+	return conn.WritePreparedMessage(message)
+}
+
+// safeWriteRaw writes pre-serialized bytes to a WebSocket connection as a text message.
+func (s *FusionServer) safeWriteRaw(conn *websocket.Conn, data []byte) error {
+	client := s.getWSClient(conn)
+	if client == nil {
+		return fmt.Errorf("connection not found")
+	}
+
+	client.writeMu.Lock()
+	defer client.writeMu.Unlock()
+	return conn.WriteMessage(websocket.TextMessage, data)
 }
 
 // safeWriteControl safely writes control messages to a WebSocket connection using per-connection mutex
 func (s *FusionServer) safeWriteControl(conn *websocket.Conn, messageType int, data []byte, deadline time.Time) error {
-	s.wsLock.RLock()
-	mutex, exists := s.wsWriteMutex[conn]
-	s.wsLock.RUnlock()
-
-	if !exists {
+	client := s.getWSClient(conn)
+	if client == nil {
 		return fmt.Errorf("connection not found")
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	client.writeMu.Lock()
+	defer client.writeMu.Unlock()
 	return conn.WriteControl(messageType, data, deadline)
 }
 
@@ -83,29 +97,17 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		return
 	}
-	s.wsClients[conn] = true
-	s.wsWriteMutex[conn] = &sync.Mutex{}
+	s.wsClients[conn] = &wsClientState{topics: make(map[string]struct{})}
 	s.wsLock.Unlock()
 
 	// Ensure cleanup when the function returns
 	defer func() {
-		conn.Close()
-		s.wsLock.Lock()
-		delete(s.wsClients, conn)
-		delete(s.wsWriteMutex, conn)
-		// Clean up all topic subscriptions for this connection
-		for topic, subscribers := range s.subscriptions {
-			delete(subscribers, conn)
-			// Clean up empty topic maps
-			if len(subscribers) == 0 {
-				delete(s.subscriptions, topic)
-			}
-		}
-		s.wsLock.Unlock()
-		logger.Info("WebSocket connection closed")
+		s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
+		s.removeConnection(conn)
+		logger.Debug("WebSocket connection closed")
 	}()
 
-	logger.Info("WebSocket connection established")
+	logger.Debug("WebSocket connection established")
 
 	// Send initial state to the client
 	initialState, err := s.handler.GetInitialState()
@@ -166,10 +168,18 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		if messageType == websocket.TextMessage {
-			// Process the message
-			s.handleWebSocketMessage(conn, data)
+		if messageType != websocket.TextMessage {
+			logger.Warn("Unsupported WebSocket message type: %d", messageType)
+			deadline := time.Now().Add(10 * time.Second)
+			if err := s.safeWriteControl(conn, websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "text messages only"), deadline); err != nil {
+				logger.Error("Failed to send close frame for unsupported message type: %v", err)
+			}
+			break
 		}
+
+		// Process the message
+		s.handleWebSocketMessage(conn, data)
 	}
 }
 
@@ -214,11 +224,27 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 	}
 }
 
+// SetMeterFilter replaces the meter ID filter for a WebSocket connection and updates
+// the master filter sent to all cluster device telemetry cores.
+func (s *FusionServer) SetMeterFilter(conn *websocket.Conn, ids []string) {
+	s.meterFilterManager.SetFilter(conn, ids, s.clusterMemberFilterAddrs())
+}
+
+// RemoveMeterFilter removes the meter ID filter for a WebSocket connection and updates
+// the master filter sent to all cluster device telemetry cores.
+func (s *FusionServer) RemoveMeterFilter(conn *websocket.Conn) {
+	s.meterFilterManager.RemoveFilter(conn, s.clusterMemberFilterAddrs())
+}
+
 // BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
 func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	// Convert NotifyMessage to appropriate WebSocket format based on operation
 	switch message.Operation {
+	case api.NotifyOpMeterData:
+		if message.MeterData != nil {
+			return s.routeMeterData(message.MeterData)
+		}
 	case api.NotifyOpConfigUpdate:
 		if message.ConfigUpdate != nil {
 			return s.broadcastConfigUpdate(message)
@@ -240,50 +266,7 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 			return s.BroadcastToTopic(api.WSTopicDeviceUpdates, updateMessage)
 		}
 	case api.NotifyOpSoftwareUpdateProgress:
-		if message.SoftwareUpdateProgressAll == nil && message.SoftwareUpdateProgress == nil {
-			return nil
-		}
-		// Build a per-node map of formatted progress responses
-		nodesProgress := make(map[string]api.SoftwareUpdateProgressResponse)
-		if message.SoftwareUpdateProgressAll != nil {
-			for nodeName, p := range message.SoftwareUpdateProgressAll {
-				nodesProgress[nodeName] = api.SoftwareUpdateProgressResponse{
-					UpdateState:  p.Status.String(),
-					Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
-					CurrentTask:  p.CurImage,
-					Progress:     fmt.Sprintf("%d", p.CurPercent),
-					Node:         p.NodeName,
-					Handler:      p.HndName,
-					Timestamp:    p.Timestamp.Format(time.RFC3339),
-					SerialNumber: p.SerialNumber,
-				}
-			}
-		} else {
-			// Fallback: single node (e.g. local-only, no cluster)
-			p := message.SoftwareUpdateProgress
-			nodesProgress[p.NodeName] = api.SoftwareUpdateProgressResponse{
-				UpdateState:  p.Status.String(),
-				Step:         fmt.Sprintf("%d/%d", p.CurStep, p.NSteps),
-				CurrentTask:  p.CurImage,
-				Progress:     fmt.Sprintf("%d", p.CurPercent),
-				Node:         p.NodeName,
-				Handler:      p.HndName,
-				Timestamp:    p.Timestamp.Format(time.RFC3339),
-				SerialNumber: p.SerialNumber,
-			}
-		}
-		var progressData interface{} = nodesProgress
-		broadcastMessage := &api.WebSocketResponse{
-			ID:        nil,
-			Version:   api.WSCurrentVersion,
-			Type:      api.WSMsgTypeUpdateProgress,
-			Code:      api.WSCodeDeviceUpdated,
-			Status:    api.WSStatusEvent,
-			Message:   fmt.Sprintf("System notification: %s", message.Operation),
-			Data:      progressData,
-			Timestamp: time.Now(),
-		}
-		return s.broadcastToAllClients(broadcastMessage)
+		return s.broadcastSoftwareUpdateProgress(message)
 	}
 	return s.broadcastGenericNotification(message)
 }
@@ -293,34 +276,190 @@ func (s *FusionServer) BroadcastToClusterObservers(message *api.NotifyMessage) e
 }
 
 func (s *FusionServer) broadcastConfigUpdate(message *api.NotifyMessage) error {
-	configUpdateMessage := &api.WebSocketResponse{
+	s.enqueueConfigUpdate(message)
+	return nil
+}
+
+func (s *FusionServer) enqueueConfigUpdate(message *api.NotifyMessage) {
+	update := message.ConfigUpdate
+	if update == nil {
+		return
+	}
+
+	s.configUpdateMu.Lock()
+	s.configUpdatePending = true
+	s.mergeQueuedConfigUpdateLocked(update)
+	if s.configUpdateDebounceTimer == nil {
+		s.configUpdateDebounceTimer = time.AfterFunc(wsConfigUpdateDebounce, s.flushConfigUpdateQueue)
+	}
+	s.configUpdateMu.Unlock()
+}
+
+func (s *FusionServer) flushConfigUpdateQueue() {
+	s.configUpdateMu.Lock()
+	pending := s.configUpdatePending
+	s.configUpdatePending = false
+	data := s.configUpdateData
+	snapshot := s.configUpdateSnapshot
+	clear := s.configUpdateClear
+	s.configUpdateData = nil
+	s.configUpdateSnapshot = false
+	s.configUpdateClear = false
+	s.configUpdateMu.Unlock()
+
+	if !pending {
+		s.configUpdateMu.Lock()
+		s.configUpdateDebounceTimer = nil
+		s.configUpdateMu.Unlock()
+		return
+	}
+
+	message := &api.WebSocketResponse{
 		ID:        nil,
 		Version:   api.WSCurrentVersion,
 		Type:      api.WSMsgTypeConfigUpdate,
 		Code:      api.WSCodeUpdated,
 		Status:    api.WSStatusEvent,
 		Message:   "Configuration updated",
-		Data:      message.ConfigUpdate.Data,
+		Data:      wsConfigUpdatePayload(data, snapshot, clear),
 		Timestamp: time.Now(),
 	}
 
-	return s.BroadcastToTopic(api.WSTopicConfigUpdates, configUpdateMessage)
+	payloadBytes, err := json.Marshal(message)
+	if err != nil {
+		logging.GetLogger().Error("Error marshaling coalesced config update: %v", err)
+	} else if err := s.BroadcastRawToTopic(api.WSTopicConfigUpdates, payloadBytes); err != nil {
+		logging.GetLogger().Error("Error broadcasting coalesced config update: %v", err)
+	}
+
+	s.configUpdateMu.Lock()
+	defer s.configUpdateMu.Unlock()
+	if s.configUpdatePending {
+		s.configUpdateDebounceTimer = time.AfterFunc(wsConfigUpdateDebounce, s.flushConfigUpdateQueue)
+		return
+	}
+	s.configUpdateDebounceTimer = nil
+}
+
+func (s *FusionServer) mergeQueuedConfigUpdateLocked(update *api.ConfigUpdate) {
+	payload, snapshot, clear := wsConfigUpdatePayloadData(update)
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
+	if s.configUpdateSnapshot {
+		if clear {
+			s.configUpdateData = payload
+			s.configUpdateClear = true
+			return
+		}
+		mergeObserverDiffInto(s.configUpdateData, payload)
+		return
+	}
+
+	if snapshot {
+		s.configUpdateData = payload
+		s.configUpdateSnapshot = true
+		s.configUpdateClear = clear
+		return
+	}
+
+	if s.configUpdateData == nil {
+		s.configUpdateData = make(map[string]any)
+	}
+	mergeObserverDiffInto(s.configUpdateData, payload)
+}
+
+func wsConfigUpdatePayloadData(update *api.ConfigUpdate) (map[string]any, bool, bool) {
+	if update == nil {
+		return nil, true, false
+	}
+	if len(update.ObserverData) > 0 && !update.Clear {
+		return cloneObserverDiff(update.ObserverData), false, false
+	}
+	return cloneObserverDiff(update.Data), true, update.Clear
+}
+
+func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *api.WebSocketConfigUpdateEvent {
+	if snapshot {
+		return &api.WebSocketConfigUpdateEvent{
+			Mode:  "snapshot",
+			State: data,
+			Clear: clear,
+		}
+	}
+
+	return &api.WebSocketConfigUpdateEvent{
+		Mode:    "patch",
+		Updates: data,
+	}
+}
+
+func mergeObserverDiffInto(dst, src map[string]any) {
+	for key, value := range src {
+		srcMap, srcIsMap := value.(map[string]any)
+		if !srcIsMap {
+			dst[key] = cloneObserverValue(value)
+			continue
+		}
+
+		if existing, ok := dst[key].(map[string]any); ok {
+			mergeObserverDiffInto(existing, srcMap)
+			continue
+		}
+		dst[key] = cloneObserverDiff(srcMap)
+	}
+}
+
+func cloneObserverDiff(src map[string]any) map[string]any {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]any, len(src))
+	for key, value := range src {
+		dst[key] = cloneObserverValue(value)
+	}
+	return dst
+}
+
+func cloneObserverValue(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		return cloneObserverDiff(x)
+	case []any:
+		out := make([]any, len(x))
+		for i := range x {
+			out[i] = cloneObserverValue(x[i])
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 // SubscribeToTopic subscribes a WebSocket connection to a specific topic
 func (s *FusionServer) SubscribeToTopic(conn *websocket.Conn, topic string) {
 	s.wsLock.Lock()
+	client := s.wsClients[conn]
+	if client == nil {
+		s.wsLock.Unlock()
+		return
+	}
 	if s.subscriptions[topic] == nil {
 		s.subscriptions[topic] = make(map[*websocket.Conn]bool)
 	}
 	s.subscriptions[topic][conn] = true
+	client.topics[topic] = struct{}{}
 	s.wsLock.Unlock()
-	logging.GetLogger().Info("WebSocket client subscribed to topic: %s", topic)
+	logging.GetLogger().Debug("WebSocket client subscribed to topic: %s", topic)
 }
 
 // UnsubscribeFromTopic unsubscribes a WebSocket connection from a specific topic
 func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) {
 	s.wsLock.Lock()
+	if client := s.wsClients[conn]; client != nil {
+		delete(client.topics, topic)
+	}
 	if s.subscriptions[topic] != nil {
 		delete(s.subscriptions[topic], conn)
 		// Clean up empty topic maps
@@ -329,11 +468,21 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 		}
 	}
 	s.wsLock.Unlock()
-	logging.GetLogger().Info("WebSocket client unsubscribed from topic: %s", topic)
+	logging.GetLogger().Debug("WebSocket client unsubscribed from topic: %s", topic)
 }
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
 func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
+	}
+	return s.BroadcastRawToTopic(topic, data)
+}
+
+// BroadcastRawToTopic sends a pre-serialized WebSocket text payload to all
+// clients subscribed to a specific topic.
+func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 	s.wsLock.RLock()
 	subscribers := s.subscriptions[topic]
 	if len(subscribers) == 0 {
@@ -348,10 +497,14 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 	}
 	s.wsLock.RUnlock()
 
-	// Send to all subscribers of this topic
+	prepared, err := websocket.NewPreparedMessage(websocket.TextMessage, data)
+	if err != nil {
+		return fmt.Errorf("failed to prepare WebSocket message: %w", err)
+	}
+
 	var failedConnections []*websocket.Conn
 	for _, conn := range connections {
-		if err := s.safeWriteJSON(conn, message); err != nil {
+		if err := s.safeWritePrepared(conn, prepared); err != nil {
 			logging.GetLogger().Error("Error sending message to WebSocket client on topic %s: %v", topic, err)
 			failedConnections = append(failedConnections, conn)
 		}
@@ -364,13 +517,66 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 			if s.subscriptions[topic] != nil {
 				delete(s.subscriptions[topic], conn)
 			}
-			delete(s.wsWriteMutex, conn)
-			delete(s.wsClients, conn)
-			conn.Close()
+			s.removeConnectionLocked(conn)
 		}
 		// Clean up empty topic maps
 		if len(s.subscriptions[topic]) == 0 {
 			delete(s.subscriptions, topic)
+		}
+		s.wsLock.Unlock()
+	}
+
+	return nil
+}
+
+// routeMeterData fans out meter data to each subscribed WebSocket connection,
+// sending only the subset of samples that each client has registered a filter for.
+// The sent payload preserves the original telemetry message structure.
+func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
+	s.wsLock.RLock()
+	subscribers := s.subscriptions[api.WSTopicMeterData]
+	conns := make([]*websocket.Conn, 0, len(subscribers))
+	for conn := range subscribers {
+		conns = append(conns, conn)
+	}
+	s.wsLock.RUnlock()
+
+	if len(conns) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	var failedConnections []*websocket.Conn
+	for _, conn := range conns {
+		filtered := s.meterFilterManager.FilterMeterDataForConn(conn, msg)
+		if filtered == nil {
+			continue
+		}
+		wsMsg := &api.WebSocketResponse{
+			ID:        nil,
+			Version:   api.WSCurrentVersion,
+			Type:      api.WSMsgTypeMeterData,
+			Code:      api.WSCodeDeviceUpdated,
+			Status:    api.WSStatusEvent,
+			Message:   "meter_data",
+			Data:      filtered,
+			Timestamp: now,
+		}
+		if err := s.safeWriteJSON(conn, wsMsg); err != nil {
+			logging.GetLogger().Error("Error routing meter data to WebSocket client: %v", err)
+			failedConnections = append(failedConnections, conn)
+		}
+	}
+
+	if len(failedConnections) > 0 {
+		addrs := s.clusterMemberFilterAddrs()
+		for _, conn := range failedConnections {
+			s.meterFilterManager.RemoveFilter(conn, addrs)
+		}
+
+		s.wsLock.Lock()
+		for _, conn := range failedConnections {
+			s.removeConnectionLocked(conn)
 		}
 		s.wsLock.Unlock()
 	}
@@ -402,9 +608,19 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	}
 	s.wsLock.RUnlock()
 
+	// Pre-serialize once for all clients.
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal WebSocket broadcast: %w", err)
+	}
+	prepared, err := websocket.NewPreparedMessage(websocket.TextMessage, data)
+	if err != nil {
+		return fmt.Errorf("failed to prepare WebSocket broadcast: %w", err)
+	}
+
 	var failedConnections []*websocket.Conn
 	for _, conn := range clients {
-		if err := s.safeWriteJSON(conn, message); err != nil {
+		if err := s.safeWritePrepared(conn, prepared); err != nil {
 			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
 			failedConnections = append(failedConnections, conn)
 		}
@@ -413,9 +629,7 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	if len(failedConnections) > 0 {
 		s.wsLock.Lock()
 		for _, conn := range failedConnections {
-			delete(s.wsClients, conn)
-			delete(s.wsWriteMutex, conn)
-			conn.Close()
+			s.removeConnectionLocked(conn)
 		}
 		s.wsLock.Unlock()
 	}
@@ -423,22 +637,31 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	return nil
 }
 
-// GetLocalSwUpdateInfo handles GET requests for the local /etc/swupdate contents.
-func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
+func (s *FusionServer) getWSClient(conn *websocket.Conn) *wsClientState {
+	s.wsLock.RLock()
+	client := s.wsClients[conn]
+	s.wsLock.RUnlock()
+	return client
+}
 
-	var info api.SwUpdateInfo
-	data, err := os.ReadFile(api.SwUpdateInfoPath)
-	if err != nil {
-		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
-	} else if err := json.Unmarshal(data, &info); err != nil {
-		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
-	}
+func (s *FusionServer) removeConnection(conn *websocket.Conn) {
+	s.wsLock.Lock()
+	s.removeConnectionLocked(conn)
+	s.wsLock.Unlock()
+}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(info); err != nil {
-		logging.GetLogger().Error("Error encoding sw update info: %v", err)
+func (s *FusionServer) removeConnectionLocked(conn *websocket.Conn) {
+	client := s.wsClients[conn]
+	if client != nil {
+		for topic := range client.topics {
+			if subscribers := s.subscriptions[topic]; subscribers != nil {
+				delete(subscribers, conn)
+				if len(subscribers) == 0 {
+					delete(s.subscriptions, topic)
+				}
+			}
+		}
 	}
+	delete(s.wsClients, conn)
+	conn.Close()
 }

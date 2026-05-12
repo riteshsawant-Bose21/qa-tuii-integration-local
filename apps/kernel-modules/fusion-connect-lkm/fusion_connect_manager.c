@@ -209,6 +209,16 @@ static bool fusion_cn_get_timing_ready(struct fusion_cn_manager *cn_mgr)
     return READ_ONCE(cn_mgr->timing_ready);
 }
 
+static inline u64 fusion_cn_fc_advance_time(u64 action_time)
+{
+    u64 ns_from_ms_boundary = action_time % NSEC_PER_MSEC;
+
+    if (ns_from_ms_boundary == (2 * TIMER_BASE_INTERVAL_NS))
+        return action_time + TIMER_BASE_INTERVAL_NS + 1;
+
+    return action_time + TIMER_BASE_INTERVAL_NS;
+}
+
 /* helpers: compute how many interrupts are due, and advance state */
 static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, struct fusion_cn_rtp_stream *s, struct fusion_cn_substream *a, u64 tick_ns)
 {
@@ -220,8 +230,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
         // Two looping cases: 1) packet_time < 1/3ms; 2) packet batching edge cases 
         // Policy: if next_action_times[playback_slot] is 0, we want to playback silence. 
         //         to playback silence in packet_time, we keep time with next_action_time instead
-        //         next_action_time is managed completely from here
-        //         played_action_time tracks the latest action time actually consumed
+        //         played_action_time tracks the latest action time actually consumed--we won't play packets scheduled before that
         //         EARLY_SLACK_NS is a window after the tick to still play back the packet
         while (count < s->buf_size_in_packets) {
             u32 slot = s->playback_slot;
@@ -251,7 +260,13 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_manager *mgr, str
             if (playing_silence) {
                 fusion_cn_alsa_fill_silence(a, slot * s->info.frames_per_packet,
                                             s->info.frames_per_packet);
-                s->next_action_time += s->packet_time;
+                fusion_cn_metrics_kernel_silence_sub(s->metrics,
+                                                     s->info.frames_per_packet);
+                if (s->info.is_fusion_connect &&
+                    s->packet_time == TIMER_BASE_INTERVAL_NS)
+                    s->next_action_time = fusion_cn_fc_advance_time(s->next_action_time);
+                else
+                    s->next_action_time += s->packet_time;
             }
 
             s->played_action_time = action_time;
@@ -577,7 +592,7 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
 }
 
 /* --- Tick queue helper --- */
-static inline void fusion_cn_queue_process(void)
+static inline void fusion_cn_queue_process(struct fusion_cn_manager *mgr)
 {
     struct kthread_worker *worker = READ_ONCE(process_worker);
 
@@ -586,8 +601,9 @@ static inline void fusion_cn_queue_process(void)
         return;
 
     /* Coalesce: only queue if not already pending */
-    if (atomic_cmpxchg(&process_pending, 0, 1) == 0)
+    if (atomic_cmpxchg(&process_pending, 0, 1) == 0) {
         kthread_queue_work(worker, &process_work);
+    } 
 }
 
 /* --- GPT client callback --- */
@@ -598,7 +614,7 @@ static void fusion_cn_gpt_tick(void *ctx, u64 tick_ns)
     WRITE_ONCE(mgr->tick_ns, tick_ns);
     WRITE_ONCE(mgr->timing_ready, true);
 
-    fusion_cn_queue_process();
+    fusion_cn_queue_process(mgr);
 }
 
 static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
@@ -1196,12 +1212,11 @@ static int handle_reset_timing_state(struct fusion_cn_manager *mgr,
         struct fusion_cn_substream *alsa_stream = NULL;
 
         spin_lock(&stream->lock);
+        alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;
-        if (stream->info.is_source) {
-            alsa_stream = stream->stream_node ? stream->stream_node->alsa_stream : NULL;
-        } else {
+        if (!stream->info.is_source) {
             stream->playback_slot = 0;
             atomic_set(&stream->playback_armed, false);
             if (stream->next_action_times && stream->buf_size_in_packets)

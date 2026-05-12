@@ -254,6 +254,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           child: SemanticHelper.container(
                             testId: SemanticHelper.createTestId(SemanticTypes.container, "crosspoint_channel_gain_$index"),
+                            isChecked: matrixSetting.isSelected,
                             child: NeumorphicTextWithPopupSliderButton(
                               isActive: matrixSetting.isSelected,
                               value: matrixSetting.mixLevel,

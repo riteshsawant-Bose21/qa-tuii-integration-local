@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_control/widgets/controllers/add_controller/add_controller_dialog.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/parts/endpointdialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
@@ -38,6 +40,8 @@ class CanvasToolBar extends StatelessWidget {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
             } else if (state.toolState is DrawingListeningAreaState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
+            } else if (state.toolState is DrawingWallState) {
+              context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
             } else if (state.toolState is MeasuringToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState());
             } else if (state.toolState is SelectToolState) {
@@ -47,6 +51,8 @@ class CanvasToolBar extends StatelessWidget {
             } else if (state.toolState is SplToolState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
               context.read<SplViewModel>().calculateSPL();
+            } else if (state.toolState is WallSelectToolState) {
+              context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
             }
           },
         ),

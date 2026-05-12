@@ -17,7 +17,7 @@ import '../../fusion_canvas/view/painters/elements/wiring/wiring_source_painter.
 import '../../fusion_canvas/view/painters/elements/wiring/wiring_zone_painter.dart';
 
 class WiringAutoLayoutUseCase {
-  static const double _horizontalGroupGap = 300;
+  static const double _horizontalGroupGap = 400;
   static const double _verticalGroupGap = 100;
   static const double _topRowDeviceGap = 120;
 
@@ -144,6 +144,7 @@ class WiringAutoLayoutUseCase {
     final List<_PlacementGroup> dspPlacements = <_PlacementGroup>[];
 
     for (FusionDsp dsp in dsps) {
+      if (_placedDeviceMap[dsp.id] == true) continue;
       dspPlacements.add(_getPlacementGroupForHardwareComponent(dsp, connectionManager));
     }
 
@@ -179,6 +180,7 @@ class WiringAutoLayoutUseCase {
 
     Offset currentOffset = Offset.zero;
     for (final _PlacementGroup group in dspPlacements) {
+      print(group.toString());
       final Rect rect = _placeGroup(
         centerPosition: currentOffset,
         layoutGrid: layoutGrid,
@@ -189,88 +191,9 @@ class WiringAutoLayoutUseCase {
       currentOffset = Offset(0, rect.bottom + _topRowDeviceGap);
     }
 
-    for (final _PlacementGroup group in unplacedSourcesGroup) {
+    for (final _PlacementGroup group in <_PlacementGroup>[...unplacedSourcesGroup, ...unplacedAmplifiersGroup, ...unplacedOthersGroup, ...unplacedZonesGroup]) {
       _placeGroup(
-        centerPosition: _offsetForUnplacedDevice(
-          group: group,
-          lastPlacedRectForType: () => layoutGrid.getLastPlacedRectForPainter((PortPainter painter) => painter is WiringSourcePainter),
-          offsetFromDSP: (Rect rect) => rect.topLeft - Offset(_horizontalGroupGap + group.size.width, 0),
-          offsetFromSameType: (Rect rect) => rect.bottomLeft + const Offset(0, _verticalGroupGap),
-          layoutGrid: layoutGrid,
-        ),
-        layoutGrid: layoutGrid,
-        element: group,
-        sizeById: sizeById,
-        painterById: painterById,
-      );
-    }
-    for (final _PlacementGroup group in unplacedAmplifiersGroup) {
-      _placeGroup(
-        centerPosition: _offsetForUnplacedDevice(
-          group: group,
-          lastPlacedRectForType:
-              () => layoutGrid.getLastPlacedRectForPainter(
-                (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier,
-              ),
-          offsetFromDSP: (Rect rect) => rect.topRight + const Offset(_horizontalGroupGap, 0),
-          offsetFromSameType: (Rect rect) => rect.bottomLeft + const Offset(0, _verticalGroupGap),
-          layoutGrid: layoutGrid,
-        ),
-        layoutGrid: layoutGrid,
-        element: group,
-        sizeById: sizeById,
-        painterById: painterById,
-      );
-    }
-
-    for (final _PlacementGroup group in unplacedOthersGroup) {
-      _placeGroup(
-        centerPosition: _offsetForUnplacedDevice(
-          group: group,
-          lastPlacedRectForType:
-              () => layoutGrid.getLastPlacedRectForPainter(
-                (PortPainter painter) => painter is WiringControllerPainter && (painter.device is FusionController || painter.device is FusionEndpoints),
-              ),
-          offsetFromDSP: (Rect rect) => Offset(-500, -group.size.height - _verticalGroupGap * 2),
-          offsetFromSameType: (Rect rect) {
-            final Offset offset = rect.topRight + const Offset(_horizontalGroupGap / 2, 0);
-            return layoutGrid.getNextAvilablePosHorizontally(
-              Rect.fromLTWH(offset.dx, offset.dy, group.size.width, group.size.height),
-            );
-          },
-
-          layoutGrid: layoutGrid,
-        ),
-        layoutGrid: layoutGrid,
-        element: group,
-        sizeById: sizeById,
-        painterById: painterById,
-      );
-    }
-    for (final _PlacementGroup group in unplacedZonesGroup) {
-      _placeGroup(
-        centerPosition: _offsetForUnplacedDevice(
-          group: group,
-          lastPlacedRectForType: () {
-            final Rect? lastPlacedRectForPainter = layoutGrid.getLastPlacedRectForPainter(
-              (PortPainter painter) => painter is WiringZonePainter,
-            );
-            if (lastPlacedRectForPainter != null) {
-              return lastPlacedRectForPainter;
-            }
-            final Rect? amplifierRect = layoutGrid.getFirstPlacedRectForPainter(
-              (PortPainter painter) => painter is WiringDevicesPainter && painter.device is Amplifier,
-            );
-            if (amplifierRect != null) {
-              return Rect.fromLTWH(amplifierRect.right + _horizontalGroupGap, amplifierRect.top - group.size.height, amplifierRect.width, amplifierRect.height);
-            }
-            return null;
-          },
-          offsetFromDSP: (Rect rect) => rect.topRight + const Offset(_horizontalGroupGap, 0),
-          offsetFromSameType: (Rect rect) => rect.bottomLeft + const Offset(0, _verticalGroupGap),
-
-          layoutGrid: layoutGrid,
-        ),
+        centerPosition: getOffsetForNewDevice(layoutGrid, group),
         layoutGrid: layoutGrid,
         element: group,
         sizeById: sizeById,
@@ -322,7 +245,10 @@ class WiringAutoLayoutUseCase {
       final Size elementSize = sizeById[element.id] ?? Size.zero;
       final PortPainter? elementPainter = painterById[element.id];
       if (elementPainter == null) return Rect.zero;
-      final Rect elementRect = Rect.fromLTWH(centerPosition.dx, centerPosition.dy, elementSize.width, elementSize.height);
+      final Offset actualCenterPosition = layoutGrid.getNextAvilablePosVertically(
+        Rect.fromLTWH(centerPosition.dx, centerPosition.dy, elementSize.width, elementSize.height),
+      );
+      final Rect elementRect = Rect.fromLTWH(actualCenterPosition.dx, actualCenterPosition.dy, elementSize.width, elementSize.height);
       layoutGrid.addPlacement(elementRect, elementPainter);
       return elementRect;
     } else if (element is _PlacementGroup) {
@@ -330,12 +256,18 @@ class WiringAutoLayoutUseCase {
       /// Place Group Elements
       ///
       Rect fullRect = Rect.zero;
-      final Offset actialCenter = layoutGrid.getNextAvilablePosVertically(
+
+      final Size groupSize = element.size;
+      final Rect groupRect = Rect.fromLTWH(centerPosition.dx, centerPosition.dy, groupSize.width, groupSize.height);
+      final Offset actualCenter = layoutGrid.getNextAvilablePosVertically(
         Rect.fromLTWH(centerPosition.dx, centerPosition.dy, element.size.width, element.size.height),
       );
 
       final Rect centerRect = _placeGroup(
-        centerPosition: actialCenter,
+        centerPosition: Offset(
+          actualCenter.dx,
+          actualCenter.dy + ((groupSize.height - element.center.size.height) / 2),
+        ),
         layoutGrid: layoutGrid,
         element: element.center,
         sizeById: sizeById,
@@ -343,11 +275,18 @@ class WiringAutoLayoutUseCase {
       );
       fullRect = centerRect;
 
-      final double leftGroupX = centerRect.left - _horizontalGroupGap - 500;
-      double leftGroupY = centerRect.top;
+      double stackedHeight(List<_PlacingElement> elements) {
+        if (elements.isEmpty) return 0;
+        final double totalElementsHeight = elements.fold<double>(0, (double sum, _PlacingElement e) => sum + e.size.height);
+        return totalElementsHeight + ((elements.length - 1) * _verticalGroupGap);
+      }
+
+      final double leftGroupX = centerRect.left - _horizontalGroupGap;
+      double leftGroupY = centerRect.center.dy - (stackedHeight(element.leftElements) / 2);
       for (final _PlacingElement leftElement in element.leftElements) {
+        final Size size = leftElement.elementSize;
         final Rect leftRect = _placeGroup(
-          centerPosition: Offset(leftGroupX, leftGroupY),
+          centerPosition: Offset(leftGroupX - size.width, leftGroupY),
           layoutGrid: layoutGrid,
           element: leftElement,
           sizeById: sizeById,
@@ -357,7 +296,7 @@ class WiringAutoLayoutUseCase {
         fullRect = fullRect.expandToInclude(leftRect);
       }
       final double rightGroupX = centerRect.right + _horizontalGroupGap;
-      double rightGroupY = centerRect.top;
+      double rightGroupY = centerRect.center.dy - (stackedHeight(element.rightElements) / 2);
       for (final _PlacingElement rightElement in element.rightElements) {
         final Rect rightRect = _placeGroup(
           centerPosition: Offset(rightGroupX, rightGroupY),
@@ -617,16 +556,25 @@ class WiringLayoutResult {
 
 abstract class _PlacingElement {
   Size get size;
+  Size get elementSize;
 }
 
 class _PlacementElement extends _PlacingElement {
   final String id;
   @override
   final Size size;
+
+  @override
+  Size get elementSize => size;
   _PlacementElement({
     required this.id,
     required this.size,
   });
+
+  @override
+  String toString() {
+    return "Element(id: $id, size: $size)";
+  }
 }
 
 class _PlacementGroup extends _PlacingElement {
@@ -635,6 +583,8 @@ class _PlacementGroup extends _PlacingElement {
   final List<_PlacingElement> rightElements;
   final List<_PlacingElement> bottomElements;
 
+  @override
+  Size get elementSize => center.elementSize;
   @override
   Size get size {
     double width = center.size.width;
@@ -662,6 +612,43 @@ class _PlacementGroup extends _PlacingElement {
     required this.rightElements,
     required this.bottomElements,
   });
+
+  @override
+  String toString() {
+    final StringBuffer buffer = StringBuffer();
+    buffer.writeln('Group');
+
+    final List<(String, List<_PlacingElement>)> sections = <(String, List<_PlacingElement>)>[
+      ('Center', <_PlacingElement>[center]),
+      ('Left', leftElements),
+      ('Right', rightElements),
+      ('Bottom', bottomElements),
+    ];
+
+    for (int s = 0; s < sections.length; s++) {
+      final (String label, List<_PlacingElement> items) = sections[s];
+      if (items.isEmpty) continue;
+      final bool isLastSection = s == sections.length - 1 || sections.sublist(s + 1).every(((String, List<_PlacingElement>) sec) => sec.$2.isEmpty);
+      final String sectionPrefix = isLastSection ? '└── ' : '├── ';
+      final String childIndent = isLastSection ? '    ' : '│   ';
+      buffer.writeln('$sectionPrefix$label');
+      for (int i = 0; i < items.length; i++) {
+        final bool isLast = i == items.length - 1;
+        final String itemPrefix = isLast ? '$childIndent└── ' : '$childIndent├── ';
+        final String itemLines = items[i].toString();
+        final List<String> lines = itemLines.split('\n');
+        final String innerIndent = isLast ? '$childIndent    ' : '$childIndent│   ';
+        buffer.write(itemPrefix);
+        buffer.writeln(lines.first);
+        for (final String line in lines.skip(1)) {
+          if (line.isEmpty) continue;
+          buffer.writeln('$innerIndent$line');
+        }
+      }
+    }
+
+    return buffer.toString();
+  }
 }
 
 class _LayoutGrid {
@@ -671,7 +658,7 @@ class _LayoutGrid {
     placements[painter] = rect;
   }
 
-  Offset getNextAvilablePosVertically(Rect rect, {double gap = 50}) {
+  Offset getNextAvilablePosVertically(Rect rect, {double gap = 100}) {
     final double x = rect.left;
     double y = rect.top;
     while (placements.values.any((Rect r) => r.overlaps(Rect.fromLTWH(x, y, rect.width, rect.height)))) {

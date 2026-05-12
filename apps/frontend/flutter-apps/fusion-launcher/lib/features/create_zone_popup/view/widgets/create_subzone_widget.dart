@@ -129,25 +129,53 @@
 part of '../create_zone_content.dart';
 
 class _CreateSubzoneWidget extends StatefulWidget {
-  const _CreateSubzoneWidget();
+  final ValueNotifier<bool> saveEnabledNotifier;
+  final VoidCallback onRevalidate;
+  final bool autoOpenSubzone; // ← new
 
+  const _CreateSubzoneWidget({
+    required this.saveEnabledNotifier,
+    required this.onRevalidate,
+    this.autoOpenSubzone = false, // ← new
+  });
   @override
   State<_CreateSubzoneWidget> createState() => _CreateSubzoneWidgetState();
 }
 
 class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
   final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
+  final ValueNotifier<bool> _canAddSubzone = ValueNotifier<bool>(true);
 
   int? _draftIndex;
   int? _editingIndex;
   final List<TextEditingController> _nameControllers = <TextEditingController>[];
   final TextEditingController _formNameCtrl = TextEditingController();
 
+  bool _initialized = false;
+  bool _autoOpenTriggered = false; // ← new
+
   @override
   void dispose() {
+    _canAddSubzone.dispose();
     for (final TextEditingController c in _nameControllers) c.dispose();
     _formNameCtrl.dispose();
     super.dispose();
+  }
+
+  // WITH:
+  void _syncFromVmState(CreateZoneViewModelState state) {
+    if (_initialized) return;
+    _initialized = true;
+    for (final AddListeningAreaToSubzoneModel sz in state.subzones) {
+      _nameControllers.add(TextEditingController(text: sz.subZoneName));
+    }
+    // Auto-open subzone form after controllers are ready
+    if (widget.autoOpenSubzone && !_autoOpenTriggered) {
+      _autoOpenTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _enterSetupMode();
+      });
+    }
   }
 
   // ── Actions ──────────────────────────────────────────────────
@@ -163,6 +191,9 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
       _editingIndex = null;
       _formNameCtrl.text = draftName;
     });
+    if (draftIdx < 2) {
+      widget.saveEnabledNotifier.value = false;
+    }
   }
 
   void _exitSetupMode() {
@@ -175,6 +206,8 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
       _editingIndex = null;
       _formNameCtrl.clear();
     });
+    widget.onRevalidate();
+    _canAddSubzone.value = true;
   }
 
   void _confirmDraft() {
@@ -198,12 +231,13 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
         _formNameCtrl.text = nextName;
       });
     } else {
-      // 2+ confirmed — close the draft form; user must press "+ Add SubZone" for more
       setState(() {
         _draftIndex = null;
         _editingIndex = null;
         _formNameCtrl.clear();
       });
+      widget.onRevalidate();
+      _canAddSubzone.value = true;
     }
   }
 
@@ -220,7 +254,7 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
     vm.onSubzoneNameChanged(_editingIndex!, name);
     setState(() {
       _editingIndex = null;
-      _formNameCtrl.text = _nameControllers[_draftIndex!].text;
+      _formNameCtrl.text = _draftIndex != null ? _nameControllers[_draftIndex!].text : '';
     });
   }
 
@@ -238,7 +272,7 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
 
   String _buildSubtitle(CreateZoneViewModelState state, int index) {
     if (index >= state.subzones.length) return '';
-    final List<ListeningArea> areas = state.subzones[index].listeningAreas ?? <ListeningArea>[];
+    final List<ListeningArea> areas = state.subzones[index].listeningAreas;
     if (areas.isEmpty) return 'No areas selected';
     return areas
         .map((ListeningArea a) {
@@ -254,9 +288,10 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
       buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.subzones != c.subzones,
-      builder:
-          (BuildContext context, CreateZoneViewModelState state) =>
-              (_draftIndex == null && _nameControllers.isEmpty) ? _buildEntryButton(context) : _buildSetupPanel(context, state),
+      builder: (BuildContext context, CreateZoneViewModelState state) {
+        _syncFromVmState(state);
+        return (_draftIndex == null && _nameControllers.isEmpty) ? _buildEntryButton(context) : _buildSetupPanel(context, state);
+      },
     );
   }
 
@@ -317,18 +352,30 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
 
         if (_editingIndex == null) ...<Widget>[
           if (confirmedCount > 0) const SizedBox(height: 4),
-          // Draft form when active; otherwise a plain add button
           if (hasDraft)
             _buildDraftForm(context)
           else
-            FusionIconTextButton(
-              icon: LucideIcons.plus,
-              label: 'Add SubZone',
-              semanticId: 'add_another_subzone_button',
-              iconSize: 16,
-              onTap: _enterSetupMode,
-              style: context.textTheme.l1SemiBold.copyWith(color: context.colorScheme.textPrimary),
-              iconColor: context.colorScheme.textPrimary,
+            ValueListenableBuilder<bool>(
+              valueListenable: _canAddSubzone,
+              builder: (BuildContext context, bool canAdd, _) {
+                return Opacity(
+                  opacity: canAdd ? 1.0 : 0.4, // ← visually dimmed when disabled
+                  child: IgnorePointer(
+                    ignoring: !canAdd, // ← blocks taps when disabled
+                    child: FusionIconTextButton(
+                      icon: LucideIcons.plus,
+                      label: 'Add SubZone',
+                      semanticId: 'add_another_subzone_button',
+                      iconSize: 16,
+                      onTap: _enterSetupMode,
+                      style: context.textTheme.l1SemiBold.copyWith(
+                        color: context.colorScheme.textPrimary,
+                      ),
+                      iconColor: context.colorScheme.textPrimary,
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ],
@@ -430,20 +477,43 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
         const SizedBox(height: 20),
         Divider(thickness: 1, height: 0, color: context.colorScheme.strokeLight),
         const SizedBox(height: 20),
-
-        _ZoneListeningAreaSection(subzoneIndex: subzoneIndex),
+        _ZoneListeningAreaSection(
+          subzoneIndex: subzoneIndex,
+          onAddingAreaChanged: (bool isAdding) {
+            _canAddSubzone.value = !isAdding;
+            if (isAdding) {
+              widget.saveEnabledNotifier.value = false;
+            } else {
+              widget.onRevalidate(); // ← revalidate when add form closes
+            }
+          },
+        ),
         const SizedBox(height: 16),
         Align(
           alignment: Alignment.centerLeft,
-          child: FusionAppButton(
-            semanticId: 'subzone_save_$subzoneIndex',
-            height: 32,
-            text: isDraft ? 'Add SubZone' : 'Update SubZone',
-            color: context.colorScheme.elevation2,
-            borderRadius: 8,
-            textstyle: context.textTheme.l1Medium.copyWith(color: context.colorScheme.textPrimary),
-            onPressed: onSave,
-            style: FusionAppButtonStyle.primary,
+          // ← wrap with ValueListenableBuilder
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _canAddSubzone,
+            builder: (BuildContext context, bool canAdd, _) {
+              return Opacity(
+                opacity: canAdd ? 1.0 : 0.4,
+                child: IgnorePointer(
+                  ignoring: !canAdd,
+                  child: FusionAppButton(
+                    semanticId: 'subzone_save_$subzoneIndex',
+                    height: 32,
+                    text: isDraft ? 'Add SubZone' : 'Update SubZone',
+                    color: context.colorScheme.elevation2,
+                    borderRadius: 8,
+                    textstyle: context.textTheme.l1Medium.copyWith(
+                      color: context.colorScheme.textPrimary,
+                    ),
+                    onPressed: onSave,
+                    style: FusionAppButtonStyle.primary,
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

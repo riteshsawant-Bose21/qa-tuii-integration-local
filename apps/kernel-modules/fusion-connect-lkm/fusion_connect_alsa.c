@@ -19,7 +19,7 @@ static const struct snd_pcm_hw_constraint_list constraints_period_sizes = {
     .list  = supported_period_sizes
 };
 
-static const unsigned int supported_periods[] = { 2, 4, 8, 16, 32, 64, 128 };
+static const unsigned int supported_periods[] = { 2, 4, 8, 16, 32 };
 static const struct snd_pcm_hw_constraint_list constraints_periods = {
     .count = ARRAY_SIZE(supported_periods),
     .list  = supported_periods
@@ -101,15 +101,10 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
     struct fusion_cn_substream *s =
         container_of(kref, struct fusion_cn_substream, ref);
 
-    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: stream=%s device=%d",
+    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: stream=%s device=%d\n",
            s->stream_name, s->stream_index);
 
-    /*
-     * PCM device lifetime is owned by ALSA disconnect/card teardown, not by
-     * the close path for an individual substream.
-     */
     s->pcm = NULL;
-
     kfree(s);
 }
 
@@ -370,9 +365,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.channels_max = stream->channels;
     hw.period_bytes_min = stream->rtp_frames_per_packet * stream->channels * stream->sample_width;
     hw.period_bytes_max = (stream->rtp_frames_per_packet * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = stream->rtp_frames_per_packet * 16 * stream->channels * stream->sample_width;
+    hw.buffer_bytes_max = stream->rtp_frames_per_packet * 32 * stream->channels * stream->sample_width;
     hw.periods_min = 2;
-    hw.periods_max = 16;
+    hw.periods_max = 32;
 
     runtime->hw = hw;
     runtime->private_data = stream;
@@ -400,7 +395,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frames_per_packet * 2, stream->rtp_frames_per_packet * 16);
+                                       stream->rtp_frames_per_packet * 2, stream->rtp_frames_per_packet * 32);
     if (err < 0) {
         stream->substream = NULL;
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
@@ -577,9 +572,8 @@ inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
         snd_pcm_uframes_t avail = (size + hw - app) % size;
         depth = (u32)(size - avail);
     } else {
-        /* capture_avail = (size + app - hw) % size
-           That's also “queued for consumer” in your capture-as-sink model */
-        depth = (u32)((size + app - hw) % size);
+        /* capture_avail = queued for consumer */
+        depth = (u32)((size + hw - app) % size);
     }
     snd_pcm_stream_unlock_irq(ss);
     spin_unlock_irqrestore(&stream->lock, flags);

@@ -203,6 +203,15 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<Speaker> getListeningAreaSpeakers({required String areaId}) {
+    try {
+      return projectManager.getHardwareForListeningArea(areaId).whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for listening area: $e");
+      return <Speaker>[];
+    }
+  }
+
   List<HardwareComponent> getHardwareForFloor({required String floorId}) {
     try {
       return projectManager.getHardwareForFloor(floorId);
@@ -307,9 +316,12 @@ extension HardwareViewModel on ProjectViewModel {
       if (listeningAreaId == null) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Select a listening area first.');
 
       final ListeningArea listeningArea = getListeningArea(areaId: listeningAreaId);
+
       if (!listeningArea.autoPlacement) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Enable Auto-Placement and try again.');
-      if (listeningArea.vertices.length < 3)
+
+      if (listeningArea.vertices.length < 3) {
         return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Listening area shape is invalid. Redraw the area and try again.');
+      }
 
       final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
       final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
@@ -410,7 +422,7 @@ extension HardwareViewModel on ProjectViewModel {
   List<Speaker> _getAutoPlacementTargetSpeakers({required List<SpeakerProduct> catalogSpeakers}) {
     final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
     final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
-    final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers];
+    final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers].where((Speaker element) => !element.isSubwoofer).toList();
 
     return allSpeakers.where((Speaker speaker) {
       final int? productId = speaker.productId;
@@ -803,6 +815,7 @@ extension HardwareViewModel on ProjectViewModel {
       price: 0,
       mountingType: mountingType,
       pitch: pitch,
+      color: "black",
       yaw: yaw,
       inputPortsData: <PortData>[
         PortData(
@@ -816,6 +829,7 @@ extension HardwareViewModel on ProjectViewModel {
       ],
       outputPortsData: <PortData>[],
       horizontalCoverageAngle: horizontalCoverageAngle,
+      isSubwoofer: product.isSubwoofer,
     );
   }
 

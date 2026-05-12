@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -16,11 +15,7 @@ import '../../../../wiring_design/view/port_connection/port_connection_overlay.d
 import '../../../view_model/spl_viewmodel.dart';
 import '../../../viewmodel/building_page_viewmodel.dart';
 import '../../../widget/building/building_canvas.dart';
-import '../../../widget/building/side_panel_widgets/building_plan.dart';
-import '../../../widget/building/side_panel_widgets/equipment_location/equipment_location_section.dart';
-import '../../../widget/building/side_panel_widgets/listening_areas_panel.dart';
-import '../../../widget/building/side_panel_widgets/properties_panel.dart';
-import '../../../widget/building/side_panel_widgets/zone_and_listening_area.dart';
+import '../../../widget/building/side_panel_widgets/side_panel_widgets.dart';
 
 class BuildingPage extends StatelessWidget {
   const BuildingPage({super.key, required this.floorCanvasController, required this.appBarHeight});
@@ -57,7 +52,6 @@ class BuildingPage extends StatelessWidget {
                     //   splController.collapse();
                     // }
                   },
-                  floorCanvasController: floorCanvasController,
                   onCalculateSpl: () => viewModel.calculateSPL(),
                   splPanelData: state.panelData,
                   rightPanel: Builder(
@@ -108,8 +102,9 @@ class BuildingPage extends StatelessWidget {
                                   children: <Widget>[
                                     FusionSidebarSectionHeader(
                                       title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-                                      isExpanded: isExpanded,
-                                      onTap: toggleExpand,
+                                      isExpanded: true,
+                                      showChevron: false,
+                                      // onTap: toggleExpand,
                                       trailing: Builder(
                                         builder: (BuildContext context) {
                                           if (toolbarMode == ToolbarMode.acoustics) return const SizedBox();
@@ -205,30 +200,12 @@ class BuildingPage extends StatelessWidget {
           },
         ),
       ),
-      DockItemConfig(
+      const DockItemConfig(
         id: "6",
         title: "COST CALCULATOR",
         side: "right",
         allowUndock: true,
-        dockItemWidget: CostCalculatorScreen(
-          speakers: serviceLocator<ProjectViewModel>().speakers,
-          sources: serviceLocator<ProjectViewModel>().sources,
-          controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-          racks:
-              serviceLocator<ProjectViewModel>().genericHardwareComponents
-                  .where(
-                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                  )
-                  .toList(),
-          amplifiers: <Amplifier>[],
-          fusionDevices: <FusionDsp>[],
-          others:
-              serviceLocator<ProjectViewModel>().genericHardwareComponents
-                  .where(
-                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                  )
-                  .toList(),
-        ),
+        dockItemWidget: CostCalculatorScreen(),
       ),
 
       DockItemConfig(

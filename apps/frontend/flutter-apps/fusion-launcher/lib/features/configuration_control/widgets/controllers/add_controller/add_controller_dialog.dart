@@ -1552,6 +1552,17 @@ class _DrawerContentState extends State<_DrawerContent> {
           isZoneLocation: isZoneLocation,
         );
 
+        if (isProController) {
+          return _ProControlMultiSelect(
+            items: items,
+            selectedIds: selectedIds,
+            thisZoneId: thisZoneId,
+            isZoneLocation: isZoneLocation,
+            onToggle: (String id) => cubit.toggleControlZone(id),
+          );
+        }
+
+        // ── LT: single select dropdown ─────────────────────────────────────
         _ZoneSelectItem? selectedItem;
         if (selectedIds.isNotEmpty) {
           selectedItem = items.cast<_ZoneSelectItem?>().firstWhere(
@@ -1562,7 +1573,6 @@ class _DrawerContentState extends State<_DrawerContent> {
 
         String displayLabel() {
           if (selectedIds.isEmpty) return '';
-          if (selectedIds.length > 1) return '${selectedIds.length} Zones Selected';
           if (selectedItem != null) {
             final bool isThisZone = isZoneLocation && selectedItem.id == thisZoneId;
             final String name =
@@ -1591,7 +1601,7 @@ class _DrawerContentState extends State<_DrawerContent> {
           itemWidgetBuilder: (BuildContext ctx, _ZoneSelectItem item, bool _) {
             final bool isSelected = selectedIds.contains(item.id);
             final bool isThisZone = item.id == thisZoneId && isZoneLocation;
-            return _buildControlZoneItem(ctx, item, isSelected, isProController, isThisZone);
+            return _buildControlZoneItem(ctx, item, isSelected, false, isThisZone);
           },
           onChanged: (_ZoneSelectItem item) {
             if (!item.isSelectable) return;
@@ -1664,27 +1674,14 @@ class _DrawerContentState extends State<_DrawerContent> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: <Widget>[
-          isProController
-              ? FusionCheckbox(
-                semanticId: 'control_checkbox_${item.id}',
-                value: isSelected,
-                shape: BoxShape.rectangle,
-                innerChild: Icon(
-                  Icons.check,
-                  size: 10,
-                  color: context.colorScheme.black,
-                ),
-                onChanged: () {},
-              )
-              : _RadioIndicator(isSelected: isSelected),
-          const SizedBox(width: 10),
+          _ColorDot(color: item.color),
+          const SizedBox(width: 8),
           Expanded(
             child: FusionAppText(
               text: label,
               style: Theme.of(context).textTheme.l1Regular,
             ),
           ),
-          _ColorDot(color: item.color),
         ],
       ),
     );
@@ -1837,19 +1834,223 @@ class _ZoneSelectItem {
 }
 
 /// Proper radio button: white border ring, dark filled dot when selected.
-class _RadioIndicator extends StatelessWidget {
-  final bool isSelected;
-  const _RadioIndicator({required this.isSelected});
+
+class _ProControlMultiSelect extends StatefulWidget {
+  final List<_ZoneSelectItem> items;
+  final Set<String> selectedIds;
+  final String? thisZoneId;
+  final bool isZoneLocation;
+  final void Function(String id) onToggle;
+
+  const _ProControlMultiSelect({
+    required this.items,
+    required this.selectedIds,
+    required this.thisZoneId,
+    required this.isZoneLocation,
+    required this.onToggle,
+  });
+
+  @override
+  State<_ProControlMultiSelect> createState() => _ProControlMultiSelectState();
+}
+
+class _ProControlMultiSelectState extends State<_ProControlMultiSelect> {
+  bool _isOpen = false;
+  final GlobalKey _dropdownKey = GlobalKey();
+  List<_ZoneSelectItem> _filtered = <_ZoneSelectItem>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.items.where((_ZoneSelectItem i) => i.isSelectable).toList();
+  }
+
+  void _toggleOpen() {
+    final bool wasOpen = _isOpen; // capture BEFORE setState
+    setState(() => _isOpen = !_isOpen);
+    if (!wasOpen) {
+      // was closed, now opening
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final BuildContext? ctx = _dropdownKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            alignment: 1.0,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  String get _headerLabel {
+    final int count = widget.selectedIds.length;
+    if (count == 0) return 'Select Zones';
+    if (count == 1) {
+      final _ZoneSelectItem? item = widget.items.cast<_ZoneSelectItem?>().firstWhere(
+        (_ZoneSelectItem? i) => i != null && widget.selectedIds.contains(i.id),
+        orElse: () => null,
+      );
+      return item?.name ?? '1 Zone Selected';
+    }
+    return '$count Zones Selected';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FusionCheckbox(
-      semanticId: '',
-      value: isSelected,
-      // innerChild drives the "dot inside ring" look.
-      // When selected: background=white, innerChild=dark dot → ◉
-      // When not selected: background=transparent, no child → ○
-      onChanged: () {},
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FusionAppText(
+          text: 'Control',
+          style: context.textTheme.l1Medium.copyWith(
+            color: context.colorScheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        TapRegion(
+          onTapOutside: (_) => setState(() => _isOpen = false),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // ── Trigger ───────────────────────────────────────────────
+              GestureDetector(
+                onTap: _toggleOpen,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: context.colorScheme.strokeLight,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(
+                          text: _headerLabel,
+                          style: context.textTheme.b3Regular.copyWith(
+                            color: widget.selectedIds.isEmpty ? context.colorScheme.onSurface.withAlpha(155) : context.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: context.colorScheme.iconDefault,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── Dropdown list ─────────────────────────────────────────
+              if (_isOpen) ...<Widget>[
+                const SizedBox(height: 4),
+                Container(
+                  key: _dropdownKey,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: context.colorScheme.strokeLight,
+                      width: 1,
+                    ),
+                    color: context.colorScheme.elevation2,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      // Items
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 220),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _filtered.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final _ZoneSelectItem item = _filtered[index];
+                            final bool isSelected = widget.selectedIds.contains(item.id);
+                            final bool isThisZone = item.id == widget.thisZoneId && widget.isZoneLocation;
+                            final String label =
+                                item.isSubZone && item.parentZoneName != null
+                                    ? '${item.parentZoneName} - ${item.name}'
+                                    : isThisZone
+                                    ? '${item.name} (This Zone)'
+                                    : item.name;
+
+                            return GestureDetector(
+                              onTap: () => widget.onToggle(item.id),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                color: Colors.transparent,
+                                child: Row(
+                                  children: <Widget>[
+                                    FusionCheckbox(
+                                      semanticId: 'ctrl_${item.id}',
+                                      value: isSelected,
+                                      shape: BoxShape.rectangle,
+                                      innerChild: Icon(
+                                        Icons.check,
+                                        size: 10,
+                                        color: context.colorScheme.black,
+                                      ),
+                                      onChanged: () => widget.onToggle(item.id),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: FusionAppText(
+                                        text: label,
+                                        style: context.textTheme.b3Regular.copyWith(
+                                          color: context.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    _ColorDot(color: item.color),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // ── Done button ───────────────────────────────────
+                      Divider(height: 1, color: context.colorScheme.strokeLight),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FusionAppButton(
+                            semanticId: 'control_zone_done',
+                            height: 36,
+                            text: widget.selectedIds.isEmpty ? 'Done' : 'Add ${widget.selectedIds.length} Zone${widget.selectedIds.length == 1 ? '' : 's'}',
+                            color: context.colorScheme.elevation3,
+                            borderRadius: 8,
+                            textstyle: context.textTheme.l1Medium.copyWith(
+                              color: context.colorScheme.textPrimary,
+                            ),
+                            onPressed: () => setState(() => _isOpen = false),
+                            style: FusionAppButtonStyle.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/right_aligned_popup_menu.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -13,6 +12,8 @@ import 'package:fusion_lib/models/project_entities/hardware_component_model.dart
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'equipment_location_dialog.dart';
+import 'right_aligned_popup_menu.dart';
 
 class EquipmentLocationSection extends StatelessWidget {
   const EquipmentLocationSection({super.key});
@@ -34,9 +35,7 @@ class EquipmentLocationSection extends StatelessWidget {
                   Expanded(
                     child: FusionAppText(
                       text: "EQUIPMENT LOCATIONS",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 11,
-                      ),
+                      style: Theme.of(context).textTheme.l1Medium.copyWith(color: context.colorScheme.textBody),
                     ),
                   ),
                   InkWell(
@@ -138,7 +137,6 @@ class EquipmentLocationSection extends StatelessWidget {
                                       InkWell(
                                         onTap: () {
                                           serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
-                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
                                         },
                                         child: Container(
                                           decoration: BoxDecoration(
@@ -148,20 +146,19 @@ class EquipmentLocationSection extends StatelessWidget {
                                           padding: const EdgeInsets.only(left: 16.0, top: 4, bottom: 4, right: 6),
                                           child: Row(
                                             children: <Widget>[
-                                              Icon(
-                                                LucideIcons.box,
-                                                size: 12,
-                                                color: context.colorScheme.onSurface,
+                                              FusionImageAuto(
+                                                path: hardware.image,
+                                                width: 14,
+                                                height: 14,
                                               ),
+                                              // Icon(
+                                              //   LucideIcons.box,
+                                              //   size: 12,
+                                              //   color: context.colorScheme.onSurface,
+                                              // ),
                                               const SizedBox(width: 8),
                                               Expanded(
-                                                child: FusionAppText(
-                                                  text: hardware.name,
-                                                  maxLine: 1,
-                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
+                                                child: FusionAppText(text: hardware.name, maxLine: 1, style: Theme.of(context).textTheme.l1Regular),
                                               ),
                                               const SizedBox(width: 8),
                                               // InkWell(
@@ -262,26 +259,29 @@ class __ExpansionTileState extends State<_ExpansionTile> {
             ),
             const SizedBox(width: 4),
             Icon(
-              LucideIcons.maximize200,
+              LucideIcons.server200,
               size: 12,
-              color: context.colorScheme.onSurface,
+              color: context.colorScheme.iconDefault,
             ),
             const SizedBox(width: 4),
 
             Expanded(
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_popup_menu_${widget.index}"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "equipment_location_section_item_popup_menu_${widget.index}",
+                ),
                 child: RightAlignedPopupMenu(
                   menuContent: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
                   child: SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_${widget.index}_title_textfield"),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.container,
+                      "equipment_location_section_item_${widget.index}_title_textfield",
+                    ),
                     child: TitleTextFieldSwitcher(
                       hintText: "Name",
                       value: widget.title,
-                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: Theme.of(context).textTheme.l1Regular,
                       save: (String newValue) {
                         BlocProvider.of<ProjectViewModel>(context).updateEquipLocation(
                           equipLocation: widget.location.copyWith(
