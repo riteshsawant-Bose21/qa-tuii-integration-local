@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
@@ -85,6 +86,11 @@ func (h *BSFHandler) Generate(c *gin.Context) {
 	if err != nil {
 		logger.Error("Failed to read spm_file from form", zap.Error(err))
 		response.BadRequest(c, "spm_file is required")
+		return
+	}
+
+	if ext := strings.ToLower(filepath.Ext(fileHeader.Filename)); ext != ".spm" {
+		response.BadRequest(c, fmt.Sprintf("invalid file type %q, only .spm files are allowed", ext))
 		return
 	}
 
