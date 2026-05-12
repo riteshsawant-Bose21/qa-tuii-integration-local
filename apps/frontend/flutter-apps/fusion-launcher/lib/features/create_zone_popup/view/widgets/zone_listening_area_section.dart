@@ -247,6 +247,7 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
                       },
                       selectedItemBuilder: (BuildContext context, ListeningArea _) {
                         return FusionAppText(
+                          semanticId: 'Listening_Area_Selected',
                           text: '$selectedCount Listening Area${selectedCount == 1 ? '' : 's'} Selected',
                           maxLine: 1,
                           style: context.textTheme.b3Regular.copyWith(
