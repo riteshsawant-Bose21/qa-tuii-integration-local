@@ -1281,7 +1281,7 @@ bool FusionConnectClient::process_audio_streams_update() {
             config.stream_name[sizeof(config.stream_name) - 1] = '\0';
 
             if (!has_explicit_playout_delay && config.sample_rate != 0)
-                config.playout_delay = static_cast<uint32_t>((10ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
+                config.playout_delay = static_cast<uint32_t>((6ULL * 1000000000ULL * config.frames_per_packet) / config.sample_rate);
 
             // role
             const bool is_source = (properties.isMember("is_source") && properties["is_source"].isBool())

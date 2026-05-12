@@ -881,15 +881,36 @@ int AlsaDevice::set_hw_params(AccessMode requested_access_mode)
     }
 
     // Set the number of periods in the buffer.
-    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 16 : 32;
-    error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
-    if (error < 0)
+    const bool negotiated_periods = is_bluealsa_device_name(device_name) ||
+                                    is_uac_device_name(device_name);
+    const unsigned requested_periods = negotiated_periods ? 32 : 16;
+    if (negotiated_periods)
     {
-        SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
-                     snd_strerror(error));
-        snd_pcm_hw_params_free(hw_params);
-        hw_params = nullptr;
-        return error;
+        unsigned int actual_periods = requested_periods;
+        int dir = 0;
+        error = snd_pcm_hw_params_set_periods_near(alsa, hw_params, &actual_periods, &dir);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to set ALSA number of periods near {}: {}",
+                         requested_periods, snd_strerror(error));
+            snd_pcm_hw_params_free(hw_params);
+            hw_params = nullptr;
+            return error;
+        }
+        SPDLOG_DEBUG("Using ALSA periods for {}: {} (requested {})",
+                     device_name.c_str(), actual_periods, requested_periods);
+    }
+    else
+    {
+        error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
+                         snd_strerror(error));
+            snd_pcm_hw_params_free(hw_params);
+            hw_params = nullptr;
+            return error;
+        }
     }
 
     // `snd_pcm_hw_params_set_buffer_time()` is redundant given we have set
