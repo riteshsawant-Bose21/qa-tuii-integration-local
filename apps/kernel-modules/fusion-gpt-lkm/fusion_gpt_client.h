@@ -9,7 +9,8 @@ struct fusion_gpt_client_ops {
 };
 
 struct fusion_gpt_timing_status {
-	bool discipline_ready;
+	bool discipline_continuity_ready;
+	bool discipline_gm_locked;
 	bool epoch_valid;
 	bool aligned;
 	u32 pps_seq;
@@ -20,5 +21,14 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
 void fusion_gpt_unregister_client(void);
 int  fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps);
 int fusion_gpt_get_timing_status(struct fusion_gpt_timing_status *status);
+/*
+ * Clears live PPS/epoch/alignment state while preserving continuity when
+ * possible.
+ */
 int fusion_gpt_reset_timing_state(void);
+/*
+ * Session-boundary reset that clears continuity but preserves local VCXO
+ * calibration state.
+ */
+int fusion_gpt_reset_timing_session(void);
 u64  fusion_gpt_read_phc_ns(void);
