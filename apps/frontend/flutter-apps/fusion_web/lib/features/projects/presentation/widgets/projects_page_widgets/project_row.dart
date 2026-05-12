@@ -1,0 +1,166 @@
+import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_web/core/services/service_locator.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
+import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
+import '../../../data/models/project_model.dart';
+import '../projects_page_widgets/status_badge.dart';
+import '../projects_page_widgets/health_stat.dart';
+import '../projects_page_widgets/incidents_badge.dart';
+
+class ProjectRow extends StatelessWidget {
+  final ProjectModel project;
+  final bool isLast;
+  final Function(ProjectModel) onTap;
+
+  const ProjectRow({
+    super.key,
+    required this.project,
+    required this.onTap,
+    this.isLast = false,
+  });
+
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      // color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+      color: Colors.transparent,
+      child: InkWell(
+        hoverColor: context.colorScheme.onSurface.withValues(alpha: 0.03),
+        onTap: () => onTap(project),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          child: Row(
+            children: [
+              /// PROJECT
+              Expanded(
+                flex: 3,
+                child: FusionAppText(
+                  text: project.name,
+                  style: context.textTheme.bodyMedium,
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// Client
+              Expanded(
+                flex: 2,
+                child: FusionAppText(
+                  text: project.clientName,
+                  style: context.textTheme.bodyMedium,
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// phase(status)
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: StatusBadge(status: project.status),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// status (region) - indoor / outdoor / hybrid
+              SizedBox(
+                width: 70,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FusionAppText(
+                    maxLine: 2,
+                    softWrap: true,
+                    text: project.region,
+                    style: context.textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// INCIDENTS
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: IncidentsBadge(count: project.incidents),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              /// HEALTH
+              Expanded(
+                flex: 2,
+                child: Row(
+                  children: [
+                    HealthStat(
+                      icon: FusionIcon.icon(Icons.check_circle_outline_rounded, color: context.colorScheme.successText,),
+                      count: project.healthyDevices,
+                      semanticId: '',
+                    ),
+                    SizedBox(width: 4),
+                    HealthStat(
+                      icon: FusionIcon.icon(Icons.warning_amber_rounded, color: context.colorScheme.warningText,),
+                      count: project.warningDevices,
+                      semanticId: '',
+                    ),
+                    SizedBox(width: 4),
+                    HealthStat(
+                      icon: FusionIcon.icon(Icons.cancel_outlined, color: context.colorScheme.errorText,),
+                      count: project.criticalDevices,
+                      semanticId: '',
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// UPDATED
+              SizedBox(
+                width: 70,
+                child: FusionAppText(
+                  text: _formatDate(project.lastUpdated),
+                  style: context.textTheme.bodyMedium,
+                ),
+              ),
+
+              SizedBox(
+                width: 48,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: ProjectActionsMenu(
+                    onInvite: () => ProjectActionsHandler.invite(
+                      context: context,
+                      project: project,
+                      viewModel: ServiceLocator().projectsViewModel,
+                    ),
+                    onArchive: () => ProjectActionsHandler.archive(
+                      context: context,
+                      project: project,
+                      viewModel: ServiceLocator().projectsViewModel,
+                    ),
+                    onDelete: () => ProjectActionsHandler.delete(
+                      context: context,
+                      project: project,
+                      viewModel: ServiceLocator().projectsViewModel,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
