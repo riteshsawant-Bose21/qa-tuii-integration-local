@@ -48,8 +48,8 @@ func (s *Service) Generate(ctx context.Context, req *types.BSFGenerateRequest, l
 		return nil, fmt.Errorf("failed to build BSF: %w", err)
 	}
 
-	timestamp := time.Now().Format("20060102T150405")
-	s3Key := fmt.Sprintf("product/BSF/%s/%s_%s.bsf", req.Family, req.ProductName, timestamp)
+	timestamp := time.Now().UnixMilli()
+	s3Key := fmt.Sprintf("product/BSF/%s/%s_%d.bsf", req.Family, req.ProductName, timestamp)
 
 	contentType := "application/zip"
 	if err := s.bucket.Upload(ctx, s3Key, bytes.NewReader(bsfBytes), &contentType); err != nil {
