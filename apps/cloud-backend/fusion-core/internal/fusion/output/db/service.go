@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"go.uber.org/zap"
 )
 
@@ -32,37 +34,27 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 
 // SelectAll retrieves all outputs from the database.
 func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.OutputItemResponse, error) {
-	query := `SELECT id, name, type, images, specifications FROM output ORDER BY name`
-
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := models.Outputs(
+		qm.OrderBy(models.OutputColumns.ID),
+	).All(ctx, s.db)
 	if err != nil {
 		logger.Error("failed to query outputs", zap.Error(err))
 		return nil, fmt.Errorf("failed to query outputs: %w", err)
 	}
 
-	defer func() { _ = rows.Close() }()
-
 	outputs := make([]types.OutputItemResponse, 0)
-	for rows.Next() {
+	for _, row := range rows {
 		var (
-			item               types.OutputItemResponse
-			images             sql.NullString
-			specificationsJSON []byte
+			item  types.OutputItemResponse
+			specs types.OutputSpecifications
 		)
-		if err := rows.Scan(
-			&item.OutputID,
-			&item.Name,
-			&item.Type,
-			&images,
-			&specificationsJSON,
-		); err != nil {
-			logger.Error("failed to scan output row", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan output row: %w", err)
-		}
 
-		var specs types.OutputSpecifications
-		if specificationsJSON != nil {
-			if err := json.Unmarshal(specificationsJSON, &specs); err != nil {
+		item.OutputID = row.ID
+		item.Name = row.Name
+		item.Type = row.Type
+
+		if row.Specifications.Valid {
+			if err := json.Unmarshal(row.Specifications.JSON, &specs); err != nil {
 				logger.Error("failed to unmarshal output specifications", zap.Error(err))
 				return nil, fmt.Errorf("failed to unmarshal output specifications: %w", err)
 			}
@@ -71,20 +63,10 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.Ou
 			specs.SupportedConnections = []string{}
 		}
 
-		imagesStr := ""
-		if images.Valid {
-			imagesStr = images.String
-		}
-
-		item.Assets = []types.OutputAsset{{Black: []string{imagesStr}}}
+		item.Assets = []types.OutputAsset{{Black: []string{row.Images}}}
 		item.Specifications = specs
 
 		outputs = append(outputs, item)
-	}
-
-	if err := rows.Err(); err != nil {
-		logger.Error("error iterating output rows", zap.Error(err))
-		return nil, fmt.Errorf("error iterating output rows: %w", err)
 	}
 
 	return outputs, nil
