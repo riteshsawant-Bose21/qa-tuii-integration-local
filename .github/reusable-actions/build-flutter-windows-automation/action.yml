@@ -52,7 +52,7 @@ runs:
     - name: Clone project
       uses: actions/checkout@v4
       with:
-        path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
+        path: C:\Users\Administrator\actions-runner-new\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
         sparse-checkout: |
           apps/frontend/flutter-apps/fusion-launcher
           libs/
@@ -62,7 +62,7 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
-        robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
+        robocopy C:\Users\Administrator\actions-runner-new\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
 
         $sourceEnv = "C:\Users\Administrator\Documents\env"
