@@ -60,7 +60,7 @@ message PeqBlockSettings {
   repeated double frequency = 2;
   repeated double gain = 3;
   repeated double q = 4;
-  repeated string filter_type = 5;
+  repeated string type = 5;
 }
 
 // Placeholder for likely dynamic settings on compressor-style blocks.

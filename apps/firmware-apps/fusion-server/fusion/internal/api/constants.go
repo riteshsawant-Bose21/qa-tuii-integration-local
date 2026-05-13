@@ -19,7 +19,7 @@ const (
 	SAPPort                 = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
 	UDPPort                 = "7947"
 	TelemetryCoreZMQPort    = "5678" // ZMQ PUB port on each device's telemetry core
-	TelemetryCoreFilterPort = "1234" // UDP port for update_filter_req on each device's telemetry core
+	TelemetryCoreFilterPort = "9999" // UDP port for update_filter_req on each device's telemetry core
 )
 
 var (
