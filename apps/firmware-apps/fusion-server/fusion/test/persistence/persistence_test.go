@@ -1285,6 +1285,58 @@ func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
 	require.Equal(t, "Node A", *storedA.Name)
 }
 
+func TestExportImportConvergesHashDespiteDifferentMetadataVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPathA := filepath.Join(tmpDir, "node_a.db")
+	dbPathB := filepath.Join(tmpDir, "node_b.db")
+
+	smA := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	pA, err := persistence.NewPersistence(dbPathA, smA)
+	require.NoError(t, err)
+	defer pA.Close()
+
+	smB := persistence.NewStateManager(&api.AppConfig{NodeName: "node-b"})
+	pB, err := persistence.NewPersistence(dbPathB, smB)
+	require.NoError(t, err)
+	defer pB.Close()
+
+	require.NoError(t, smA.Set("volume", 11))
+	require.NoError(t, pA.SaveState())
+
+	require.NoError(t, smB.Set("volume", 3))
+	require.NoError(t, pB.SaveState())
+
+	metaBeforeA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaBeforeB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.NotEqual(t, metaBeforeA.Version, metaBeforeB.Version)
+
+	exported, err := pA.ExportData()
+	require.NoError(t, err)
+
+	exportMap, ok := exported.(map[string]map[string]any)
+	require.True(t, ok)
+
+	importPayload := make(map[string]any, len(exportMap))
+	for key, value := range exportMap {
+		importPayload[key] = value
+	}
+	require.NoError(t, pB.ImportData(importPayload))
+
+	hashA, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	hashB, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, hashA, hashB)
+
+	metaAfterA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaAfterB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, metaAfterA.Hash, metaAfterB.Hash)
+}
+
 func readDatabaseMetadata(dbPath string) (*api.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
@@ -1402,6 +1454,7 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 		if err := json.Unmarshal(value, &metadata); err != nil {
 			return nil, err
 		}
+		metadata.Version = api.Version{}
 		metadata.Hash = ""
 		return json.Marshal(metadata)
 
