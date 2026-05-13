@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -19,6 +20,10 @@ import (
 type BSFHandler struct {
 	bsf fusion.BSF
 }
+
+// bsfNameRe allows only letters, digits, hyphens and underscores in product_name and family.
+// This prevents path-traversal attacks when these values are embedded in S3 keys.
+var bsfNameRe = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
 
 // NewBSFHandler creates a new BSF handler.
 func NewBSFHandler(bsf fusion.BSF) *BSFHandler {
@@ -61,6 +66,15 @@ func (h *BSFHandler) Generate(c *gin.Context) {
 	}
 	if description == "" {
 		response.BadRequest(c, "description is required")
+		return
+	}
+
+	if !bsfNameRe.MatchString(productName) {
+		response.BadRequest(c, "product_name contains invalid characters, only letters, digits, hyphens and underscores are allowed")
+		return
+	}
+	if !bsfNameRe.MatchString(family) {
+		response.BadRequest(c, "family contains invalid characters, only letters, digits, hyphens and underscores are allowed")
 		return
 	}
 

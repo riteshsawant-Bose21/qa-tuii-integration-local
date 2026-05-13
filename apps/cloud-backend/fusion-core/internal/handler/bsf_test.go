@@ -451,3 +451,73 @@ func TestBSFHandler_Generate_ProductNameAndFamilyPassedCorrectly(t *testing.T) {
 	assert.Equal(t, "AM10", captured.ProductName)
 	assert.Equal(t, "ArenaMatch", captured.Family)
 }
+
+// ---------------------------------------------------------------------------
+// Path traversal / S3 key injection prevention
+// ---------------------------------------------------------------------------
+
+func TestBSFHandler_Generate_ProductNameWithSlash_Returns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := NewBSFHandler(&MockBSFService{})
+
+	fields := defaultFields()
+	fields["product_name"] = "../../evil"
+	w, c := newBSFTestContext(t, fields, bsfTestSPMFileName, bsfTestSPMData)
+
+	h.Generate(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestBSFHandler_Generate_FamilyWithSlash_Returns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := NewBSFHandler(&MockBSFService{})
+
+	fields := defaultFields()
+	fields["family"] = "../other-bucket"
+	w, c := newBSFTestContext(t, fields, bsfTestSPMFileName, bsfTestSPMData)
+
+	h.Generate(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestBSFHandler_Generate_ProductNameWithDot_Returns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := NewBSFHandler(&MockBSFService{})
+
+	fields := defaultFields()
+	fields["product_name"] = "DM3.SE"
+	w, c := newBSFTestContext(t, fields, bsfTestSPMFileName, bsfTestSPMData)
+
+	h.Generate(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestBSFHandler_Generate_ProductNameWithSpace_Returns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := NewBSFHandler(&MockBSFService{})
+
+	fields := defaultFields()
+	fields["product_name"] = "DM3 SE"
+	w, c := newBSFTestContext(t, fields, bsfTestSPMFileName, bsfTestSPMData)
+
+	h.Generate(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestBSFHandler_Generate_ValidNamesWithHyphenAndUnderscore_Accepted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := NewBSFHandler(successMock())
+
+	fields := defaultFields()
+	fields["product_name"] = "DM3-SE_V2"
+	fields["family"] = "Design_Max-Pro"
+	w, c := newBSFTestContext(t, fields, "DM3-SE_V2.spm", bsfTestSPMData)
+
+	h.Generate(c)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+}
