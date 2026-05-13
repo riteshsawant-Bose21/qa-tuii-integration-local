@@ -40,7 +40,6 @@ class VirtualControlSection extends StatelessWidget {
 
   Future<void> _downloadQrAsImage(BuildContext context) async {
     try {
-      // 1. Build QR image using pretty_qr_code
       final QrCode qrCode = QrCode.fromData(
         data: _qrData,
         errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -60,15 +59,12 @@ class VirtualControlSection extends StatelessWidget {
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
 
-      // 2. Resolve save directory
       final Directory saveDir = await _getDownloadsDirectory();
       final String filePath = '${saveDir.path}/virtual_controller_qr.png';
 
-      // 3. Write file
       final File file = File(filePath);
       await file.writeAsBytes(pngBytes);
 
-      // 4. Notify user
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -88,23 +84,27 @@ class VirtualControlSection extends StatelessWidget {
 
   Future<Directory> _getDownloadsDirectory() async {
     if (Platform.isMacOS || Platform.isWindows) {
-      // path_provider returns the Downloads folder on desktop
       final Directory? downloads = await getDownloadsDirectory();
       if (downloads != null) return downloads;
     }
-    // Fallback to app documents directory
     return getApplicationDocumentsDirectory();
   }
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabvirtualControlsection),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        FusionTestKeys.instance.settingsTabvirtualControlsection,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// Section header — shared PanelSectionHeader widget
-          PanelSectionHeader(semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectionHeader, title: 'VIRTUAL CONTROL'),
+          PanelSectionHeader(
+            semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectionHeader,
+            title: 'VIRTUAL CONTROL',
+          ),
 
           /// QR + description row
           Padding(
@@ -125,7 +125,10 @@ class VirtualControlSection extends StatelessWidget {
 
   Widget _buildQrCode(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.settingsTabvirtualControlsectionQrPanel),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        FusionTestKeys.instance.settingsTabvirtualControlsectionQrPanel,
+      ),
       child: Container(
         width: 158,
         height: 158,
@@ -167,7 +170,6 @@ class VirtualControlSection extends StatelessWidget {
               onTap: () {
                 final WallControllerConfig config = serviceLocator<ProjectViewModel>().getWallControllerConfig();
                 final TouchUIZoneConfig touchUiConfig = serviceLocator<ProjectViewModel>().getTouchUIZoneConfig();
-                // final String prettyJson = const JsonEncoder.withIndent('  ').convert(config.toJson());
                 final String prettyJson = const JsonEncoder.withIndent('  ').convert(touchUiConfig.toJson());
                 debugPrint('─── WallControllerConfig JSON ───');
                 debugPrint(prettyJson);
@@ -181,32 +183,32 @@ class VirtualControlSection extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            FusionAppButton(
-              semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
-              text: 'Download',
-              height: 32,
-              width: 110,
-              showSuffixIcon: true,
-              suffixIcon: Icons.download_outlined,
-              style: FusionAppButtonStyle.primary,
-              onPressed: () => _downloadQrAsImage(context),
+            Row(
+              spacing: 6,
+              children: <Widget>[
+                FusionAppButton(
+                  semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
+                  text: 'Download',
+                  height: 32,
+                  width: 110,
+                  showSuffixIcon: true,
+                  suffixIcon: Icons.download_outlined,
+                  style: FusionAppButtonStyle.primary,
+                  onPressed: () => _downloadQrAsImage(context),
+                ),
+                FusionAppButton(
+                  semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
+                  text: 'Print',
+                  height: 32,
+                  width: 110,
+                  showSuffixIcon: true,
+                  suffixIcon: Icons.print_outlined,
+                  style: FusionAppButtonStyle.primary,
+                  onPressed: () => _printQr(context),
+                ),
+                const SizedBox(width: 12),
+              ],
             ),
-            // Row(
-            //   children: <Widget>[
-            //     FusionAppButton(
-            //       semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
-            //       text: 'Print',
-            //       height: 32,
-            //       width: 110,
-            //       showSuffixIcon: true,
-            //       suffixIcon: Icons.print_outlined,
-            //       style: FusionAppButtonStyle.primary,
-            //       onPressed: () => _printQr(context),
-            //     ),
-            //     const SizedBox(width: 12),
-            //
-            //   ],
-            // ),
           ],
         ),
       ),
@@ -261,12 +263,12 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
         _loading = false;
       });
     } catch (e) {
+      print('Load printers error: $e');
       setState(() => _loading = false);
     }
   }
 
   Future<Uint8List> _buildPdf() async {
-    // Render QR
     final QrCode qrCode = QrCode.fromData(
       data: widget.qrData,
       errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -280,10 +282,13 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
         background: Color(0xFFFFFFFF),
       ),
     );
+
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     final Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-    // Build PDF
+    final pw.Font fontRegular = await PdfGoogleFonts.notoSansRegular();
+    final pw.Font fontBold = await PdfGoogleFonts.notoSansBold();
+
     final pw.Document doc = pw.Document();
     final pw.MemoryImage qrPwImage = pw.MemoryImage(pngBytes);
     final PdfPageFormat format = _landscape ? _selectedFormat.landscape : _selectedFormat.portrait;
@@ -299,6 +304,7 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                 pw.Text(
                   'Virtual Wall Controller',
                   style: pw.TextStyle(
+                    font: fontBold,
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
                   ),
@@ -312,7 +318,7 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                 pw.SizedBox(height: 16),
                 pw.Text(
                   'Scan with a mobile device on the same network',
-                  style: const pw.TextStyle(fontSize: 12),
+                  style: pw.TextStyle(font: fontRegular, fontSize: 12),
                 ),
               ],
             ),
@@ -324,31 +330,110 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
     return doc.save();
   }
 
+  /// Resolves the real CUPS queue name from a Flutter display name.
+  /// CUPS queues use underscores; display names may use spaces.
+  /// e.g. "Mangalore Office Printer" → "Mangalore_Office_Printer"
+  Future<String> _resolveCupsQueueName(String displayName) async {
+    try {
+      /// lpstat -a lists all accepting queues with their real CUPS queue names
+      final ProcessResult result = await Process.run('lpstat', <String>['-a']);
+      final String output = result.stdout as String;
+
+      print('lpstat -a output:\n$output');
+
+      for (final String line in output.split('\n')) {
+        if (line.trim().isEmpty) continue;
+
+        /// Each line format: "QueueName accepting requests since ..."
+        final String queueName = line.split(' ').first;
+
+        /// Normalize both sides: replace underscores with spaces, lowercase
+        final String normalizedQueue = queueName.replaceAll('_', ' ').toLowerCase();
+        final String normalizedDisplay = displayName.replaceAll('_', ' ').toLowerCase();
+
+        if (normalizedQueue == normalizedDisplay) {
+          print('Matched CUPS queue: $queueName for display name: $displayName');
+          return queueName;
+        }
+      }
+
+      print('No exact match found in lpstat -a, falling back to underscore replacement');
+    } catch (e) {
+      print('Could not resolve CUPS queue name: $e');
+    }
+
+    /// Fallback: replace spaces with underscores
+    return displayName.replaceAll(' ', '_');
+  }
+
   Future<void> _print() async {
     if (_selectedPrinter == null) return;
     setState(() => _printing = true);
 
     try {
-      final Uint8List pdfBytes = await _buildPdf();
+      print('========== PRINT ==========');
+      print('Display name: ${_selectedPrinter!.name}');
+      print('Copies: $_copies');
 
-      for (int i = 0; i < _copies; i++) {
+      print('Building PDF...');
+      final Uint8List pdfBytes = await _buildPdf();
+      print('PDF built: ${pdfBytes.length} bytes');
+
+      final Directory tempDir = await getTemporaryDirectory();
+      final String pdfPath = '${tempDir.path}/virtual_controller_qr.pdf';
+      await File(pdfPath).writeAsBytes(pdfBytes);
+      print('PDF saved to: $pdfPath');
+
+      if (Platform.isMacOS) {
+        /// Resolve real CUPS queue name (handles spaces in printer display names)
+        final String cupsQueue = await _resolveCupsQueueName(_selectedPrinter!.name);
+        print('Resolved CUPS queue: $cupsQueue');
+
+        /// Pass args as a list — Process.run does NOT use shell,
+        /// so spaces in cupsQueue and pdfPath are handled correctly
+        final ProcessResult result = await Process.run(
+          'lpr',
+          <String>[
+            '-P',
+            cupsQueue,
+            '-#',
+            _copies.toString(),
+            pdfPath,
+          ],
+        );
+
+        print('lpr stdout: ${result.stdout}');
+        print('lpr stderr: ${result.stderr}');
+        print('lpr exit code: ${result.exitCode}');
+
+        if (result.exitCode != 0) {
+          throw Exception('lpr failed (exit ${result.exitCode}): ${result.stderr}');
+        }
+
+        print('Print job submitted successfully');
+        if (mounted) Navigator.of(context).pop(true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sent to printer successfully'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        /// Windows / Linux — directPrintPdf works reliably
+        if (mounted) Navigator.of(context).pop(true);
         await Printing.directPrintPdf(
           printer: _selectedPrinter!,
-          onLayout: (PdfPageFormat format) async => pdfBytes,
+          onLayout: (_) async => pdfBytes,
           name: 'virtual_controller_qr',
-          format: _landscape ? _selectedFormat.landscape : _selectedFormat.portrait,
         );
       }
 
-      if (mounted) {
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sent to ${_selectedPrinter!.name}'),
-          ),
-        );
-      }
-    } catch (e) {
+      print('========== END PRINT ==========');
+    } catch (e, stack) {
+      print('Print error: $e');
+      print('Stack: $stack');
       if (mounted) {
         setState(() => _printing = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -379,7 +464,7 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    // Header
+                    // ── Header ──────────────────────────────────────────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
@@ -396,12 +481,12 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Two-column body: controls | preview
+                    // ── Body: controls | preview ─────────────────────────
                     IntrinsicHeight(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          // LEFT: controls
+                          // LEFT — controls
                           SizedBox(
                             width: 380,
                             child: Column(
@@ -432,14 +517,14 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                             ),
                           ),
                           const SizedBox(width: 24),
-                          // RIGHT: preview
+                          // RIGHT — preview
                           Expanded(child: _buildPreview(context)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Action buttons
+                    // ── Action buttons ───────────────────────────────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
@@ -478,10 +563,8 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
       ),
       clipBehavior: Clip.antiAlias,
       child: PdfPreview(
-        // Rebuild whenever paper size / orientation changes
         key: ValueKey<String>(
-          '${_selectedFormat.width}_'
-          '${_selectedFormat.height}_$_landscape',
+          '${_selectedFormat.width}_${_selectedFormat.height}_$_landscape',
         ),
         build: (PdfPageFormat format) => _buildPdf(),
         canChangePageFormat: false,
@@ -513,7 +596,7 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
       value: _selectedPrinter,
       borderRadius: BorderRadius.circular(8),
       items: _printers,
-      itemLabelBuilder: (Printer p) => p.name, // ← name may differ, check the class
+      itemLabelBuilder: (Printer p) => p.name,
       onChanged: (Printer? p) => setState(() => _selectedPrinter = p),
     );
   }
@@ -559,7 +642,6 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
               borderRadius: BorderRadius.circular(8),
               boxShadow:
                   selected
-                      // Pressed-in (inset) shadows
                       ? <BoxShadow>[
                         BoxShadow(
                           color: context.colorScheme.shadowDark,
@@ -579,7 +661,6 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                           blurStyle: BlurStyle.inner,
                         ),
                       ]
-                      // Raised (extruded) shadows
                       : <BoxShadow>[
                         BoxShadow(
                           color: context.colorScheme.shadowLight,
@@ -619,7 +700,10 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
 
   Widget _buildCopiesSelector(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, 'print_dialog_copies_selector'),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'print_dialog_copies_selector',
+      ),
       value: _copies.toString(),
       child: Container(
         padding: const EdgeInsets.all(6),
