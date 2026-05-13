@@ -249,7 +249,8 @@ type VIPMonitor struct {
 	applyMu     sync.RWMutex
 	applyStatus VIPApplyStatus
 
-	selfHealOnce sync.Once // ensures self-heal from VRRP runs at most once
+	selfHealMu     sync.Mutex
+	selfHealActive bool // true while a self-heal goroutine is in-flight
 }
 
 // NewVIPMonitor creates a new VIP monitor instance
@@ -631,10 +632,15 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	// keepalived config converges cluster-wide.
 	if configuredVIP == "" && newVIP != "" {
 		m.stateMu.Unlock()
-		m.selfHealOnce.Do(func() {
+		m.selfHealMu.Lock()
+		if !m.selfHealActive {
+			m.selfHealActive = true
+			m.selfHealMu.Unlock()
 			logger.Info("VRRP self-heal: no configured VIP but received advertisement for %s from %s — attempting config sync", newVIP, srcIP)
 			go m.selfHealVIPFromPeer(srcIP)
-		})
+		} else {
+			m.selfHealMu.Unlock()
+		}
 		return
 	}
 
@@ -653,11 +659,16 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 		}
 		isLocalVIP, err := vip.IsIPPresentOnLocalInterface(configuredVIP)
 		if err == nil && !isLocalVIP {
-			m.selfHealOnce.Do(func() {
+			m.selfHealMu.Lock()
+			if !m.selfHealActive {
+				m.selfHealActive = true
+				m.selfHealMu.Unlock()
 				logger.Info("VRRP stale-VIP self-heal: configured VIP %s is not active locally but peer %s is advertising %s — attempting config sync",
 					configuredVIP, srcIP, newVIP)
 				go m.selfHealVIPFromPeer(srcIP)
-			})
+			} else {
+				m.selfHealMu.Unlock()
+			}
 		} else {
 			logger.Debug("Ignoring VRRP VIP address update that differs from configured VIP: configured=%s advertised=%s srcIP=%s",
 				configuredVIP, newVIP, srcIP)
@@ -883,6 +894,12 @@ func (m *VIPMonitor) updateVIP(vipValue string) error {
 // node missed the original Set VIP fan-out (e.g. during bootstrap when
 // memberlist visibility was incomplete).
 func (m *VIPMonitor) selfHealVIPFromPeer(peerIP string) {
+	defer func() {
+		m.selfHealMu.Lock()
+		m.selfHealActive = false
+		m.selfHealMu.Unlock()
+	}()
+
 	logger := logging.GetLogger()
 
 	// Fetch VIP config from the peer's admin endpoint

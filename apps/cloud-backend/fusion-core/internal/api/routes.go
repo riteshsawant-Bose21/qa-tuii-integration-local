@@ -142,4 +142,12 @@ func (a *API) registerRoutes() {
 		firmwareUpdate.POST(constants.EndpointLogBundleUpdateStatus, firmwareHandler.LogBundleUpdateStatus)
 	}
 
+	// BSF routes
+	bsfHandler := handler.NewBSFHandler(a.bsf)
+	bsfGroup := v1.Group("")
+	bsfGroup.Use(middleware.ExtractUserFromHeaders())
+	{
+		bsfGroup.POST(constants.EndpointBSFGenerate, bsfHandler.Generate)
+	}
+
 }

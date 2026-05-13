@@ -15,7 +15,8 @@ type CloudConfig struct {
 	ProductS3Bucket      string
 	ProjectS3Bucket      string
 	FirmwareBundleBucket string
-	AssetBaseURL        string
+	AssetS3Bucket        string
+	AssetBaseURL         string
 	Region               string
 	IoTEndpoint          string
 	IoTCommandTopic      string
@@ -45,11 +46,14 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		return nil, fmt.Errorf("failed to get S3 firmware bucket: %w", err)
 	}
 
+	assetBucket, err := s.store.ReqString(environment.S3.AssetBucket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get S3 asset bucket: %w", err)
+	}
 	assetBaseURL, err := s.store.ReqString(environment.S3.AssetBaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 asset base URL: %w", err)
 	}
-
 	region, err := s.store.ReqString(environment.AWS.Region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 region: %w", err)
@@ -81,7 +85,8 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		ProductS3Bucket:      productBucket,
 		ProjectS3Bucket:      projectBucket,
 		FirmwareBundleBucket: firmwareBundleBucket,
-		AssetBaseURL:        assetBaseURL,
+		AssetS3Bucket:        assetBucket,
+		AssetBaseURL:         assetBaseURL,
 		Region:               region,
 		IoTEndpoint:          iotEndpoint,
 		IoTCommandTopic:      iotCommandTopic,

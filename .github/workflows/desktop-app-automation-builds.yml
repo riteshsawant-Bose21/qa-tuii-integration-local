@@ -15,7 +15,7 @@ jobs:
   flutter-windows-automation-build:
     concurrency:
       group: flutter-windows-automation-build
-    runs-on: windows-actions-build-agent
+    runs-on: win-automation-build-agent
     timeout-minutes: 30
 
     steps:
@@ -31,7 +31,7 @@ jobs:
           keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
           cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
           SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD_NEW }}
   flutter-mac-automation-build:
     concurrency:
       group: flutter-mac-automation-build
