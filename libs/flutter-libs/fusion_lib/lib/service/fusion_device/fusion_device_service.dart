@@ -7,6 +7,8 @@ import 'package:fusion_lib/generated/proto/fusion/websocket.pb.dart' as model;
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
+import '../../generated/proto/fusion/devices.pb.dart' as model;
+
 class FusionDeviceService {
   final FusionNetworkClient networkClient;
 
@@ -241,25 +243,46 @@ class FusionDeviceService {
 
   Future<ResponseCallback<List<FusionNetworkDevice>>> getAvailableDevicesOnNetwork({required String ip}) async {
     try {
-      ResponseCallback<List<FusionNetworkDevice>> responseCallback = await networkClient.get(
+      final ResponseCallback<model.DeviceListResponse> response = await networkClient.getProto<model.DeviceListResponse>(
         api: FusionApiEndpoint.fusionDevice,
         baseUrlToOverride: ip,
         isSecure: false,
-        fromJson: (dynamic json) {
-          print("Raw response from Fusion device scan: $json");
-          // Dio may return the body as a raw String when the server's
-          // Content-Type is not strictly application/json. Decode it first.
-          final List<dynamic> list = json is String ? jsonDecode(json) as List<dynamic> : json as List<dynamic>;
-          return List<FusionNetworkDevice>.from(
-            list.map((e) => FusionNetworkDevice.fromJson(e as Map<String, dynamic>)),
-          );
-        },
+        create: model.DeviceListResponse.create,
       );
 
-      return responseCallback;
+      if (!response.success || response.data == null) {
+        return ResponseCallback<List<FusionNetworkDevice>>.failure(
+          response.message,
+          statusCode: response.statusCode,
+        );
+      }
+
+      // print("Raw devices from response: ${response.data!.devices.map((d) => d.toString()).toList()}");
+
+      return ResponseCallback<List<FusionNetworkDevice>>.success(
+        response.data!.devices.map(_toFusionNetworkDevice).toList(),
+        statusCode: response.statusCode,
+      );
     } catch (e) {
       return ResponseCallback<List<FusionNetworkDevice>>.failure(e.toString());
     }
+  }
+
+  FusionNetworkDevice _toFusionNetworkDevice(model.DeviceInfo device) {
+    final String serialNumber = device.serialNumber;
+
+    return FusionNetworkDevice(
+      address: device.address,
+      id: device.id,
+      location: device.location,
+      name: device.name,
+      modelName: device.modelName,
+      serialNumber: serialNumber,
+      isPrimary: device.isPrimary,
+      macAddress: device.macAddress,
+      softwareUpdateVersion: device.firmwareVersion,
+      isDeviceCertificateValid: device.isDeviceCertificateValid,
+    );
   }
 
   Future<ResponseCallback<String>> getCsrCertificate({

@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fusion_lib/generated/proto/fusion/websocket.pb.dart' as model;
-import 'package:fusion_lib/generated/proto/google/protobuf/struct.pb.dart'
-    as structpb;
+import 'package:fusion_lib/generated/proto/google/protobuf/struct.pb.dart' as structpb;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -53,15 +52,13 @@ enum _WsState {
   verifying,
 }
 
-class BlockDataViewmodel extends Cubit<BlockDataState>
-    with WidgetsBindingObserver {
+class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserver {
   BlockDataViewmodel() : super(BlockDataState()) {
     WidgetsBinding.instance.addObserver(this);
     _attachControlModeListener();
   }
 
-  final FusionNetworkClient _networkClient =
-      serviceLocator<FusionNetworkClient>();
+  final FusionNetworkClient _networkClient = serviceLocator<FusionNetworkClient>();
 
   // ── Message templates ──────────────────────────────────────────────────────
 
@@ -82,8 +79,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
 
   /// Live ping completers keyed by their request id ("ping-N").
   /// Each completer resolves to true (pong received) or false (timed out).
-  final Map<String, Completer<bool>> _pendingPings =
-      <String, Completer<bool>>{};
+  final Map<String, Completer<bool>> _pendingPings = <String, Completer<bool>>{};
 
   /// How long to wait for a pong before declaring the socket dead.
   static const Duration _kPingTimeout = Duration(seconds: 5);
@@ -110,8 +106,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
 
   // ── Send debouncing ────────────────────────────────────────────────────────
 
-  final Map<String, ({Timer timer, dynamic value, int? dimension})>
-  _pendingSends = <String, ({Timer timer, dynamic value, int? dimension})>{};
+  final Map<String, ({Timer timer, dynamic value, int? dimension})> _pendingSends = <String, ({Timer timer, dynamic value, int? dimension})>{};
   static const Duration _kSendDebounce = Duration(milliseconds: 150);
   int _patchSeq = 0;
 
@@ -174,10 +169,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
   void _attachControlModeListener() {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     _onControlModeChanged(vm.isInControlMode);
-    _controlModeSubscription = vm.stream
-        .map((_) => vm.isInControlMode)
-        .distinct()
-        .listen(_onControlModeChanged);
+    _controlModeSubscription = vm.stream.map((_) => vm.isInControlMode).distinct().listen(_onControlModeChanged);
   }
 
   void _onControlModeChanged(bool active) {
@@ -230,14 +222,12 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
       return;
     }
 
-    final String wsHost =
-        virtualIP.contains(':') ? virtualIP : '$virtualIP:8080';
+    final String wsHost = virtualIP.contains(':') ? virtualIP : '$virtualIP:8080';
     final String wsUrl = 'ws://$wsHost/ws';
     debugPrint('[BlockData] Connecting to $wsUrl…');
 
     try {
-      final ResponseCallback<dynamic> result = await _networkClient
-          .connectWebSocket(url: wsUrl);
+      final ResponseCallback<dynamic> result = await _networkClient.connectWebSocket(url: wsUrl);
       if (!result.success) {
         debugPrint('[BlockData] Connect failed: ${result.message}');
         _wsState = _WsState.disconnected;
@@ -411,10 +401,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
     final dynamic rawData = message.data;
     late final model.WebSocketResponse payload;
     try {
-      payload =
-          rawData is String
-              ? model.WebSocketResponse.fromJson(rawData)
-              : model.WebSocketResponse.fromJson(jsonEncode(rawData));
+      payload = rawData is String ? model.WebSocketResponse.fromJson(rawData) : model.WebSocketResponse.fromJson(jsonEncode(rawData));
     } catch (_) {
       return;
     }
@@ -441,15 +428,11 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
     }
 
     try {
-      final Map<String, dynamic>? data =
-          payload.hasData() ? _decodeValueMap(payload.data) : null;
-      final Map<String, dynamic>? audio =
-          (data?['settings'] as Map<String, dynamic>?)?['audio']
-              as Map<String, dynamic>?;
+      final Map<String, dynamic>? data = payload.hasData() ? _decodeValueMap(payload.data) : null;
+      final Map<String, dynamic>? audio = (data?['settings'] as Map<String, dynamic>?)?['audio'] as Map<String, dynamic>?;
       if (audio == null) return;
 
-      final Map<String, Map<String, dynamic>> updated =
-          Map<String, Map<String, dynamic>>.from(state.allBlockData);
+      final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData);
       bool anyAccepted = false;
 
       audio.forEach((String blockId, dynamic value) {
@@ -560,8 +543,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
 
     for (final Timer t in _activeInteractions.values) t.cancel();
     _activeInteractions.clear();
-    for (final ({Timer timer, dynamic value, int? dimension}) e
-        in _pendingSends.values) {
+    for (final ({Timer timer, dynamic value, int? dimension}) e in _pendingSends.values) {
       e.timer.cancel();
     }
     _pendingSends.clear();
@@ -611,22 +593,19 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
 
     // Fallback to REST.
     try {
-      final ResponseCallback<FusionStateValue<Map<String, dynamic>>> response =
-          await _networkClient.getStateValue<Map<String, dynamic>>(
-            key: 'settings.audio.$blockId',
-            isSecure: false,
-            baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP!,
-            decodeValue:
-                (dynamic value) => Map<String, dynamic>.from(
-                  value as Map<dynamic, dynamic>,
-                ),
-          );
+      final ResponseCallback<FusionStateValue<Map<String, dynamic>>> response = await _networkClient.getStateValue<Map<String, dynamic>>(
+        key: 'settings.audio.$blockId',
+        isSecure: false,
+        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP!,
+        decodeValue:
+            (dynamic value) => Map<String, dynamic>.from(
+              value as Map<dynamic, dynamic>,
+            ),
+      );
 
       if (response.success && response.data != null && response.data!.exists) {
         final Map<String, dynamic> currentValue = response.data!.value!;
-        final Map<String, Map<String, dynamic>> updated =
-            Map<String, Map<String, dynamic>>.from(state.allBlockData)
-              ..[blockId] = currentValue;
+        final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData)..[blockId] = currentValue;
         emit(
           state.copyWith(
             blockId: blockId,
@@ -638,8 +617,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
       } else {
         FusionLogger.log(
           tag: LogTag.dspConfig,
-          message:
-              '[BlockData] REST fetch failed for $blockId: ${response.message}',
+          message: '[BlockData] REST fetch failed for $blockId: ${response.message}',
         );
       }
     } catch (ex) {
@@ -662,15 +640,21 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
     required dynamic value,
     int? dimension,
   }) async {
+    updateBlockParameterViaAPi(
+      blockId: blockId,
+      parameter: parameter,
+      value: value,
+      dimension: dimension,
+    );
+    return;
     final String key = '$blockId.$parameter';
 
     // 1. Optimistic local write — UI feels instant.
-    final Map<String, Map<String, dynamic>> optimistic =
-        Map<String, Map<String, dynamic>>.from(state.allBlockData)
-          ..[blockId] = <String, dynamic>{
-            ...state.allBlockData[blockId] ?? <String, dynamic>{},
-            parameter: value,
-          };
+    final Map<String, Map<String, dynamic>> optimistic = Map<String, Map<String, dynamic>>.from(state.allBlockData)
+      ..[blockId] = <String, dynamic>{
+        ...state.allBlockData[blockId] ?? <String, dynamic>{},
+        parameter: value,
+      };
     if (!isClosed) emit(state.copyWith(allBlockData: optimistic));
 
     // 2. Mark interaction — suppresses echo from server for [_kInteractionCooldown].
@@ -705,28 +689,14 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
     int? dimension,
   }) async {
     try {
-      final Map<String, dynamic> payload =
-          dimension == null
-              ? <String, dynamic>{
-                'settings': <String, dynamic>{
-                  'audio': <String, dynamic>{
-                    blockId: <String, dynamic>{parameter: value},
-                  },
-                },
-              }
-              : <String, dynamic>{
-                'settings': <String, dynamic>{
-                  'audio': <String, dynamic>{
-                    blockId: <String, dynamic>{
-                      parameter: _buildDimensionList(value, dimension),
-                    },
-                  },
-                },
-              };
+      final Map<String, dynamic> payload = <String, dynamic>{
+        "value": value,
+      };
 
       final ResponseCallback<dynamic> response = await _networkClient.patch(
-        api: FusionApiEndpoint.fusionState,
+        api: FusionApiEndpoint.audioSettings,
         isSecure: false,
+        additionalPath: dimension == null ? "$blockId/$parameter" : "$blockId/$parameter/$dimension",
         baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
         data: payload,
       );
@@ -734,15 +704,13 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
       if (!response.success) {
         FusionLogger.log(
           tag: LogTag.dspConfig,
-          message:
-              '[BlockData] REST patch failed for $blockId.$parameter: ${response.message}',
+          message: '[BlockData] REST patch failed for $blockId.$parameter: ${response.message}',
         );
       }
     } catch (ex) {
       FusionLogger.log(
         tag: LogTag.dspConfig,
-        message:
-            '[BlockData] REST patch exception for $blockId.$parameter: $ex',
+        message: '[BlockData] REST patch exception for $blockId.$parameter: $ex',
       );
     }
   }
@@ -798,9 +766,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
       // tears the socket down and any message sent in this window is dropped
       // with no retry. REST is reliable; use it whenever we are not in the
       // fully-confirmed 'connected' state.
-      final bool socketConfirmedHealthy =
-          _wsState == _WsState.connected &&
-          _networkClient.webSocketService.isConnected;
+      final bool socketConfirmedHealthy = _wsState == _WsState.connected && _networkClient.webSocketService.isConnected;
 
       if (socketConfirmedHealthy) {
         _sendPatchConfig(audioPayload);
@@ -850,8 +816,7 @@ class BlockDataViewmodel extends Cubit<BlockDataState>
     if (!response.success) {
       FusionLogger.log(
         tag: LogTag.dspConfig,
-        message:
-            '[BlockData] REST patch fallback failed for $blockId.$parameter: ${response.message}',
+        message: '[BlockData] REST patch fallback failed for $blockId.$parameter: ${response.message}',
       );
     }
   }

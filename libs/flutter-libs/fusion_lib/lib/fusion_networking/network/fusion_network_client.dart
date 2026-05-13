@@ -519,13 +519,6 @@ class FusionNetworkClient {
   }
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
-    if (!HAS_CLOUD_ACCESS)
-      return ResponseCallback<T>(
-        success: false,
-        message: "Access to APIs is not allowed.",
-        statusCode: null,
-      );
-
     try {
       // Close any existing socket to prevent leaks on reconnect.
       if (subscriberSocket != null) {
@@ -895,6 +888,7 @@ enum FusionApiEndpoint {
   //fusion server setup apis
   fusionDeviceConfig('/device', FusionApiType.fusionServer),
   fusionDevice('/devices', FusionApiType.fusionServer),
+  fusionSync('/device', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
   audioSettings('/settings/audio', FusionApiType.fusionServer),
   snapshots('/snapshots', FusionApiType.fusionServer),
@@ -919,6 +913,7 @@ extension ApiEndpointTypeCheckExtension on String {
         contains(FusionApiEndpoint.fusionGetEndPoints.path) ||
         contains(FusionApiEndpoint.fusionDeviceConfig.path) ||
         contains(FusionApiEndpoint.fusionDevice.path) ||
+        contains(FusionApiEndpoint.fusionSync.path) ||
         contains(FusionApiEndpoint.setVip.path) ||
         contains(FusionApiEndpoint.audioSettings.path) ||
         contains(FusionApiEndpoint.snapshots.path) ||
