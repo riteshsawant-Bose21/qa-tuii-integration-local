@@ -1,7 +1,7 @@
 package types
 
 // ComponentCategory represents the type of component being processed.
-// For example, "speaker" for speakers and subwoofers. This is used to determinethe appropriate BSF structure and processing logic during BSF generation.
+// For example, "speaker" for speakers and subwoofers. This is used to determine the appropriate BSF structure and processing logic during BSF generation.
 // currently only "speaker" is supported, but this can be extended in the future to support other hardware component types like "Slider", "pullback", etc.
 type ComponentCategory string
 

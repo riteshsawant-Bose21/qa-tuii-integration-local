@@ -52,7 +52,7 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 	}
 	assetBaseURL, err := s.store.ReqString(environment.S3.AssetBaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get S3 asset base URL: %%w", err)
+		return nil, fmt.Errorf("failed to get S3 asset base URL: %w", err)
 	}
 	region, err := s.store.ReqString(environment.AWS.Region)
 	if err != nil {

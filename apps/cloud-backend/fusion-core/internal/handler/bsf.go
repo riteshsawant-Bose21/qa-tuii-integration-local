@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
@@ -77,7 +78,12 @@ func (h *BSFHandler) Generate(c *gin.Context) {
 	}
 	category := types.ComponentCategory(categoryStr)
 	if _, ok := types.ValidCategories[category]; !ok {
-		response.BadRequest(c, fmt.Sprintf("unsupported category %q, valid values: speaker", categoryStr))
+		validValues := make([]string, 0, len(types.ValidCategories))
+		for k := range types.ValidCategories {
+			validValues = append(validValues, string(k))
+		}
+		sort.Strings(validValues)
+		response.BadRequest(c, fmt.Sprintf("unsupported category %q, valid values: %s", categoryStr, strings.Join(validValues, ", ")))
 		return
 	}
 
@@ -94,18 +100,34 @@ func (h *BSFHandler) Generate(c *gin.Context) {
 		return
 	}
 
+	const maxSPMSize = 2 << 20 // 2 MB
+	if fileHeader.Size > maxSPMSize {
+		response.BadRequest(c, fmt.Sprintf("spm_file exceeds maximum allowed size of 2 MB (got %d bytes)", fileHeader.Size))
+		return
+	}
+
 	file, err := fileHeader.Open()
 	if err != nil {
 		logger.Error("Failed to open uploaded spm_file", zap.Error(err))
 		response.InternalError(c)
 		return
 	}
-	defer file.Close()
 
-	spmData, err := io.ReadAll(file)
+	// close the file when we're done
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			logger.Error("Failed to close spm_file", zap.Error(cerr))
+		}
+	}()
+
+	spmData, err := io.ReadAll(io.LimitReader(file, maxSPMSize+1))
 	if err != nil {
 		logger.Error("Failed to read spm_file content", zap.Error(err))
 		response.InternalError(c)
+		return
+	}
+	if int64(len(spmData)) > maxSPMSize {
+		response.BadRequest(c, "spm_file exceeds maximum allowed size of 2 MB")
 		return
 	}
 

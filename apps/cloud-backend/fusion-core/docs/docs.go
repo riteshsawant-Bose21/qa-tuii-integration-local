@@ -76,7 +76,7 @@ const docTemplate = `{
         },
         "/bsf/generate": {
             "post": {
-                "description": "Generates a BSF (Bose Specification File) archive from the provided product metadata and SPM file, uploads it to S3, and returns the download URL.",
+                "description": "Generates a BSF (Bose Specification File) from the provided product metadata and SPM file, uploads it to S3, and returns the download URL.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -90,14 +90,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Product name (e.g. AMM108)",
+                        "description": "Product name (e.g. DM3SE)",
                         "name": "product_name",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Product family (e.g. AMM)",
+                        "description": "Product family (e.g. DesignMax)",
                         "name": "family",
                         "in": "formData",
                         "required": true

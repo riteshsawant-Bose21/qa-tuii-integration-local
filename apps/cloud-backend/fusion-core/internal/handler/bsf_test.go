@@ -54,7 +54,7 @@ func buildBSFRequest(t *testing.T, fields map[string]string, fileName string, fi
 		_, err = part.Write(fileContent)
 		require.NoError(t, err)
 	}
-	writer.Close()
+	require.NoError(t, writer.Close())
 
 	req, err := http.NewRequest(http.MethodPost, "/bsf/generate", body)
 	require.NoError(t, err)

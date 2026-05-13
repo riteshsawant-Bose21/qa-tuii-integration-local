@@ -2,7 +2,7 @@
 
 INSERT INTO feature (name, description)
 VALUES
-  ('bsf.generate', 'Can generate BSF (Bose Speaker File) archives');
+  ('bsf.generate', 'Can generate BSF (Bose Specification File) archives');
 
 SELECT setval('feature_permission_id_seq', (SELECT MAX(id) FROM feature_permission));
 
