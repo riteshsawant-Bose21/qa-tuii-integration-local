@@ -35,6 +35,9 @@ class SurfacePlacementResult {
   /// Room width in meters
   final double roomWidth;
 
+  /// Optional debug info produced during placement resolution.
+  final SurfacePlacementDebugInfo? debugInfo;
+
   /// Total number of speakers required
   int get totalSpeakers => positions.length;
 
@@ -51,6 +54,7 @@ class SurfacePlacementResult {
     required this.horizontalCoverageAngle,
     required this.roomLength,
     required this.roomWidth,
+    this.debugInfo,
   });
 
   @override

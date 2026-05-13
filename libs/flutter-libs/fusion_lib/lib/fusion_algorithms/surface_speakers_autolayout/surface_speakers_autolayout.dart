@@ -8,6 +8,7 @@ part 'model/coverage_preference.dart';
 part 'model/loudspeaker.dart';
 part 'model/placement_config.dart';
 part 'model/speaker_position.dart';
+part 'model/surface_placement_debug_info.dart';
 part 'model/surface_placement_result.dart';
 part 'model/surface_room.dart';
 
@@ -160,22 +161,20 @@ class SurfaceSpeakerPlacer {
     print("Provisional speakers placed on walls: ${provisionalSpeakers.length}");
 
     // Step 7: Resolve overlaps and corner-wall collisions.
-    final List<SpeakerPosition> positions = _resolveSpeakerOverlaps(
+    final ({List<SpeakerPosition> positions, SurfacePlacementDebugInfo debugInfo}) resolved = _resolveSpeakerOverlaps(
       provisionalSpeakers: provisionalSpeakers,
       room: room,
       mountingHeight: mountingHeight,
       effectiveCoverage: effectiveCoverage,
     );
-    print("Positions after resolving overlaps: ${positions.length}");
+    print("Positions after resolving overlaps: ${resolved.positions.length}");
 
     final List<int> speakersPerWall = _countSpeakersPerWall(provisionalSpeakers);
     final int speakersOnLength = speakersPerWall.isEmpty ? 0 : speakersPerWall.reduce(max);
     final int speakersOnWidth = speakersPerWall.isEmpty ? 0 : speakersPerWall.reduce(min);
 
-    // Step 8: Debug output if enabled
-
     return SurfacePlacementResult(
-      positions: positions,
+      positions: resolved.positions,
       mountingHeight: mountingHeight,
       downAngle: downAngle,
       distanceToListenerPlane: distance,
@@ -186,6 +185,7 @@ class SurfaceSpeakerPlacer {
       horizontalCoverageAngle: speaker.horizontalCoverageAngle,
       roomLength: room.length,
       roomWidth: room.width,
+      debugInfo: resolved.debugInfo,
     );
   }
 
@@ -331,40 +331,45 @@ class SurfaceSpeakerPlacer {
   }
 
   /// Resolves overlap and corner collisions based on polygon geometry.
-  static List<SpeakerPosition> _resolveSpeakerOverlaps({
+  static ({List<SpeakerPosition> positions, SurfacePlacementDebugInfo debugInfo}) _resolveSpeakerOverlaps({
     required List<_PlacedSpeaker> provisionalSpeakers,
     required SurfaceRoom room,
     required double mountingHeight,
     required double effectiveCoverage,
   }) {
     final List<_PlacedSpeaker> working = List<_PlacedSpeaker>.from(provisionalSpeakers);
+    final List<RemovedSpeakerInfo> removedSpeakers = <RemovedSpeakerInfo>[];
     print(
       "Resolving overlaps for ${working.length} provisional speakers... Positions: ${working.map((s) => '(${s.point.dx.toStringAsFixed(2)}, ${s.point.dy.toStringAsFixed(2)})').join('\n ')}",
     );
-    // Step 5: Remove speakers that fall on a corner (speaker overlap with wall at corners).
+
+    // Step 1: Remove speakers that fall on a corner (speaker overlap with wall at corners).
     final double cornerThreshold = max(0.1, effectiveCoverage * 0.15);
-    bool isCornerCollision(_PlacedSpeaker speaker) {
-      return room.corners.any((Offset corner) {
-        var distance2 = (speaker.point - corner).distance;
-        if (distance2 <= cornerThreshold) {
-          print(
-            "Corner collision detected for speaker at (${speaker.point.dx.toStringAsFixed(2)}, ${speaker.point.dy.toStringAsFixed(2)}) with corner at (${corner.dx.toStringAsFixed(2)}, ${corner.dy.toStringAsFixed(2)}). Distance: ${distance2.toStringAsFixed(3)} m, Threshold: ${cornerThreshold.toStringAsFixed(3)} m",
+
+    RemovedSpeakerInfo? buildCornerCollision(_PlacedSpeaker speaker) {
+      for (final Offset corner in room.corners) {
+        final double dist = (speaker.point - corner).distance;
+        if (dist <= cornerThreshold) {
+          return RemovedSpeakerInfo(
+            position: speaker.point,
+            reason: SpeakerRemovalReason.cornerCollision,
+            nearestCorner: corner,
+            distanceToCorner: dist,
           );
         }
-        return distance2 <= cornerThreshold;
-      });
+      }
+      return null;
     }
 
-    final List<_PlacedSpeaker> cornerCollisionSpeakers = working.where(isCornerCollision).toList(growable: false);
-    print(
-      "Corner collision selection (${cornerCollisionSpeakers.length}): ${cornerCollisionSpeakers.map((s) => '(${s.point.dx.toStringAsFixed(2)}, ${s.point.dy.toStringAsFixed(2)})').join(', ')}",
-    );
-    working.removeWhere(
-      isCornerCollision,
-    );
-    print("After removing corner collisions: ${working.length} speakers remain Corner threshold: ${cornerThreshold.toStringAsFixed(2)} m");
+    final List<_PlacedSpeaker> cornerCollisionSpeakers = working.where((s) => buildCornerCollision(s) != null).toList(growable: false);
+    for (final _PlacedSpeaker s in cornerCollisionSpeakers) {
+      final RemovedSpeakerInfo? info = buildCornerCollision(s);
+      if (info != null) removedSpeakers.add(info);
+    }
+    working.removeWhere((s) => buildCornerCollision(s) != null);
+    print("After removing corner collisions: ${working.length} speakers remain. Corner threshold: ${cornerThreshold.toStringAsFixed(2)} m");
 
-    // Step 3 & 4: Merge adjacent overlapping speakers by replacing each pair with midpoint.
+    // Step 2: Merge adjacent overlapping speakers by replacing each pair with midpoint.
     final double adjacentOverlapThreshold = max(0.1, effectiveCoverage * 0.5);
     bool hasChange = true;
 
@@ -387,6 +392,24 @@ class SurfaceSpeakerPlacer {
           );
           final _BoundaryProjection snapped = _projectPointToClosestWall(midpoint, room);
 
+          // Record both merged speakers.
+          removedSpeakers.add(
+            RemovedSpeakerInfo(
+              position: a.point,
+              reason: SpeakerRemovalReason.adjacentMerge,
+              mergedWithPosition: b.point,
+              mergedToPosition: snapped.point,
+            ),
+          );
+          removedSpeakers.add(
+            RemovedSpeakerInfo(
+              position: b.point,
+              reason: SpeakerRemovalReason.adjacentMerge,
+              mergedWithPosition: a.point,
+              mergedToPosition: snapped.point,
+            ),
+          );
+
           final int removeFirst = max(i, nextIndex);
           final int removeSecond = min(i, nextIndex);
           working.removeAt(removeFirst);
@@ -407,7 +430,24 @@ class SurfaceSpeakerPlacer {
       }
     }
     print("After merging overlaps: ${working.length} speakers remain");
-    // Remove corner points again after midpoint merges (midpoint may land on a corner).
+
+    // Step 3: Remove corner points again after midpoint merges.
+    final List<_PlacedSpeaker> postMergeCornerHits = working
+        .where((s) => room.corners.any((corner) => (s.point - corner).distance <= cornerThreshold))
+        .toList(growable: false);
+    for (final _PlacedSpeaker s in postMergeCornerHits) {
+      final Offset nearestCorner = room.corners.reduce(
+        (a, b) => (s.point - a).distance < (s.point - b).distance ? a : b,
+      );
+      removedSpeakers.add(
+        RemovedSpeakerInfo(
+          position: s.point,
+          reason: SpeakerRemovalReason.postMergeCornerCollision,
+          nearestCorner: nearestCorner,
+          distanceToCorner: (s.point - nearestCorner).distance,
+        ),
+      );
+    }
     working.removeWhere(
       (_PlacedSpeaker speaker) => room.corners.any((Offset corner) => (speaker.point - corner).distance <= cornerThreshold),
     );
@@ -425,7 +465,19 @@ class SurfaceSpeakerPlacer {
         })
         .toList(growable: false);
 
-    return edgeConstrained.map((s) => SpeakerPosition(s.point.dx, s.point.dy, mountingHeight, s.rotation)).toList(growable: false);
+    final List<SpeakerPosition> positions = edgeConstrained
+        .map((s) => SpeakerPosition(s.point.dx, s.point.dy, mountingHeight, s.rotation))
+        .toList(growable: false);
+
+    final SurfacePlacementDebugInfo debugInfo = SurfacePlacementDebugInfo(
+      roomCorners: room.corners,
+      provisionalPositions: provisionalSpeakers.map((s) => s.point).toList(growable: false),
+      removedSpeakers: removedSpeakers,
+      cornerThreshold: cornerThreshold,
+      adjacentOverlapThreshold: adjacentOverlapThreshold,
+    );
+
+    return (positions: positions, debugInfo: debugInfo);
   }
 
   static List<int> _countSpeakersPerWall(List<_PlacedSpeaker> placed) {

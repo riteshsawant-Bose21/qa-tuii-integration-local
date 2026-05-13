@@ -6,16 +6,25 @@ import 'package:fusion_lib/product_data/models/models.dart';
 
 import '../../../speaker_selection_popup/viewmodel/product_query_view_model.dart';
 
+class AutoPlacementResult {
+  final List<Speaker> speakers;
+  final SurfacePlacementResult? surfacePlacementResult;
+  final PlacementResult? placementResult;
+  final CeilingPlacementParams? ceilingPlacementParams;
+
+  AutoPlacementResult({required this.speakers, required this.surfacePlacementResult, required this.placementResult, required this.ceilingPlacementParams});
+}
+
 class AutoPlacementUsecase {
-  ResponseCallback<List<Speaker>> runAutoPlacementForCurrentListeningArea({
+  ResponseCallback<AutoPlacementResult> runAutoPlacementForCurrentListeningArea({
     required AutoPlacementParam autoPlacementResult,
     required ListeningArea listeningArea,
   }) {
     try {
-      if (!listeningArea.autoPlacement) return ResponseCallback<List<Speaker>>.failure('Enable Auto-Placement and try again.');
+      if (!listeningArea.autoPlacement) return ResponseCallback<AutoPlacementResult>.failure('Enable Auto-Placement and try again.');
 
       if (listeningArea.vertices.length < 3) {
-        return ResponseCallback<List<Speaker>>.failure('Listening area shape is invalid. Redraw the area and try again.');
+        return ResponseCallback<AutoPlacementResult>.failure('Listening area shape is invalid. Redraw the area and try again.');
       }
 
       final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
@@ -40,12 +49,12 @@ class AutoPlacementUsecase {
 
       final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
 
-      if (candidatePoints.isEmpty) {
-        FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
-        return ResponseCallback<List<Speaker>>.failure(
-          'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
-        );
-      }
+      // if (candidatePoints.isEmpty) {
+      //   FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
+      //   return ResponseCallback<AutoPlacementResult>.failure(
+      //     'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
+      //   );
+      // }
 
       final List<_SpeakerPos> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
       final int placeCount = sortedPoints.length;
@@ -66,13 +75,18 @@ class AutoPlacementUsecase {
         resultedSpeakers.add(clonedSpeaker);
       }
 
-      return ResponseCallback<List<Speaker>>.success(
-        resultedSpeakers,
+      return ResponseCallback<AutoPlacementResult>.success(
+        AutoPlacementResult(
+          speakers: resultedSpeakers,
+          surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
+          placementResult: autoPlacedDetails.placementResult,
+          ceilingPlacementParams: autoPlacedDetails.ceilingPlacementParams,
+        ),
         message: 'Auto-placement successful. Placed $placeCount speakers.',
       );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
-      return ResponseCallback<List<Speaker>>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
+      return ResponseCallback<AutoPlacementResult>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
     }
   }
 
@@ -203,7 +217,6 @@ class AutoPlacementUsecase {
           corners: geometry,
           ceilingHeight: ceilingHeight,
           listenerHeight: listenerHeight,
-          
         ),
         speaker: Loudspeaker(horizontalCoverageAngle: coverageAngle, type: referenceSpeaker.speakerSKU),
         config: PlacementConfig(
