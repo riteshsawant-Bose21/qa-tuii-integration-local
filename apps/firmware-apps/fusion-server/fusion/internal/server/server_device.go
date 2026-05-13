@@ -198,7 +198,7 @@ func projectAudioBlockSettings(block *model.AudioBlockSettings) (map[string]any,
 			projected["frequency"] = float64SliceToAny(typed.Peq.GetFrequency())
 			projected["gain"] = float64SliceToAny(typed.Peq.GetGain())
 			projected["q"] = float64SliceToAny(typed.Peq.GetQ())
-			projected["type"] = stringSliceToAny(typed.Peq.GetFilterType())
+			projected["type"] = stringSliceToAny(typed.Peq.GetType())
 		}
 		return projected, nil
 	case *model.AudioBlockSettings_Compressor:

@@ -1107,9 +1107,6 @@ func hashIsConsistent(metadata []api.MemberMetadata) bool {
 
 // deepCopyState makes a deep copy of the state map
 func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
-	if src == nil {
-		return nil
-	}
 	dst := make(map[string]*api.StateEntry, len(src))
 	for k, v := range src {
 		if v == nil {

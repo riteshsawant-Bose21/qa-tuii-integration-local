@@ -1459,3 +1459,50 @@ func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {
 func stringPtr(value string) *string {
 	return &value
 }
+
+// TestPatchAfterSetStateNilDoesNotPanic is a regression test for the panic
+// "assignment to entry in nil map" that occurred when:
+//  1. ClearState called SetState(nil)
+//  2. SetState(nil) propagated nil into sm.state.State via deepCopyState(nil)
+//  3. A subsequent Patch (e.g. PUT /device) tried to write into the nil map
+//
+// The fix ensures deepCopyState always returns an initialised (possibly empty)
+// map, so sm.state.State is never nil after a clear.
+func TestPatchAfterSetStateNilDoesNotPanic(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+
+	// Seed some initial state so there is something to clear.
+	if err := sm.Set("foo", map[string]any{"bar": 1}); err != nil {
+		t.Fatalf("Set failed: %v", err)
+	}
+
+	// Simulate what ClearState does: SetState(nil).
+	// Before the fix this left sm.state.State == nil.
+	sm.SetState(nil)
+
+	// A Patch immediately after must not panic.
+	result, err := sm.Patch(map[string]any{"foo": map[string]any{"bar": 42}})
+	if err != nil {
+		t.Fatalf("Patch returned unexpected error after SetState(nil): %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected a non-nil PatchResult after patching into cleared state")
+	}
+
+	got, ok := sm.Get("foo.bar")
+	if !ok {
+		t.Fatal("Get(foo.bar) returned not found after Patch")
+	}
+	var gotInt int
+	switch v := got.(type) {
+	case float64:
+		gotInt = int(v)
+	case int:
+		gotInt = v
+	default:
+		t.Fatalf("unexpected type for foo.bar: %T (%v)", got, got)
+	}
+	if gotInt != 42 {
+		t.Errorf("expected foo.bar=42 after Patch, got %v", got)
+	}
+}

@@ -404,6 +404,9 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPATCH(routes.SettingsWallControllerConfigEndpoint, app.Server.PatchWallControllerConfig)
 	app.registerPublicDELETE(routes.SettingsWallControllerConfigEndpoint, app.Server.ClearWallControllerConfig)
 
+	// State
+	app.registerPublicDELETE(routes.StateEndpoint, app.Server.ClearState)
+
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
 
@@ -450,6 +453,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
 	app.registerPrivatePATCH(routes.StateEndpoint, app.Server.PatchState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
+	app.registerPrivateDELETE(routes.StateEndpoint, app.Server.ClearState)
 
 	// Manufacturing
 	app.registerPrivatePOST(routes.ManufacturingSetModelNameEndpoint, app.Server.SetModelNameLocal)
