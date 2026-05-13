@@ -44,7 +44,6 @@ struct stream_node {
     struct list_head node;
     struct fusion_cn_rtp_stream *rtp_stream;
     struct fusion_cn_substream *alsa_stream;
-    atomic_t metrics_pending;
 };
 
 struct active_streams {

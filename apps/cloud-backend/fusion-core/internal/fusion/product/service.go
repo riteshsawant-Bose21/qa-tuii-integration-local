@@ -17,10 +17,16 @@ type SourceService interface {
 	GetAllSources(ctx context.Context, logger *zap.Logger) ([]types.SourceItemResponse, error)
 }
 
+// OutputService defines the interface for output operations.
+type OutputService interface {
+	GetAllOutputs(ctx context.Context, logger *zap.Logger) ([]types.OutputItemResponse, error)
+}
+
 // Service provides methods to interact with the product database and sync operations.
 type Service struct {
 	dbService     DatabaseService
 	sourceService SourceService
+	outputService OutputService
 	version       string
 	validator     *validation.FieldValidator
 	validationCfg *config.Validation
@@ -64,12 +70,15 @@ type DatabaseService interface {
 }
 
 // NewService creates a new product service.
-func NewService(dbService DatabaseService, sourceService SourceService, version string, validationCfg *config.Validation, processingCfg *config.Processing, s3Client *cloudfs.S3, logger *zap.Logger) *Service {
+func NewService(dbService DatabaseService, sourceService SourceService, outputService OutputService, version string, validationCfg *config.Validation, processingCfg *config.Processing, s3Client *cloudfs.S3, logger *zap.Logger) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
 	if sourceService == nil {
 		panic("sourceService cannot be nil")
+	}
+	if outputService == nil {
+		panic("outputService cannot be nil")
 	}
 	if validationCfg == nil {
 		panic("validationCfg cannot be nil")
@@ -87,6 +96,7 @@ func NewService(dbService DatabaseService, sourceService SourceService, version 
 	return &Service{
 		dbService:     dbService,
 		sourceService: sourceService,
+		outputService: outputService,
 		version:       version,
 		validator:     validation.NewFieldValidator(),
 		validationCfg: validationCfg,

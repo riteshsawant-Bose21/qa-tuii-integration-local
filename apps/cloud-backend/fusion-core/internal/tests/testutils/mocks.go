@@ -8,6 +8,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 // MockAuthService implements the fusion.Auth interface for testing.
@@ -58,3 +59,11 @@ func CreateSimpleLoggerMiddleware(logger interface{}) gin.HandlerFunc {
 
 // Ensure MockMiddleware implements the interface
 var _ middleware.AuthMiddleware = (*MockMiddleware)(nil)
+
+// MockBSFService implements the fusion.BSF interface for testing.
+type MockBSFService struct{}
+
+// Generate returns a mock BSF generate response.
+func (m *MockBSFService) Generate(_ context.Context, _ *types.BSFGenerateRequest, _ *zap.Logger) (*types.BSFGenerateResponse, error) {
+	return &types.BSFGenerateResponse{BSFURL: "https://mock-url"}, nil
+}

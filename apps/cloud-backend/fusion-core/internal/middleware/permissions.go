@@ -58,6 +58,9 @@ const (
 	AdminFull = "admin"
 	AdminUser = "user.manage"
 
+	// BSF permissions
+	BSFGenerate = "bsf.generate"
+
 	// Wildcard permissions
 	AllPermissions = "*"
 )
@@ -159,6 +162,11 @@ func SetupOrganizationPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointOrganizationByID), OrganizationDelete, PermissionAdmin, "Delete organization")
 }
 
+// SetupBSFPermissions configures access control permissions for BSF generation endpoints
+func SetupBSFPermissions(acc *AccessControlConfig) {
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointBSFGenerate), BSFGenerate, PermissionWrite, "Generate BSF file")
+}
+
 // SetupCommonPermissions configures common permission patterns
 func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupProjectPermissions(acc)
@@ -167,6 +175,7 @@ func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupDevicePermissions(acc)
 	SetupOrganizationPermissions(acc)
 	SetupFirmwarePermissions(acc)
+	SetupBSFPermissions(acc)
 
 	// Add more permission setups here as needed
 	// SetupUserPermissions(acc)
