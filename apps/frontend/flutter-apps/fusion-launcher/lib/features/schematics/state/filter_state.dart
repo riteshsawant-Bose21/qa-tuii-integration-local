@@ -47,48 +47,46 @@ class FilterViewModelState {
 
   List<String> get checkedLocationIds => locationChecked.entries.where((MapEntry<String, bool> e) => e.value).map((MapEntry<String, bool> e) => e.key).toList();
 
-  // ── hasActiveFilters — all categories ────────────────────────────────────
-
   bool get hasActiveFilters =>
       checkedFloorIds.isNotEmpty || checkedAreaIds.isNotEmpty || checkedZoneIds.isNotEmpty || checkedSubZoneIds.isNotEmpty || checkedLocationIds.isNotEmpty;
 
-  // ── passesFilter ──────────────────────────────────────────────────────────
-  //
-  // Logic: AND across categories; OR within each category.
-  //
-  // LocationModel only exposes `floorId` and `listeningAreaId`, so only
-  // those two categories can be applied at the device level right now.
-  //
-  // Zone, SubZone, and EquipmentLocation filters are intentionally left out:
-  // LocationModel has no zoneId / subZoneId / equipLocationId fields.
-  // The checkboxes for those sections still render in the UI and their state
-  // is stored, but they will have no effect on filtering until those fields
-  // are added to LocationModel (and this method is extended accordingly).
+  bool get hasActiveHardwareFilters => checkedFloorIds.isNotEmpty || checkedAreaIds.isNotEmpty;
 
   bool passesFilter(HardwareComponent device) {
-    if (!hasActiveFilters) return true;
+    if (!hasActiveHardwareFilters) return true;
 
     final String? deviceFloorId = device.locationEntity.floorId;
     final String? deviceAreaId = device.locationEntity.listeningAreaId;
 
-    // ── FLOOR filter (AND) ───────────────────────────────────────────────
-    if (checkedFloorIds.isNotEmpty) {
-      if (deviceFloorId == null || !checkedFloorIds.contains(deviceFloorId)) {
-        return false;
-      }
+    // ── FIX ───────────────────────────────────────────────────────────────
+    // BUG (original): null-check came before contains-check, so any device
+    // with no floor/area was immediately excluded whenever a floor or area
+    // filter was active — including after Select All.
+    //
+    // Correct rule: only exclude a device when it HAS a location value that
+    // does NOT appear in the checked set. A null (unassigned) field is
+    // never grounds for exclusion — you can't filter by a location that
+    // hasn't been set yet.
+    //
+    // Examples with Select All (all floors + all areas checked):
+    //   device { floor: "f1", area: null } → floor "f1" ∈ checked ✓, area null → skip ✓ → shown
+    //   device { floor: null, area: null } → both null → both skipped ✓ → shown
+    //   device { floor: "f1", area: "a1" } → both ∈ checked ✓ → shown
+    //
+    // Examples with Floor 1 only checked:
+    //   device { floor: "f2", area: null } → floor "f2" ∉ checked → excluded ✓
+    //   device { floor: null, area: null } → floor null → skip, area null → skip → shown
+    // ─────────────────────────────────────────────────────────────────────
+
+    // FLOOR: only exclude if the device has a floor that is NOT checked
+    if (checkedFloorIds.isNotEmpty && deviceFloorId != null) {
+      if (!checkedFloorIds.contains(deviceFloorId)) return false;
     }
 
-    // ── LISTENING AREA filter (AND) ──────────────────────────────────────
-    if (checkedAreaIds.isNotEmpty) {
-      if (deviceAreaId == null || !checkedAreaIds.contains(deviceAreaId)) {
-        return false;
-      }
+    // AREA: only exclude if the device has an area that is NOT checked
+    if (checkedAreaIds.isNotEmpty && deviceAreaId != null) {
+      if (!checkedAreaIds.contains(deviceAreaId)) return false;
     }
-
-    // ── ZONE / SUB-ZONE / EQUIPMENT LOCATION ─────────────────────────────
-    // TODO: LocationModel does not yet carry zoneId, subZoneId, or
-    // equipLocationId. Extend LocationModel and add filter checks here once
-    // those fields are available.
 
     return true;
   }

@@ -87,7 +87,7 @@ class SchematicHardwareListing<T extends HardwareComponent, VM extends DeviceLis
                   // filter active).
                   if (allowedZoneNames != null) {
                     final String? name = e.zoneName;
-                    if (name == null || !allowedZoneNames.contains(name)) {
+                    if (name != null && !allowedZoneNames.contains(name)) {
                       return false;
                     }
                   }
@@ -96,7 +96,7 @@ class SchematicHardwareListing<T extends HardwareComponent, VM extends DeviceLis
                   // Skipped when allowedEquipLocationNames is null.
                   if (allowedEquipLocationNames != null) {
                     final String? name = e.equipmentLocationName;
-                    if (name == null || !allowedEquipLocationNames.contains(name)) {
+                    if (name != null && !allowedEquipLocationNames.contains(name)) {
                       return false;
                     }
                   }

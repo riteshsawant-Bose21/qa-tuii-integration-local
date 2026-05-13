@@ -230,26 +230,28 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                   }
                                 }
 
+                                // ── Union all active sets → OR logic across categories ────────
+                                Set<String>? allowedZoneIds;
+
+                                if (filterState.checkedZoneIds.isNotEmpty) {
+                                  allowedZoneIds = <String>{...filterState.checkedZoneIds};
+                                }
+                                if (filterState.checkedSubZoneIds.isNotEmpty) {
+                                  allowedZoneIds =
+                                      allowedZoneIds == null ? <String>{...zoneIdsFromCheckedSubZones} : allowedZoneIds.union(zoneIdsFromCheckedSubZones);
+                                }
+                                if (filterState.checkedFloorIds.isNotEmpty) {
+                                  allowedZoneIds = allowedZoneIds == null ? <String>{...zoneIdsOnCheckedFloors} : allowedZoneIds.union(zoneIdsOnCheckedFloors);
+                                }
+                                if (filterState.checkedAreaIds.isNotEmpty) {
+                                  allowedZoneIds = allowedZoneIds == null ? <String>{...zoneIdsOnCheckedAreas} : allowedZoneIds.union(zoneIdsOnCheckedAreas);
+                                }
+
                                 final List<Zone> allDevices = state.devices;
                                 final List<Zone> devices =
                                     allDevices.where((Zone z) {
-                                      // Zone checkbox filter (direct zone selection)
-                                      if (filterState.checkedZoneIds.isNotEmpty && !filterState.checkedZoneIds.contains(z.id)) {
-                                        return false;
-                                      }
-                                      // SubZone checkbox filter (show parent zone of checked subzone)
-                                      if (filterState.checkedSubZoneIds.isNotEmpty && !zoneIdsFromCheckedSubZones.contains(z.id)) {
-                                        return false;
-                                      }
-                                      // Floor filter (resolved via ListeningArea → Zone)
-                                      if (filterState.checkedFloorIds.isNotEmpty && !zoneIdsOnCheckedFloors.contains(z.id)) {
-                                        return false;
-                                      }
-                                      // Area filter (resolved via ListeningArea → Zone)
-                                      if (filterState.checkedAreaIds.isNotEmpty && !zoneIdsOnCheckedAreas.contains(z.id)) {
-                                        return false;
-                                      }
-                                      return true;
+                                      if (allowedZoneIds == null) return true;
+                                      return allowedZoneIds.contains(z.id);
                                     }).toList();
 
                                 read.updateResults(
@@ -284,6 +286,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                     );
                                   },
                                   itemBuilder: (BuildContext context, Zone zone) {
+                                    final List<SubZone> allSubZones = _projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
+                                    final List<SubZone> visibleSubZones =
+                                        filterState.checkedSubZoneIds.isEmpty
+                                            ? allSubZones
+                                            : allSubZones.where((SubZone sub) => filterState.checkedSubZoneIds.contains(sub.id)).toList();
+
                                     return ExpandableZoneWidget(
                                       index: devices.indexOf(zone),
                                       zoneName: zone.name,
@@ -291,9 +299,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                       bgColor: zone.color,
                                       initiallyExpanded: true,
                                       zoneCircuits: _projectViewModel.getCircuitsInZone(zone.id),
-                                      subZones: _projectViewModel.getSubZonesForZone(
-                                        parentZoneId: zone.id,
-                                      ),
+                                      subZones: visibleSubZones,
                                       onDelete: (String id) {
                                         serviceLocator<ProjectViewModel>().removeZone(
                                           zoneId: zone.id,
