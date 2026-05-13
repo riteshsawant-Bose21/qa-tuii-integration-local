@@ -19,7 +19,7 @@ RestartSec=5
 # A53 is ~8-12x slower than a modern host core — tune this value for your host:
 #   Apple Silicon (M-series): 10-12%
 #   Intel x86: 15-20%
-CPUQuota=12%
+#   CPUQuota=12%
 MemoryMax=512M
 
 [Install]
