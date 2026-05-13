@@ -421,6 +421,16 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
+// ClearState handles HTTP DELETE requests to wipe the entire configuration state.
+func (s *FusionServer) ClearState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.handler.StateManager.SetState(nil)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // PatchState handles private HTTP PATCH requests that apply a partial update to configuration state.
 func (s *FusionServer) PatchState(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePatch(w, r) {
