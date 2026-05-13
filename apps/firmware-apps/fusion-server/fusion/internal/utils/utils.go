@@ -365,7 +365,7 @@ func CalculateDiff(before, after any) map[string]any {
 		if !bIsArr && aIsArr {
 			return map[string]any{"": DeepCopy(aarr)}
 		}
-		if reflect.DeepEqual(barr, aarr) {
+		if sliceEqual(barr, aarr) {
 			return nil
 		}
 		return map[string]any{"": DeepCopy(aarr)}
@@ -374,10 +374,90 @@ func CalculateDiff(before, after any) map[string]any {
 	// -----------------------------
 	// PRIMITIVE CASE
 	// -----------------------------
-	if reflect.DeepEqual(before, after) {
+	if valueEqual(before, after) {
 		return nil
 	}
 	return map[string]any{"": after}
+}
+
+// valueEqual compares two values that are expected to be JSON-compatible primitives
+// (string, float64, bool, nil, json.Number) without reflection.
+func valueEqual(a, b any) bool {
+	switch av := a.(type) {
+	case nil:
+		return b == nil
+	case bool:
+		bv, ok := b.(bool)
+		return ok && av == bv
+	case string:
+		bv, ok := b.(string)
+		return ok && av == bv
+	case float64:
+		bv, ok := b.(float64)
+		return ok && av == bv
+	case json.Number:
+		bv, ok := b.(json.Number)
+		return ok && av == bv
+	default:
+		// Fallback for unexpected types
+		return reflect.DeepEqual(a, b)
+	}
+}
+
+// sliceEqual compares two []any slices element-wise without reflection.
+func sliceEqual(a, b []any) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		switch av := a[i].(type) {
+		case map[string]any:
+			bv, ok := b[i].(map[string]any)
+			if !ok || !mapEqual(av, bv) {
+				return false
+			}
+		case []any:
+			bv, ok := b[i].([]any)
+			if !ok || !sliceEqual(av, bv) {
+				return false
+			}
+		default:
+			if !valueEqual(a[i], b[i]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// mapEqual compares two map[string]any maps recursively without reflection.
+func mapEqual(a, b map[string]any) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		bv, ok := b[k]
+		if !ok {
+			return false
+		}
+		switch avm := av.(type) {
+		case map[string]any:
+			bvm, ok := bv.(map[string]any)
+			if !ok || !mapEqual(avm, bvm) {
+				return false
+			}
+		case []any:
+			bvs, ok := bv.([]any)
+			if !ok || !sliceEqual(avm, bvs) {
+				return false
+			}
+		default:
+			if !valueEqual(av, bv) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func BuildInternalURL(address, port, endpoint string) string {
