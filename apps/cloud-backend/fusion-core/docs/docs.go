@@ -4086,9 +4086,6 @@ const docTemplate = `{
                 "paging_type": {
                     "type": "string"
                 },
-                "primary_connection": {
-                    "type": "string"
-                },
                 "supported_connections": {
                     "type": "array",
                     "items": {

@@ -756,8 +756,6 @@ definitions:
     properties:
       paging_type:
         type: string
-      primary_connection:
-        type: string
       supported_connections:
         items:
           type: string
