@@ -625,6 +625,31 @@ func (sm *StateManager) GetFullState() VersionedState {
 	}
 }
 
+// MarshalLocalState serializes the state directly under RLock without deep-copying.
+// This is safe because json.Marshal only reads the data. The caller must not retain
+// or mutate the returned byte slice's backing data beyond its immediate use.
+func (sm *StateManager) MarshalLocalState(version api.Version, nodeID string) ([]byte, int) {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	snapshot := struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}{
+		Version: version,
+		NodeID:  nodeID,
+		State:   sm.state.State,
+	}
+
+	data, err := json.Marshal(snapshot)
+	if err != nil {
+		logging.GetLogger().Error("MarshalLocalState: %v", err)
+		return nil, 0
+	}
+	return data, len(sm.state.State)
+}
+
 func (sm *StateManager) patchBaseStateUnsafe(update map[string]any) map[string]any {
 	keys := topLevelPatchKeys(update)
 	out := make(map[string]any, len(keys))
