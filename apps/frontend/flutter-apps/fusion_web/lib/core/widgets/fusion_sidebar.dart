@@ -1,0 +1,421 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_web/core/navigation/app_router.dart';
+import 'package:fusion_web/core/constants/app_constants.dart';
+import 'package:fusion_web/core/presentation/base_viewmodel.dart';
+import 'package:fusion_web/core/theme/theme_cubit.dart';
+import 'package:fusion_web/core/widgets/viewmodels/sidebar_viewmodel.dart';
+import 'package:fusion_web/core/permissions/permission_service.dart';
+import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
+import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+class FusionSidebar extends StatefulWidget {
+  final ValueChanged<DashboardTabs>? onTabChanged;
+  final DashboardTabs? selectedTab;
+
+  const FusionSidebar({super.key, this.onTabChanged, this.selectedTab});
+
+  @override
+  State<FusionSidebar> createState() => _FusionSidebarState();
+}
+
+class _FusionSidebarState extends State<FusionSidebar> {
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) {
+        final vm = SidebarViewModel();
+        vm.initialize(widget.selectedTab);
+        return vm;
+      },
+      child: BlocBuilder<SidebarViewModel, BaseState<DashboardTabs?>>(
+        builder: (context, state) {
+          final viewModel = context.read<SidebarViewModel>();
+
+          return Container(
+            width: AppConstants.sidebarWidth,
+            height: double.infinity,
+            // decoration: BoxDecoration(color: Theme.of(context).cardColor),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// LOGO
+                    // Container(
+                    //   width: double.infinity,
+                    //   padding: const EdgeInsets.all(16),
+                    //   child: Center(
+                    //     child: Image.asset(
+                    //       'assets/images/bose_professional_logo.png',
+                    //       height: 32,
+                    //       fit: BoxFit.contain,
+                    //     ),
+                    //   ),
+                    // ),
+                    const SizedBox(height: 16),
+
+                    _buildUserSection(context, viewModel),
+
+                    const SizedBox(height: 16),
+
+                    Expanded(
+                      child: _buildNavigationSection(context, viewModel),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ===============================
+  Widget _buildUserSection(BuildContext context, SidebarViewModel viewModel) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        // boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
+      ),
+      padding: const EdgeInsets.all(AppConstants.padding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // BlocBuilder<ThemeCubit, ThemeMode>(
+              //   builder: (context, themeMode) {
+              //     final isDark = themeMode == ThemeMode.dark;
+
+              //     return FusionSwitch(
+              //       semanticId: "theme_toggle",
+              //       value: isDark,
+              //       onChanged: (_) {
+              //         context.read<ThemeCubit>().toggleTheme();
+              //       },
+              //       height: 40,
+              //       width: 70,
+              //       radiusFactor: 0.5,
+              //       activeTrackColor: Colors.green,
+              //       inactiveTrackColor: Colors.grey,
+              //       activeThumbColor: Colors.white,
+              //       inactiveThumbColor: Colors.grey.shade300,
+              //     );
+              //   },
+              // ),
+              GestureDetector(
+                onTap: viewModel.clearNotifications,
+                child: Badge(
+                  smallSize: 10,
+                  alignment: Alignment.topRight,
+                  backgroundColor: Colors.red,
+                  isLabelVisible: viewModel.hasNotifications,
+                  child: Container(
+                    height: 36,
+                    width: 36,
+                    decoration: BoxDecoration(
+                      // color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(LucideIcons.bell, size: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FusionAppText(
+                  text: viewModel.appName,
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: context.colorScheme.elevation6,
+                  ),
+                ),
+              ),
+              const Icon(LucideIcons.chevronDown),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FusionAppText(
+            text: viewModel.userName,
+            style: context.textTheme.titleMedium,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===============================
+  Widget _buildNavigationSection(
+    BuildContext context,
+    SidebarViewModel viewModel,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        // color: Colors.white,
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        // boxShadow: [BoxShadow(blurRadius: 6, color: Colors.black12)],
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.home_filled,
+                    DashboardTabs.dashboard,
+                  ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.work,
+                    DashboardTabs.projects,
+                  ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.devices,
+                    DashboardTabs.devices,
+                  ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.people,
+                    DashboardTabs.users,
+                  ),
+                  // Only show Organizations tab for Super Admin with Bose Pro account
+                  if (_shouldShowOrganizations())
+                    _buildNavItem(
+                      context,
+                      viewModel,
+                      Icons.business,
+                      DashboardTabs.organizations,
+                    ),
+                  // Only show Software Update tab for Super Admin with Bose Pro account
+                  if (_shouldShowOrganizations())
+                    _buildNavItem(
+                      context,
+                      viewModel,
+                      Icons.system_update,
+                      DashboardTabs.softwareUpdate,
+                    ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.security,
+                    DashboardTabs.roles,
+                  ),
+                  _buildNavItem(
+                    context,
+                    viewModel,
+                    Icons.settings,
+                    DashboardTabs.settings,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const Divider(height: 0),
+
+          Padding(
+            padding: const EdgeInsets.all(AppConstants.padding),
+            child: _HoverNavItem(
+              icon: LucideIcons.logOut,
+              title: 'Sign Out',
+              semanticsId: 'signout_section',
+              onTap: () => _logoutDialog(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: FusionAppText(
+            text: "Sign Out",
+            style: context.textTheme.titleMedium,
+          ),
+          content: const FusionAppText(
+            text: "Are you sure you want to sign out? ",
+          ),
+          actions: <Widget>[
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_signout_button",
+              ),
+              child: NeumorphicDarkButton(
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  _handleLogout(context);
+                },
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(
+                  text: "Sign Out",
+                  style: context.textTheme.labelMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "dashboard_sidebar_cancel_button",
+              ),
+              child: NeumorphicDarkButton(
+                onTap: () => Navigator.pop(ctx),
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(
+                  text: "Cancel",
+                  style: context.textTheme.labelMedium,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    SidebarViewModel viewModel,
+    IconData icon,
+    DashboardTabs tab,
+  ) {
+    return _HoverNavItem(
+      icon: icon,
+      title: tab.title,
+      semanticsId: 'test-${tab.name}-tab',
+      isSelected: viewModel.selectedTab == tab,
+      onTap: () {
+        viewModel.setSelectedTab(tab);
+        widget.onTabChanged?.call(tab);
+      },
+    );
+  }
+
+  /// Check if the Organizations tab should be shown based on user role and account type
+  bool _shouldShowOrganizations() {
+    final permissionService = PermissionService.instance;
+
+    // Check if user is authenticated
+    if (!permissionService.isAuthenticated) {
+      return false;
+    }
+
+    // Check if user role is "Super Admin" and account type is "Bose Pro"
+    final userRole = permissionService.userRole;
+    final accountType = permissionService.accountType;
+
+    return userRole == 'Super Admin' && accountType == 'Bose Pro';
+  }
+
+  // ===============================
+  void _handleLogout(BuildContext context) async {
+    try {
+      final dataSource = Auth0DataSource();
+      final repository = AuthRepositoryImpl(dataSource: dataSource);
+      final logoutUseCase = LogoutUseCase(repository);
+
+      await logoutUseCase();
+
+      Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+    } catch (_) {
+      Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+    }
+  }
+}
+
+class _HoverNavItem extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback? onTap;
+  final bool isSelected;
+  final String semanticsId;
+
+  const _HoverNavItem({
+    required this.icon,
+    required this.title,
+    this.onTap,
+    this.isSelected = false,
+    required this.semanticsId,
+  });
+
+  @override
+  State<_HoverNavItem> createState() => _HoverNavItemState();
+}
+
+class _HoverNavItemState extends State<_HoverNavItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color themeColor = context.colorScheme.onSurface;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.listItem,
+          widget.semanticsId,
+        ),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? themeColor.withValues(alpha: 0.04)
+                  : (_isHovered
+                        ? themeColor.withValues(alpha: 0.02)
+                        : Colors.transparent),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: <Widget>[
+                Icon(widget.icon),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: context.textTheme.labelMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

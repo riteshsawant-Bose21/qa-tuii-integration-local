@@ -373,6 +373,7 @@ int fusion_cn_rtp_add_stream(struct fusion_cn_rtp_manager *rtp_mgr,
     kref_init(&stream->ref);
     spin_lock_init(&stream->lock);
     atomic_set(&stream->is_running, 0);
+    atomic_set(&stream->metrics_pending, 0);
 
     sample_physical_width_bits = snd_pcm_format_physical_width(info->format);
     if (sample_physical_width_bits <= 0) {
@@ -569,6 +570,16 @@ struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manag
     return NULL;
 }
 
+static inline u32 fusion_cn_current_playback_slot(const struct fusion_cn_substream *a,
+                                                  const struct fusion_cn_rtp_stream *s)
+{
+    if (!a || !s->info.frames_per_packet || !s->buf_size_in_packets)
+        return 0;
+
+    return (READ_ONCE(a->buffer_pos) / s->info.frames_per_packet) %
+           s->buf_size_in_packets;
+}
+
 static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, u64 handle,
                                                  u16 seq_num, u32 rtp_timestamp, u32 packet_ssrc,
                                                  u8 payload_type, const u8 *payload, u32 payload_len,
@@ -615,8 +626,11 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             sample_physical_width_bits = snd_pcm_format_physical_width(stream->info.format);
 
-            // If we haven't seen an SSRC for this stream yet, or if the packet's SSRC differs from the stashed one, stash it and reset timing state
+            // If we haven't seen an SSRC for this stream yet, or if the packet's SSRC differs from the
+            // stashed one, reset RTP scheduling state but preserve ALSA ring position.
             if (stream->ssrc == 0 || packet_ssrc != stream->ssrc) {
+                u32 expected_slot = fusion_cn_current_playback_slot(alsa_stream, stream);
+
                 stream->ssrc = packet_ssrc;
                 stream->current_seq_num = 0;
                 atomic_set(&stream->playback_armed, false);
@@ -625,19 +639,22 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                 if (stream->next_action_times && stream->buf_size_in_packets)
                     memset(stream->next_action_times, 0,
                            sizeof(u64) * stream->buf_size_in_packets);
-                stream->playback_slot = 0;
-                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s\n",
-                       stream->ssrc, stream->info.stream_name);
+                printk(KERN_DEBUG "fusion_cn_rtp: process_packet: Stashed SSRC 0x%08x for stream %s expected_slot=%u\n",
+                       stream->ssrc, stream->info.stream_name, expected_slot);
             }
 
             // We use the incoming packet's sequence number to determine where it should go in the buffer
             write_slot = seq_num % stream->buf_size_in_packets;
 
-             // To keep playback aligned with write_slot, we wait for a packet to land in slot 0 before arming playback
+            // To keep playback aligned with ALSA, wait for a packet to land in the current playback slot
+            // before re-arming after SSRC/timing discontinuities.
             if (!atomic_read(&stream->playback_armed)) {
-                if (write_slot == 0) {
+                u32 expected_slot = fusion_cn_current_playback_slot(alsa_stream, stream);
+
+                if (write_slot == expected_slot) {
                     atomic_set(&stream->playback_armed, true);
-                    printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s\n", stream->info.stream_name);
+                    printk(KERN_DEBUG "fusion_cn_rtp: playback armed %s slot=%u\n",
+                           stream->info.stream_name, expected_slot);
                 } else {
                     spin_unlock(&stream->lock);
                     read_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -743,8 +760,9 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
 
             if (rtp_mgr->trace_debug) {
                 printk(KERN_DEBUG
-                       "fusion_cn_rtp: process_packet: %s slot=%u playback_slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
-                       stream->info.stream_name, write_slot, stream->playback_slot, seq_num,
+                       "fusion_cn_rtp: process_packet: %s slot=%u expected_slot=%u seq=%u now=%llu reconstructed=%llu playout=%llu\n",
+                       stream->info.stream_name, write_slot,
+                       fusion_cn_current_playback_slot(alsa_stream, stream), seq_num,
                        current_phc_ns, reconstructed_phc_ns, stream->next_action_times[write_slot]);
             }
 
@@ -763,8 +781,7 @@ static void fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr, 
                                        seq_num, rtp_timestamp, rx_phc_ns ? rx_phc_ns : current_phc_ns,
                                        payload_len, metrics_flags,
                                        reconstructed_phc_ns, sched_playout_ns);
-            if (stream->stream_node)
-                atomic_set(&stream->stream_node->metrics_pending, 1);
+            atomic_set(&stream->metrics_pending, 1);
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);
@@ -987,7 +1004,6 @@ int fusion_cn_rtp_set_stream_running(struct fusion_cn_rtp_manager *rtp_mgr, u64 
             }
             memset(stream->next_action_times, 0, sizeof(u64) * (stream->buf_size_in_packets));
         }
-        stream->playback_slot = 0;
         stream->next_action_time = 0;
         stream->played_action_time = 0;
         stream->current_seq_num = 0;

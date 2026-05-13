@@ -595,7 +595,7 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
-        bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex));
+        bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex+1));
     }
 }
 
@@ -1030,7 +1030,7 @@ bool ApplyQueuedAudioCommands()
         if (settings.isMember("input") && settings["input"].isInt())
         {
             Json::Value payload(Json::objectValue);
-            payload["index"] = settings["input"].asInt();
+            payload["index"] = settings["input"].asInt()-1;
 
             if (!SendRealtimeCommand("setSource", payload, zoneIndex))
             {

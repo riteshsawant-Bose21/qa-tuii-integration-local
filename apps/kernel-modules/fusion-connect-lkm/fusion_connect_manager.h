@@ -17,9 +17,10 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_GET_METRICS,
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
     FUSION_CN_CTRL_CMD_GET_TIMING_STATUS,
-    FUSION_CN_CTRL_CMD_RESET_TIMING_STATE,
+    FUSION_CN_CTRL_CMD_RESET_TIMING_SESSION,
     FUSION_CN_CTRL_CMD_SET_DEBUG,
-    FUSION_CN_CTRL_CMD_SET_ETH_IFACE
+    FUSION_CN_CTRL_CMD_SET_ETH_IFACE,
+    FUSION_CN_CTRL_CMD_RESET_TIMING_HOLDOVER
 };
 
 struct fusion_cn_state {
@@ -43,7 +44,6 @@ struct stream_node {
     struct list_head node;
     struct fusion_cn_rtp_stream *rtp_stream;
     struct fusion_cn_substream *alsa_stream;
-    atomic_t metrics_pending;
 };
 
 struct active_streams {

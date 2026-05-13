@@ -2,6 +2,7 @@ package source
 
 import (
 	"context"
+	"strings"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"go.uber.org/zap"
@@ -14,12 +15,12 @@ type DatabaseService interface {
 
 // Service provides source business logic.
 type Service struct {
-	dbService DatabaseService
-	logger    *zap.Logger
+	dbService    DatabaseService
+	AssetBaseURL string
 }
 
 // NewService creates a new source service.
-func NewService(dbService DatabaseService, logger *zap.Logger) *Service {
+func NewService(dbService DatabaseService, assetBaseURL string, logger *zap.Logger) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
@@ -27,8 +28,8 @@ func NewService(dbService DatabaseService, logger *zap.Logger) *Service {
 		panic("logger cannot be nil")
 	}
 	return &Service{
-		dbService: dbService,
-		logger:    logger,
+		dbService:    dbService,
+		AssetBaseURL: strings.TrimRight(assetBaseURL, "/"),
 	}
 }
 
@@ -41,5 +42,21 @@ func (s *Service) GetAllSources(ctx context.Context, logger *zap.Logger) ([]type
 	if sources == nil {
 		return []types.SourceItemResponse{}, nil
 	}
+
+	// Build full public URLs from asset paths
+	if s.AssetBaseURL != "" {
+		for i := range sources {
+			if len(sources[i].Assets) > 0 {
+				asset := &sources[i].Assets[0]
+				if len(asset.Black) > 0 && asset.Black[0] != "" {
+					asset.Black[0] = s.AssetBaseURL + "/" + strings.TrimLeft(asset.Black[0], "/")
+				}
+				if len(asset.White) > 0 && asset.White[0] != "" {
+					asset.White[0] = s.AssetBaseURL + "/" + strings.TrimLeft(asset.White[0], "/")
+				}
+			}
+		}
+	}
+
 	return sources, nil
 }
