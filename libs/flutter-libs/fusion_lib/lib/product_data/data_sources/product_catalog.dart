@@ -41,8 +41,8 @@ class ProductCatalog {
       dsps: (json['dsp'] as List<dynamic>?)?.map((e) => DspProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       ioEndpoints: (json['io_endpoint'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       accessories: (json['additional_accessories'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      sources: (json['sources'] as List<dynamic>?)?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      outputs: (json['outputs'] as List<dynamic>?)?.map((e) => OutputProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      sources: (json['source'] as List<dynamic>?)?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      outputs: (json['output'] as List<dynamic>?)?.map((e) => OutputProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
 
@@ -54,12 +54,7 @@ class ProductCatalog {
     'dsp': dsps.map((e) => e.toJson()).toList(),
     'io_endpoint': ioEndpoints.map((e) => e.toJson()).toList(),
     'additional_accessories': accessories.map((e) => e.toJson()).toList(),
-    'sources': sources.map((e) => e.toJson()).toList(),
-    'outputs': outputs.map((e) => e.toJson()).toList(),
+    'source': sources.map((e) => e.toJson()).toList(),
+    'output': outputs.map((e) => e.toJson()).toList(),
   };
-
-  int get totalCount => speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length + sources.length;
-
-  @override
-  String toString() => 'ProductCatalog(version: $version, totalCount: $totalCount)';
 }

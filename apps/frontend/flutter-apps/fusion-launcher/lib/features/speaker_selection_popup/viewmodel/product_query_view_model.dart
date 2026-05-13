@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/product_data/models/output_product.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 import 'package:mutex/mutex.dart';
@@ -146,6 +147,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   List<DspProduct> get dsps => state.products?.dsps ?? const <DspProduct>[];
   List<ControllerProduct> get controllers => state.products?.controllers ?? const <ControllerProduct>[];
   List<AccessoryProduct> get accessories => state.products?.accessories ?? const <AccessoryProduct>[];
+  List<OutputProduct> get outputs => state.products?.outputs ?? const <OutputProduct>[];
 
   double getPrice(int productId) {
     final List<ProductPriceModel> prices = state.prices[productId] ?? const <ProductPriceModel>[];

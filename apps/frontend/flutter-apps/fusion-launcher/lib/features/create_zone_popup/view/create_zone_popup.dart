@@ -345,7 +345,6 @@ import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zon
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/service_locator.dart';
-import '../../add_output_device/views/add_output_device.dart';
 import '../view_model/create_zone_viewmodel_state.dart';
 import 'create_zone_content.dart';
 
@@ -449,27 +448,6 @@ class CreateZonePopup extends StatelessWidget {
       buttonEnabledNotifier: saveEnabled, // ← add
       onButtonPressed: () => vm.createZone(context),
       title: 'Create Zone',
-      header: FusionDrawerHeader(
-        semanticId: 'create_zone',
-        title: 'Create Zone',
-        trailing: GestureDetector(
-          onTap: () {
-            AddOutputDevice.show(
-              context: context,
-              zoneColor: vm.state.zoneColor,
-              zoneName: vm.state.zoneName,
-              onBack: () => Navigator.of(context).pop(),
-            );
-          },
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: FusionAppText(
-              text: "Add Output Device",
-              style: context.textTheme.l1SemiBold,
-            ),
-          ),
-        ),
-      ), // ← add
       content: BlocProvider<CreateZoneViewModel>.value(
         value: vm,
         child: CreateZoneContent(

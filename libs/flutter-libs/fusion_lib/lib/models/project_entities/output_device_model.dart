@@ -2,71 +2,15 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-// ── Connection type for third-party output devices ────────────────────────
-
-enum OutputDeviceConnectionType {
-  analogOutput,
-  usbOutput,
-  aes67Stream;
-
-  String get displayName => switch (this) {
-    OutputDeviceConnectionType.analogOutput => 'Analog Output',
-    OutputDeviceConnectionType.usbOutput => 'USB Output',
-    OutputDeviceConnectionType.aes67Stream => 'AES67 Stream',
-  };
-
-  static OutputDeviceConnectionType fromString(String? value) {
-    if (value == null || value.isEmpty) return OutputDeviceConnectionType.analogOutput;
-    return OutputDeviceConnectionType.values.firstWhere(
-      (OutputDeviceConnectionType e) => e.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => OutputDeviceConnectionType.analogOutput,
-    );
-  }
-}
-
-// ── Category / purpose of the third-party device ─────────────────────────
-
-enum OutputDeviceType {
-  mediaRecorder,
-  laptopOrPC,
-  mixer,
-  localOutput,
-  monitorOutput,
-  hearingAssistance,
-  poweredSpeaker,
-  externalSystem,
-  genericOutput,
-  genericAmplifier;
-
-  String get displayName => switch (this) {
-    OutputDeviceType.mediaRecorder => 'Media Recorder',
-    OutputDeviceType.laptopOrPC => 'Laptop/PC',
-    OutputDeviceType.mixer => 'Mixer',
-    OutputDeviceType.localOutput => 'Local Output',
-    OutputDeviceType.monitorOutput => 'Monitor Output',
-    OutputDeviceType.hearingAssistance => 'Hearing Assistance',
-    OutputDeviceType.poweredSpeaker => 'Powered Speaker',
-    OutputDeviceType.externalSystem => 'External System',
-    OutputDeviceType.genericOutput => 'Generic Output',
-    OutputDeviceType.genericAmplifier => 'Generic Amplifier',
-  };
-
-  static OutputDeviceType fromString(String? value) {
-    if (value == null || value.isEmpty) return OutputDeviceType.genericOutput;
-    return OutputDeviceType.values.firstWhere(
-      (OutputDeviceType e) => e.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => OutputDeviceType.genericOutput,
-    );
-  }
-}
+import '../../product_data/models/output_product.dart';
 
 // ── OutputDevice model ────────────────────────────────────────────────────
 
 /// Represents a third-party (non-ecosystem) output device connected to the
 /// Fusion system — e.g. an external brand speaker, amplifier, or recorder.
 class OutputDevice extends HardwareComponent {
-  final OutputDeviceType outputDeviceType;
-  final OutputDeviceConnectionType connectionType;
+  final int productId;
+  final OutputConnectionType connectionType;
   final AudioChannel audioChannel;
 
   OutputDevice({
@@ -76,7 +20,7 @@ class OutputDevice extends HardwareComponent {
     super.pos,
     super.wiringPos,
     super.zAxis,
-    required this.outputDeviceType,
+    required this.productId,
     required this.connectionType,
     required this.audioChannel,
     super.image = '',
@@ -101,8 +45,8 @@ class OutputDevice extends HardwareComponent {
     Offset? pos,
     Offset? wiringPos,
     double? zAxis,
-    OutputDeviceType? outputDeviceType,
-    OutputDeviceConnectionType? connectionType,
+    int? productId,
+    OutputConnectionType? connectionType,
     AudioChannel? audioChannel,
     String? image,
     LocationModel? locationEntity,
@@ -121,7 +65,7 @@ class OutputDevice extends HardwareComponent {
       pos: pos ?? this.pos,
       wiringPos: wiringPos ?? this.wiringPos,
       zAxis: zAxis ?? this.zAxis,
-      outputDeviceType: outputDeviceType ?? this.outputDeviceType,
+      productId: productId ?? this.productId,
       connectionType: connectionType ?? this.connectionType,
       audioChannel: audioChannel ?? this.audioChannel,
       image: image ?? this.image,
@@ -143,8 +87,8 @@ class OutputDevice extends HardwareComponent {
       name: json['name'],
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
-      outputDeviceType: OutputDeviceType.fromString(json['outputDeviceType']),
-      connectionType: OutputDeviceConnectionType.fromString(json['connectionType']),
+      productId: json['productId'],
+      connectionType: OutputConnectionType.fromString(json['connectionType']),
       audioChannel: AudioChannel.fromJson(json['audioChannel']) ?? AudioChannel.mono,
       image: json['image'] ?? '',
       locationEntity: LocationModel.fromJson(json['locationEntity']),
@@ -166,7 +110,7 @@ class OutputDevice extends HardwareComponent {
       'name': name,
       'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
-      'outputDeviceType': outputDeviceType.name,
+      'productId': productId,
       'connectionType': connectionType.name,
       'audioChannel': audioChannel.name,
       'image': image,

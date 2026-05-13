@@ -907,12 +907,15 @@ class SoftwareUpdateService {
 
     late ResponseCallback<BundleDownloadUrlResult> requestDownloadUrlResponse;
 
+    final String requestedVersion = _state.availableVersion ?? '';
+    // final String requestedVersion = '${_state.availableVersion ?? ''}-dev.89+66febbe';
+
     try {
-      if (_state.availableVersion?.isEmpty ?? true) throw Exception("Version is required to get software bundle");
+      if (requestedVersion.isEmpty) throw Exception("Version is required to get software bundle");
 
       requestDownloadUrlResponse = await _networkClient.get<BundleDownloadUrlResult>(
         api: FusionApiEndpoint.firmwareBundleDownloadUrl,
-        additionalPath: '${_state.availableVersion}/request-download-url',
+        additionalPath: '$requestedVersion/request-download-url',
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) throw Exception('Unexpected firmware bundle download response format.');
           return BundleDownloadUrlResult.fromJson(json);
@@ -937,10 +940,11 @@ class SoftwareUpdateService {
 
     final String downloadUrl = requestDownloadUrlResponse.data?.downloadUrl ?? '';
     if (downloadUrl.isEmpty) {
-      throw const _UpdateException(
+      throw _UpdateException(
         UpdateError(
           code: UpdateErrorCode.downloadFailed,
-          message: 'Bundle download URL is missing.',
+          message:
+              'Bundle download URL is unavailable. The requested version ($requestedVersion) may be invalid, or the bundle may not yet be ready on the server.',
           isRetryable: true,
           retryLabel: 'Retry download',
         ),

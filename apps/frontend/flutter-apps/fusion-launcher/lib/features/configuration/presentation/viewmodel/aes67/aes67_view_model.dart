@@ -273,11 +273,7 @@ extension Aes67ViewModel on ProjectViewModel {
   // ==================== OutputDevice ↔ Stream+Channel Mapping ====================
 
   /// Assigns multiple stream-channel mappings to [outputDeviceId].
-  void assignStreamChannelsToOutputDevice({
-    required String outputDeviceId,
-    required List<AssignedStreamChannel> channels,
-    bool autoSave = true,
-  }) {
+  void assignStreamChannelsToOutputDevice({required String outputDeviceId, required List<AssignedStreamChannel> channels, bool autoSave = true}) {
     try {
       if (autoSave) recordSnapshot();
       projectManager.assignStreamChannelsToOutputDevice(outputDeviceId: outputDeviceId, channels: channels);
