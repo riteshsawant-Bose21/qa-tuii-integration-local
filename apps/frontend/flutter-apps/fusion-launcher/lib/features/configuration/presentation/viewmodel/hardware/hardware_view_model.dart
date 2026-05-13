@@ -361,7 +361,7 @@ extension HardwareViewModel on ProjectViewModel {
       // updateListeningArea(area: updatedListeningArea, autoSave: false);
 
       // Hard reset speaker inventory in current LA: remove all existing placed + unplaced speakers.
-      removeAllSpeakersFromCurrentListeningArea(autoSave: false);
+      if (newSpeakers.data?.speakers.isNotEmpty ?? false) removeAllSpeakersFromCurrentListeningArea(autoSave: false);
 
       // Add a fresh set of algorithm-placed speakers only.
       for (final Speaker point in newSpeakers.data?.speakers ?? <Speaker>[]) {
