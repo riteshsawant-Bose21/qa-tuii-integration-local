@@ -382,10 +382,9 @@ func (h *Hub) queueConfigUpdate(message *api.NotifyMessage) {
 
 	h.configUpdates.mu.Lock()
 	h.configUpdates.pending = cloneNotifyMessageForBroadcast(message)
-	if h.configUpdates.timer != nil {
-		h.configUpdates.timer.Stop()
+	if h.configUpdates.timer == nil {
+		h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	}
-	h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	h.configUpdates.mu.Unlock()
 }
 
