@@ -42,6 +42,7 @@ type ProductResponse struct {
 	Accessory  []ProductItemResponse `json:"accessory,omitempty"`
 	IOEndpoint []ProductItemResponse `json:"io_endpoint,omitempty"`
 	Source     []SourceItemResponse  `json:"source"`
+	Output     []OutputItemResponse  `json:"output"`
 }
 
 // SingleProductResponse represents an individual product response when fetching by ID.

@@ -15,7 +15,7 @@ jobs:
   flutter-windows-automation-build:
     concurrency:
       group: flutter-windows-automation-build
-    runs-on: windows-actions-build-agent
+    runs-on: win-automation-build-agent
     timeout-minutes: 30
 
     steps:

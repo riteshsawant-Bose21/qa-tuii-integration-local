@@ -100,6 +100,11 @@ private:
         DEVICE_STATE_UNKNOWN,
     } State;
 
+    typedef enum {
+        ACCESS_RW_INTERLEAVED,
+        ACCESS_MMAP_INTERLEAVED,
+    } AccessMode;
+
     static void convert_read_float_le(const uint8_t *src, float *dst,
                                       int channels, int samples);
     static void convert_write_float_le(const float *src, uint8_t *dst,
@@ -154,6 +159,7 @@ private:
     bool is_input;
     int playback_start_threshold_frames;
     State current_state = DEVICE_STATE_CLOSED;
+    AccessMode access_mode = ACCESS_RW_INTERLEAVED;
     snd_pcm_uframes_t negotiated_buffer_size = 0;
     bosepro::AudioSubtask deferred_open_task;
     static pthread_mutex_t open_mutex;
@@ -166,8 +172,8 @@ private:
     void open_device();
     void close_device();
     bool is_open();
-    void set_hw_params();
-    void set_sw_params();
+    int set_hw_params(AccessMode requested_access_mode);
+    int set_sw_params();
     int get_device_number(const std::string &name);
 };
 
@@ -217,6 +223,18 @@ static bool is_fusion_connect_stream_name(const std::string &device_name)
 static bool is_bluealsa_device_name(const std::string &device_name)
 {
     return device_name.compare(0, 9, "bluealsa:") == 0;
+}
+
+static bool is_uac_device_name(const std::string &device_name)
+{
+    std::string base = device_name;
+
+    if (base.rfind("hw:", 0) == 0)
+    {
+        base = base.substr(3);
+    }
+
+    return base.rfind("UAC", 0) == 0;
 }
 
 static bool use_low_latency_fc_depths(const std::string &device_name, bool use_asrc)
@@ -346,35 +364,72 @@ void AlsaDevice::open_device()
         full_device_name = "hw:FusionConnect," + std::to_string(device_number);
     }
 
-    SPDLOG_DEBUG("Opening: {}", full_device_name);
-    int error = open_pcm(&alsa, full_device_name,
+    std::vector<AccessMode> access_modes =
+        (is_bluealsa_device_name(full_device_name) ||
+         is_uac_device_name(full_device_name))
+            ? std::vector<AccessMode>{ACCESS_RW_INTERLEAVED}
+            : std::vector<AccessMode>{ACCESS_MMAP_INTERLEAVED, ACCESS_RW_INTERLEAVED};
+
+    for (AccessMode requested_access_mode : access_modes)
+    {
+        const char *requested_name =
+            requested_access_mode == ACCESS_MMAP_INTERLEAVED ? "MMAP_INTERLEAVED"
+                                                             : "RW_INTERLEAVED";
+        int error;
+
+        SPDLOG_DEBUG("Opening: {}", full_device_name);
+        error = open_pcm(&alsa, full_device_name,
                          is_input ? SND_PCM_STREAM_CAPTURE
                                   : SND_PCM_STREAM_PLAYBACK,
                          SND_PCM_NONBLOCK);
 
-    if (error < 0)
-    {
-        if (!is_bluealsa_device_name(full_device_name))
+        if (error < 0)
         {
-            SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+            if (!is_bluealsa_device_name(full_device_name))
+            {
+                SPDLOG_DEBUG("Failed to open ALSA device: {}", snd_strerror(error));
+            }
+            pthread_mutex_unlock(&open_mutex);
+            return;
         }
+
+        error = set_hw_params(requested_access_mode);
+        if (error < 0)
+        {
+            SPDLOG_WARN("ALSA {} setup failed for {}: {}",
+                        requested_name, device_name.c_str(), snd_strerror(error));
+            close_device();
+            continue;
+        }
+
+        error = set_sw_params();
+        if (error < 0)
+        {
+            SPDLOG_WARN("ALSA {} sw_params failed for {}: {}",
+                        requested_name, device_name.c_str(), snd_strerror(error));
+            close_device();
+            continue;
+        }
+
+        error = snd_pcm_prepare(alsa);
+        if (error < 0)
+        {
+            SPDLOG_WARN("ALSA {} prepare failed for {}: {}",
+                        requested_name, device_name.c_str(), snd_strerror(error));
+            close_device();
+            continue;
+        }
+
+        SPDLOG_INFO("Using ALSA access {} for {}",
+                    requested_name, device_name.c_str());
         pthread_mutex_unlock(&open_mutex);
+
+        ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING, "Opened device {}",
+                              device_name.c_str());
         return;
     }
 
-    set_hw_params();
-    set_sw_params();
-
-    error = snd_pcm_prepare(alsa);
-    if (error < 0)
-    {
-        SPDLOG_ERROR("Failed to prepare ALSA device: {}", snd_strerror(error));
-    }
-
     pthread_mutex_unlock(&open_mutex);
-
-    ALSA_DEVICE_SET_STATE(DEVICE_STATE_STREAMING, "Opened device {}",
-                          device_name.c_str());
 }
 
 
@@ -398,6 +453,7 @@ void AlsaDevice::close_device()
         sw_params = nullptr;
     }
 
+    access_mode = ACCESS_RW_INTERLEAVED;
     negotiated_buffer_size = 0;
 
     ALSA_DEVICE_SET_STATE(DEVICE_STATE_CLOSED, "Closed device {}",
@@ -426,7 +482,9 @@ int AlsaDevice::get_buffer_depth()
         return -1;
     }
 
-    int depth = snd_pcm_avail(alsa);
+    int depth = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_avail_update(alsa)
+                  : snd_pcm_avail(alsa);
 
     if (depth < 0)
     {
@@ -548,7 +606,9 @@ int AlsaDevice::read(float *buffer, int samples)
         return samples;
     }
 
-    int res = snd_pcm_readi(alsa, sample_buffer.get(), samples);
+    int res = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_mmap_readi(alsa, sample_buffer.get(), samples)
+                  : snd_pcm_readi(alsa, sample_buffer.get(), samples);
 
     if (res == -EAGAIN)
     {
@@ -643,7 +703,9 @@ void AlsaDevice::write(const float *buffer, int samples)
 
     convert_write(buffer, sample_buffer.get(), channels, samples);
 
-    int res = snd_pcm_writei(alsa, sample_buffer.get(), samples);
+    int res = (access_mode == ACCESS_MMAP_INTERLEAVED)
+                  ? snd_pcm_mmap_writei(alsa, sample_buffer.get(), samples)
+                  : snd_pcm_writei(alsa, sample_buffer.get(), samples);
 
     if (res == -EAGAIN)
     {
@@ -700,7 +762,7 @@ void AlsaDevice::write(const float *buffer, int samples)
 }
 
 
-void AlsaDevice::set_hw_params()
+int AlsaDevice::set_hw_params(AccessMode requested_access_mode)
 {
     int error;
 
@@ -711,16 +773,25 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to get ALSA hardware parameters: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
 
-    // Choose between non-/interleaved and read/write vs. mmap.
-    error = snd_pcm_hw_params_set_access(alsa, hw_params,
-            SND_PCM_ACCESS_RW_INTERLEAVED);
+    error = snd_pcm_hw_params_set_access(
+        alsa, hw_params,
+        requested_access_mode == ACCESS_MMAP_INTERLEAVED
+            ? SND_PCM_ACCESS_MMAP_INTERLEAVED
+            : SND_PCM_ACCESS_RW_INTERLEAVED);
     if (error < 0)
     {
         SPDLOG_ERROR("Failed to set ALSA access type: {}",
                     snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
+    access_mode = requested_access_mode;
 
     // Choose between float, s32, s24, s16, etc.
     for (auto &format : alsa_formats)
@@ -740,6 +811,9 @@ void AlsaDevice::set_hw_params()
     if (convert_read == nullptr)
     {
         SPDLOG_ERROR("Failed to find ALSA format.");
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return -EINVAL;
     }
 
     // `snd_pcm_hw_params_set_subformat()` can set up to use 20 or 24 bits
@@ -751,6 +825,9 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA channels: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
 
     // Set the exact sample rate to use.
@@ -759,6 +836,9 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA sample rate: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
 
     // `snd_pcm_hw_params_set_rate_resample()` can disable resampling
@@ -770,6 +850,9 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to disable ALSA resampling: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
 
     // `snd_pcm_hw_params_set_export_buffer()` allows the buffer to be
@@ -792,15 +875,42 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA period size: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
 
     // Set the number of periods in the buffer.
-    const unsigned requested_periods = is_fusion_connect_stream_name(device_name) ? 16 : 32;
-    error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
-    if (error < 0)
+    const bool negotiated_periods = is_bluealsa_device_name(device_name) ||
+                                    is_uac_device_name(device_name);
+    const unsigned requested_periods = negotiated_periods ? 32 : 16;
+    if (negotiated_periods)
     {
-        SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
-                     snd_strerror(error));
+        unsigned int actual_periods = requested_periods;
+        int dir = 0;
+        error = snd_pcm_hw_params_set_periods_near(alsa, hw_params, &actual_periods, &dir);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to set ALSA number of periods near {}: {}",
+                         requested_periods, snd_strerror(error));
+            snd_pcm_hw_params_free(hw_params);
+            hw_params = nullptr;
+            return error;
+        }
+        SPDLOG_DEBUG("Using ALSA periods for {}: {} (requested {})",
+                     device_name.c_str(), actual_periods, requested_periods);
+    }
+    else
+    {
+        error = snd_pcm_hw_params_set_periods(alsa, hw_params, requested_periods, 0);
+        if (error < 0)
+        {
+            SPDLOG_ERROR("Failed to set ALSA number of periods: {}",
+                         snd_strerror(error));
+            snd_pcm_hw_params_free(hw_params);
+            hw_params = nullptr;
+            return error;
+        }
     }
 
     // `snd_pcm_hw_params_set_buffer_time()` is redundant given we have set
@@ -815,6 +925,9 @@ void AlsaDevice::set_hw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA hardware parameters: {}",
                      snd_strerror(error));
+        snd_pcm_hw_params_free(hw_params);
+        hw_params = nullptr;
+        return error;
     }
     else
     {
@@ -847,10 +960,12 @@ void AlsaDevice::set_hw_params()
                          device_name.c_str(), actual_period_size);
         }
     }
+
+    return 0;
 }
 
 
-void AlsaDevice::set_sw_params()
+int AlsaDevice::set_sw_params()
 {
     int error;
 
@@ -861,6 +976,9 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to get ALSA software parameters: {}",
                      snd_strerror(error));
+        snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
+        return error;
     }
 
     // `snd_pcm_sw_params_set_tstamp_mode()` turns timestamps on or off.
@@ -877,6 +995,9 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA avail min: {}",
                      snd_strerror(error));
+        snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
+        return error;
     }
 
     // `snd_pcm_sw_params_set_period_event()` sets a poll/select wakeup
@@ -891,6 +1012,9 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA start threshold: {}",
                     snd_strerror(error));
+        snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
+        return error;
     }
 
     // Set the threshold above which we enter xrun state.  The -1 setting
@@ -901,6 +1025,9 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA stop threshold: {}",
                      snd_strerror(error));
+        snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
+        return error;
     }
 
     // `snd_pcm_sw_params_set_silence_thershold()` when the playback buffer
@@ -917,7 +1044,12 @@ void AlsaDevice::set_sw_params()
     {
         SPDLOG_ERROR("Failed to set ALSA software parameters: {}",
                      snd_strerror(error));
+        snd_pcm_sw_params_free(sw_params);
+        sw_params = nullptr;
+        return error;
     }
+
+    return 0;
 }
 
 
@@ -1338,9 +1470,9 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     {
         base_ratio = 1.0;
         read_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), 4 * period_size);
-        target_depth = min_depth + period_size;
-        max_depth = target_depth + period_size;
+        min_depth = std::max(get_frame_size(), 2 * period_size);
+        target_depth = min_depth + 2 * period_size;
+        max_depth = target_depth + 2 * period_size;
     }
     else
     {
@@ -1472,9 +1604,9 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     else if (use_low_latency_fc_depths(device_name, use_asrc))
     {
         max_write_samples = get_frame_size();
-        min_depth = std::max(get_frame_size(), 4 * period_size);
-        target_depth = min_depth + period_size;
-        max_depth = target_depth + period_size;
+        min_depth = std::max(get_frame_size(), 2 * period_size);
+        target_depth = min_depth + 2 * period_size;
+        max_depth = target_depth + 2 * period_size;
     }
     // AES67 is 5/6/10
     else

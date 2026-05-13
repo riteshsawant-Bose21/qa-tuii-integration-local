@@ -164,7 +164,7 @@ void FusionTUIIBridge::handleFusionSourceUpdate(const std::string &zoneID, uint1
 
     spdlog::debug("[FusionTUIIBridge] Processing Fusion source update: {} = {}", zoneID, sourceIndex);
 
-    if (!processSourceUpdate(zoneID, sourceIndex))
+    if (!processSourceUpdate(zoneID, sourceIndex-1))
     {
         spdlog::warn("[FusionTUIIBridge] Failed to process source update for {}", zoneID);
     }
