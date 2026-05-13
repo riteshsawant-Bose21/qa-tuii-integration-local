@@ -6,7 +6,6 @@
 #include <linux/hash.h>
 #include <sound/core.h>
 #include <sound/asound.h>
-#include <sound/pcm-indirect.h>
 
 #define FUSION_CN_NUM_CHANNELS_MAX 120
 #define FUSION_CN_DEFAULT_BUFFER_FRAMES 512
@@ -38,7 +37,6 @@ struct fusion_cn_substream {
     u32                rtp_frames_per_packet;
     u32                interrupts_per_period;
     u32                interrupt_idx;
-    struct snd_pcm_indirect pcm_indirect;
     atomic_t                dma_offset;
     spinlock_t              lock;
     struct hlist_node       hnode;
