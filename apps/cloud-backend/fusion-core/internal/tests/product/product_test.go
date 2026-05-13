@@ -109,7 +109,6 @@ func (suite *ProductIntegrationTestSuite) TestGetAllProducts_WithOutputData() {
 			assert.Equal(suite.T(), "Media Recorder", output.Name)
 			require.Len(suite.T(), output.Assets, 1)
 			assert.ElementsMatch(suite.T(), []string{"assets/images/outputs/media_recorder.png"}, output.Assets[0].Black)
-			assert.Equal(suite.T(), "analogOutput", output.Specifications.PrimaryConnection)
 			assert.ElementsMatch(suite.T(), []string{"analogOutput", "usbOutput"}, output.Specifications.SupportedConnections)
 			break
 		}

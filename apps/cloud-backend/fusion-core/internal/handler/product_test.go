@@ -192,7 +192,6 @@ func TestGetAllProducts(t *testing.T) {
 								},
 							},
 							Specifications: types.OutputSpecifications{
-								PrimaryConnection:    "analogOutput",
 								SupportedConnections: []string{"analogOutput", "usbOutput"},
 							},
 						},
@@ -228,7 +227,6 @@ func TestGetAllProducts(t *testing.T) {
 				assert.Equal(t, "media", resp.Output[0].Type)
 				assert.Len(t, resp.Output[0].Assets, 1)
 				assert.ElementsMatch(t, []string{"assets/images/outputs/media_recorder.png"}, resp.Output[0].Assets[0].Black)
-				assert.Equal(t, "analogOutput", resp.Output[0].Specifications.PrimaryConnection)
 				assert.ElementsMatch(t, []string{"analogOutput", "usbOutput"}, resp.Output[0].Specifications.SupportedConnections)
 				assert.Len(t, resp.Speaker, 1)
 				assert.Equal(t, "Test Speaker", resp.Speaker[0].ModelName)

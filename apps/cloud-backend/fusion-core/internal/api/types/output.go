@@ -1,7 +1,6 @@
 package types
 
 type OutputSpecifications struct {
-	PrimaryConnection    string   `json:"primary_connection"`
 	SupportedConnections []string `json:"supported_connections"`
 	PagingType           *string  `json:"paging_type"`
 }
