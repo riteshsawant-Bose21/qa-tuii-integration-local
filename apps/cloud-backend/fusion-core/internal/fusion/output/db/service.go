@@ -14,21 +14,16 @@ import (
 
 // Service provides database operations for the output table.
 type Service struct {
-	db     *sql.DB
-	logger *zap.Logger
+	db *sql.DB
 }
 
 // NewService creates a new output database service.
-func NewService(db *sql.DB, logger *zap.Logger) *Service {
+func NewService(db *sql.DB) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
-	if logger == nil {
-		panic("logger cannot be nil")
-	}
 	return &Service{
-		db:     db,
-		logger: logger,
+		db: db,
 	}
 }
 

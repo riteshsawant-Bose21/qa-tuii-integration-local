@@ -167,7 +167,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Source Service.")
 
 	// Initialize Output DB Service
-	outputDBSvc := outputdb.NewService(pgs, loggers.AppLogger)
+	outputDBSvc := outputdb.NewService(pgs)
 	loggers.AppLogger.Info("Initialized Output DB Service.")
 
 	// Initialize Output Service

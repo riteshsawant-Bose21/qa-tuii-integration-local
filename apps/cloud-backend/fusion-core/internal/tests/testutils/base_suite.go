@@ -218,7 +218,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	sourceSVC := source.NewService(sourceDBSvc, "", loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
-	outputDBSvc := outputdb.NewService(suite.DB, loggers.AppLogger)
+	outputDBSvc := outputdb.NewService(suite.DB)
 	loggers.AppLogger.Info("Initialized Output DB Service.")
 
 	outputSVC := output.NewService(outputDBSvc, "", loggers.AppLogger)
