@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/add_output_device/repository/add_output
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/output_product.dart';
-import 'package:fusion_lib/product_data/models/product_asset.dart';
 
 part 'add_output_device_vm_state.dart';
 
@@ -19,37 +18,7 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
 
   void setZoneId(String? id) => emit(state.copyWith(zoneId: () => id));
 
-  List<OutputProduct> get _outputsProducts => serviceLocator<ProductQueryViewModel>().outputs;
-
-  List<OutputProduct> get outputProducts {
-    // TODO: SHARATH : Replace with actual data fetching logic. For now, returning hardcoded list for testing.
-    final List<OutputProduct> outputs = <OutputProduct>[
-      const OutputProduct(
-        id: 1,
-        name: 'Output Type A',
-        primaryConnection: OutputConnectionType.analogOutput,
-        assets: ProductAsset(assets: <String, List<String>>{}),
-        supportedConnections: <OutputConnectionType>[
-          OutputConnectionType.analogOutput,
-          OutputConnectionType.aes67output,
-        ],
-      ),
-      const OutputProduct(
-        id: 2,
-        name: 'Output Type B',
-        primaryConnection: OutputConnectionType.analogOutput,
-        assets: ProductAsset(assets: <String, List<String>>{}),
-        supportedConnections: <OutputConnectionType>[
-          OutputConnectionType.analogOutput,
-          OutputConnectionType.aes67output,
-        ],
-      ),
-    ];
-
-    return outputs;
-
-    // return _outputsProducts;
-  }
+  List<OutputProduct> get outputProducts => serviceLocator<ProductQueryViewModel>().outputs;
 
   void updateOutputProductId(int? productId) {
     final OutputProduct? selectedProduct = outputProducts.firstWhereOrNull((OutputProduct p) => p.id == productId);
