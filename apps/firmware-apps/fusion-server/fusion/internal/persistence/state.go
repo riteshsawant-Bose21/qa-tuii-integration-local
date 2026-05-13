@@ -376,7 +376,12 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	existing := sm.patchBaseStateUnsafe(update)
-	before := utils.DeepCopy(existing)
+
+	// Snapshot only the keys being patched for diff (avoids a full deep copy).
+	before := make(map[string]any, len(existing))
+	for k, v := range existing {
+		before[k] = utils.DeepCopy(v)
+	}
 
 	if err := utils.ApplyPatch(existing, update); err != nil {
 		sm.Unlock()
