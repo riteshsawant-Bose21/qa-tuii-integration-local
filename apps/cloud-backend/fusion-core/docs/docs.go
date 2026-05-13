@@ -4131,6 +4131,60 @@ const docTemplate = `{
                 }
             }
         },
+        "types.OutputAsset": {
+            "type": "object",
+            "properties": {
+                "black": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "white": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.OutputItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputAsset"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "specifications": {
+                    "$ref": "#/definitions/types.OutputSpecifications"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.OutputSpecifications": {
+            "type": "object",
+            "properties": {
+                "paging_type": {
+                    "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "types.PermissionUpdateRequest": {
             "type": "object",
             "required": [
@@ -4242,6 +4296,12 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "output": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputItemResponse"
                     }
                 },
                 "source": {

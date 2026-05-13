@@ -731,6 +731,41 @@ definitions:
         example: 1
         type: integer
     type: object
+  types.OutputAsset:
+    properties:
+      black:
+        items:
+          type: string
+        type: array
+      white:
+        items:
+          type: string
+        type: array
+    type: object
+  types.OutputItemResponse:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/types.OutputAsset'
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+      specifications:
+        $ref: '#/definitions/types.OutputSpecifications'
+      type:
+        type: string
+    type: object
+  types.OutputSpecifications:
+    properties:
+      paging_type:
+        type: string
+      supported_connections:
+        items:
+          type: string
+        type: array
+    type: object
   types.PermissionUpdateRequest:
     properties:
       access_level_id:
@@ -807,6 +842,10 @@ definitions:
       io_endpoint:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      output:
+        items:
+          $ref: '#/definitions/types.OutputItemResponse'
         type: array
       source:
         items:

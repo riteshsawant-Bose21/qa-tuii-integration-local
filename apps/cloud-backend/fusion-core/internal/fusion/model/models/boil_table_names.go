@@ -17,12 +17,14 @@ var TableNames = struct {
 	DeviceProjectHistory   string
 	Feature                string
 	FeaturePermission      string
+	Output                 string
 	Product                string
 	ProductPrice           string
 	ProductSyncJob         string
 	Project                string
 	ProjectUser            string
 	Role                   string
+	Source                 string
 	UserProfile            string
 	UserSettings           string
 }{
@@ -39,12 +41,14 @@ var TableNames = struct {
 	DeviceProjectHistory:   "device_project_history",
 	Feature:                "feature",
 	FeaturePermission:      "feature_permission",
+	Output:                 "output",
 	Product:                "product",
 	ProductPrice:           "product_price",
 	ProductSyncJob:         "product_sync_job",
 	Project:                "project",
 	ProjectUser:            "project_user",
 	Role:                   "role",
+	Source:                 "source",
 	UserProfile:            "user_profile",
 	UserSettings:           "user_settings",
 }
