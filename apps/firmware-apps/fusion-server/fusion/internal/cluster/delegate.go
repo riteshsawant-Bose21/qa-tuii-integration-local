@@ -610,25 +610,13 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	logger := logging.GetLogger()
 	logger.Debug("[DELEGATE] LocalState requested (join=%v)", join)
 
-	state := d.stateManager.GetFullState()
-	snapshot := struct {
-		Version api.Version                `json:"version"`
-		NodeID  string                     `json:"node_id"`
-		State   map[string]*api.StateEntry `json:"state"`
-	}{
-		Version: d.stateManager.GetVersion(),
-		NodeID:  d.appConfig.NodeName,
-		State:   state.State,
-	}
-
-	data, err := json.Marshal(snapshot)
-	if err != nil {
-		logger.Error("Error marshaling local state: %v", err)
+	version := d.stateManager.GetVersion()
+	data, count := d.stateManager.MarshalLocalState(version, d.appConfig.NodeName)
+	if data == nil {
 		return nil
 	}
 
-	logger.Debug("Providing local state with %d entries (version: %v)",
-		len(state.State), snapshot.Version)
+	logger.Debug("Providing local state with %d entries (version: %v)", count, version)
 
 	if join {
 		logger.Debug("[DELEGATE] LocalState provided with join true, size=%d", len(data))

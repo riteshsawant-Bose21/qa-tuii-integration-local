@@ -1,5 +1,5 @@
 # Fusion fusion-server service file
-# This file is to be used only by multipass. 
+# This file is to be used ONLY by multipass. 
 # If you edit this file, please edit the files in meta-fusion to maintain sync
 
 [Unit]
@@ -15,6 +15,12 @@ Environment=FUSION_NET_IFACE=enp0s1
 ExecStart=/usr/local/bin/fusion-server
 Restart=always
 RestartSec=5
+# Throttle to approximate a single ARM Cortex-A53 @ 1.5GHz (i.MX8M Nano).
+# A53 is ~8-12x slower than a modern host core — tune this value for your host:
+#   Apple Silicon (M-series): 10-12%
+#   Intel x86: 15-20%
+#   CPUQuota=12%
+MemoryMax=512M
 
 [Install]
 WantedBy=multi-user.target
