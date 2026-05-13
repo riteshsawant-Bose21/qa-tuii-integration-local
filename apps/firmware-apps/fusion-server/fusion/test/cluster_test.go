@@ -268,7 +268,7 @@ func TestPutDSPDeploymentPackage(t *testing.T) {
 	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable())
 	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain())
 	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ())
-	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFilterType(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFilterType())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetType(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetType())
 
 	projectedFrequencies, err := getClusterAudioSettingArray(clusterServerURL, blockID, "frequency")
 	require.NoError(t, err)
@@ -552,7 +552,7 @@ func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPac
 								Frequency:  []float64{100.0, 200.0, 300.0},
 								Gain:       []float64{1.0, 2.0, 3.0},
 								Q:          []float64{0.7, 1.1, 1.5},
-								FilterType: []string{"peq", "peq", "peq"},
+								Type:       []string{"peq", "peq", "peq"},
 							},
 						},
 					},
