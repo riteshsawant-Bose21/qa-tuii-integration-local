@@ -1483,3 +1483,56 @@ func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {
 func stringPtr(value string) *string {
 	return &value
 }
+
+// ---------------------------------------------------------------------------
+// MarshalLocalState tests
+// ---------------------------------------------------------------------------
+
+func TestMarshalLocalStateReturnsValidJSON(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("volume", float64(75)))
+	require.NoError(t, sm.Set("mute", false))
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "test-node")
+	require.NotNil(t, data)
+	require.Equal(t, 2, count)
+
+	var result struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &result))
+	require.Equal(t, "test-node", result.NodeID)
+	require.Len(t, result.State, 2)
+	require.Equal(t, version, result.Version)
+}
+
+func TestMarshalLocalStateEmptyState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "empty-node")
+	require.NotNil(t, data, "expected non-nil data even for empty state")
+	require.Equal(t, 0, count)
+}
+
+func TestMarshalLocalStateConsistentWithGetFullState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("settings", map[string]any{"audio": map[string]any{"gain": float64(50)}}))
+
+	version := sm.GetVersion()
+	data, _ := sm.MarshalLocalState(version, "node-x")
+
+	fullState := sm.GetFullState()
+
+	var marshaled struct {
+		State map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &marshaled))
+	require.Equal(t, len(fullState.State), len(marshaled.State))
+	for k := range fullState.State {
+		require.Contains(t, marshaled.State, k)
+	}
+}
