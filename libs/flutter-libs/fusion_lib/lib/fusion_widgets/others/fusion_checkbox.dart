@@ -34,7 +34,7 @@ class FusionCheckbox extends StatelessWidget {
     return SemanticHelper.toggle(
       testId: SemanticHelper.createTestId(
         SemanticTypes.toggle,
-        "fusion_checkbox${semanticId ?? ''}",
+        "fusion_checkbox$semanticId",
       ),
       value: isActive,
       child: MouseRegion(
@@ -49,11 +49,9 @@ class FusionCheckbox extends StatelessWidget {
             decoration: BoxDecoration(
               shape: resolvedShape,
               borderRadius: resolvedShape == BoxShape.rectangle ? BorderRadius.circular(4) : null,
-              color: resolvedShape == BoxShape.circle && innerChild != null
-                  ? isActive
-                        ? context.colorScheme.iconWhite
-                        : Colors.transparent
-                  : (isActive ? context.colorScheme.iconWhite : null),
+              // Circle (radio): always transparent — dot provides the active indicator
+              // Rectangle (checkbox): fill white when active
+              color: resolvedShape == BoxShape.circle ? Colors.transparent : (isActive ? context.colorScheme.iconWhite : null),
               border: Border.all(
                 color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
                 width: 1,
@@ -68,14 +66,14 @@ class FusionCheckbox extends StatelessWidget {
                                 height: 9,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: context.colorScheme.iconWhite,
+                                  color: context.colorScheme.iconWhite, // dot on transparent bg ✓
                                 ),
                               )
                         : innerChild ??
                               Icon(
                                 Icons.check,
                                 size: 10,
-                                color: context.colorScheme.black,
+                                color: context.colorScheme.black, // checkmark on white bg ✓
                               ))
                   : null,
             ),
