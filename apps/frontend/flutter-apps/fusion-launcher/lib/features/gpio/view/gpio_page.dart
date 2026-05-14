@@ -70,7 +70,7 @@ class GpioPage extends StatelessWidget {
                                   child: Row(
                                     children: <Widget>[
                                       FusionAppText(
-                                        semanticId: 'gpio_header_${state.availableGPIOPorts < 0 ? "Need" : "Available"}',
+                                        semanticId: 'gpio_header_port_availability',
                                         text: state.availableGPIOPorts < 0 ? "Need" : "Available",
                                         style: context.textTheme.bodySmall,
                                       ),
