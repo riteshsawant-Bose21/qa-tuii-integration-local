@@ -751,12 +751,21 @@ func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, ne
 }
 
 // SetState replaces the entire state map and advances the version.
+// When state is nil (i.e. a full clear), the epoch is also bumped so that any
+// peer still carrying old entries is rejected by the epoch guard in
+// ClusterDelegate.MergeRemoteState, preventing the cleared state from being
+// immediately restored by the next push/pull cycle.
 func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Lock()
 	defer sm.Unlock()
 
 	sm.state.State = deepCopyState(state)
-	sm.version.Counter++
+	if state == nil {
+		sm.version.Epoch++
+		sm.version.Counter = 0
+	} else {
+		sm.version.Counter++
+	}
 	sm.markChecksumDirtyUnsafe()
 }
 
