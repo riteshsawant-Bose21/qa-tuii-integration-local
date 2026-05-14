@@ -37,8 +37,6 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
 
       // Compute snapshots per page and used IDs
       final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
-      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
-
       // Load persisted pages from relationships
       final List<ControllerPageModel> controllerPages = _projectViewModel.getControllerPages(controllerId);
       final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
@@ -57,13 +55,16 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
 
       final String? selectedSceneSetId = sceneSets.isNotEmpty ? sceneSets.first.id : null;
 
+      // Compute used IDs including user-created snapshot pages
+      final Set<String> finalUsedIds = _computeUsedSnapshotIdsFromPages(snapshotPages, snapshotsPerPage);
+
       emit(
         SnapshotLoaded(
           sceneSets: sceneSets,
           snapshotsInSceneSets: snapshotsInSceneSets,
           allSnapshots: allSnapshots,
           snapshotsPerPage: snapshotsPerPage,
-          usedSnapshotIds: usedSnapshotIds,
+          usedSnapshotIds: finalUsedIds,
           selectedSceneSetIds: selectedSceneSetIds,
           selectedSceneSetId: selectedSceneSetId,
           snapshotPages: snapshotPages,
@@ -179,9 +180,13 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       );
     }
 
+    // Recompute used snapshot IDs including new page
+    final Set<String> updatedUsedIds = _computeUsedSnapshotIdsFromPages(updatedPages, loaded.snapshotsPerPage);
+
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
+        usedSnapshotIds: updatedUsedIds,
         selectedSnapshotPageId: newPage.id,
         selectedSceneSetId: null,
       ),
@@ -204,9 +209,13 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       );
     }
 
+    // Recompute used snapshot IDs after deletion
+    final Set<String> updatedUsedIds = _computeUsedSnapshotIdsFromPages(updatedPages, loaded.snapshotsPerPage);
+
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
+        usedSnapshotIds: updatedUsedIds,
         selectedSnapshotPageId: loaded.selectedSnapshotPageId == pageId ? null : loaded.selectedSnapshotPageId,
       ),
     );
@@ -249,6 +258,18 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       for (final SnapshotsModel snap in linked) {
         usedIds.add(snap.id);
       }
+    }
+    return usedIds;
+  }
+
+  /// Compute used snapshot IDs from both scene-set pages and user-created snapshot pages.
+  Set<String> _computeUsedSnapshotIdsFromPages(
+    List<SnapshotPageModel> snapshotPages,
+    Map<String, List<SnapshotsModel>> snapshotsPerPage,
+  ) {
+    final Set<String> usedIds = _computeUsedSnapshotIds(snapshotsPerPage);
+    for (final SnapshotPageModel page in snapshotPages) {
+      usedIds.addAll(page.snapshotIds);
     }
     return usedIds;
   }
