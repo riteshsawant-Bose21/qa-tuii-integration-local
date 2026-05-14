@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
@@ -18,10 +19,9 @@ enum MeterInactiveReason { notStarted, controlModeOff, projectClosed, refreshing
 // ─────────────────────────────────────────────────────────────────────────────
 // MeterDataViewModel — singleton registered in service_locator.dart
 //
-// Resilient ZMQ telemetry consumer with:
+// Resilient WebSocket telemetry consumer with:
 //  • Enum-based connection state machine (no desync-able boolean flags)
 //  • Heartbeat liveness detection via last-received timestamp
-//    (ZMQ has no ping/pong — timestamp is the correct mechanism here)
 //  • Exponential-backoff auto-reconnect
 //  • App lifecycle awareness with background-grace-period guard
 //    (short focus-blips on desktop are ignored; only true backgrounds reconnect)
@@ -31,18 +31,14 @@ enum MeterInactiveReason { notStarted, controlModeOff, projectClosed, refreshing
 
 /// Internal connection state — the single source of truth for what the
 /// telemetry stream is doing right now. All entry points gate on this value.
-///
-/// Unlike [BlockDataViewmodel] there is no `verifying` state because ZMQ
-/// subscriptions do not support a ping/pong handshake. Liveness is inferred
-/// from the timestamp of the last received frame.
 enum _TelemetryState {
   /// No subscription open. Safe to call [startTelemetry].
   disconnected,
 
-  /// [networkClient.connect] is in-flight. Duplicate calls are ignored.
+  /// WebSocket connect is in-flight. Duplicate calls are ignored.
   connecting,
 
-  /// Subscription open; data flowing; heartbeat running.
+  /// WebSocket open; data flowing; heartbeat running.
   connected,
 }
 
@@ -53,6 +49,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   }
 
   final FusionNetworkClient networkClient = serviceLocator<FusionNetworkClient>();
+  final WebSocketService _wsService = serviceLocator<WebSocketService>();
 
   // ── Connection state machine ───────────────────────────────────────────────
 
@@ -62,19 +59,17 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   /// Prevents the auto-reconnect path from running after a deliberate stop.
   bool _intentionallyStopped = false;
 
-  StreamSubscription<ResponseCallback<dynamic>>? _telemetrySubscription;
+  StreamSubscription<ResponseCallback<dynamic>>? _wsSubscription;
+  StreamSubscription<bool>? _wsAliveSubscription;
   StreamSubscription<dynamic>? _controlModeSubscription;
 
   // ── Observer tracking ──────────────────────────────────────────────────────
 
-  /// Identity tokens of currently mounted UI widgets observing this ViewModel.
-  ///
-  /// Using a [Set] rather than a counter prevents counter drift caused by
-  /// mismatched register/unregister calls (e.g. hot-reload, widget rebuild).
-  /// Each widget passes a stable `this` reference or a dedicated token object.
-  final Set<Object> _observers = <Object>{};
+  final Map<Object, Set<String>?> _observers = <Object, Set<String>?>{};
 
   bool get hasActiveObservers => _observers.isNotEmpty;
+
+  Set<String> _activeBlockIds = <String>{};
 
   // ── Reconnect (exponential backoff) ───────────────────────────────────────
 
@@ -82,22 +77,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   Duration _reconnectDelay = const Duration(seconds: 2);
   static const Duration _kMaxReconnectDelay = Duration(seconds: 30);
 
-  // ── Heartbeat (timestamp-based liveness) ──────────────────────────────────
+  // ── Heartbeat (ping/pong via FusionNetworkClient) ───────────────────────────
   //
-  // ZMQ is a subscriber protocol — there is no application-level ping/pong.
-  // We infer liveness from how recently data arrived. If no frame arrives
-  // within [_kStaleThreshold] the socket is considered silently dead.
-
-  Timer? _heartbeatTimer;
-
-  /// How often the heartbeat fires while connected.
-  static const Duration _kHeartbeatInterval = Duration(seconds: 8);
-
-  /// If no data arrives within this window the connection is stale.
-  static const Duration _kStaleThreshold = Duration(seconds: 15);
-
-  /// Timestamp of the last successfully received data frame.
-  DateTime? _lastDataReceivedAt;
 
   // ── App-lifecycle background detection ────────────────────────────────────
 
@@ -115,10 +96,6 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   /// the socket is almost certainly still alive.
   static const Duration _kBackgroundGracePeriod = Duration(seconds: 5);
 
-  /// On resume, if the most recent data frame is older than this we assume the
-  /// socket died silently and force a reconnect immediately.
-  static const Duration _kResumeStaleThreshold = Duration(seconds: 10);
-
   // ═══════════════════════════════════════════════════════════════════════════
   // Lifecycle
   // ═══════════════════════════════════════════════════════════════════════════
@@ -127,7 +104,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   Future<void> close() {
     WidgetsBinding.instance.removeObserver(this);
     _controlModeSubscription?.cancel();
-    _heartbeatTimer?.cancel();
+    _wsAliveSubscription?.cancel();
     _reconnectTimer?.cancel();
     _teardownTelemetry();
     return super.close();
@@ -161,10 +138,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
 
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        // True background entry — record timestamp, pause heartbeat.
+        // True background entry — record timestamp
         _backgroundedAt ??= DateTime.now();
-        _heartbeatTimer?.cancel();
-        _heartbeatTimer = null;
 
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
@@ -180,48 +155,28 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   /// Handles the app returning to the foreground after a genuine background
   /// trip. Decides whether the existing subscription can be trusted.
   ///
-  /// Note: Unlike [BlockDataViewmodel], there is no ping/pong available over
-  /// ZMQ. We probe liveness via the last-received timestamp instead.
   void _onAppResumed({required Duration awayFor}) {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     if (!vm.isInControlMode || !hasActiveObservers) return;
 
-    // Very short absence → trust the socket; the heartbeat will catch any
-    // silent death within [_kHeartbeatInterval].
-    if (awayFor < _kBackgroundGracePeriod) {
-      _ensureHeartbeatRunning();
-      return;
-    }
-
-    // No subscription at all → let the normal connect flow run.
     if (_telemetryState == _TelemetryState.disconnected) {
-      _ensureHeartbeatRunning();
       startTelemetry();
       return;
     }
 
-    // Subscription exists — check the last-data timestamp to decide if it is
-    // still alive. A fresh frame means the socket survived the background.
-    final DateTime? last = _lastDataReceivedAt;
-    final bool looksAlive = last != null && DateTime.now().difference(last) < _kResumeStaleThreshold;
-
-    if (looksAlive) {
-      debugPrint('[MeterData] Socket looks alive on resume — keeping it.');
+    if (awayFor < _kBackgroundGracePeriod) {
+      // Short absence — socket is trusted. Ensure heartbeat is running.
       _ensureHeartbeatRunning();
     } else {
-      debugPrint(
-        '[MeterData] Socket appears stale on resume — forcing reconnect.',
-      );
+      debugPrint('[MeterData] Long background (${awayFor.inSeconds}s) — forcing reconnect.');
       _forceReconnect();
     }
   }
 
-  /// Restarts the heartbeat timer only if a subscription is open and the
-  /// timer is not already running.
+  /// Restarts the heartbeat in [FusionNetworkClient] if a connection is open.
   void _ensureHeartbeatRunning() {
     if (_telemetryState != _TelemetryState.connected) return;
-    if (_heartbeatTimer?.isActive ?? false) return;
-    _startHeartbeat();
+    networkClient.startWsHeartbeat();
   }
 
   // ── Control-mode wiring ────────────────────────────────────────────────────
@@ -262,12 +217,17 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   /// Call from a widget's [State.initState] / [StatefulWidget] mounting point.
   ///
   /// Pass a stable identity token — typically `this` from a [State] subclass.
-  /// The Set ensures that a widget calling [registerObserver] twice without an
-  /// intervening [unregisterObserver] does not inflate the count.
-  void registerObserver(Object observer) {
+  /// Optionally pass [blockIds] to declare which meter block IDs this observer
+  void registerObserver(Object observer, Set<String> blockIds) {
     final bool wasEmpty = _observers.isEmpty;
-    _observers.add(observer);
-    debugPrint('[MeterData] registerObserver — count: ${_observers.length}');
+    _observers[observer] = blockIds;
+    FusionLogger.log(
+      tag: LogTag.dspConfig,
+      message:
+          '[MeterData] registerObserver — count: ${_observers.length}'
+          '${blockIds != null ? ', blockIds: $blockIds' : ''}',
+    );
+    _recomputeBlockIds();
 
     if (wasEmpty) {
       final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
@@ -285,14 +245,11 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     _observers.remove(observer);
     debugPrint('[MeterData] unregisterObserver — count: ${_observers.length}');
 
+    _recomputeBlockIds();
+
     if (_observers.isEmpty) {
-      // No UI is watching — pause timers to conserve resources.
-      // The subscription itself is kept alive so data is not lost if an
-      // observer re-mounts quickly (e.g. a tab switch).
       _reconnectTimer?.cancel();
       _reconnectTimer = null;
-      _heartbeatTimer?.cancel();
-      _heartbeatTimer = null;
     }
   }
 
@@ -320,35 +277,34 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       return;
     }
 
-    debugPrint('[MeterData] Connecting to $vip…');
+    final String wsHost = vip.contains(':') ? vip : '$vip:8080';
+    final String wsUrl = 'ws://$wsHost/ws';
 
-    try {
-      await networkClient.connect(vip: vip);
-    } catch (e) {
-      debugPrint('[MeterData] Connect failed: $e');
-      _telemetryState = _TelemetryState.disconnected;
-      _scheduleReconnect();
-      return;
-    }
+    debugPrint('[MeterData] Connecting to $wsUrl…');
 
-    // Attach stream listener before updating state so we cannot miss the
-    // first frame.
-    _telemetrySubscription = networkClient.responseMessages.listen(
-      _onDataReceived,
+    await networkClient.connectWebSocket(url: wsUrl);
+
+    _wsSubscription = networkClient.webSocketMessages.listen(
+      _onWsMessage,
       onError: (dynamic error) {
-        debugPrint('[MeterData] Stream error: $error');
+        debugPrint('[MeterData] WS stream error: $error');
         _handleUnexpectedDisconnect();
       },
       onDone: () {
-        debugPrint('[MeterData] Stream closed by server.');
+        debugPrint('[MeterData] WS stream closed by server.');
         _handleUnexpectedDisconnect();
       },
       cancelOnError: false,
     );
 
-    _lastDataReceivedAt = DateTime.now();
+    // _wsAliveSubscription?.cancel();
+    // _wsAliveSubscription = networkClient.wsAliveStream.listen((bool alive) {
+    //   if (!alive && !_intentionallyStopped) {
+    //     debugPrint('[MeterData] wsAliveStream emitted false — reconnecting…');
+    //     _forceReconnect();
+    //   }
+    // });
 
-    // Reset backoff — connection succeeded.
     _reconnectDelay = const Duration(seconds: 2);
     _telemetryState = _TelemetryState.connected;
 
@@ -356,25 +312,105 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));
     }
 
-    _startHeartbeat();
-    debugPrint('[MeterData] Telemetry connected.');
+    // _sendSubscribe();
+    _sendBlockIdsUpdate();
+
+    networkClient.startWsHeartbeat();
+    debugPrint('[MeterData] Telemetry connected via WebSocket.');
+  }
+
+  /// Sends the subscribe_meter_data message to the WS server.
+  void _sendSubscribe() {
+    final Map<String, dynamic> msg = <String, dynamic>{
+      'type': 'subscribe_meter_data',
+      'id': _randomId,
+      'version': 1,
+    };
+    _wsService.sendMessage(jsonEncode(msg));
+    debugPrint('[MeterData] Sent subscribe_meter_data');
+  }
+
+  /// Sends the unsubscribe_meter_data message to the WS server.
+  void _sendUnsubscribe() {
+    if (!_wsService.isConnected) return;
+    final Map<String, dynamic> msg = <String, dynamic>{
+      'type': 'unsubscribe_meter_data',
+      'id': _randomId,
+      'version': 1,
+    };
+    _wsService.sendMessage(jsonEncode(msg));
+    debugPrint('[MeterData] Sent unsubscribe_meter_data');
+  }
+
+  /// Random ID generator for WS messages ID field.
+  String get _randomId => DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+
+  // ── Block-ID subscription management ──────────────────────────────────────
+
+  /// Recomputes [_activeBlockIds] from all observers and sends an update to
+  /// the WS server if the set has changed.
+  void _recomputeBlockIds() {
+    final Set<String> newIds = <String>{};
+    for (final Set<String>? entry in _observers.values) {
+      if (entry != null) newIds.addAll(entry);
+    }
+
+    if (_activeBlockIds.length == newIds.length && _activeBlockIds.containsAll(newIds)) {
+      return; // No change — skip the WS message.
+    }
+
+    _activeBlockIds = newIds;
+    debugPrint('[MeterData] activeBlockIds updated: $_activeBlockIds');
+
+    _sendBlockIdsUpdate();
+  }
+
+  /// Sends the current [_activeBlockIds] to the WS server so it can filter
+  /// which meter blocks it sends back.
+  void _sendBlockIdsUpdate() {
+    if (!_wsService.isConnected) return;
+    if (_telemetryState != _TelemetryState.connected) return;
+
+    final Map<String, dynamic> msg = <String, dynamic>{
+      'type': 'update_meter_data_filter',
+      'version': 1,
+      'id': _randomId,
+      'data': <String, dynamic>{
+        'filter': _activeBlockIds.toList(),
+      },
+    };
+    FusionLogger.log(tag: 'MeterDataViewModel', message: 'Sending update_meter_data_filter with block IDs: $msg');
+    _wsService.sendMessage(jsonEncode(msg));
+    debugPrint('[MeterData] Sent update_meter_subscription — block_ids: $_activeBlockIds');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Incoming data
   // ═══════════════════════════════════════════════════════════════════════════
 
-  void _onDataReceived(ResponseCallback<dynamic> message) {
-    _lastDataReceivedAt = DateTime.now();
+  void _onWsMessage(ResponseCallback<dynamic> response) {
+    print("[MeterData] Received WS message: ${response.data}");
+    if (!response.success) return;
 
     if (!state.isConnected && !isClosed) {
       emit(state.copyWith(isConnected: true, clearInactiveReason: true));
     }
 
     try {
-      final MeterPacket packet = MeterPacket.fromMap(
-        message.data as Map<String, dynamic>,
-      );
+      final Map<String, dynamic> envelope = response.data as Map<String, dynamic>;
+
+      final String? type = envelope['type'] as String?;
+
+      // Only process meter_data envelopes.
+      if (type != 'meter_data') return;
+
+      FusionLogger.log(tag: 'MeterDataViewModel', message: 'Received WS message: ${response.data}');
+      FusionLogger.log(tag: 'MeterDataViewModel', message: 'Current state before processing message: $_observers');
+
+      final dynamic data = envelope['data'];
+      if (data is! Map<String, dynamic>) return;
+
+      final MeterPacket packet = MeterPacket.fromMap(data);
 
       final Map<String, MeterPacket> updatedPackets = Map<String, MeterPacket>.from(state.packets)..[packet.name] = packet;
 
@@ -439,31 +475,6 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Heartbeat
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(_kHeartbeatInterval, (_) => _checkLiveness());
-  }
-
-  /// Checks whether the most recent frame arrived within [_kStaleThreshold].
-  /// If not, the ZMQ socket is considered silently dead and is torn down.
-  void _checkLiveness() {
-    if (_intentionallyStopped || isClosed) return;
-    if (_lastDataReceivedAt == null) return;
-
-    final Duration elapsed = DateTime.now().difference(_lastDataReceivedAt!);
-    if (elapsed > _kStaleThreshold) {
-      debugPrint(
-        '[MeterData] No data for ${elapsed.inSeconds}s — '
-        'treating connection as stale, reconnecting…',
-      );
-      _forceReconnect();
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // Reconnect
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -524,10 +535,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
 
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
-    _reconnectDelay = const Duration(seconds: 2); // ← was never reset in original
-    _lastDataReceivedAt = null;
+    _reconnectDelay = const Duration(seconds: 2);
 
     _teardownTelemetry();
 
@@ -542,13 +550,13 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
 
   /// Low-level subscription cleanup. Does NOT update [_telemetryState] —
   /// the caller owns that transition.
-  ///
-  /// Note: heartbeat is NOT cancelled here. [stopTelemetry] and
-  /// [_handleUnexpectedDisconnect] handle that explicitly before calling
-  /// this method, avoiding the double-cancel that was in the original code.
   void _teardownTelemetry() {
-    _telemetrySubscription?.cancel();
-    _telemetrySubscription = null;
-    networkClient.disconnect(); // fire-and-forget
+    _sendUnsubscribe();
+    _wsAliveSubscription?.cancel();
+    _wsAliveSubscription = null;
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    networkClient.stopWsHeartbeat();
+    networkClient.disconnectWebSocket();
   }
 }

@@ -30,6 +30,58 @@ class FusionConfigSyncService {
     }
   }
 
+  //sync wall controller config to dsp
+  Future<ResponseCallback<bool>> syncWallControllerConfig({
+    required Map<String, dynamic> controllerConfig,
+    required String vip,
+  }) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.patch(
+        api: FusionApiEndpoint.wallControllerConfig,
+        data: controllerConfig,
+        baseUrlToOverride: vip,
+        isSecure: false,
+      );
+
+      if (response.success) {
+        return ResponseCallback.success(true);
+      } else {
+        return ResponseCallback<bool>(
+          success: false,
+          message: response.message,
+        );
+      }
+    } catch (e) {
+      return ResponseCallback<bool>(success: false, message: e.toString());
+    }
+  }
+
+  //sync touch ui config to dsp
+  Future<ResponseCallback<bool>> syncTouchUiConfig({
+    required Map<String, dynamic> touchUiConfig,
+    required String vip,
+  }) async {
+    try {
+      final ResponseCallback<dynamic> response = await networkClient.patch(
+        api: FusionApiEndpoint.touchUiConfig,
+        data: touchUiConfig,
+        baseUrlToOverride: vip,
+        isSecure: false,
+      );
+
+      if (response.success) {
+        return ResponseCallback.success(true);
+      } else {
+        return ResponseCallback<bool>(
+          success: false,
+          message: response.message,
+        );
+      }
+    } catch (e) {
+      return ResponseCallback<bool>(success: false, message: e.toString());
+    }
+  }
+
   Future<ResponseCallback<Map<String, dynamic>>> getConfigFromDsp({
     required String vip,
   }) async {

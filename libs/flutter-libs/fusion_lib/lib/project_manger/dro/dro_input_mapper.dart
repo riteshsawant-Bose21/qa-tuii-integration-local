@@ -33,7 +33,11 @@ extension DroInputMapper on ProjectManager {
             blocksProperties[property.name] = valueList;
           }
         }
-        processingBlockData[block.id] = blocksProperties;
+        Map<String, dynamic> blockType = {
+          "algorithm": block.algorithmId,
+          block.algorithmId: blocksProperties,
+        };
+        processingBlockData[block.id] = blockType;
       }
     }
     return processingBlockData;
