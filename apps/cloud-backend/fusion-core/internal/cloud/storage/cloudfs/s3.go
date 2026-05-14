@@ -80,7 +80,19 @@ func (b *S3BucketHandle) Object(name string) ObjectHandle {
 }
 
 // Upload uploads content to an S3 object
-func (b *S3BucketHandle) Upload(_ context.Context, _ string, _ io.Reader, _ *string) error {
+func (b *S3BucketHandle) Upload(ctx context.Context, name string, content io.Reader, contentType *string) error {
+	input := &s3.PutObjectInput{
+		Bucket: aws.String(b.bucketName),
+		Key:    aws.String(name),
+		Body:   content,
+	}
+	if contentType != nil {
+		input.ContentType = contentType
+	}
+	_, err := b.client.PutObject(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to upload object %s: %w", name, err)
+	}
 	return nil
 }
 

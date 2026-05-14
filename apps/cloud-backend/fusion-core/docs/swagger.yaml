@@ -54,6 +54,11 @@ definitions:
         example: Bearer
         type: string
     type: object
+  types.BSFGenerateResponse:
+    properties:
+      bsf_url:
+        type: string
+    type: object
   types.Budget:
     properties:
       amount:
@@ -1457,6 +1462,63 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
+  /bsf/generate:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Generates a BSF (Bose Specification File) from the provided product
+        metadata and SPM file, uploads it to S3, and returns the download URL.
+      parameters:
+      - description: Product name (e.g. DM3SE)
+        in: formData
+        name: product_name
+        required: true
+        type: string
+      - description: Product family (e.g. DesignMax)
+        in: formData
+        name: family
+        required: true
+        type: string
+      - description: Product description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: 'Product SKU (default: -)'
+        in: formData
+        name: sku
+        type: string
+      - description: 'Whether the product is a subwoofer (default: false)'
+        in: formData
+        name: is_subwoofer
+        type: boolean
+      - description: 'Component category (default: speaker)'
+        in: formData
+        name: category
+        type: string
+      - description: SPM measurement file
+        in: formData
+        name: spm_file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: BSF file generated and uploaded
+          schema:
+            $ref: '#/definitions/types.BSFGenerateResponse'
+        "400":
+          description: Missing or invalid input
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Generate BSF File
+      tags:
+      - BSF
   /devices:
     post:
       consumes:

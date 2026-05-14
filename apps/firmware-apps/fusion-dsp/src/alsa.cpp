@@ -1296,10 +1296,10 @@ void AlsaDevice::convert_read_s24_3le(const uint8_t *src, float *dst,
 
     for (int i = 0; i < samples * channels; i++)
     {
-        src32.b[0] = src[i * 3 + 0];
-        src32.b[1] = src[i * 3 + 1];
-        src32.b[2] = src[i * 3 + 2];
-        src32.b[3] = 0;
+        src32.b[0] = 0;
+        src32.b[1] = src[i * 3 + 0];
+        src32.b[2] = src[i * 3 + 1];
+        src32.b[3] = src[i * 3 + 2];
         dst[i] = static_cast<float>(src32.i) / 2147483648.0f;
     }
 }
