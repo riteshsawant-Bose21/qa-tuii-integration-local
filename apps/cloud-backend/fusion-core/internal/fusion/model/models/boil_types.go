@@ -111,6 +111,19 @@ func AllCommandStatusEnum() []string {
 	}
 }
 
+// Enum values for OutputType
+const (
+	OutputTypeMedia     string = "media"
+	OutputTypeAmplifier string = "amplifier"
+)
+
+func AllOutputType() []string {
+	return []string{
+		OutputTypeMedia,
+		OutputTypeAmplifier,
+	}
+}
+
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"
@@ -163,5 +176,22 @@ func AllSyncStatusEnum() []string {
 		SyncStatusEnumInProgress,
 		SyncStatusEnumCompleted,
 		SyncStatusEnumFailed,
+	}
+}
+
+// Enum values for SourceType
+const (
+	SourceTypeMic     string = "mic"
+	SourceTypeMedia   string = "media"
+	SourceTypeGeneric string = "generic"
+	SourceTypePaging  string = "paging"
+)
+
+func AllSourceType() []string {
+	return []string{
+		SourceTypeMic,
+		SourceTypeMedia,
+		SourceTypeGeneric,
+		SourceTypePaging,
 	}
 }

@@ -1218,20 +1218,22 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
         final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedSubZoneId == subZone.id;
         final bool isZoneSelected = serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
-        return Container(
-          decoration:
-              hasIncomingData
-                  ? BoxDecoration(color: Colors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4))
-                  : isZoneSelected
-                  ? BoxDecoration(
-                    border: Border.all(color: context.colorScheme.GreenThemeDisabled, width: 1.5),
-                    borderRadius: BorderRadius.circular(context.smallRadius),
-                  )
-                  : null,
-          margin: EdgeInsets.only(bottom: context.smallGap),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "subzone_${index + 1}"),
+          child: Container(
+            decoration:
+                hasIncomingData
+                    ? BoxDecoration(color: Colors.green.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(4))
+                    : isZoneSelected
+                    ? BoxDecoration(
+                      border: Border.all(color: context.colorScheme.GreenThemeDisabled, width: 1.5),
+                      borderRadius: BorderRadius.circular(context.smallRadius),
+                    )
+                    : null,
+            margin: EdgeInsets.only(bottom: context.smallGap),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
               // Subzone Header with Speaker DragTarget
               DragTarget<Speaker>(
                 onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
@@ -1431,7 +1433,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 ),
                 secondChild: const SizedBox.shrink(),
               ),
-            ],
+              ],
+            ),
           ),
         );
       },

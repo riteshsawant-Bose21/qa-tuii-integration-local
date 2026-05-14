@@ -45,6 +45,16 @@ func (p *Service) GetAllProducts(ctx context.Context, logger *zap.Logger) (*type
 		products.Source = sources
 	}
 
+	// Fetch outputs and attach to response
+	outputs, err := p.outputService.GetAllOutputs(ctx, logger)
+
+	if err != nil {
+		logger.Warn("failed to fetch outputs, continuing without output data", zap.Error(err))
+		products.Output = []types.OutputItemResponse{}
+	} else {
+		products.Output = outputs
+	}
+
 	return products, nil
 }
 

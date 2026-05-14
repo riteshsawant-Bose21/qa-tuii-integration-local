@@ -3,11 +3,27 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../create_zone_popup/view/create_zone_popup.dart';
+import '../../state/filter_state.dart';
+import '../../viewmodel/filter_view_model.dart';
+
+// ─────────────────────────────────────────────
+//  LAYOUT CONSTANTS
+// ─────────────────────────────────────────────
+
+const double _dotSize = 16.0;
+const double _rowHPad = 2.0;
+const double _dotCenterX = _rowHPad + (_dotSize / 2);
+
+const double _itemGap = 4.0;
+const double _headerGap = 4.0;
+const double _childHeight = 32.0;
+const double _trailingSize = 32.0;
+
+/// Height of the drag-handle strip between sections.
+const double _handleHeight = 6.0;
 
 class FilterSection extends StatefulWidget {
   const FilterSection({super.key});
@@ -17,342 +33,555 @@ class FilterSection extends StatefulWidget {
 }
 
 class _FilterSectionState extends State<FilterSection> {
-  final Map<String, bool> _floorOpen = <String, bool>{};
+  // ── ViewModel accessor ─────────────────────────────────────────────────────
+  FilterViewModel get _vm => context.read<FilterViewModel>();
 
-  static const double _dotSize = 16.0;
-  static const double _rowHPad = 2.0;
-  static const double _dotCenterX = _rowHPad + (_dotSize / 2);
-
+  // ── Project data accessors ─────────────────────────────────────────────────
   List<FloorModel> get _floors => serviceLocator<ProjectViewModel>().getAllFloors();
-
   List<Zone> get _zones => serviceLocator<ProjectViewModel>().getAllZones();
-
   List<EquipLocation> get _equipLocations => serviceLocator<ProjectViewModel>().equipLocations;
-  final Map<String, bool> _floorEditing = <String, bool>{};
-  final Map<String, bool> _areaEditing = <String, bool>{};
-  final Map<String, bool> _locationEditing = <String, bool>{};
+
+  // ── Per-section *content* heights ─────────────────────────────────────────
+  //
+  // The header for each section is rendered OUTSIDE its SizedBox, so it is
+  // always visible no matter how small the content area gets.
+  // Minimum content height = 0 → the section collapses to header-only.
+
+  bool _hovered = false;
+  bool _selectedcthovered = false;
+  String? _hoveredAddSection;
+
+  // ── Initialise equal thirds on first layout ────────────────────────────────
+
+  double _floorFlex = 1.0;
+  double _zoneFlex = 1.0;
+  double _equipFlex = 1.0;
+  double _lastSectionPool = 300.0;
+
+  void _clampFlex() {
+    const double minSectionPx = 56.0; // enough for header + tiny scroll area
+    final double total = _floorFlex + _zoneFlex + _equipFlex;
+    // Minimum flex = what fraction of the pool gives us minSectionPx
+    final double minFlex = _lastSectionPool > 0 ? (minSectionPx / _lastSectionPool) * total : 0.1;
+    _floorFlex = _floorFlex.clamp(minFlex, double.infinity);
+    _zoneFlex = _zoneFlex.clamp(minFlex, double.infinity);
+    _equipFlex = _equipFlex.clamp(minFlex, double.infinity);
+  }
+
+  // ── Drag delta helper ──────────────────────────────────────────────────────
+
+  /// Transfers [delta] pixels from [below] to [above], clamping both to ≥ 0.
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Widget _trailingCheckbox({required bool value, required VoidCallback onToggle}) {
+    return SizedBox(
+      width: _trailingSize,
+      height: _trailingSize,
+      child: Center(child: FusionCheckbox(semanticId: '', value: value, onChanged: onToggle)),
+    );
+  }
+
+  Widget _trailingKebab(Widget kebab) => SizedBox(width: _trailingSize, height: _trailingSize, child: Center(child: kebab));
+
+  // ─────────────────────────────────────────────
+  //  BUILD
+  // ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        return Container(
-          width: 212,
-          height: 864,
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation1,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.colorScheme.elevation2, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _buildPanelHeader(context),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: <Widget>[
-                      _buildFloorSection(context),
-                      _buildZonesSection(context),
-                      _buildEquipmentSection(context),
-                    ],
-                  ),
-                ),
+      builder: (BuildContext context, ProjectViewModelState projectState) {
+        return BlocBuilder<FilterViewModel, FilterViewModelState>(
+          builder: (BuildContext context, FilterViewModelState filterState) {
+            return Container(
+              width: 212,
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation1,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: context.colorScheme.elevation2, width: 1),
               ),
-            ],
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _buildPanelHeader(context, filterState),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (BuildContext ctx, BoxConstraints constraints) {
+                        final double sectionPool = constraints.maxHeight - _handleHeight * 2;
+                        _lastSectionPool = sectionPool.clamp(1.0, double.infinity);
+                        final double totalFlex = _floorFlex + _zoneFlex + _equipFlex;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            // ── FLOOR SECTION ──────────────────────────────
+                            Flexible(
+                              flex: (_floorFlex * 1000).round().clamp(1, 999999),
+                              fit: FlexFit.tight,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  _buildFloorHeader(context, filterState),
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: SingleChildScrollView(
+                                        child: _buildFloorContent(context, filterState),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            _buildDragHandle(
+                              onDelta:
+                                  (double dy) => setState(() {
+                                    if (sectionPool <= 0) return;
+                                    final double d = dy * totalFlex / sectionPool;
+                                    _floorFlex += d;
+                                    _zoneFlex -= d;
+                                    _clampFlex();
+                                  }),
+                            ),
+
+                            // ── ZONE SECTION ───────────────────────────────
+                            Flexible(
+                              flex: (_zoneFlex * 1000).round().clamp(1, 999999),
+                              fit: FlexFit.tight,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  _buildZoneHeader(context, filterState),
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: SingleChildScrollView(
+                                        child: _buildZoneContent(context, filterState),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            _buildDragHandle(
+                              onDelta:
+                                  (double dy) => setState(() {
+                                    if (sectionPool <= 0) return;
+                                    final double d = dy * totalFlex / sectionPool;
+                                    _zoneFlex += d;
+                                    _equipFlex -= d;
+                                    _clampFlex();
+                                  }),
+                            ),
+
+                            // ── EQUIPMENT SECTION ──────────────────────────
+                            Flexible(
+                              flex: (_equipFlex * 1000).round().clamp(1, 999999),
+                              fit: FlexFit.tight,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  _buildEquipmentHeader(context, filterState),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      child: _buildEquipmentContent(context, filterState),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildPanelHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-        ),
-      ),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FusionAppText(
-          underLine: true,
-          text: 'Filter',
-          style: context.textTheme.l1SemiBold.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: context.colorScheme.textPrimary,
+  // ── Drag handle widget ─────────────────────────────────────────────────────
+
+  Widget _buildDragHandle({required ValueChanged<double> onDelta}) {
+    return GestureDetector(
+      onVerticalDragUpdate: (DragUpdateDetails d) => onDelta(d.delta.dy),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeRow,
+        child: SizedBox(
+          height: _handleHeight,
+          child: Center(
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation2,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(
+  // ── Panel header ───────────────────────────────────────────────────────────
+
+  Widget _buildPanelHeader(BuildContext context, FilterViewModelState state) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.colorScheme.elevation2, width: 1)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _vm.toggleFilterMode(),
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hovered = true),
+                onExit: (_) => setState(() => _hovered = false),
+                child: FusionAppText(
+                  text: state.filterMode ? 'Done' : 'Filter',
+                  style: context.textTheme.l1SemiBold.copyWith(
+                    color: _hovered ? context.colorScheme.textSecondary : context.colorScheme.textPrimary,
+                    decoration: TextDecoration.underline,
+                    decorationColor: _hovered ? context.colorScheme.textSecondary : context.colorScheme.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (state.filterMode)
+            Builder(
+              builder: (BuildContext context) {
+                final List<FloorModel> floors = _floors;
+                final List<Zone> zones = _zones;
+                final List<EquipLocation> locations = _equipLocations;
+                final bool allSelected = _vm.areAllSelected(floors, zones, locations);
+                return MouseRegion(
+                  onEnter: (_) => setState(() => _selectedcthovered = true),
+                  onExit: (_) => setState(() => _selectedcthovered = false),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (allSelected) {
+                        _vm.deselectAll();
+                      } else {
+                        _vm.selectAll(floors: floors, zones: zones, locations: locations);
+                      }
+                    },
+                    child: Row(
+                      children: <Widget>[
+                        FusionAppText(
+                          text: 'Select All',
+                          style: context.textTheme.l1SemiBold.withColor(
+                            _selectedcthovered ? context.colorScheme.textSecondary : context.colorScheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FusionCheckbox(
+                          semanticId: 'select_all',
+                          value: allSelected,
+                          onChanged: () {
+                            if (allSelected) {
+                              _vm.deselectAll();
+                            } else {
+                              _vm.selectAll(floors: floors, zones: zones, locations: locations);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Generic section-header row (label + optional ADD button + divider) ─────
+
+  Widget _buildSectionHeaderRow(
     BuildContext context,
+    FilterViewModelState state,
     String label,
     VoidCallback onAdd,
   ) {
+    final bool isAddHovered = _hoveredAddSection == label;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             Expanded(
               child: FusionAppText(
                 text: label,
-                style: context.textTheme.l1Regular.copyWith(
-                  color: context.colorScheme.textSecondary,
-                  letterSpacing: 0.6,
+                maxLine: 1,
+                style: context.textTheme.l1Regular.copyWith(color: context.colorScheme.textSecondary),
+              ),
+            ),
+            if (!state.filterMode)
+              MouseRegion(
+                onEnter: (_) => setState(() => _hoveredAddSection = label),
+                onExit: (_) => setState(() => _hoveredAddSection = null),
+                child: GestureDetector(
+                  onTap: onAdd,
+                  child: FusionAppButton(
+                    semanticId: '',
+                    style: FusionAppButtonStyle.tertiary,
+                    text: 'ADD',
+                    textstyle: context.textTheme.l1SemiBold.withColor(
+                      isAddHovered ? context.colorScheme.textSecondary : context.colorScheme.textPrimary,
+                    ),
+                    showPrefixIcon: true,
+                    prefixIcon: LucideIcons.plus,
+                    onPressed: onAdd,
+                  ),
                 ),
               ),
-            ),
-            GestureDetector(
-              onTap: onAdd,
-              child: FusionAppButton(
-                semanticId: '',
-                style: FusionAppButtonStyle.tertiary,
-                text: 'ADD',
-                textstyle: context.textTheme.l1SemiBold.withColor(context.colorScheme.textPrimary),
-                showPrefixIcon: true,
-                prefixIcon: LucideIcons.plus,
-                onPressed: onAdd,
-              ),
-            ),
           ],
         ),
-        Divider(
-          color: context.colorScheme.strokeLight,
-          thickness: 1,
-          height: 12,
-        ),
+        Divider(color: context.colorScheme.strokeLight, thickness: 1, height: 12),
       ],
     );
   }
 
   // ─────────────────────────────────────────────
-  //  FLOORS
+  //  FLOORS  (header + content split)
   // ─────────────────────────────────────────────
 
-  Widget _buildFloorSection(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+  // Header is rendered unconditionally above the resizable SizedBox.
+  Widget _buildFloorHeader(BuildContext context, FilterViewModelState state) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: _buildSectionHeaderRow(context, state, 'FLOORS', () {
+        serviceLocator<ProjectViewModel>().addFloor(
+          floor: FloorModel(
+            name: 'Floor ${_floors.length + 1}',
+            floorPlan: FloorPlanModel(imagePath: '', position: Offset.zero, size: Size.zero),
+          ),
+        );
+      }),
+    );
+  }
+
+  // Items only — no header, just padding + rows.
+  Widget _buildFloorContent(BuildContext context, FilterViewModelState state) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, _headerGap, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _buildSectionHeader(context, 'FLOORS', () {
-            final FloorModel newFloor = FloorModel(
-              name: 'Floor ${_floors.length + 1}',
-              floorPlan: FloorPlanModel(
-                imagePath: '', // ← empty string for no image
-                position: Offset.zero, // ← or whatever Position/Offset type it expects
-                size: Size.zero, // ← or whatever Size type it expects
-              ),
-            );
-            serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
-          }),
-          const SizedBox(height: 6),
-          for (final FloorModel floor in _floors) ...<Widget>[
-            _buildFloorRow(context, floor),
-            const SizedBox(height: 2),
+          for (int i = 0; i < _floors.length; i++) ...<Widget>[
+            _buildFloorRow(context, state, _floors[i]),
+            if (i < _floors.length - 1) const SizedBox(height: _itemGap),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildFloorRow(BuildContext context, FloorModel floor) {
-    final bool isOpen = _floorOpen[floor.id] ?? false;
-    final bool isEditing = _floorEditing[floor.id] ?? false;
-
+  Widget _buildFloorRow(BuildContext context, FilterViewModelState state, FloorModel floor) {
+    final bool isOpen = state.isFloorOpen(floor.id);
+    final bool isEditing = state.isFloorEditing(floor.id);
+    final TextEditingController nameCtrl = _vm.getOrCreateFloorController(floor.id, floor.name);
     final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id);
 
-    final TextEditingController floorNameController = TextEditingController(text: floor.name);
-
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            GestureDetector(
-              onTap: () => setState(() => _floorOpen[floor.id] = !isOpen),
-              child: Icon(
-                isOpen ? Icons.arrow_drop_down : Icons.arrow_right,
-                size: 20,
-                color: context.colorScheme.iconWhite,
+            if (!state.filterMode)
+              InkWell(
+                onTap: () => _vm.toggleFloorOpen(floor.id),
+                child: Icon(
+                  isOpen ? Icons.arrow_drop_down : Icons.arrow_right,
+                  size: 20,
+                  color: context.colorScheme.iconWhite,
+                ),
               ),
-            ),
             const SizedBox(width: 4),
             Expanded(
               child:
-                  isEditing
+                  isEditing && !state.filterMode
                       ? PropertyTextField(
-                        controller: floorNameController,
+                        controller: nameCtrl,
                         maxLength: 24,
                         autofocus: true,
                         onSubmitted: (String v) {
-                          final String trimmedName = v.trim();
-                          if (trimmedName.isNotEmpty) {
-                            final FloorModel updated = floor.copyWith(name: trimmedName);
-                            serviceLocator<ProjectViewModel>().updateFloor(floor: updated);
+                          final String trimmed = v.trim();
+                          if (trimmed.isNotEmpty) {
+                            serviceLocator<ProjectViewModel>().updateFloor(floor: floor.copyWith(name: trimmed));
                           } else {
-                            floorNameController.text = floor.name;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Floor name cannot be empty'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
+                            nameCtrl.text = floor.name;
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(const SnackBar(content: Text('Floor name cannot be empty'), duration: Duration(seconds: 2)));
                           }
-                          setState(() => _floorEditing[floor.id] = false);
+                          _vm.toggleFloorEditMode(floor.id);
                         },
                       )
-                      : FusionAppText(
-                        text: floor.name,
-                        style: context.textTheme.l1SemiBold,
-                      ),
+                      : FusionAppText(text: floor.name, style: context.textTheme.l1SemiBold),
             ),
-            FusionKebabPopup(
-              semanticId: "",
-              onEdit: () => setState(() => _floorEditing[floor.id] = true),
-              onDelete: () {
-                serviceLocator<ProjectViewModel>().removeFloor(floorId: floor.id);
-              },
-            ),
+            if (state.filterMode)
+              _trailingCheckbox(value: state.isFloorChecked(floor.id), onToggle: () => _vm.toggleFloor(floor.id))
+            else
+              _trailingKebab(
+                FusionKebabPopup(
+                  semanticId: '',
+                  onEdit: () => _vm.toggleFloorEditMode(floor.id),
+                  onDelete: () {
+                    _vm.cleanupFloorController(floor.id);
+                    serviceLocator<ProjectViewModel>().removeFloor(floorId: floor.id);
+                  },
+                ),
+              ),
           ],
         ),
-        if (isOpen && listeningAreas.isNotEmpty)
-          for (int i = 0; i < listeningAreas.length; i++)
-            if (_areaEditing[listeningAreas[i].id] ?? false)
-              Row(
-                children: <Widget>[
-                  // match your existing indentation spacing
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: PropertyTextField(
-                      controller: TextEditingController(text: listeningAreas[i].name),
-                      maxLength: 24,
-                      autofocus: true,
-                      onSubmitted: (String v) {
-                        final String trimmedName = v.trim();
-                        if (trimmedName.isNotEmpty) {
-                          final ListeningArea updated = listeningAreas[i].copyWith(name: trimmedName);
-                          serviceLocator<ProjectViewModel>().updateListeningArea(area: updated);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Area name cannot be empty'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                        setState(() => _areaEditing[listeningAreas[i].id] = false);
-                      },
+        if (!state.filterMode)
+          if (isOpen && listeningAreas.isNotEmpty)
+            for (int i = 0; i < listeningAreas.length; i++)
+              if (!state.filterMode && state.isAreaEditing(listeningAreas[i].id))
+                Padding(
+                  padding: const EdgeInsets.only(left: 24),
+                  child: PropertyTextField(
+                    controller: _vm.getOrCreateAreaController(listeningAreas[i].id, listeningAreas[i].name),
+                    maxLength: 24,
+                    autofocus: true,
+                    onSubmitted: (String v) {
+                      final String trimmed = v.trim();
+                      if (trimmed.isNotEmpty) {
+                        serviceLocator<ProjectViewModel>().updateListeningArea(area: listeningAreas[i].copyWith(name: trimmed));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Area name cannot be empty'), duration: Duration(seconds: 2)));
+                      }
+                      _vm.toggleAreaEditMode(listeningAreas[i].id);
+                    },
+                  ),
+                )
+              else
+                _buildChildRow(
+                  context: context,
+                  state: state,
+                  id: listeningAreas[i].id,
+                  label: listeningAreas[i].name,
+                  isLast: i == listeningAreas.length - 1,
+                  isChecked: state.isAreaChecked(listeningAreas[i].id),
+                  onToggle: () => _vm.toggleArea(listeningAreas[i].id),
+                  items: <KebabMenuItem>[
+                    KebabMenuItem(
+                      label: 'Edit',
+                      onTap: () => _vm.toggleAreaEditMode(listeningAreas[i].id),
+                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
                     ),
-                  ),
-                ],
-              )
-            else
-              _buildChildRow(
-                context: context,
-                label: listeningAreas[i].name,
-                isLast: i == listeningAreas.length - 1,
-                items: <KebabMenuItem>[
-                  KebabMenuItem(
-                    label: 'Edit',
-                    onTap: () => setState(() => _areaEditing[listeningAreas[i].id] = true),
-                    icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                  ),
-                  KebabMenuItem(
-                    label: 'Delete',
-                    onTap: () => serviceLocator<ProjectViewModel>().removeListeningArea(areaId: listeningAreas[i].id),
-                    icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                  ),
-                ],
-              ),
+                    KebabMenuItem(
+                      label: 'Delete',
+                      onTap: () {
+                        _vm.cleanupAreaController(listeningAreas[i].id);
+                        serviceLocator<ProjectViewModel>().removeListeningArea(areaId: listeningAreas[i].id);
+                      },
+                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                    ),
+                  ],
+                ),
       ],
     );
   }
 
   // ─────────────────────────────────────────────
-  //  ZONES
+  //  ZONES  (header + content split)
   // ─────────────────────────────────────────────
 
-  Widget _buildZonesSection(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+  Widget _buildZoneHeader(BuildContext context, FilterViewModelState state) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: _buildSectionHeaderRow(context, state, 'ZONES', () {
+        CreateZonePopup.show(context, isFromBuildingPage: false);
+      }),
+    );
+  }
+
+  Widget _buildZoneContent(BuildContext context, FilterViewModelState state) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, _headerGap, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _buildSectionHeader(context, 'ZONES', () {
-            CreateZonePopup.show(context, isFromBuildingPage: false);
-          }),
-          const SizedBox(height: 6),
-          for (final Zone zone in _zones) ...<Widget>[
-            _buildZoneRow(context, zone),
-            const SizedBox(height: 2),
+          for (int i = 0; i < _zones.length; i++) ...<Widget>[
+            _buildZoneRow(context, state, _zones[i]),
+            if (i < _zones.length - 1) const SizedBox(height: _itemGap),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildZoneRow(BuildContext context, Zone zone) {
+  Widget _buildZoneRow(BuildContext context, FilterViewModelState state, Zone zone) {
     final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             Container(
               width: 13,
               height: 13,
-              decoration: BoxDecoration(
-                color: zone.color,
-                borderRadius: BorderRadius.circular(3),
-              ),
+              decoration: BoxDecoration(color: zone.color, borderRadius: BorderRadius.circular(3)),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: FusionAppText(
-                text: zone.name,
-                style: context.textTheme.l1Regular,
+            Expanded(child: FusionAppText(text: zone.name, style: context.textTheme.l1Regular)),
+            if (state.filterMode)
+              _trailingCheckbox(value: state.isZoneChecked(zone.id), onToggle: () => _vm.toggleZone(zone.id))
+            else
+              _trailingKebab(
+                FusionKebabPopup(
+                  semanticId: '',
+                  items: <KebabMenuItem>[
+                    KebabMenuItem(
+                      label: 'Edit',
+                      onTap: () => CreateZonePopup.showEdit(context, zone: zone, isFromBuildingPage: false),
+                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                    ),
+                    KebabMenuItem(
+                      label: 'Add SubZone',
+                      onTap: () => CreateZonePopup.showEdit(context, zone: zone, isFromBuildingPage: false, autoOpenSubzone: true),
+                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                    ),
+                    KebabMenuItem(
+                      label: 'Delete',
+                      onTap: () => serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id),
+                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            FusionKebabPopup(
-              semanticId: '',
-              items: <KebabMenuItem>[
-                KebabMenuItem(
-                  label: 'Edit',
-                  onTap: () => CreateZonePopup.showEdit(context, zone: zone, isFromBuildingPage: false),
-                  icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                ),
-                KebabMenuItem(
-                  label: 'Add SubZone',
-                  onTap: () {},
-                  icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                ),
-                KebabMenuItem(
-                  label: 'Delete',
-                  onTap: () => serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id),
-                  icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                ),
-              ],
-            ),
           ],
         ),
         for (int i = 0; i < subZones.length; i++)
           _buildChildRow(
             context: context,
+            state: state,
+            id: subZones[i].id,
             label: subZones[i].name,
             isLast: i == subZones.length - 1,
+            isChecked: state.isSubZoneChecked(subZones[i].id),
+            onToggle: () => _vm.toggleSubZone(subZones[i].id),
             items: <KebabMenuItem>[
               KebabMenuItem(
                 label: 'Edit',
-                onTap: () {},
-                icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-              ),
-              KebabMenuItem(
-                label: 'Add SubZone',
-                onTap: () {},
+                onTap: () => CreateZonePopup.showEdit(context, zone: zone, isFromBuildingPage: false, autoOpenSubzone: true),
                 icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
               ),
               KebabMenuItem(
@@ -367,72 +596,81 @@ class _FilterSectionState extends State<FilterSection> {
   }
 
   // ─────────────────────────────────────────────
-  //  EQUIPMENT LOCATIONS
+  //  EQUIPMENT LOCATIONS  (header + content split)
   // ─────────────────────────────────────────────
 
-  Widget _buildEquipmentSection(BuildContext context) {
+  Widget _buildEquipmentHeader(BuildContext context, FilterViewModelState state) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: _buildSectionHeaderRow(context, state, 'EQUIPMENT LOCATION', () {
+        serviceLocator<ProjectViewModel>().addEquipLocation(
+          equipLocation: EquipLocation(name: 'Equipment Location ${_equipLocations.length + 1}'),
+        );
+      }),
+    );
+  }
+
+  Widget _buildEquipmentContent(BuildContext context, FilterViewModelState state) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, _headerGap, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _buildSectionHeader(context, 'EQUIPMENT LOCATION', () {
-            final EquipLocation newLocation = EquipLocation(
-              name: 'Equipment Location ${_equipLocations.length + 1}',
-            );
-            serviceLocator<ProjectViewModel>().addEquipLocation(equipLocation: newLocation);
-          }),
-          const SizedBox(height: 6),
-          for (final EquipLocation location in _equipLocations) ...<Widget>[
+          for (int i = 0; i < _equipLocations.length; i++) ...<Widget>[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                const SizedBox(width: 8),
                 Expanded(
                   child:
-                      (_locationEditing[location.id] ?? false)
+                      (!state.filterMode && state.isLocationEditing(_equipLocations[i].id))
                           ? PropertyTextField(
-                            controller: TextEditingController(text: location.name),
+                            controller: _vm.getOrCreateLocationController(_equipLocations[i].id, _equipLocations[i].name),
                             maxLength: 24,
                             autofocus: true,
                             onSubmitted: (String v) {
-                              final String trimmedName = v.trim();
-                              if (trimmedName.isNotEmpty) {
-                                final EquipLocation updated = location.copyWith(name: trimmedName);
-                                serviceLocator<ProjectViewModel>().updateEquipLocation(equipLocation: updated);
+                              final String trimmed = v.trim();
+                              if (trimmed.isNotEmpty) {
+                                serviceLocator<ProjectViewModel>().updateEquipLocation(equipLocation: _equipLocations[i].copyWith(name: trimmed));
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Location name cannot be empty'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(const SnackBar(content: Text('Location name cannot be empty'), duration: Duration(seconds: 2)));
                               }
-                              setState(() => _locationEditing[location.id] = false);
+                              _vm.toggleLocationEditMode(_equipLocations[i].id);
                             },
                           )
-                          : FusionAppText(
-                            text: location.name,
-                            style: context.textTheme.l1Regular,
-                          ),
+                          : FusionAppText(text: _equipLocations[i].name, style: context.textTheme.l1Regular),
                 ),
-                FusionKebabPopup(
-                  semanticId: '',
-                  items: <KebabMenuItem>[
-                    KebabMenuItem(
-                      label: 'Edit',
-                      onTap: () => setState(() => _locationEditing[location.id] = true),
-                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                if (state.filterMode)
+                  _trailingCheckbox(
+                    value: state.isLocationChecked(_equipLocations[i].id),
+                    onToggle: () => _vm.toggleLocation(_equipLocations[i].id),
+                  )
+                else
+                  _trailingKebab(
+                    FusionKebabPopup(
+                      semanticId: '',
+                      items: <KebabMenuItem>[
+                        KebabMenuItem(
+                          label: 'Edit',
+                          onTap: () => _vm.toggleLocationEditMode(_equipLocations[i].id),
+                          icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                        ),
+                        KebabMenuItem(
+                          label: 'Delete',
+                          onTap: () {
+                            _vm.cleanupLocationController(_equipLocations[i].id);
+                            serviceLocator<ProjectViewModel>().removeEquipLocation(equipLocationId: _equipLocations[i].id);
+                          },
+                          icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
+                        ),
+                      ],
                     ),
-                    KebabMenuItem(
-                      label: 'Delete',
-                      onTap: () => serviceLocator<ProjectViewModel>().removeEquipLocation(equipLocationId: location.id),
-                      icon: 'packages/fusion_lib/lib/assets/svgs/edit.svg',
-                    ),
-                  ],
-                ),
+                  ),
               ],
             ),
-            const SizedBox(height: 2),
+            if (i < _equipLocations.length - 1) const SizedBox(height: _itemGap),
           ],
         ],
       ),
@@ -440,14 +678,23 @@ class _FilterSectionState extends State<FilterSection> {
   }
 
   // ─────────────────────────────────────────────
-  //  SHARED WIDGETS
+  //  SHARED CHILD ROW
   // ─────────────────────────────────────────────
 
-  Widget _buildChildRow({required BuildContext context, required String label, required bool isLast, required List<KebabMenuItem> items}) {
+  Widget _buildChildRow({
+    required BuildContext context,
+    required FilterViewModelState state,
+    required String id,
+    required String label,
+    required bool isLast,
+    required bool isChecked,
+    required VoidCallback onToggle,
+    required List<KebabMenuItem> items,
+  }) {
     const double treeWidth = _dotCenterX + _dotSize + 4;
 
     return SizedBox(
-      height: 34,
+      height: _childHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -463,17 +710,13 @@ class _FilterSectionState extends State<FilterSection> {
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Expanded(
-                  child: FusionAppText(
-                    text: label,
-                    style: context.textTheme.l1Regular,
-                  ),
-                ),
-                FusionKebabPopup(
-                  semanticId: '',
-                  items: items,
-                ),
+                Expanded(child: FusionAppText(text: label, style: context.textTheme.l1Regular)),
+                if (state.filterMode)
+                  _trailingCheckbox(value: isChecked, onToggle: onToggle)
+                else
+                  _trailingKebab(FusionKebabPopup(semanticId: 'section_child', items: items)),
               ],
             ),
           ),
@@ -481,20 +724,10 @@ class _FilterSectionState extends State<FilterSection> {
       ),
     );
   }
-
-  Widget _kebab({
-    required VoidCallback onEdit,
-    required VoidCallback onDelete,
-  }) => FusionKebabPopup(
-    semanticId: '',
-    onDelete: onDelete,
-    onEdit: onEdit,
-    onDuplicate: () {},
-  );
 }
 
 // ─────────────────────────────────────────────
-//  TREE LINE PAINTER (unchanged)
+//  TREE LINE PAINTER
 // ─────────────────────────────────────────────
 
 class _TreeLinePainter extends CustomPainter {
@@ -502,11 +735,7 @@ class _TreeLinePainter extends CustomPainter {
   final bool isLast;
   final double lineX;
 
-  const _TreeLinePainter({
-    required this.color,
-    required this.isLast,
-    required this.lineX,
-  });
+  const _TreeLinePainter({required this.color, required this.isLast, required this.lineX});
 
   @override
   void paint(Canvas canvas, Size size) {

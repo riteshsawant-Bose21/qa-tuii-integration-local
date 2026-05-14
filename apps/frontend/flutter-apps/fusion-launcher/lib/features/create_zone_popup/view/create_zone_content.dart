@@ -21,6 +21,7 @@ import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/service_locator.dart';
+import '../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../view_model/create_zone_viewmodel.dart';
 import '../view_model/create_zone_viewmodel_state.dart';
@@ -30,11 +31,13 @@ part 'widgets/create_subzone_widget.dart';
 class CreateZoneContent extends StatefulWidget {
   final bool isFromBuildingPage;
   final ValueNotifier<bool> saveEnabledNotifier;
+  final bool autoOpenSubzone;
 
   const CreateZoneContent({
     super.key,
     required this.isFromBuildingPage,
     required this.saveEnabledNotifier,
+    this.autoOpenSubzone = false,
   });
 
   @override
@@ -78,6 +81,7 @@ class _CreateZoneContentState extends State<CreateZoneContent> {
                 ),
                 const SizedBox(height: 20),
                 _CreateSubzoneWidget(
+                  autoOpenSubzone: widget.autoOpenSubzone,
                   saveEnabledNotifier: widget.saveEnabledNotifier,
                   onRevalidate: () => _revalidate(context.read<CreateZoneViewModel>().state), // ← pass revalidate down
                 ),

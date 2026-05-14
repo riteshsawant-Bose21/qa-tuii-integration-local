@@ -25,6 +25,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization"
 	organizationdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/organization/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output"
+	outputdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -216,6 +218,12 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	sourceSVC := source.NewService(sourceDBSvc, "", loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
+	outputDBSvc := outputdb.NewService(suite.DB)
+	loggers.AppLogger.Info("Initialized Output DB Service.")
+
+	outputSVC := output.NewService(outputDBSvc, "", loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Output Service.")
+
 	validationCfg := &config.Validation{
 		SupportedVersions: []string{"v1"},
 		RequireVersion:    false,
@@ -244,7 +252,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	s3Client, err := cloudfs.NewS3Client(context.Background(), cloudCfg.AWSConfig)
 	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
 
-	suite.ProductSVC = product.NewService(productDBSvc, sourceSVC, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
+	suite.ProductSVC = product.NewService(productDBSvc, sourceSVC, outputSVC, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
 	require.NotNil(suite.T(), suite.ProductSVC, "Failed to initialize product service")
 
 	// Initialize Project services
@@ -288,8 +296,9 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 
 	authSvc := &MockAuthService{}
 	authMiddleware := &MockMiddleware{}
+	bsfSvc := &MockBSFService{}
 
-	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, suite.OrganizationSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, loggers)
+	apiServer, err := api.New(apiConfig, suite.ProductSVC, suite.ProjectSVC, suite.UserSVC, suite.OrganizationSVC, authSvc, suite.FirmwareSVC, authMiddleware, suite.DeviceSVC, bsfSvc, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

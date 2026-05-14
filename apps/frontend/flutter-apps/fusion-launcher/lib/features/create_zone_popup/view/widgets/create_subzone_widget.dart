@@ -130,13 +130,14 @@ part of '../create_zone_content.dart';
 
 class _CreateSubzoneWidget extends StatefulWidget {
   final ValueNotifier<bool> saveEnabledNotifier;
-  final VoidCallback onRevalidate; // ← add
+  final VoidCallback onRevalidate;
+  final bool autoOpenSubzone; // ← new
 
   const _CreateSubzoneWidget({
     required this.saveEnabledNotifier,
-    required this.onRevalidate, // ← add
+    required this.onRevalidate,
+    this.autoOpenSubzone = false, // ← new
   });
-
   @override
   State<_CreateSubzoneWidget> createState() => _CreateSubzoneWidgetState();
 }
@@ -150,12 +151,31 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
   final List<TextEditingController> _nameControllers = <TextEditingController>[];
   final TextEditingController _formNameCtrl = TextEditingController();
 
+  bool _initialized = false;
+  bool _autoOpenTriggered = false; // ← new
+
   @override
   void dispose() {
     _canAddSubzone.dispose();
     for (final TextEditingController c in _nameControllers) c.dispose();
     _formNameCtrl.dispose();
     super.dispose();
+  }
+
+  // WITH:
+  void _syncFromVmState(CreateZoneViewModelState state) {
+    if (_initialized) return;
+    _initialized = true;
+    for (final AddListeningAreaToSubzoneModel sz in state.subzones) {
+      _nameControllers.add(TextEditingController(text: sz.subZoneName));
+    }
+    // Auto-open subzone form after controllers are ready
+    if (widget.autoOpenSubzone && !_autoOpenTriggered) {
+      _autoOpenTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _enterSetupMode();
+      });
+    }
   }
 
   // ── Actions ──────────────────────────────────────────────────
@@ -171,7 +191,9 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
       _editingIndex = null;
       _formNameCtrl.text = draftName;
     });
-    widget.saveEnabledNotifier.value = false;
+    if (draftIdx < 2) {
+      widget.saveEnabledNotifier.value = false;
+    }
   }
 
   void _exitSetupMode() {
@@ -184,7 +206,7 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
       _editingIndex = null;
       _formNameCtrl.clear();
     });
-    widget.onRevalidate(); // ← not blindly true
+    widget.onRevalidate();
     _canAddSubzone.value = true;
   }
 
@@ -214,7 +236,7 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
         _editingIndex = null;
         _formNameCtrl.clear();
       });
-      widget.onRevalidate(); // ← not blindly true
+      widget.onRevalidate();
       _canAddSubzone.value = true;
     }
   }
@@ -232,7 +254,7 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
     vm.onSubzoneNameChanged(_editingIndex!, name);
     setState(() {
       _editingIndex = null;
-      _formNameCtrl.text = _nameControllers[_draftIndex!].text;
+      _formNameCtrl.text = _draftIndex != null ? _nameControllers[_draftIndex!].text : '';
     });
   }
 
@@ -266,9 +288,10 @@ class _CreateSubzoneWidgetState extends State<_CreateSubzoneWidget> {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
       buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.subzones != c.subzones,
-      builder:
-          (BuildContext context, CreateZoneViewModelState state) =>
-              (_draftIndex == null && _nameControllers.isEmpty) ? _buildEntryButton(context) : _buildSetupPanel(context, state),
+      builder: (BuildContext context, CreateZoneViewModelState state) {
+        _syncFromVmState(state);
+        return (_draftIndex == null && _nameControllers.isEmpty) ? _buildEntryButton(context) : _buildSetupPanel(context, state);
+      },
     );
   }
 

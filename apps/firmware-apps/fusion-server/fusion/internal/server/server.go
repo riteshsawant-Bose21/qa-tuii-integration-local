@@ -22,6 +22,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// validKeyRe validates query parameter values contain only allowed characters.
+var validKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_.\[\]*]+$`)
+
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
 	node                      string
@@ -661,8 +664,7 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 	}
 
 	// Validate that the parameter contains only allowed characters.
-	validKey := regexp.MustCompile(`^[a-zA-Z0-9_.\[\]*]+$`)
-	if !validKey.MatchString(params[0]) {
+	if !validKeyRe.MatchString(params[0]) {
 		return "", fmt.Errorf("invalid characters in parameter %q", param)
 	}
 	return params[0], nil
