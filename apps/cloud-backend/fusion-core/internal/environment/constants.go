@@ -30,7 +30,8 @@ var (
 		ProjectBucket:        "S3_PROJECT_BUCKET",
 		ProductBucket:        "S3_PRODUCT_BUCKET",
 		FirmwareBundleBucket: "S3_FIRMWARE_BUNDLE_BUCKET",
-		AssetBaseURL:        "S3_ASSET_BASE_URL",
+		AssetBaseURL:         "S3_ASSET_BASE_URL",
+		AssetBucket:          "S3_ASSET_BUCKET",
 	}
 
 	AWS = types.EnvironmentAWSVariables{

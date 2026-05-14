@@ -38,8 +38,11 @@ import (
 	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
+	bsfservice "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/bsf"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output"
+	outputdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/output/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -164,8 +167,16 @@ func main() {
 	sourceSVC := source.NewService(sourceDBSvc, cfg.Cloud.AssetBaseURL, loggers.AppLogger)
 	loggers.AppLogger.Info("Initialized Source Service.")
 
+	// Initialize Output DB Service
+	outputDBSvc := outputdb.NewService(pgs)
+	loggers.AppLogger.Info("Initialized Output DB Service.")
+
+	// Initialize Output Service
+	outputSVC := output.NewService(outputDBSvc, cfg.Cloud.AssetBaseURL, loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Output Service.")
+
 	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, sourceSVC, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
+	productSVC := product.NewService(productDBSvc, sourceSVC, outputSVC, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
 	if productSVC == nil {
 		loggers.AppLogger.Fatal("Failed to initialize product service")
 	}
@@ -258,11 +269,15 @@ func main() {
 	//Initialize Device Service
 	deviceSVC := device.NewService(deviceDbSvc, projectDBSvc, iothandler, *cfg.Cloud)
 
+	// Initialize BSF Service
+	bsfSVC := bsfservice.NewService(s3Handler.Bucket(cfg.Cloud.AssetS3Bucket), cfg.Cloud.AssetBaseURL)
+	loggers.AppLogger.Info("Initialized BSF Service.")
+
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, deviceSVC, loggers)
+	}, productSVC, projectSVC, userSVC, organizationSVC, authSVC, firmwareSVC, authMiddleware, deviceSVC, bsfSVC, loggers)
 
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
