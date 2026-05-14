@@ -29,13 +29,17 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
   int _copies = 1;
   bool _loading = true;
   bool _printing = false;
+  double _qrSize = 320;
+
+  static const double _qrSizeMin = 100;
+  static const double _qrSizeMax = 500;
 
   static const Map<String, PdfPageFormat> _paperSizes = <String, PdfPageFormat>{
-    'Letter': PdfPageFormat.letter,
     'A4': PdfPageFormat.a4,
     'A3': PdfPageFormat.a3,
     'A5': PdfPageFormat.a5,
     'Legal': PdfPageFormat.legal,
+    'Letter': PdfPageFormat.letter,
   };
 
   @override
@@ -107,8 +111,8 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                 ),
                 pw.SizedBox(height: 24),
                 pw.SizedBox(
-                  width: 320,
-                  height: 320,
+                  width: _qrSize,
+                  height: _qrSize,
                   child: pw.Image(qrPwImage),
                 ),
                 pw.SizedBox(height: 16),
@@ -309,6 +313,10 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
                                 _buildLabel(context, 'Copies', 'print_dialog_copies_label'),
                                 const SizedBox(height: 6),
                                 _buildCopiesSelector(context),
+                                const SizedBox(height: 16),
+                                _buildLabel(context, 'QR Code Size', 'print_dialog_qr_size_label'),
+                                const SizedBox(height: 6),
+                                _buildQrSizeSlider(context),
                               ],
                             ),
                           ),
@@ -350,29 +358,53 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
   }
 
   Widget _buildPreview(BuildContext context) {
+    final PdfPageFormat pageFormat = _landscape ? _selectedFormat.landscape : _selectedFormat.portrait;
+    final double aspectRatio = pageFormat.width / pageFormat.height;
+
     return Container(
-      height: 380,
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: context.colorScheme.strokeLight),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: PdfPreview(
-        key: ValueKey<String>(
-          '${_selectedFormat.width}_${_selectedFormat.height}_$_landscape',
-        ),
-        build: (PdfPageFormat format) => _buildPdf(),
-        canChangePageFormat: false,
-        canChangeOrientation: false,
-        canDebug: false,
-        allowPrinting: false,
-        allowSharing: false,
-        useActions: false,
-        pdfPreviewPageDecoration: const BoxDecoration(color: Colors.white),
-        previewPageMargin: const EdgeInsets.all(8),
-        scrollViewDecoration: BoxDecoration(
-          color: context.colorScheme.elevation1,
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: PdfPreview(
+              key: ValueKey<String>(
+                '${_selectedFormat.width}_${_selectedFormat.height}_${_landscape}_${_qrSize.round()}',
+              ),
+              build: (PdfPageFormat format) => _buildPdf(),
+              canChangePageFormat: false,
+              canChangeOrientation: false,
+              canDebug: false,
+              allowPrinting: false,
+              allowSharing: false,
+              useActions: false,
+              pdfPreviewPageDecoration: const BoxDecoration(color: Colors.white),
+              previewPageMargin: EdgeInsets.zero,
+              scrollViewDecoration: const BoxDecoration(color: Colors.white),
+            ),
+          ),
         ),
       ),
     );
@@ -548,6 +580,57 @@ class _CustomPrintDialogState extends State<CustomPrintDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQrSizeSlider(BuildContext context) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'print_dialog_qr_size_slider',
+      ),
+      value: _qrSize.round().toString(),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              FusionAppText(
+                text: '${_qrSize.round()}px',
+                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textPrimary),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: context.colorScheme.primary,
+              inactiveTrackColor: context.colorScheme.elevation1,
+              thumbColor: context.colorScheme.primary,
+              overlayColor: context.colorScheme.primary.withOpacity(0.12),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: _qrSize,
+              min: _qrSizeMin,
+              max: _qrSizeMax,
+              divisions: 16,
+              onChanged: (double value) => setState(() => _qrSize = value),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              FusionAppText(
+                text: 'Small',
+                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+              ),
+              FusionAppText(
+                text: 'Large',
+                style: Theme.of(context).textTheme.l1Regular.withColor(context.colorScheme.textBody),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
