@@ -96,6 +96,29 @@ func (l *UDPListener) loop() {
 	l.conn.SetReadDeadline(time.Time{})
 	close(l.ready)
 
+	// 2. Heartbeat — send a noop every 5s to prevent the server from evicting
+	//    this client due to clientStaleTTL (10s).
+	noop, _ := json.Marshal(map[string]any{"action": "noop"})
+	heartbeatStop := make(chan struct{})
+	heartbeatDone := make(chan struct{})
+	go func() {
+		defer close(heartbeatDone)
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				l.conn.WriteToUDP(noop, l.serverAddr)
+			case <-heartbeatStop:
+				return
+			}
+		}
+	}()
+	defer func() {
+		close(heartbeatStop)
+		<-heartbeatDone
+	}()
+
 	// 3. Read loop.
 	for {
 		l.conn.SetReadDeadline(time.Now().Add(30 * time.Second))

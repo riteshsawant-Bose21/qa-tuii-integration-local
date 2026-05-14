@@ -143,6 +143,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                 tools: <FusionCanvasTool<FusionToolState>>[
                                   FusionCanvasTool.measureTool,
                                   FusionCanvasTool.penTool,
+                                  FusionCanvasTool.rectangleTool,
                                   FusionCanvasTool.customDragTool(
                                     transformSelectedLayerIds: (String layerId) {
                                       return buildingPageViewModel.transformLayerIdForSelection(
@@ -380,6 +381,40 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                         }
                                       } else if (state is DrawingWallState) {
                                         projectVM.addWall(wall: Wall(vertices: value), floorId: floor.id);
+                                      }
+
+                                      calculateSpl(context);
+                                    },
+                                  ),
+                                  rectangleToolEvents: FusionRectangleToolEvents(
+                                    onRectangleDrawn: (List<FusionCanvasPoint> value) {
+                                      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                      if (value.last == value.first) {
+                                        value.removeLast();
+                                      }
+                                      final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
+
+                                      final String? listeningAreaId = null;
+                                      // state
+                                      //     .listeningAreaId; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one
+                                      final ListeningArea? existingArea = projectVM.listeningAreas.firstWhereOrNull(
+                                        (ListeningArea element) => element.id == listeningAreaId,
+                                      );
+                                      if (existingArea == null) {
+                                        final ListeningArea listeningArea = ListeningArea(
+                                          vertices: value,
+                                          name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                        );
+                                        projectVM.addListeningArea(
+                                          area: listeningArea,
+                                          floorId: floor.id,
+                                        );
+                                        projectVM.setCurrentSelectedListeningArea(listeningArea.id);
+                                      } else {
+                                        projectVM.updateListeningArea(
+                                          area: existingArea.copyWith(vertices: value, isDrawn: true),
+                                        );
+                                        projectVM.setCurrentSelectedListeningArea(existingArea.id);
                                       }
 
                                       calculateSpl(context);

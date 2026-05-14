@@ -343,7 +343,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
 import '../../../core/service_locator.dart';
+import '../../add_output_device/views/add_output_device.dart';
 import '../view_model/create_zone_viewmodel_state.dart';
 import 'create_zone_content.dart';
 
@@ -361,12 +363,12 @@ class CreateZonePopup extends StatelessWidget {
     required this.isFromBuildingPage,
   });
 
-  static void showEdit(BuildContext context, {required Zone zone, bool isFromBuildingPage = false}) {
+  static void showEdit(BuildContext context, {required Zone zone, bool isFromBuildingPage = false, bool autoOpenSubzone = false}) {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final CreateZoneViewModel vm = CreateZoneViewModel()..init(isFromBuilding: isFromBuildingPage);
-    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(false);
+    final ValueNotifier<bool> saveEnabled = ValueNotifier<bool>(true);
 
-    // Pre-populate using existing public setters
+    // Pre-populate
     vm.setZoneName(zone.name);
     vm.setZoneColor(zone.zoneColor);
 
@@ -374,12 +376,13 @@ class CreateZonePopup extends StatelessWidget {
       vm.updateZoneListeningArea(area, false);
     }
 
-    for (final SubZone sz in projectViewModel.getSubZonesForZone(parentZoneId: zone.id)) {
+    final List<SubZone> existingSubzones = projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
+    for (int i = 0; i < existingSubzones.length; i++) {
+      final SubZone sz = existingSubzones[i];
       vm.addSubzone();
-      final int index = vm.state.subzones.length - 1;
-      vm.onSubzoneNameChanged(index, sz.name);
-      for (final ListeningArea area in projectViewModel.getListeningAreasForZone(zoneId: zone.id)) {
-        vm.updateZoneListeningArea(area, false);
+      vm.onSubzoneNameChanged(i, sz.name);
+      for (final ListeningArea area in projectViewModel.getListeningAreasInSubZone(subZoneId: sz.id)) {
+        vm.updateSubzoneListeningArea(i, area, false);
       }
     }
 
@@ -391,7 +394,12 @@ class CreateZonePopup extends StatelessWidget {
       onButtonPressed: () {
         final CreateZoneViewModelState s = vm.state;
 
-        projectViewModel.updateZone(zone: zone);
+        projectViewModel.updateZone(
+          zone: zone.copyWith(
+            name: s.zoneName,
+            zoneColor: s.zoneColor,
+          ),
+        );
 
         if (s.subzones.isEmpty) {
           projectViewModel.updateListeningAreasInZone(
@@ -399,12 +407,9 @@ class CreateZonePopup extends StatelessWidget {
             zoneId: zone.id,
           );
         } else {
-          final List<SubZone> existingSubzones = projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
-          for (final SubZone sz in existingSubzones) {
-            projectViewModel.removeSubZoneFromZone(
-              subZoneId: sz.id,
-              parentZoneId: zone.id,
-            );
+          final List<SubZone> oldSubzones = projectViewModel.getSubZonesForZone(parentZoneId: zone.id);
+          for (final SubZone sz in oldSubzones) {
+            projectViewModel.removeSubZoneFromZone(subZoneId: sz.id, parentZoneId: zone.id);
           }
           for (final AddListeningAreaToSubzoneModel subzone in s.subzones) {
             final SubZone newSubZone = SubZone(name: subzone.subZoneName);
@@ -432,6 +437,7 @@ class CreateZonePopup extends StatelessWidget {
         child: CreateZoneContent(
           isFromBuildingPage: isFromBuildingPage,
           saveEnabledNotifier: saveEnabled,
+          autoOpenSubzone: autoOpenSubzone,
         ),
       ),
     );
@@ -447,6 +453,27 @@ class CreateZonePopup extends StatelessWidget {
       buttonEnabledNotifier: saveEnabled, // ← add
       onButtonPressed: () => vm.createZone(context),
       title: 'Create Zone',
+      header: FusionDrawerHeader(
+        semanticId: 'create_zone',
+        title: 'Create Zone',
+        trailing: GestureDetector(
+          onTap: () {
+            AddOutputDevice.show(
+              context: context,
+              zoneColor: vm.state.zoneColor,
+              zoneName: vm.state.zoneName,
+              onBack: () => Navigator.of(context).pop(),
+            );
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: FusionAppText(
+              text: "Add Output Device",
+              style: context.textTheme.l1SemiBold,
+            ),
+          ),
+        ),
+      ), // ← add
       content: BlocProvider<CreateZoneViewModel>.value(
         value: vm,
         child: CreateZoneContent(

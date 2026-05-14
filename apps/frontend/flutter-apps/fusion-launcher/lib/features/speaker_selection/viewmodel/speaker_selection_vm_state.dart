@@ -3,10 +3,10 @@ part of 'speaker_selection_vm.dart';
 class SpeakerSelectionVmState extends Equatable {
   final String? listeningAreaId;
 
-  // To add new listening area
-  final bool shouldAddNewListeningArea;
-  final String? floorId;
-  final String? newListeningAreaName;
+  // // To add new listening area
+  // final bool shouldAddNewListeningArea;
+  // final String? floorId;
+  // final String? newListeningAreaName;
 
   final double? listeningHeight;
   final SpeakerSelectionMode speakerSelectionMode;
@@ -30,9 +30,9 @@ class SpeakerSelectionVmState extends Equatable {
 
   const SpeakerSelectionVmState({
     this.listeningAreaId,
-    this.shouldAddNewListeningArea = false,
-    this.floorId,
-    this.newListeningAreaName,
+    // this.shouldAddNewListeningArea = false,
+    // this.floorId,
+    // this.newListeningAreaName,
     this.listeningHeight,
     this.speakerSelectionMode = SpeakerSelectionMode.select,
     this.selectModeArgs = const SpeakerSelectModeArgs(),
@@ -48,9 +48,9 @@ class SpeakerSelectionVmState extends Equatable {
   @override
   List<Object?> get props => <Object?>[
     listeningAreaId,
-    shouldAddNewListeningArea,
-    floorId,
-    newListeningAreaName,
+    // shouldAddNewListeningArea,
+    // floorId,
+    // newListeningAreaName,
     listeningHeight,
     speakerSelectionMode,
     selectModeArgs,
@@ -65,9 +65,9 @@ class SpeakerSelectionVmState extends Equatable {
 
   SpeakerSelectionVmState copyWith({
     ValueGetter<String?>? listeningAreaId,
-    ValueGetter<bool>? shouldAddNewListeningArea,
-    ValueGetter<String?>? floorId,
-    ValueGetter<String?>? newListeningAreaName,
+    // ValueGetter<bool>? shouldAddNewListeningArea,
+    // ValueGetter<String?>? floorId,
+    // ValueGetter<String?>? newListeningAreaName,
     ValueGetter<double?>? listeningHeight,
     ValueGetter<SpeakerSelectionMode>? speakerSelectionMode,
     ValueGetter<SpeakerSelectModeArgs>? selectModeArgs,
@@ -83,9 +83,9 @@ class SpeakerSelectionVmState extends Equatable {
   }) {
     return SpeakerSelectionVmState(
       listeningAreaId: listeningAreaId != null ? listeningAreaId() : this.listeningAreaId,
-      shouldAddNewListeningArea: shouldAddNewListeningArea != null ? shouldAddNewListeningArea() : this.shouldAddNewListeningArea,
-      floorId: floorId != null ? floorId() : this.floorId,
-      newListeningAreaName: newListeningAreaName != null ? newListeningAreaName() : this.newListeningAreaName,
+      // shouldAddNewListeningArea: shouldAddNewListeningArea != null ? shouldAddNewListeningArea() : this.shouldAddNewListeningArea,
+      // floorId: floorId != null ? floorId() : this.floorId,
+      // newListeningAreaName: newListeningAreaName != null ? newListeningAreaName() : this.newListeningAreaName,
       listeningHeight: listeningHeight != null ? listeningHeight() : this.listeningHeight,
       speakerSelectionMode: speakerSelectionMode != null ? speakerSelectionMode() : this.speakerSelectionMode,
       selectModeArgs: selectModeArgs != null ? selectModeArgs() : this.selectModeArgs,

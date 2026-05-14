@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/add_output_device/repository/add_output_device_repo.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/aes67_config.dart';
 
 part 'add_output_device_vm_state.dart';
 
@@ -10,6 +10,10 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
   AddOutputDeviceViewModel() : super(AddOutputDeviceVmState.initial());
 
   final ValueNotifier<bool> isSaveEnabled = ValueNotifier<bool>(false);
+
+  final AddOutputDeviceRepository _repository = AddOutputDeviceRepository();
+
+  void setZoneId(String? id) => emit(state.copyWith(zoneId: () => id));
 
   void updateOutputDeviceName(String name) => emit(state.copyWith(outputDeviceName: () => name));
   void updateOutputType(OutputDeviceType? type) => emit(state.copyWith(outputType: () => type));
@@ -24,9 +28,9 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
     bool canProceed = false;
 
     final bool hasName = vmState.outputDeviceName != null && vmState.outputDeviceName!.isNotEmpty;
-    canProceed = hasName && vmState.outputType != null && vmState.audioChannel != null && vmState.connection != null;
+    canProceed = vmState.zoneId != null && hasName && vmState.outputType != null && vmState.audioChannel != null && vmState.connection != null;
 
-    final bool isAes67 = vmState.connection == OutputDeviceConnectionType.aes67;
+    final bool isAes67 = vmState.connection == OutputDeviceConnectionType.aes67Stream;
     if (isAes67) {
       if (vmState.audioChannel == AudioChannel.mono) {
         canProceed = canProceed && vmState.selectedMonoChannel != null && vmState.selectedStream != null;
@@ -39,8 +43,28 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
   }
 
   void onSaveTap() {
-    // Handle the save action, e.g., by sending the data to a repository or service.
-    // You can access the current state using `state` and perform necessary actions.
+    final AddOutputDeviceVmState current = state;
+
+    if (current.outputDeviceName == null || current.outputType == null || current.audioChannel == null || current.connection == null) return;
+
+    final OutputDevice device = OutputDevice(
+      name: current.outputDeviceName!,
+      outputDeviceType: current.outputType!,
+      connectionType: current.connection!,
+      audioChannel: current.audioChannel!,
+      locationEntity: LocationModel(),
+      price: 0.0,
+      addedFromBuildingPage: false,
+    );
+
+    _repository.saveOutputDevice(
+      device: device,
+      zoneId: current.zoneId,
+      selectedStream: current.selectedStream,
+      selectedMonoChannel: current.selectedMonoChannel,
+      selectedLeftChannel: current.selectedLeftChannel,
+      selectedRightChannel: current.selectedRightChannel,
+    );
   }
 
   @override
@@ -51,7 +75,6 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
 
   @override
   Future<void> close() {
-    // Dispose the ValueNotifier when the ViewModel is closed to prevent memory leaks.
     isSaveEnabled.dispose();
     return super.close();
   }

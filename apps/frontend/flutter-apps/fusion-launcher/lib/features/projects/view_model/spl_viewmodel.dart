@@ -54,6 +54,24 @@ class SplViewModel extends Cubit<SplState> {
     _updateSPLFromPanelData();
   }
 
+  bool canCalculateSPL() {
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    if (currentFloorIndex == -1) return false;
+
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
+    if (floorListeningAreas.isEmpty) return false;
+
+    final List<Speaker> speakers = List<Speaker>.from(
+      serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
+    );
+    if (speakers.isEmpty) return false;
+
+    return true;
+  }
+
   Future<void> calculateSPL() async {
     // print(
     //   "Calculating SPL with panel data: ${state.panelData}, current listening areas: ${state.listeningAreas.length}",
