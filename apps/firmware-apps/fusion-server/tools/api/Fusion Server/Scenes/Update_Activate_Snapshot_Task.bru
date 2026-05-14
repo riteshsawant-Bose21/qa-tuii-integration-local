@@ -1,0 +1,25 @@
+meta {
+  name: Update Activate Snapshot Task
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{api_url}}/tasks/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: Play
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "cron_expr": "@every 1m"
+  }
+}

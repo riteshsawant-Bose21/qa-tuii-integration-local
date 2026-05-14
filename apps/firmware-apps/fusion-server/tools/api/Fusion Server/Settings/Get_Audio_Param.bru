@@ -1,0 +1,16 @@
+meta {
+  name: Get Audio Param
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{api_url}}/settings/audio/:blockId/:param
+  body: none
+  auth: none
+}
+
+params:path {
+  blockId: GAIN528578446
+  param: gain
+}

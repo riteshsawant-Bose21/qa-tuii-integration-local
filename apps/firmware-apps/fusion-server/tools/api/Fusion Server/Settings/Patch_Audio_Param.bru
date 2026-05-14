@@ -1,0 +1,22 @@
+meta {
+  name: Patch Audio Param
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{api_url}}/settings/audio/:blockId/:param
+  body: json
+  auth: none
+}
+
+params:path {
+  blockId: GAIN528578446
+  param: gain
+}
+
+body:json {
+  {
+    "value": -12.0
+  }
+}

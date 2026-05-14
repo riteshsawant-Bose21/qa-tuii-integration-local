@@ -1,5 +1,5 @@
 info:
-  name: Get All Devices Info
+  name: Get Devices
   type: http
   seq: 2
 

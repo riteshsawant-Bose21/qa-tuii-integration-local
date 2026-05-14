@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"mime/multipart"
@@ -19,6 +19,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -31,6 +32,12 @@ type messageTriggerPayload struct {
 	Priority  int      `json:"priority,omitempty"`
 	Zones     []string `json:"zones,omitempty"`
 	Timestamp int64    `json:"timestamp"`
+}
+
+func uniqueAudioNames(prefix string) (string, string) {
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	base := fmt.Sprintf("%s_%s", prefix, suffix)
+	return base + ".wav", base
 }
 
 func localAudioBaseURL(t *testing.T) string {
@@ -90,8 +97,7 @@ func TestAudioUploadAndDeleteSuccess(t *testing.T) {
 
 	// Create a tiny valid 8kHz mono PCM WAV (0.25s of silence)
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	filename := "test_upload.wav"
-	displayName := "Unit Test Clip"
+	filename, displayName := uniqueAudioNames("unit_test_clip")
 
 	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
 	if meta.Id == "" {
@@ -116,8 +122,7 @@ func TestAudioUploadBinaryIntegrity(t *testing.T) {
 	defer cancel()
 
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	filename := "binary_integrity.wav"
-	displayName := "Binary Integrity Clip"
+	filename, displayName := uniqueAudioNames("binary_integrity_clip")
 
 	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
 	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
@@ -226,7 +231,7 @@ func TestAudioUploadMissingFile(t *testing.T) {
 // uploadAudio is a helper that performs a multipart/form-data upload to POST /pava/messages
 // with the "binary" file part and optional "display_name". It asserts 201 and
 // returns the parsed metadata.
-func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data []byte, displayName string) *api.AudioMetadata {
+func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data []byte, displayName string) *model.AudioMetadata {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -268,8 +273,8 @@ func uploadAudio(t *testing.T, ctx context.Context, base, filename string, data 
 		t.Fatalf("POST %s returned %d, want 201; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
 	}
 
-	var meta api.AudioMetadata
-	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+	var meta model.AudioMetadata
+	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		t.Fatalf("decoding metadata failed: %v", err)
 	}
 
@@ -283,16 +288,17 @@ func TestTriggerMessageRecordsImmediateManualHistory(t *testing.T) {
 	clearHistory(t)
 
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	meta := uploadAudio(t, ctx, audioServerAddr, "trigger_history.wav", wav, "Trigger History Clip")
+	filename, displayName := uniqueAudioNames("trigger_history_clip")
+	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
 	defer deleteAudio(t, ctx, audioServerAddr, meta.Id)
 
 	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
-	reqBody := []byte(`{"priority":100}`)
+	reqBody := marshalProtoMessage(t, &model.TriggerMessageRequest{Priority: 100})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", audioServerAddr, triggerEndpoint), bytes.NewReader(reqBody))
 	if err != nil {
 		t.Fatalf("creating trigger request failed: %v", err)
 	}
-	req.Header.Set("Content-Type", api.JsonMIMEType)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -312,13 +318,13 @@ func TestTriggerMessageRecordsImmediateManualHistory(t *testing.T) {
 
 	found := false
 	for _, rec := range history {
-		if rec.TaskID == "message_trigger_immediate" {
+		if rec.GetTaskId() == "message_trigger_immediate" {
 			found = true
-			if rec.Description != "Immediate/manual audio message trigger" {
-				t.Fatalf("unexpected history description: got %q", rec.Description)
+			if rec.GetDescription() != "Immediate/manual audio message trigger" {
+				t.Fatalf("unexpected history description: got %q", rec.GetDescription())
 			}
-			if rec.Status != "success" {
-				t.Fatalf("unexpected history status: got %q want %q", rec.Status, "success")
+			if rec.GetStatus() != "success" {
+				t.Fatalf("unexpected history status: got %q want %q", rec.GetStatus(), "success")
 			}
 		}
 	}
@@ -337,16 +343,20 @@ func TestTriggerMessageEmitsZonesPayloadLocal(t *testing.T) {
 	defer listener.Close()
 
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	meta := uploadAudio(t, ctx, baseURL, "trigger_zones_payload.wav", wav, "Trigger Zones Payload")
+	filename, displayName := uniqueAudioNames("trigger_zones_payload")
+	meta := uploadAudio(t, ctx, baseURL, filename, wav, displayName)
 	defer deleteAudio(t, ctx, baseURL, meta.Id)
 
 	triggerEndpoint := strings.Replace(routes.PAVAMessageTriggerEndpoint, "{id}", meta.Id, 1)
-	reqBody := []byte(`{"priority":77,"zones":["lobby","gym"]}`)
+	reqBody := marshalProtoMessage(t, &model.TriggerMessageRequest{
+		Priority: 77,
+		Zones:    []string{"lobby", "gym"},
+	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s%s", baseURL, triggerEndpoint), bytes.NewReader(reqBody))
 	if err != nil {
 		t.Fatalf("creating trigger request failed: %v", err)
 	}
-	req.Header.Set("Content-Type", api.JsonMIMEType)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -456,7 +466,7 @@ func TestAudioUploadWithTags(t *testing.T) {
 	defer cancel()
 
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	filename := "test_tags.wav"
+	filename, displayName := uniqueAudioNames("test_tags")
 
 	// Create multipart with tags
 	var buf bytes.Buffer
@@ -472,6 +482,7 @@ func TestAudioUploadWithTags(t *testing.T) {
 	}
 
 	// Add tags
+	_ = w.WriteField("display_name", displayName)
 	_ = w.WriteField("tags", "Fire Drill")
 	_ = w.WriteField("tags", "Emergencies")
 
@@ -496,8 +507,8 @@ func TestAudioUploadWithTags(t *testing.T) {
 		t.Fatalf("POST %s returned %d, want 201; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
 	}
 
-	var meta api.AudioMetadata
-	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+	var meta model.AudioMetadata
+	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		t.Fatalf("decoding metadata failed: %v", err)
 	}
 
@@ -529,14 +540,14 @@ func TestAudioListFilterByTag(t *testing.T) {
 		t.Fatalf("GET %s returned %d, want 200; body=%s", routes.PAVAMessagesEndpoint, resp.StatusCode, string(body))
 	}
 
-	var metas []*api.AudioMetadata
-	if err := json.NewDecoder(resp.Body).Decode(&metas); err != nil {
+	metas, err := decodeAudioMetadataListResponse(resp.Body)
+	if err != nil {
 		t.Fatalf("decoding metadata failed: %v", err)
 	}
 
-	for _, m := range metas {
+	for _, m := range metas.GetMessages() {
 		found := false
-		for _, t := range m.Tags {
+		for _, t := range m.GetTags() {
 			if strings.EqualFold(t, "Emergencies") {
 				found = true
 				break
@@ -569,8 +580,8 @@ func TestListAllTags(t *testing.T) {
 		t.Fatalf("GET %s returned %d, want 200; body=%s", routes.PAVAMessagesTagsEndpoint, resp.StatusCode, string(body))
 	}
 
-	var tags []string
-	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+	tagsResp, err := decodeAudioTagListResponse(resp.Body)
+	if err != nil {
 		t.Fatalf("decoding tags failed: %v", err)
 	}
 
@@ -578,16 +589,81 @@ func TestListAllTags(t *testing.T) {
 	expected := []string{"Fire Drill", "Emergencies"}
 	for _, e := range expected {
 		found := false
-		for _, t := range tags {
+		for _, t := range tagsResp.GetTags() {
 			if strings.EqualFold(t, e) {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("expected tag %q in tag list, got %v", e, tags)
+			t.Errorf("expected tag %q in tag list, got %v", e, tagsResp.GetTags())
 		}
 	}
+}
+
+func decodeAudioMetadataListResponse(body io.Reader) (*model.AudioMetadataListResponse, error) {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+
+	var protoResp model.AudioMetadataListResponse
+	if err := decodeProtoBody(bytes.NewReader(data), &protoResp); err == nil {
+		return &protoResp, nil
+	}
+
+	var legacy []struct {
+		Id          string        `json:"id"`
+		OrigName    string        `json:"orig_name"`
+		DisplayName string        `json:"display_name"`
+		Filename    string        `json:"filename"`
+		MimeType    string        `json:"mime_type"`
+		Uploaded    time.Time     `json:"uploaded"`
+		Duration    time.Duration `json:"duration,omitempty"`
+		SizeBytes   int64         `json:"size_bytes"`
+		Tags        []string      `json:"tags"`
+		Checksum    string        `json:"checksum"`
+	}
+	if err := json.Unmarshal(data, &legacy); err != nil {
+		return nil, err
+	}
+
+	out := make([]*model.AudioMetadata, 0, len(legacy))
+	for _, meta := range legacy {
+		out = append(out, &model.AudioMetadata{
+			Id:          meta.Id,
+			OrigName:    meta.OrigName,
+			DisplayName: meta.DisplayName,
+			Filename:    meta.Filename,
+			MimeType:    meta.MimeType,
+			Uploaded:    timestamppb.New(meta.Uploaded),
+			Duration:    int64(meta.Duration),
+			SizeBytes:   meta.SizeBytes,
+			Tags:        append([]string(nil), meta.Tags...),
+			Checksum:    meta.Checksum,
+		})
+	}
+
+	return &model.AudioMetadataListResponse{Messages: out}, nil
+}
+
+func decodeAudioTagListResponse(body io.Reader) (*model.AudioTagListResponse, error) {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+
+	var protoResp model.AudioTagListResponse
+	if err := decodeProtoBody(bytes.NewReader(data), &protoResp); err == nil {
+		return &protoResp, nil
+	}
+
+	var legacy []string
+	if err := json.Unmarshal(data, &legacy); err != nil {
+		return nil, err
+	}
+
+	return &model.AudioTagListResponse{Tags: legacy}, nil
 }
 
 func TestAudioSyncAcrossNodes(t *testing.T) {
@@ -598,8 +674,7 @@ func TestAudioSyncAcrossNodes(t *testing.T) {
 
 	// Create a short WAV
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	filename := "sync_test.wav"
-	displayName := "Sync Test Clip"
+	filename, displayName := uniqueAudioNames("sync_test_clip")
 
 	// Upload to VIP
 	meta := uploadAudio(t, ctx, audioServerAddr, filename, wav, displayName)
@@ -651,15 +726,15 @@ func hasMetadata(_ *testing.T, base, id string) bool {
 		return false
 	}
 
-	var meta api.AudioMetadata
-	if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
+	var meta model.AudioMetadata
+	if err := decodeProtoBody(resp.Body, &meta); err != nil {
 		return false
 	}
 
-	return meta.Id == id
+	return meta.GetId() == id
 }
 
-func verifyAudioSynced(t *testing.T, ctx context.Context, base string, meta *api.AudioMetadata) {
+func verifyAudioSynced(t *testing.T, ctx context.Context, base string, meta *model.AudioMetadata) {
 
 	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", meta.Id, 1)
 	url := fmt.Sprintf("%s%s", base, streamEndpoint)
@@ -712,18 +787,27 @@ func getClusterNodeURLs(t *testing.T, ctx context.Context, vipURL string) []stri
 		t.Fatalf("/devices returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var devices []api.DeviceInfo
-	if err := json.NewDecoder(resp.Body).Decode(&devices); err != nil {
-		t.Fatalf("failed to decode /devices: %v", err)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read /devices response: %v", err)
+	}
+
+	var devicesResp model.DeviceListResponse
+	if err := decodeProtoBody(bytes.NewReader(body), &devicesResp); err != nil {
+		t.Fatalf("failed to decode /devices: %v; body=%s", err, string(body))
+	}
+
+	if len(devicesResp.Devices) == 0 {
+		t.Fatalf("/devices returned no devices; body=%s", string(body))
 	}
 
 	// Build the list of URLs
 	urls := make([]string, 0)
-	for _, d := range devices {
-		url := fmt.Sprintf("http://%s:8080", d.Address)
+	for _, d := range devicesResp.Devices {
+		url := fmt.Sprintf("http://%s:8080", d.GetAddress())
 
 		// skip VIP node
-		if d.IsPrimaryNode {
+		if d.GetIsPrimary() {
 			continue
 		}
 
@@ -746,8 +830,7 @@ func TestAudioDeleteAcrossNodes(t *testing.T) {
 
 	// Create a short WAV
 	wav := makeTestWAV(8000, 1, 16, 200*time.Millisecond)
-	filename := "delete_sync_test.wav"
-	displayName := "Delete Sync Test Clip"
+	filename, displayName := uniqueAudioNames("delete_sync_test_clip")
 
 	// Upload to VIP
 	meta := uploadAudio(t, ctx, vip, filename, wav, displayName)

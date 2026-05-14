@@ -1,7 +1,7 @@
 info:
   name: Activate Scene
   type: http
-  seq: 7
+  seq: 14
 
 http:
   method: POST

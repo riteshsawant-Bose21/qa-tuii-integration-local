@@ -1,0 +1,14 @@
+info:
+  name: Clear Wall Controller Config
+  type: http
+  seq: 12
+
+http:
+  method: DELETE
+  url: "{{api_url}}/settings/wall_controller_config"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

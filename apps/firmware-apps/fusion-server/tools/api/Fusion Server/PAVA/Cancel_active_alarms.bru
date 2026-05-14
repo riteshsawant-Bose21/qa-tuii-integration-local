@@ -1,0 +1,17 @@
+meta {
+  name: Cancel active alarms
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{api_url}}/pava/cancel
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "zones": []
+  }
+}

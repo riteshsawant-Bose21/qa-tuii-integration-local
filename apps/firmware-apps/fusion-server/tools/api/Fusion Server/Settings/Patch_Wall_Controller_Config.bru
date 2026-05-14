@@ -1,0 +1,30 @@
+meta {
+  name: Patch Wall Controller Config
+  type: http
+  seq: 11
+}
+
+patch {
+  url: {{api_url}}/settings/wall_controller_config
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "value": {
+      "zones": [
+        {
+          "id": "FUNC546470292/selector",
+          "gain": {
+            "default_gain_value": "0",
+            "default_mute_value": "0",
+            "gainID": "GAIN528578446",
+            "max_value": "12",
+            "min_value": "-60"
+          }
+        }
+      ]
+    }
+  }
+}

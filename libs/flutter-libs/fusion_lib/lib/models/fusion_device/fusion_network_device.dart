@@ -1,4 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:fusion_lib/generated/proto/fusion/websocket.pb.dart' as wsmodel;
+import 'package:fusion_lib/generated/proto/google/protobuf/struct.pb.dart'
+    as structpb;
 
 /// Model class representing a Fusion network device discovered on the network.
 class FusionNetworkDevice {
@@ -63,7 +66,9 @@ class FusionNetworkDevice {
   String? get primaryDeviceVersion {
     if (!isPrimary) return null;
 
-    if (preReleaseTag != null && preReleaseTag!.isNotEmpty && preReleaseTag!.toLowerCase() != 'unknown') {
+    if (preReleaseTag != null &&
+        preReleaseTag!.isNotEmpty &&
+        preReleaseTag!.toLowerCase() != 'unknown') {
       return "$softwareUpdateVersion-$preReleaseTag.$jenkinsBuildNumber";
     }
 
@@ -76,14 +81,18 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: json['serial_number'] == "07323a09dabc1d39" ? "XLRPAL" : 'FM8Y', //json['model_name'] as String? ?? ''
+      modelName: json['serial_number'] == "07323a09dabc1d39"
+          ? "XLRPAL"
+          : 'FM8Y', //json['model_name'] as String? ?? ''
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
       macAddress: json['mac_address'] as String? ?? '',
       softwareUpdateVersion: json['software_update_version'] as String? ?? '',
-      isDeviceCertificateValid: json['is_device_certificate_valid'] as bool? ?? false,
+      isDeviceCertificateValid:
+          json['is_device_certificate_valid'] as bool? ?? false,
       fusionMonorepoBranch: json['fusion_monorepo_branch'] as String? ?? '',
-      fusionMonorepoCommitHash: json['fusion_monorepo_commit_hash'] as String? ?? '',
+      fusionMonorepoCommitHash:
+          json['fusion_monorepo_commit_hash'] as String? ?? '',
       jenkinsBuildNumber: json['jenkins_build_number'] as String? ?? '',
       preReleaseTag: json['pre_release_tag'] as String?,
     );
@@ -133,10 +142,13 @@ class FusionNetworkDevice {
       serialNumber: serialNumber ?? this.serialNumber,
       isPrimary: isPrimary ?? this.isPrimary,
       macAddress: macAddress ?? this.macAddress,
-      softwareUpdateVersion: softwareUpdateVersion ?? this.softwareUpdateVersion,
-      isDeviceCertificateValid: isDeviceCertificateValid ?? this.isDeviceCertificateValid,
+      softwareUpdateVersion:
+          softwareUpdateVersion ?? this.softwareUpdateVersion,
+      isDeviceCertificateValid:
+          isDeviceCertificateValid ?? this.isDeviceCertificateValid,
       fusionMonorepoBranch: fusionMonorepoBranch ?? this.fusionMonorepoBranch,
-      fusionMonorepoCommitHash: fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
+      fusionMonorepoCommitHash:
+          fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
       jenkinsBuildNumber: jenkinsBuildNumber ?? this.jenkinsBuildNumber,
       preReleaseTag: preReleaseTag ?? this.preReleaseTag,
     );
@@ -235,7 +247,14 @@ class FirmwareUpdateCheckResult extends Equatable {
   }
 
   @override
-  List<Object?> get props => [updateAvailable, appUpdateRequired, bundleId, version, releaseNotes, minDesktopAppVersion];
+  List<Object?> get props => [
+    updateAvailable,
+    appUpdateRequired,
+    bundleId,
+    version,
+    releaseNotes,
+    minDesktopAppVersion,
+  ];
 }
 
 class BundleDownloadUrlResult extends Equatable {
@@ -281,6 +300,30 @@ class CloudDeviceRegisterResult {
   }
 }
 
+class FirmwareDeviceRebootStatus extends Equatable {
+  final String serialNumber;
+  final String currentBundleVersion;
+  final String status;
+  final String currentState;
+
+  const FirmwareDeviceRebootStatus({
+    required this.serialNumber,
+    required this.currentBundleVersion,
+    required this.status,
+    required this.currentState,
+  });
+
+  @override
+  List<Object?> get props => <Object?>[
+    serialNumber,
+    currentBundleVersion,
+    status,
+    currentState,
+  ];
+
+  bool get isSUCCESS => status.toUpperCase() == 'SUCCESS';
+}
+
 class DeviceUpdateProgressEvent extends Equatable {
   final String serialNumber;
   final String node;
@@ -302,11 +345,6 @@ class DeviceUpdateProgressEvent extends Equatable {
     required this.timestamp,
   });
 
-  bool get isCompleted => updateState.toUpperCase() == 'COMPLETED';
-  bool get isSuccess => updateState.toUpperCase() == 'SUCCESS';
-  bool get isFailed => updateState.contains('FAIL') || updateState.contains('ERROR');
-  double get stepProgress => progress.clamp(0, 100) / 100.0;
-
   factory DeviceUpdateProgressEvent.fromJson(Map<String, dynamic> json) {
     final String rawProgress = json['progress']?.toString() ?? '0';
     final int parsedProgress = int.tryParse(rawProgress) ?? 0;
@@ -319,6 +357,29 @@ class DeviceUpdateProgressEvent extends Equatable {
       progress: parsedProgress.clamp(0, 100),
       handler: json['handler']?.toString() ?? '',
       timestamp: json['timestamp']?.toString() ?? '',
+    );
+  }
+
+  factory DeviceUpdateProgressEvent.fromProtoValue(structpb.Value value) {
+    final structpb.Struct? payload = value.hasStructValue()
+        ? value.structValue
+        : null;
+    final Map<String, structpb.Value> fields = payload?.fields ?? const {};
+
+    final String rawProgress =
+        _stringFromValue(fields['progress']) ??
+        _intFromValue(fields['progress']).toString();
+    final int parsedProgress = int.tryParse(rawProgress) ?? 0;
+
+    return DeviceUpdateProgressEvent(
+      serialNumber: _stringFromValue(fields['serial_number']) ?? '',
+      node: _stringFromValue(fields['node']) ?? '',
+      updateState: _stringFromValue(fields['update_state']) ?? '',
+      step: _stringFromValue(fields['step']) ?? '0/0',
+      currentTask: _stringFromValue(fields['current_task']) ?? '',
+      progress: parsedProgress.clamp(0, 100),
+      handler: _stringFromValue(fields['handler']) ?? '',
+      timestamp: _stringFromValue(fields['timestamp']) ?? '',
     );
   }
 
@@ -335,8 +396,23 @@ class DeviceUpdateProgressEvent extends Equatable {
     );
   }
 
+  bool get isCompleted => updateState.toUpperCase() == 'COMPLETED';
+  bool get isSuccess => updateState.toUpperCase() == 'SUCCESS';
+  bool get isFailed =>
+      updateState.contains('FAIL') || updateState.contains('ERROR');
+  double get stepProgress => progress.clamp(0, 100) / 100.0;
+
   @override
-  List<Object?> get props => [serialNumber, node, updateState, step, currentTask, progress, handler, timestamp];
+  List<Object?> get props => <Object?>[
+    serialNumber,
+    node,
+    updateState,
+    step,
+    currentTask,
+    progress,
+    handler,
+    timestamp,
+  ];
 
   DeviceUpdateProgressEvent copyWith({
     String? serialNumber,
@@ -348,15 +424,12 @@ class DeviceUpdateProgressEvent extends Equatable {
     String? handler,
     String? timestamp,
   }) {
-    final canStepOverwrite = updateState != "COMPLETED";
+    final bool canStepOverwrite = updateState != "COMPLETED";
 
     return DeviceUpdateProgressEvent(
       serialNumber: serialNumber ?? this.serialNumber,
       node: node ?? this.node,
       updateState: updateState ?? this.updateState,
-      // DON'T update the step if the update is already completed,
-      // as some devices might send a final "COMPLETED" state without a step value,
-      // which would overwrite the last valid step with an empty or default value.
       step: canStepOverwrite ? (step ?? this.step) : this.step,
       currentTask: currentTask ?? this.currentTask,
       progress: progress ?? this.progress,
@@ -386,13 +459,15 @@ class FirmwareUpdateProgressEvent extends Equatable {
   bool get isUpdateProgress => type == 'update_progress';
 
   factory FirmwareUpdateProgressEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, DeviceUpdateProgressEvent> devicesBySerial = <String, DeviceUpdateProgressEvent>{};
+    final Map<String, DeviceUpdateProgressEvent> devicesBySerial =
+        <String, DeviceUpdateProgressEvent>{};
     final dynamic rawData = json['data'];
     if (rawData is Map<String, dynamic>) {
       for (final MapEntry<String, dynamic> entry in rawData.entries) {
         final dynamic value = entry.value;
         if (value is! Map<String, dynamic>) continue;
-        final DeviceUpdateProgressEvent parsed = DeviceUpdateProgressEvent.fromJson(value);
+        final DeviceUpdateProgressEvent parsed =
+            DeviceUpdateProgressEvent.fromJson(value);
         final String serial = parsed.serialNumber.trim();
         final String key = serial.isNotEmpty ? serial : entry.key;
         devicesBySerial[key] = parsed;
@@ -402,13 +477,70 @@ class FirmwareUpdateProgressEvent extends Equatable {
     return FirmwareUpdateProgressEvent(
       type: json['type']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
-      code: json['code'] is int ? json['code'] as int : int.tryParse(json['code']?.toString() ?? '') ?? 0,
+      code: json['code'] is int
+          ? json['code'] as int
+          : int.tryParse(json['code']?.toString() ?? '') ?? 0,
       message: json['message']?.toString() ?? '',
       timestamp: json['timestamp']?.toString() ?? '',
       devicesBySerial: devicesBySerial,
     );
   }
 
+  factory FirmwareUpdateProgressEvent.fromWebSocketResponse(
+    wsmodel.WebSocketResponse response,
+  ) {
+    final Map<String, DeviceUpdateProgressEvent> devicesBySerial =
+        <String, DeviceUpdateProgressEvent>{};
+
+    if (response.hasData() && response.data.hasStructValue()) {
+      final Map<String, structpb.Value> entries =
+          response.data.structValue.fields;
+      for (final MapEntry<String, structpb.Value> entry in entries.entries) {
+        if (!entry.value.hasStructValue()) {
+          continue;
+        }
+        final DeviceUpdateProgressEvent parsed =
+            DeviceUpdateProgressEvent.fromProtoValue(entry.value);
+        final String serial = parsed.serialNumber.trim();
+        final String key = serial.isNotEmpty ? serial : entry.key;
+        devicesBySerial[key] = parsed;
+      }
+    }
+
+    return FirmwareUpdateProgressEvent(
+      type: response.type,
+      status: response.status,
+      code: response.code,
+      message: response.message,
+      timestamp: response.hasTimestamp()
+          ? response.timestamp.toDateTime().toUtc().toIso8601String()
+          : '',
+      devicesBySerial: devicesBySerial,
+    );
+  }
+
   @override
-  List<Object?> get props => [type, status, code, message, timestamp, devicesBySerial];
+  List<Object?> get props => <Object?>[
+    type,
+    status,
+    code,
+    message,
+    timestamp,
+    devicesBySerial,
+  ];
+}
+
+String? _stringFromValue(structpb.Value? value) {
+  if (value == null) return null;
+  if (value.hasStringValue()) return value.stringValue;
+  if (value.hasNumberValue()) return value.numberValue.toString();
+  if (value.hasBoolValue()) return value.boolValue.toString();
+  return null;
+}
+
+int _intFromValue(structpb.Value? value) {
+  if (value == null) return 0;
+  if (value.hasNumberValue()) return value.numberValue.toInt();
+  if (value.hasStringValue()) return int.tryParse(value.stringValue) ?? 0;
+  return 0;
 }

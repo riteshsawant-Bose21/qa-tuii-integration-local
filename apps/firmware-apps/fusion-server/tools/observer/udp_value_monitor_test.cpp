@@ -683,7 +683,7 @@ std::string httpBaseForIntegrationHost(const std::string &host) {
     }
     return "http://" + httpAddr;
   }
-  return "http://" + host + ":8080";
+  return "http://" + host + ":9090";
 }
 
 bool httpPatchJSON(const std::string &host, int httpPort,
@@ -773,95 +773,6 @@ bool httpPatchJSON(const std::string &host, int httpPort,
 
   const std::string statusLine = response.substr(0, response.find("\r\n"));
   const bool ok = statusLine.find(" 200 ") != std::string::npos;
-  if (!ok && detail != nullptr) {
-    *detail = "unexpected HTTP status: " + statusLine;
-  }
-  return ok;
-}
-
-bool httpDelete(const std::string &host, int httpPort, const std::string &path,
-                std::string *detail = nullptr) {
-  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    if (detail != nullptr) {
-      *detail = "socket() failed";
-    }
-    return false;
-  }
-
-  timeval timeout{};
-  timeout.tv_sec = 5;
-  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-  setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-  sockaddr_in serverAddr{};
-  serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(static_cast<uint16_t>(httpPort));
-  if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
-    if (detail != nullptr) {
-      *detail = "inet_pton failed for host " + host;
-    }
-    close(sockfd);
-    return false;
-  }
-  if (connect(sockfd, reinterpret_cast<sockaddr *>(&serverAddr),
-              sizeof(serverAddr)) != 0) {
-    if (detail != nullptr) {
-      *detail = "connect failed: " + std::string(strerror(errno));
-    }
-    close(sockfd);
-    return false;
-  }
-
-  std::ostringstream request;
-  request << "DELETE " << path << " HTTP/1.0\r\n"
-          << "Host: " << host << ":" << httpPort << "\r\n"
-          << "Connection: close\r\n\r\n";
-  const std::string requestStr = request.str();
-
-  size_t sentTotal = 0;
-  while (sentTotal < requestStr.size()) {
-    ssize_t sent = send(sockfd, requestStr.data() + sentTotal,
-                        requestStr.size() - sentTotal, 0);
-    if (sent < 0) {
-      if (errno == EINTR) {
-        continue;
-      }
-      if (detail != nullptr) {
-        *detail = "send failed: " + std::string(strerror(errno));
-      }
-      close(sockfd);
-      return false;
-    }
-    sentTotal += static_cast<size_t>(sent);
-  }
-
-  std::string response;
-  char buffer[1024];
-  while (true) {
-    ssize_t n = recv(sockfd, buffer, sizeof(buffer), 0);
-    if (n == 0) {
-      break;
-    }
-    if (n < 0) {
-      if (errno == EINTR) {
-        continue;
-      }
-      if (detail != nullptr) {
-        *detail = "recv failed: " + std::string(strerror(errno));
-      }
-      close(sockfd);
-      return false;
-    }
-    response.append(buffer, static_cast<size_t>(n));
-    if (response.size() >= 32 && response.find("\r\n") != std::string::npos) {
-      break;
-    }
-  }
-  close(sockfd);
-
-  const std::string statusLine = response.substr(0, response.find("\r\n"));
-  const bool ok = statusLine.find(" 204 ") != std::string::npos;
   if (!ok && detail != nullptr) {
     *detail = "unexpected HTTP status: " + statusLine;
   }
@@ -1156,8 +1067,8 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
   const int expected = 42;
   const std::string body = "{\"observer_test\":{\"value\":42}}";
   std::string patchDetail;
-  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
-      << "Failed to PATCH observer_test.value via fusion-server HTTP API: "
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/state", body, &patchDetail))
+      << "Failed to PATCH observer_test.value via fusion-server admin state API: "
       << patchDetail;
 
   Json::Value val;
@@ -1224,7 +1135,7 @@ TEST(UDPValueMonitorTest, IntegrationOversizedUpdatePullsConfigFromFusionServer)
   const std::string body = "{\"" + rootKey + "\":{\"value\":" +
                            jsonStringLiteral(expected) + "}}";
   std::string patchDetail;
-  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/state", body, &patchDetail))
       << "Failed to PATCH oversized config value: " << patchDetail;
 
   Json::Value val;
@@ -1239,7 +1150,7 @@ TEST(UDPValueMonitorTest, IntegrationOversizedUpdatePullsConfigFromFusionServer)
   }
 
   const std::string cleanupBody = "{\"" + rootKey + "\":{\"value\":\"\"}}";
-  (void)httpPatchJSON(httpHost, httpPort, "/value", cleanupBody);
+  (void)httpPatchJSON(httpHost, httpPort, "/state", cleanupBody);
   monitorUDP.stop();
 
   ASSERT_TRUE(val.isString()) << "Observer did not receive pulled config value";
@@ -1294,7 +1205,7 @@ TEST(UDPValueMonitorTest, IntegrationDeleteValueBroadcastClearsObserverState) {
   const std::string body = "{\"" + rootKey + "\":{\"value\":" +
                            jsonStringLiteral(expected) + "}}";
   std::string patchDetail;
-  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/value", body, &patchDetail))
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/state", body, &patchDetail))
       << "Failed to PATCH seed value before delete: " << patchDetail;
 
   Json::Value val;
@@ -1310,9 +1221,10 @@ TEST(UDPValueMonitorTest, IntegrationDeleteValueBroadcastClearsObserverState) {
   ASSERT_TRUE(val.isString()) << "Observer did not receive seeded value";
   ASSERT_EQ(val.asString(), expected);
 
+  const std::string clearBody = "{\"" + rootKey + "\":null}";
   std::string deleteDetail;
-  ASSERT_TRUE(httpDelete(httpHost, httpPort, "/value", &deleteDetail))
-      << "Failed to DELETE /value: " << deleteDetail;
+  ASSERT_TRUE(httpPatchJSON(httpHost, httpPort, "/state", clearBody, &deleteDetail))
+      << "Failed to PATCH /state null clear: " << deleteDetail;
 
   const auto clearDeadline =
       std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -1327,5 +1239,5 @@ TEST(UDPValueMonitorTest, IntegrationDeleteValueBroadcastClearsObserverState) {
   monitorUDP.stop();
 
   EXPECT_TRUE(val.isNull())
-      << "Observer did not clear watched value after DELETE /value";
+      << "Observer did not clear watched value after PATCH /state null clear";
 }

@@ -1,6 +1,7 @@
 package tasks_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -25,13 +26,19 @@ func init() {
 func TestAddTaskRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "tasks_validation.db")
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(tmpDir, "audio")
+	require.NoError(t, os.MkdirAll(api.AudioFilesLocation, 0755))
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
 	p, err := persistence.NewPersistence(dbPath, sm)
 	require.NoError(t, err)
 	defer p.Close()
 
-	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil)
+	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil, nil)
 
 	err = tm.AddTask(&api.Task{
 		ID:          "snap-task-1",
@@ -49,6 +56,12 @@ func TestAddTaskRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 func TestLoadTasksDisablesInvalidPersistedSnapshotTask(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "tasks_load_validation.db")
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(tmpDir, "audio")
+	require.NoError(t, os.MkdirAll(api.AudioFilesLocation, 0755))
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
 	p, err := persistence.NewPersistence(dbPath, sm)
@@ -68,7 +81,7 @@ func TestLoadTasksDisablesInvalidPersistedSnapshotTask(t *testing.T) {
 		},
 	}))
 
-	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil)
+	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil, nil)
 
 	require.NoError(t, tm.LoadTasks())
 

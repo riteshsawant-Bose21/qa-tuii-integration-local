@@ -1,0 +1,27 @@
+meta {
+  name: Create Activate Snapshot Task
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{api_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "analog-input",
+    "cron_expr": "@every 2s",
+    "description": "Change to analog input",
+    "type": "snapshot",
+    "params": {
+      "snapshot_id": "analog"
+    }
+  }
+}

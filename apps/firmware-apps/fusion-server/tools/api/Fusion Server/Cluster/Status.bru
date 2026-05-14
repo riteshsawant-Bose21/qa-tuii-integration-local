@@ -1,0 +1,11 @@
+meta {
+  name: Status
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{metrics_url}}/cluster/status
+  body: none
+  auth: none
+}

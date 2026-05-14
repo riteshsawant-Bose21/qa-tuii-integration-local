@@ -1,0 +1,30 @@
+meta {
+  name: Patch TouchUI Zone Config
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{api_url}}/settings/touchui_zone_config
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "value": {
+      "zones": [
+        {
+          "zoneId": "FUNC135425261/selector",
+          "gain": {
+            "Max": 100,
+            "Min": 0,
+            "DefGain": 50,
+            "DefMute": false,
+            "Id": "GAIN653367066"
+          }
+        }
+      ]
+    }
+  }
+}

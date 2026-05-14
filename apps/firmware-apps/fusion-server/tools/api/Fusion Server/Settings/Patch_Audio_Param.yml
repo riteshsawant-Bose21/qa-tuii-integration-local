@@ -1,0 +1,27 @@
+info:
+  name: Patch Audio Param
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{api_url}}/settings/audio/:blockId/:param"
+  params:
+    - name: blockId
+      value: GAIN528578446
+      type: path
+    - name: param
+      value: gain
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "value": -12.0
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

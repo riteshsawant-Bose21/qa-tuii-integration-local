@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package fusion.deviceconfig.v1;
+
+import "google/protobuf/struct.proto";
+import "fusion/device_config_static.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+// DroConditionedDevice comes from the configurator result and owns the deployable
+// DSP static configuration for one device.
+message DroConditionedDevice {
+  string id = 1;
+  string label = 2;
+  string device_type = 3;
+  string location = 4;
+  double cost = 5;
+  repeated DroCore cores = 6;
+  repeated google.protobuf.ListValue connections_device_in = 7;
+  repeated google.protobuf.ListValue connections_device_out = 8;
+  StaticConfiguration dsp_static_config = 9;
+}
+
+message DroCore {
+  string label = 1;
+  double util_algs = 2;
+  double util_device_connect = 3;
+  double util_task_connect = 4;
+  double util_total = 5;
+  repeated string block_ids = 6;
+}
+
+message DroAes67Stream {
+  string stream_id = 1;
+  string stream_name = 2;
+  string direction = 3;
+  string multicast_destination_ip = 4;
+  string source_device = 5;
+  uint32 channels = 6;
+  string description = 7;
+  string destination_device = 8;
+}
+
+message DroDeviceConnection {
+  string source_device = 1;
+  string destination_device = 2;
+  uint32 channels = 3;
+  string source_port = 4;
+}
+
+message DroIoPort {
+  string io_id = 1;
+  string device_id = 2;
+  string port_type = 3;
+  repeated uint32 port_nums = 4;
+}
+
+// Latency is still provisional because no non-empty example was available in
+// the inspected configurator outputs. The shape will need refinement once a
+// real latency entry is mapped.
+message DroLatency {
+  map<string, google.protobuf.Value> values = 1;
+}

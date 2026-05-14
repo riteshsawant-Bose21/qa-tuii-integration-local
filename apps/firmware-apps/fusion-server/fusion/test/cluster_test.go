@@ -1,22 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	json "github.com/goccy/go-json"
-	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 
 	"github.com/stretchr/testify/assert"
@@ -38,28 +37,53 @@ func helperAdminURL(path string) string {
 
 // TestUpdateDeviceInfoLocal exercises PATCH /device (UpdateDeviceInfoLocal).
 func TestUpdateDeviceInfoLocal(t *testing.T) {
+	resp, err := http.Get(helperAdminURL(routes.DeviceEndpoint))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on initial GET /device")
 
-	base := api.DevicePatch{
-		Id:       ptrString("test-device"),
-		Location: ptrString("RoomB"),
-		Name:     ptrString("BaseDevice"),
+	var original model.DeviceInfo
+	require.NoError(t, decodeProtoBody(resp.Body, &original), "Expected valid JSON for original device info")
+
+	defer func() {
+		restore := &model.DevicePatch{
+			Id:       ptrStringValue(original.GetId()),
+			Location: ptrStringValue(original.GetLocation()),
+			Name:     ptrStringValue(original.GetName()),
+		}
+		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(restore)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+
+		restoreResp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer restoreResp.Body.Close()
+		assert.Equal(t, http.StatusNoContent, restoreResp.StatusCode, "restore PATCH /device should succeed")
+	}()
+	base := &model.DevicePatch{
+		Id:       ptrStringValue("test-device"),
+		Location: ptrStringValue("RoomB"),
+		Name:     ptrStringValue("BaseDevice"),
 	}
-	bytesBase, err := json.Marshal(base)
+	bytesBase, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(base)
 	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesBase))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.JsonMIMEType)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content when setting base device via PATCH")
 	// Now PATCH /device to change only the Name.
-	patch := api.DevicePatch{
-		Name: ptrString("RenamedDevice"),
+	patch := &model.DevicePatch{
+		Name: ptrStringValue("RenamedDevice"),
 	}
-	bytesPatch, err := json.Marshal(patch)
+	bytesPatch, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
 	require.NoError(t, err)
 
 	req, err = http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesPatch))
@@ -77,19 +101,19 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on GET /device after patch")
 
-	var updated api.DeviceInfo
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&updated), "Expected valid JSON after patch")
-	assert.Equal(t, *base.Id, updated.Id, "ID should remain unchanged")
+	var updated model.DeviceInfo
+	require.NoError(t, decodeProtoBody(resp.Body, &updated), "Expected valid JSON after patch")
+	assert.Equal(t, base.GetId(), updated.Id, "ID should remain unchanged")
 	assert.Equal(t, "RenamedDevice", updated.Name, "Name should have been updated")
-	assert.Equal(t, *base.Location, updated.Location, "Location should remain unchanged")
+	assert.Equal(t, base.GetLocation(), updated.Location, "Location should remain unchanged")
 }
 
 // TestUpdateDeviceInfoNotFound attempts PATCH /devices/{id} on a non-existent device.
 func TestUpdateDeviceInfoNotFound(t *testing.T) {
-	patch := api.DevicePatch{
-		Name: ptrString("ShouldNotExist"),
+	patch := &model.DevicePatch{
+		Name: ptrStringValue("ShouldNotExist"),
 	}
-	bytesPatch, err := json.Marshal(patch)
+	bytesPatch, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
 	require.NoError(t, err)
 
 	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, "nonexistent"))
@@ -105,25 +129,77 @@ func TestUpdateDeviceInfoNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "PATCH /devices/nonexistent should return 404")
 }
 
+func TestGetDevicesInfo(t *testing.T) {
+	list := getDevicesInfo(t)
+	require.NotEmpty(t, list.Devices)
+	for _, device := range list.Devices {
+		assert.NotEmpty(t, device.GetId(), "device id should be populated")
+		assert.NotEmpty(t, device.GetAddress(), "device address should be populated")
+	}
+}
+
+func TestUpdateDeviceInfoSuccess(t *testing.T) {
+	list := getDevicesInfo(t)
+	require.NotEmpty(t, list.Devices)
+
+	device := list.Devices[0]
+	deviceID := device.GetId()
+	originalName := device.GetName()
+	updatedName := fmt.Sprintf("ProtoDevice-%d", time.Now().UnixNano())
+
+	defer func() {
+		restore := &model.DevicePatch{Name: ptrStringValue(originalName)}
+		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(restore)
+		require.NoError(t, err)
+		req, err := http.NewRequest(http.MethodPatch, helperURL(routes.DevicesEndpoint)+"/"+deviceID, bytes.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode, "restore PATCH /devices/{id} should succeed")
+	}()
+
+	patch := &model.DevicePatch{Name: ptrStringValue(updatedName)}
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, helperURL(routes.DevicesEndpoint)+"/"+deviceID, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "PATCH /devices/{id} should succeed")
+
+	refreshed := getDevicesInfo(t)
+	var found *model.DeviceInfo
+	for _, candidate := range refreshed.Devices {
+		if candidate.GetId() == deviceID {
+			found = candidate
+			break
+		}
+	}
+	require.NotNil(t, found, "patched device should still be present in GET /devices")
+	assert.Equal(t, updatedName, found.GetName(), "public device patch should be visible via GET /devices")
+}
+
 // TestUpdateDeviceInfoRejectsDuplicateID verifies that PATCH /devices/{id} returns
 // an error when attempting to set a device ID that is already in use by another node.
 func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
-	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
-		t.Skip("requires at least two cluster nodes")
-	}
+	list := getDevicesInfo(t)
+	require.GreaterOrEqual(t, len(list.Devices), 2, "requires at least two visible devices")
 
-	nodeA := clusterConfig.nodes[0]
-	nodeB := clusterConfig.nodes[1]
-
-	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+	infoA := list.Devices[0]
+	infoB := list.Devices[1]
 
 	// Attempt to set node A's device ID to the same value as node B's.
-	patch := api.DevicePatch{Id: ptrString(infoB.Id)}
-	body, err := json.Marshal(patch)
+	patch := &model.DevicePatch{Id: ptrStringValue(infoB.GetId())}
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
 	require.NoError(t, err)
 
-	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.Id))
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.GetId()))
 	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.JsonMIMEType)
@@ -136,29 +212,33 @@ func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
 		"PATCH /devices/{id} with duplicate ID should return 409 Conflict")
 
 	// Verify node A's ID was not changed.
-	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	assert.Equal(t, infoA.Id, afterA.Id, "node A device ID must remain unchanged")
+	refreshed := getDevicesInfo(t)
+	var afterA *model.DeviceInfo
+	for _, candidate := range refreshed.Devices {
+		if candidate.GetAddress() == infoA.GetAddress() {
+			afterA = candidate
+			break
+		}
+	}
+	require.NotNil(t, afterA, "node A device should still be present in GET /devices")
+	assert.Equal(t, infoA.GetId(), afterA.GetId(), "node A device ID must remain unchanged")
 }
 
 // TestUpdateDeviceInfoRejectsDuplicateName verifies that PATCH /devices/{id} returns
 // an error when attempting to set a device name that is already in use by another node.
 func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
-	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
-		t.Skip("requires at least two cluster nodes")
-	}
+	list := getDevicesInfo(t)
+	require.GreaterOrEqual(t, len(list.Devices), 2, "requires at least two visible devices")
 
-	nodeA := clusterConfig.nodes[0]
-	nodeB := clusterConfig.nodes[1]
-
-	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+	infoA := list.Devices[0]
+	infoB := list.Devices[1]
 
 	// Attempt to set node A's name to the same value as node B's.
-	patch := api.DevicePatch{Name: ptrString(infoB.Name)}
-	body, err := json.Marshal(patch)
+	patch := &model.DevicePatch{Name: ptrStringValue(infoB.GetName())}
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(patch)
 	require.NoError(t, err)
 
-	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.Id))
+	target := helperURL(fmt.Sprintf("%s/%s", routes.DevicesEndpoint, infoA.GetId()))
 	req, err := http.NewRequest(http.MethodPatch, target, bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.JsonMIMEType)
@@ -171,8 +251,177 @@ func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
 		"PATCH /devices/{id} with duplicate name should return 409 Conflict")
 
 	// Verify node A's name was not changed.
-	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	assert.Equal(t, infoA.Name, afterA.Name, "node A device name must remain unchanged")
+	refreshed := getDevicesInfo(t)
+	var afterA *model.DeviceInfo
+	for _, candidate := range refreshed.Devices {
+		if candidate.GetAddress() == infoA.GetAddress() {
+			afterA = candidate
+			break
+		}
+	}
+	require.NotNil(t, afterA, "node A device should still be present in GET /devices")
+	assert.Equal(t, infoA.GetName(), afterA.GetName(), "node A device name must remain unchanged")
+}
+
+func TestPutDSPDeploymentPackage(t *testing.T) {
+	payload, blockID := testDeviceConfigurationPackage(t)
+
+	resp, putResp := putDeviceConfigurationPackage(t, payload)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on PUT /device")
+	assert.Equal(t, "success", putResp.GetStatus())
+	require.NotNil(t, putResp.GetUpdates(), "PUT /device should return typed updates on first apply")
+	assert.Contains(t, putResp.GetUpdates().GetFields(), "dro_conditioned_output")
+	assert.Contains(t, putResp.GetUpdates().GetFields(), "fusion_connect_additions")
+	assert.Contains(t, putResp.GetUpdates().GetFields(), "devices")
+	assert.Contains(t, putResp.GetUpdates().GetFields(), "audio_streams")
+	assert.Contains(t, putResp.GetUpdates().GetFields(), "settings")
+
+	getResp, err := http.Get(helperURL(routes.DeviceEndpoint))
+	require.NoError(t, err)
+	defer getResp.Body.Close()
+	assert.Equal(t, http.StatusOK, getResp.StatusCode, "Expected 200 OK on GET /device")
+
+	var got model.DeviceConfigurationPackage
+	require.NoError(t, decodeProtoBody(getResp.Body, &got), "Expected valid JSON from GET /device")
+	require.NotNil(t, got.DroConditionedOutput)
+	require.NotNil(t, got.FusionConnectAdditions)
+	require.Len(t, got.DroConditionedOutput.Devices, 1)
+	require.Len(t, got.FusionConnectAdditions.AudioStreams, 1)
+	require.NotNil(t, got.FusionConnectAdditions.Settings)
+
+	assert.Equal(t, payload.DroConditionedOutput.Devices[0].Id, got.DroConditionedOutput.Devices[0].Id)
+	assert.Equal(t, "Provisioned Device", got.DroConditionedOutput.Devices[0].Label)
+	assert.Equal(t, payload.FusionConnectAdditions.AudioStreams[0].SourceDeviceUid, got.FusionConnectAdditions.AudioStreams[0].SourceDeviceUid)
+	assert.Equal(t, payload.FusionConnectAdditions.AudioStreams[0].DestDeviceUid, got.FusionConnectAdditions.AudioStreams[0].DestDeviceUid)
+	require.Contains(t, got.FusionConnectAdditions.Settings.Audio, blockID)
+	require.NotNil(t, got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetAlgorithm(), got.FusionConnectAdditions.Settings.Audio[blockID].GetAlgorithm())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFrequency(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetFrequency())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetBandEnable())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetGain())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetQ())
+	assert.Equal(t, payload.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetType(), got.FusionConnectAdditions.Settings.Audio[blockID].GetPeq().GetType())
+
+	projectedFrequencies, err := getClusterAudioSettingArray(clusterServerURL, blockID, "frequency")
+	require.NoError(t, err)
+	assert.Equal(t, []any{100.0, 200.0, 300.0}, projectedFrequencies)
+}
+
+func TestGetDSPDeploymentPackage(t *testing.T) {
+	resp, err := http.Get(helperURL(routes.DeviceEndpoint))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on standalone GET /device")
+
+	var got model.DeviceConfigurationPackage
+	require.NoError(t, decodeProtoBody(resp.Body, &got), "Expected valid JSON from GET /device")
+
+	// Standalone GET /device should always return a valid typed envelope, even if
+	// one or both subtrees are currently absent from state.
+	if got.DroConditionedOutput != nil {
+		assert.NotNil(t, got.DroConditionedOutput.Devices)
+	}
+	if got.FusionConnectAdditions != nil {
+		assert.NotNil(t, got.FusionConnectAdditions.AudioStreams)
+	}
+}
+
+func TestPutDSPDeploymentPackageNoop(t *testing.T) {
+	payload, _ := testDeviceConfigurationPackage(t)
+
+	resp, _ := putDeviceConfigurationPackage(t, payload)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "first PUT /device should succeed")
+
+	resp, putResp := putDeviceConfigurationPackage(t, payload)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "second PUT /device should succeed")
+	assert.Equal(t, "noop", putResp.GetStatus())
+	assert.Nil(t, putResp.GetUpdates(), "noop PUT /device should not include updates")
+}
+
+func TestDeviceProtoStrictness(t *testing.T) {
+	t.Run("PutDSPDeploymentPackage unknown field", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a","unknown_field":1}]},"fusion_connect_additions":{"settings":{"audio":{}}}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage invalid typed field", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]},"fusion_connect_additions":{"audio_streams":[{"source_device_uid":"device-a","dest_device_uid":"device-b","properties":{"channels":"two"}}],"settings":{"audio":{}}}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing dro_conditioned_output", func(t *testing.T) {
+		body := strings.NewReader(`{"fusion_connect_additions":{"settings":{"audio":{}}}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing fusion_connect_additions", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("PutDSPDeploymentPackage missing fusion_connect_additions.settings", func(t *testing.T) {
+		body := strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]},"fusion_connect_additions":{}}`)
+		req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("UpdateDeviceInfo unknown field", func(t *testing.T) {
+		list := getDevicesInfo(t)
+		require.NotEmpty(t, list.Devices)
+		body := strings.NewReader(`{"name":"ProtoStrict","unknown_field":"x"}`)
+		req, err := http.NewRequest(http.MethodPatch, helperURL(routes.DevicesEndpoint)+"/"+list.Devices[0].GetId(), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("UpdateDeviceInfo invalid typed field", func(t *testing.T) {
+		list := getDevicesInfo(t)
+		require.NotEmpty(t, list.Devices)
+		body := strings.NewReader(`{"name":123}`)
+		req, err := http.NewRequest(http.MethodPatch, helperURL(routes.DevicesEndpoint)+"/"+list.Devices[0].GetId(), body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
 }
 
 // TestDeviceInfoErrorCases groups wrong-method and malformed-JSON scenarios.
@@ -184,6 +433,27 @@ func TestDeviceInfoErrorCases(t *testing.T) {
 		body       io.Reader
 		wantStatus int
 	}{
+		{
+			name:       "GetDSPDeploymentPackage wrong method",
+			url:        helperURL(routes.DeviceEndpoint),
+			method:     http.MethodPost,
+			body:       nil,
+			wantStatus: http.StatusMethodNotAllowed,
+		},
+		{
+			name:       "PutDSPDeploymentPackage malformed JSON",
+			method:     http.MethodPut,
+			url:        helperURL(routes.DeviceEndpoint),
+			body:       strings.NewReader("not-json"),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "PutDSPDeploymentPackage missing required settings",
+			method:     http.MethodPut,
+			url:        helperURL(routes.DeviceEndpoint),
+			body:       strings.NewReader(`{"dro_conditioned_output":{"devices":[{"id":"device-a"}]},"fusion_connect_additions":{}}`),
+			wantStatus: http.StatusBadRequest,
+		},
 		{
 			name:       "GetDevicesInfo wrong method",
 			url:        helperURL(routes.DevicesEndpoint),
@@ -248,302 +518,159 @@ func ptrString(s string) *string {
 	return &s
 }
 
-func TestDeviceIDUpdate_UDPStaysLocal_WebSocketSeesCluster(t *testing.T) {
-	if len(clusterConfig.nodes) < 2 {
-		t.Skip("requires at least two cluster nodes")
-	}
-
-	nodeA := clusterConfig.nodes[0]
-	nodeB := clusterConfig.nodes[1]
-	var nodeC *clusterNode
-	if len(clusterConfig.nodes) > 2 {
-		nodeC = &clusterConfig.nodes[2]
-	}
-
-	originalA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	originalB := getLocalDeviceInfoOnInstance(t, nodeB.name)
-	var originalC api.DeviceInfo
-	if nodeC != nil {
-		originalC = getLocalDeviceInfoOnInstance(t, nodeC.name)
-	}
-
-	restoreDeviceInfo := func(nodeName string, original api.DeviceInfo) {
-		patchLocalDeviceInfoOnInstance(t, nodeName, api.DevicePatch{
-			Id:       ptrString(original.Id),
-			Name:     ptrString(original.Name),
-			Location: ptrString(original.Location),
-		})
-	}
-	defer restoreDeviceInfo(nodeA.name, originalA)
-	defer restoreDeviceInfo(nodeB.name, originalB)
-	if nodeC != nil {
-		defer restoreDeviceInfo(nodeC.name, originalC)
-	}
-
-	wsConn := connectWebSocket(t, getTestURL())
-	defer wsConn.Close()
-	readWebSocketResponse(t, wsConn, wsTestTimeout) // welcome
-	sendWebSocketRequest(t, wsConn, &api.WebSocketRequest{
-		ID:      "cluster-device-subscribe",
-		Version: 1,
-		Type:    api.WSMsgTypeDevices,
-	})
-	readWebSocketResponse(t, wsConn, wsTestTimeout) // subscription response
-
-	targetIDA := fmt.Sprintf("%s-local-udp-a-%d", originalA.Id, time.Now().UnixNano())
-	targetIDB := fmt.Sprintf("%s-local-udp-b-%d", originalB.Id, time.Now().UnixNano())
-
-	probeNodes := []string{nodeA.name, nodeB.name}
-	if nodeC != nil {
-		probeNodes = append(probeNodes, nodeC.name)
-	}
-	probePath := deployDeviceIDProbeToInstances(t, probeNodes)
-
-	observerA := startDeviceIDProbeOnInstance(t, nodeA.name, probePath, targetIDA, 8*time.Second)
-	observerB := startDeviceIDProbeOnInstance(t, nodeB.name, probePath, targetIDA, 8*time.Second)
-	var observerC *deviceIDProbeProcess
-	if nodeC != nil {
-		observerC = startDeviceIDProbeOnInstance(t, nodeC.name, probePath, targetIDA, 8*time.Second)
-	}
-	patchLocalDeviceInfoOnInstance(t, nodeA.name, api.DevicePatch{Id: &targetIDA})
-
-	waitForProbeMatch(t, observerA, targetIDA)
-	assertProbesTimedOut(t, targetIDA, observerB, observerC)
-
-	wsUpdateA := awaitWebSocketDeviceUpdate(t, wsConn, targetIDA, 10*time.Second)
-	require.Equal(t, targetIDA, websocketDeviceID(t, wsUpdateA), "websocket should receive node A device ID update")
-
-	observerAFromB := startDeviceIDProbeOnInstance(t, nodeA.name, probePath, targetIDB, 8*time.Second)
-	observerBFromB := startDeviceIDProbeOnInstance(t, nodeB.name, probePath, targetIDB, 8*time.Second)
-	var observerCFromB *deviceIDProbeProcess
-	if nodeC != nil {
-		observerCFromB = startDeviceIDProbeOnInstance(t, nodeC.name, probePath, targetIDB, 8*time.Second)
-	}
-	patchLocalDeviceInfoOnInstance(t, nodeB.name, api.DevicePatch{Id: &targetIDB})
-
-	waitForProbeMatch(t, observerBFromB, targetIDB)
-	assertProbesTimedOut(t, targetIDB, observerAFromB, observerCFromB)
-
-	wsUpdateB := awaitWebSocketDeviceUpdate(t, wsConn, targetIDB, 10*time.Second)
-	require.Equal(t, targetIDB, websocketDeviceID(t, wsUpdateB), "websocket should receive node B device ID update")
+func ptrStringValue(s string) *string {
+	return &s
 }
 
-func getLocalDeviceInfoOnInstance(t *testing.T, nodeName string) api.DeviceInfo {
+func getDevicesInfo(t *testing.T) *model.DeviceListResponse {
 	t.Helper()
+	resp, err := http.Get(helperURL(routes.DevicesEndpoint))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	output, err := runMultipassCommandOnInstance(t, nodeName, "curl -sS http://127.0.0.1:9090/device")
-	require.NoError(t, err, "failed to read local device info on %s: %s", nodeName, output)
-
-	var info api.DeviceInfo
-	require.NoError(t, json.Unmarshal([]byte(output), &info))
-	return info
+	var list model.DeviceListResponse
+	require.NoError(t, decodeProtoBody(resp.Body, &list))
+	return &list
 }
 
-func patchLocalDeviceInfoOnInstance(t *testing.T, nodeName string, patch api.DevicePatch) {
+func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPackage, string) {
 	t.Helper()
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	deviceID := "provisioned-device-" + suffix
+	sinkID := "sink-device-" + suffix
+	blockID := "device_config_eq_" + suffix
 
-	body, err := json.Marshal(patch)
+	return &model.DeviceConfigurationPackage{
+		DroConditionedOutput: &model.DroConditionedOutput{
+			Devices: []*model.DroConditionedDevice{
+				{
+					Id:         deviceID,
+					Label:      "Provisioned Device",
+					DeviceType: "fusion_c1",
+					DspStaticConfig: &model.StaticConfiguration{
+						AudioTasks: []*model.AudioTask{
+							{
+								Name: "Main Task",
+								Blocks: []*model.Block{
+									{
+										Name:      blockID,
+										Algorithm: "peq",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		FusionConnectAdditions: &model.FusionConnectAdditions{
+			AudioStreams: []*model.FusionConnectAudioStream{
+				{
+					SourceDeviceUid: deviceID,
+					DestDeviceUid:   sinkID,
+					Properties: &model.FusionConnectAudioStreamProperties{
+						Channels:        2,
+						IsFusionConnect: true,
+					},
+				},
+			},
+			Settings: &model.FusionConnectAudioSettings{
+				Audio: map[string]*model.AudioBlockSettings{
+					blockID: {
+						Algorithm: "peq",
+						Kind: &model.AudioBlockSettings_Peq{
+							Peq: &model.PeqBlockSettings{
+								BandEnable: []bool{true, false, true},
+								Frequency:  []float64{100.0, 200.0, 300.0},
+								Gain:       []float64{1.0, 2.0, 3.0},
+								Q:          []float64{0.7, 1.1, 1.5},
+								Type:       []string{"peq", "peq", "peq"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, blockID
+}
+
+func putDeviceConfigurationPackage(t *testing.T, payload *model.DeviceConfigurationPackage) (*http.Response, *model.DeviceConfigurationPackagePutResponse) {
+	t.Helper()
+	body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(payload)
 	require.NoError(t, err)
 
-	command := fmt.Sprintf(
-		"curl -sS -X PATCH -H 'Content-Type: application/json' --data %q -o /dev/null -w '%%{http_code}' http://127.0.0.1:9090/device",
-		string(body),
-	)
-	output, err := runMultipassCommandOnInstance(t, nodeName, command)
-	require.NoError(t, err, "failed to patch local device info on %s: %s", nodeName, output)
-	require.Equal(t, "204", strings.TrimSpace(output), "PATCH /device failed on %s", nodeName)
-}
-
-func awaitWebSocketDeviceUpdate(t *testing.T, conn *websocket.Conn, targetDeviceID string, timeout time.Duration) *api.WebSocketResponse {
-	t.Helper()
-
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		response := readWebSocketResponse(t, conn, time.Until(deadline))
-		if response.Type == api.WSMsgTypeDeviceUpdate && websocketDeviceID(t, response) == targetDeviceID {
-			return response
-		}
-	}
-
-	t.Fatalf("timed out waiting for websocket device update")
-	return nil
-}
-
-func websocketDeviceID(t *testing.T, response *api.WebSocketResponse) string {
-	t.Helper()
-
-	payload, ok := response.Data.(map[string]any)
-	require.True(t, ok, "websocket device update payload had unexpected type %T", response.Data)
-	id, ok := payload["id"].(string)
-	require.True(t, ok, "websocket device update missing id field: %#v", payload)
-	return id
-}
-
-type udpObserverResult struct {
-	Status         string `json:"status"`
-	DeviceID       string `json:"device_id,omitempty"`
-	ExpectedDevice string `json:"expected_device_id,omitempty"`
-	LastSeen       string `json:"last_seen,omitempty"`
-}
-
-type deviceIDProbeProcess struct {
-	nodeName string
-	targetID string
-	done     chan probeExecutionResult
-}
-
-type probeExecutionResult struct {
-	result udpObserverResult
-	err    error
-	raw    string
-}
-
-func deployDeviceIDProbeToInstances(t *testing.T, nodeNames []string) string {
-	t.Helper()
-
-	remotePath := "/tmp/device_id_probe"
-	localBinary := filepath.Join(t.TempDir(), "device_id_probe")
-	buildDeviceIDProbe(t, localBinary)
-
-	for _, nodeName := range nodeNames {
-		runHostMultipassCommand(t, "transfer", localBinary, fmt.Sprintf("%s:%s", nodeName, remotePath))
-		_, err := runMultipassCommandOnInstance(t, nodeName, fmt.Sprintf("chmod +x %q", remotePath))
-		require.NoError(t, err, "chmod probe on %s failed", nodeName)
-	}
-
-	return remotePath
-}
-
-func buildDeviceIDProbe(t *testing.T, outputPath string) {
-	t.Helper()
-
-	sourcePath, err := filepath.Abs("../../tools/device_id_probe/main.go")
-	require.NoError(t, err, "resolve device_id_probe source path")
-
-	cmd := exec.Command("go", "build", "-o", outputPath, sourcePath)
-	cmd.Env = append(os.Environ(),
-		"GOOS=linux",
-		"GOARCH=arm64",
-		"CGO_ENABLED=0",
-	)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "cross-compile device_id_probe failed: %s", string(out))
-}
-
-func startDeviceIDProbeOnInstance(t *testing.T, nodeName, remotePath, targetDeviceID string, timeout time.Duration) *deviceIDProbeProcess {
-	t.Helper()
-
-	command := fmt.Sprintf("%q 127.0.0.1 7947 %q %d", remotePath, targetDeviceID, int(timeout.Seconds()))
-	args := []string{"exec", nodeName, "--", "bash", "-lc", command}
-	cmd := exec.Command("multipass", args...)
-	stdout, err := cmd.StdoutPipe()
+	req, err := http.NewRequest(http.MethodPut, helperURL(routes.DeviceEndpoint), bytes.NewReader(body))
 	require.NoError(t, err)
-	stderr, err := cmd.StderrPipe()
+	req.Header.Set("Content-Type", api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	require.NoError(t, cmd.Start())
 
-	readyCh := make(chan error, 1)
-	done := make(chan probeExecutionResult, 1)
+	var putResp model.DeviceConfigurationPackagePutResponse
+	require.NoError(t, decodeProtoBody(resp.Body, &putResp), "Expected valid JSON from PUT /device")
 
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		readySeen := false
-		var result udpObserverResult
-		var rawLines []string
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
-			}
-			rawLines = append(rawLines, line)
-			if !readySeen {
-				if line != "ready" {
-					readyCh <- fmt.Errorf("unexpected probe readiness output on %s: %q", nodeName, line)
-					return
-				}
-				readySeen = true
-				readyCh <- nil
-				continue
-			}
-			if err := json.Unmarshal([]byte(line), &result); err == nil {
-				break
-			}
-		}
-		if !readySeen {
-			if err := scanner.Err(); err != nil {
-				readyCh <- err
-			} else {
-				readyCh <- fmt.Errorf("probe on %s exited before signaling ready", nodeName)
-			}
-		}
-		errOut, _ := io.ReadAll(stderr)
-		waitErr := cmd.Wait()
-		done <- probeExecutionResult{
-			result: result,
-			err:    waitErr,
-			raw:    strings.Join(append(rawLines, strings.TrimSpace(string(errOut))), "\n"),
-		}
-	}()
-
-	require.NoError(t, <-readyCh)
-	return &deviceIDProbeProcess{
-		nodeName: nodeName,
-		targetID: targetDeviceID,
-		done:     done,
-	}
+	return resp, &putResp
 }
 
-func waitForProbeMatch(t *testing.T, probe *deviceIDProbeProcess, targetDeviceID string) {
-	t.Helper()
+func getClusterAudioSettingArray(baseURL, blockID, param string) ([]any, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/settings/audio/%s/%s", baseURL, blockID, param))
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
 
-	execResult := <-probe.done
-	require.NoError(t, execResult.err, "probe on %s failed:\n%s", probe.nodeName, execResult.raw)
-	require.Equal(t, "matched", execResult.result.Status, "probe on %s did not match target %q:\n%s", probe.nodeName, targetDeviceID, execResult.raw)
-	require.Equal(t, targetDeviceID, execResult.result.DeviceID, "probe on %s matched wrong device ID", probe.nodeName)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code: %d response: %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Value any `json:"value"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	array, ok := response.Value.([]any)
+	if !ok {
+		return nil, fmt.Errorf("value is not an array: %T", response.Value)
+	}
+	return array, nil
 }
 
-func assertProbeTimedOut(t *testing.T, probe *deviceIDProbeProcess, forbiddenDeviceID string) {
-	t.Helper()
-
-	execResult := <-probe.done
-	require.NoError(t, execResult.err, "probe on %s failed:\n%s", probe.nodeName, execResult.raw)
-	if execResult.result.Status != "timeout" {
-		t.Fatalf("probe on %s unexpectedly saw forbidden device ID %q:\n%s", probe.nodeName, forbiddenDeviceID, execResult.raw)
+func decodeProtoBody(body io.Reader, msg proto.Message) error {
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return err
 	}
+	return protojson.Unmarshal(data, msg)
 }
 
-func assertProbesTimedOut(t *testing.T, forbiddenDeviceID string, probes ...*deviceIDProbeProcess) {
+func getLocalDeviceInfoOnInstance(t *testing.T, nodeName string) *model.DeviceInfo {
 	t.Helper()
+	require.NotNil(t, clusterConfig, "clusterConfig must be initialized")
 
-	var failures []string
-	for _, probe := range probes {
-		if probe == nil {
-			continue
-		}
-		execResult := <-probe.done
-		if execResult.err != nil {
-			failures = append(failures, fmt.Sprintf("probe on %s failed:\n%s", probe.nodeName, execResult.raw))
-			continue
-		}
-		if execResult.result.Status != "timeout" {
-			failures = append(failures, fmt.Sprintf(
-				"probe on %s unexpectedly saw forbidden device ID %q:\n%s",
-				probe.nodeName,
-				forbiddenDeviceID,
-				execResult.raw,
-			))
+	var nodeAddr string
+	for _, n := range clusterConfig.nodes {
+		if n.name == nodeName {
+			nodeAddr = n.address
+			break
 		}
 	}
-	if len(failures) > 0 {
-		t.Fatalf(strings.Join(failures, "\n\n"))
-	}
-}
+	require.NotEmpty(t, nodeAddr, "node %q not found in cluster config", nodeName)
 
-func runHostMultipassCommand(t *testing.T, args ...string) string {
-	t.Helper()
+	parsed, err := url.Parse(nodeAddr)
+	require.NoError(t, err)
 
-	cmd := exec.Command("multipass", args...)
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "multipass %s failed: %s", strings.Join(args, " "), string(output))
-	return string(output)
+	adminURL := parsed.Scheme + "://" + parsed.Hostname() + ":9090" + routes.DeviceEndpoint
+
+	resp, err := http.Get(adminURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var info model.DeviceInfo
+	require.NoError(t, decodeProtoBody(resp.Body, &info))
+	return &info
 }

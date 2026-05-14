@@ -19,9 +19,9 @@ curl --request POST \
 curl --request GET \
   --url http://192.168.2.100:8080/time-machine/meta/active
 
-# Set data
-curl --request POST \
-     --url http://192.168.2.100:8080/value \
+# Seed state (admin)
+curl --request PATCH \
+     --url http://192.168.2.100:9090/state \
      --header "Content-Type: application/json" \
      --data-binary @analog_in_config.json
 

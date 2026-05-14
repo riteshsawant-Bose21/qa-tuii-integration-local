@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 	"io"
@@ -16,9 +17,10 @@ import (
 	"strings"
 	"time"
 
-	json "github.com/goccy/go-json"
-
 	"github.com/oklog/ulid/v2"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -52,15 +54,16 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 
 	// If no tags provided, return everything
 	if len(normalizedTags) == 0 {
-		w.Header().Set(api.ContentType, api.JsonMIMEType)
-		if err := json.NewEncoder(w).Encode(metas); err != nil {
+		if err := writePAVAProtoJSON(w, &model.AudioMetadataListResponse{
+			Messages: audioMetadataListToProto(metas),
+		}); err != nil {
 			logger.Error("Error encoding audio metadata list: %v", err)
 		}
 		return
 	}
 
 	// Filter
-	filtered := make([]*api.AudioMetadata, 0, len(metas))
+	filtered := make([]*model.AudioMetadata, 0, len(metas))
 	for _, m := range metas {
 		// Build a lowercase set of tags on the item
 		itemTags := make(map[string]struct{}, len(m.Tags))
@@ -82,8 +85,9 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(filtered); err != nil {
+	if err := writePAVAProtoJSON(w, &model.AudioMetadataListResponse{
+		Messages: audioMetadataListToProto(filtered),
+	}); err != nil {
 		logger.Error("Error encoding filtered audio metadata list: %v", err)
 	}
 }
@@ -251,13 +255,13 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build metadata record
-	meta := &api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          id,
 		OrigName:    origName,
 		DisplayName: displayName,
 		Filename:    onDiskName,
 		MimeType:    mimeType,
-		Uploaded:    time.Now().UTC(),
+		Uploaded:    timestamppb.New(time.Now().UTC()),
 		SizeBytes:   totalSize,
 		Tags:        normalized,
 		Checksum:    checksum,
@@ -272,16 +276,14 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return created metadata
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(meta); err != nil {
+	if err := writePAVAProtoJSONWithStatus(w, http.StatusCreated, audioMetadataToProto(meta)); err != nil {
 		logger.Error("json encode failed after header write: %v", err)
 	}
 
 	// Background the audio sync update
 	go func() {
 		update := &api.AudioSyncUpdate{
-			Metadata: *meta,
+			Metadata: meta,
 			URL:      h.appConfig.SelfUrl(),
 		}
 
@@ -311,8 +313,7 @@ func (h *Handler) HandleAudioGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(meta); err != nil {
+	if err := writePAVAProtoJSON(w, audioMetadataToProto(meta)); err != nil {
 		logging.GetLogger().Error("Error encoding audio metadata: %v", err)
 	}
 }
@@ -460,10 +461,62 @@ func (h *Handler) HandleAudioTagList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(tags); err != nil {
+	if err := writePAVAProtoJSON(w, &model.AudioTagListResponse{Tags: tags}); err != nil {
 		logger.Error("Error encoding tag list: %v", err)
 	}
+}
+
+var pavaProtoJSONMarshalOptions = protojson.MarshalOptions{
+	UseProtoNames:   true,
+	EmitUnpopulated: false,
+}
+
+func writePAVAProtoJSON(w http.ResponseWriter, msg proto.Message) error {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	data, err := pavaProtoJSONMarshalOptions.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	return err
+}
+
+func writePAVAProtoJSONWithStatus(w http.ResponseWriter, status int, msg proto.Message) error {
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(status)
+	data, err := pavaProtoJSONMarshalOptions.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	return err
+}
+
+func audioMetadataToProto(meta *model.AudioMetadata) *model.AudioMetadata {
+	if meta == nil {
+		return nil
+	}
+
+	return &model.AudioMetadata{
+		Id:          meta.Id,
+		OrigName:    meta.OrigName,
+		DisplayName: meta.DisplayName,
+		Filename:    meta.Filename,
+		MimeType:    meta.MimeType,
+		Uploaded:    meta.Uploaded,
+		Duration:    int64(meta.Duration),
+		SizeBytes:   meta.SizeBytes,
+		Tags:        append([]string(nil), meta.Tags...),
+		Checksum:    meta.Checksum,
+	}
+}
+
+func audioMetadataListToProto(metas []*model.AudioMetadata) []*model.AudioMetadata {
+	out := make([]*model.AudioMetadata, 0, len(metas))
+	for _, meta := range metas {
+		out = append(out, audioMetadataToProto(meta))
+	}
+	return out
 }
 
 // newULID generates a lexicographically sortable unique ID.

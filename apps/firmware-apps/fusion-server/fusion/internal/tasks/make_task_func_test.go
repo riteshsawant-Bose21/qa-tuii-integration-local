@@ -1,9 +1,11 @@
 package tasks
 
 import (
+	"path/filepath"
 	"testing"
 
 	"fusion/internal/api"
+	"fusion/internal/persistence"
 )
 
 func TestMakeTaskFunc_RejectsInvalidSceneSnapshotParams(t *testing.T) {
@@ -31,8 +33,6 @@ func TestMakeTaskFunc_RejectsInvalidSceneSnapshotParams(t *testing.T) {
 }
 
 func TestMakeTaskFunc_AcceptsValidRequiredParams(t *testing.T) {
-	tm := &TaskManager{}
-
 	tests := []struct {
 		name string
 		task *api.Task
@@ -57,6 +57,28 @@ func TestMakeTaskFunc_AcceptsValidRequiredParams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tm := &TaskManager{}
+			if tt.task.Type == api.TaskTypeSnapshot {
+				tmpDir := t.TempDir()
+				prevAudioDir := api.AudioFilesLocation
+				api.AudioFilesLocation = filepath.Join(tmpDir, "audio")
+				t.Cleanup(func() {
+					api.AudioFilesLocation = prevAudioDir
+				})
+
+				sm := persistence.NewStateManager(&api.AppConfig{NodeName: "test-node"})
+				p, err := persistence.NewPersistence(filepath.Join(tmpDir, "tasks.db"), sm)
+				if err != nil {
+					t.Fatalf("failed to create persistence: %v", err)
+				}
+				t.Cleanup(func() {
+					p.Close()
+				})
+				if err := p.CreateSnapshot("snapshot-1"); err != nil {
+					t.Fatalf("failed to seed snapshot: %v", err)
+				}
+				tm.persistence = p
+			}
 			_, err := tm.makeTaskFunc(tt.task)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)

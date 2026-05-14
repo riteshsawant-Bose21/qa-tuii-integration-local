@@ -1,0 +1,33 @@
+info:
+  name: Patch TouchUI Zone Config
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{api_url}}/settings/touchui_zone_config"
+  body:
+    type: json
+    data: |-
+      {
+        "value": {
+          "zones": [
+            {
+              "zoneId": "FUNC135425261/selector",
+              "gain": {
+                "Max": 100,
+                "Min": 0,
+                "DefGain": 50,
+                "DefMute": false,
+                "Id": "GAIN653367066"
+              }
+            }
+          ]
+        }
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

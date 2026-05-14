@@ -21,7 +21,7 @@ func TestWebSocketSubscribeMeterData(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-sub-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -44,7 +44,7 @@ func TestWebSocketSubscribeMeterDataIdempotent(t *testing.T) {
 
 	// Subscribe twice — both should succeed
 	for i := 0; i < 2; i++ {
-		request := &api.WebSocketRequest{
+		request := &wsRequest{
 			ID:      "meter-sub-idem",
 			Version: api.WSCurrentVersion,
 			Type:    api.WSMsgTypeSubscribeMeterData,
@@ -71,7 +71,7 @@ func TestWebSocketUpdateMeterDataFilter(t *testing.T) {
 	payload := map[string]interface{}{
 		"filter": []string{"block_a", "block_b"},
 	}
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-filter-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -105,7 +105,7 @@ func TestWebSocketUpdateMeterDataFilterEmpty(t *testing.T) {
 	payload := map[string]interface{}{
 		"filter": []string{},
 	}
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-filter-empty",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -131,7 +131,7 @@ func TestWebSocketUpdateMeterDataFilterInvalidPayload(t *testing.T) {
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-filter-bad",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -156,7 +156,7 @@ func TestWebSocketUpdateMeterDataFilterAutoSubscribes(t *testing.T) {
 	payload := map[string]interface{}{
 		"filter": []string{"block_x"},
 	}
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-filter-autosub",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -179,7 +179,7 @@ func TestWebSocketUpdateMeterDataFilterReplace(t *testing.T) {
 	payload1 := map[string]interface{}{
 		"filter": []string{"block_a", "block_b"},
 	}
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-filter-r1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -193,7 +193,7 @@ func TestWebSocketUpdateMeterDataFilterReplace(t *testing.T) {
 	payload2 := map[string]interface{}{
 		"filter": []string{"block_c", "block_d", "block_e"},
 	}
-	request2 := &api.WebSocketRequest{
+	request2 := &wsRequest{
 		ID:      "meter-filter-r2",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -222,7 +222,7 @@ func TestWebSocketUnsubscribeMeterData(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// First subscribe
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "meter-unsub-setup",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -231,7 +231,7 @@ func TestWebSocketUnsubscribeMeterData(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // consume subscribe response
 
 	// Now unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "meter-unsub-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUnsubscribeMeterData,
@@ -253,7 +253,7 @@ func TestWebSocketUnsubscribeMeterDataWithoutSubscribe(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Unsubscribe without subscribing first — should succeed gracefully
-	request := &api.WebSocketRequest{
+	request := &wsRequest{
 		ID:      "meter-unsub-noop",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUnsubscribeMeterData,
@@ -276,7 +276,7 @@ func TestWebSocketMeterDataFullLifecycle(t *testing.T) {
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
 	// Step 1: Subscribe to meter data
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "lifecycle-sub",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -290,7 +290,7 @@ func TestWebSocketMeterDataFullLifecycle(t *testing.T) {
 	filterPayload := map[string]interface{}{
 		"filter": []string{"meter_1", "meter_2"},
 	}
-	filterReq := &api.WebSocketRequest{
+	filterReq := &wsRequest{
 		ID:      "lifecycle-filter",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -305,7 +305,7 @@ func TestWebSocketMeterDataFullLifecycle(t *testing.T) {
 	filterPayload2 := map[string]interface{}{
 		"filter": []string{"meter_3"},
 	}
-	filterReq2 := &api.WebSocketRequest{
+	filterReq2 := &wsRequest{
 		ID:      "lifecycle-filter2",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -317,7 +317,7 @@ func TestWebSocketMeterDataFullLifecycle(t *testing.T) {
 	assert.Equal(t, api.WSCodeUpdated, filterResp2.Code)
 
 	// Step 4: Unsubscribe
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "lifecycle-unsub",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUnsubscribeMeterData,
@@ -339,7 +339,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	readWebSocketResponse(t, conn2, wsTestTimeout) // Skip welcome
 
 	// conn1 subscribes and sets filter for block_a
-	subReq1 := &api.WebSocketRequest{
+	subReq1 := &wsRequest{
 		ID:      "multi-sub-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -348,7 +348,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	resp1 := readWebSocketResponse(t, conn1, wsTestTimeout)
 	assert.Equal(t, api.WSCodeOK, resp1.Code)
 
-	filterReq1 := &api.WebSocketRequest{
+	filterReq1 := &wsRequest{
 		ID:      "multi-filter-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -359,7 +359,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	assert.Equal(t, api.WSCodeUpdated, fResp1.Code)
 
 	// conn2 subscribes and sets filter for block_b
-	subReq2 := &api.WebSocketRequest{
+	subReq2 := &wsRequest{
 		ID:      "multi-sub-2",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -368,7 +368,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	resp2 := readWebSocketResponse(t, conn2, wsTestTimeout)
 	assert.Equal(t, api.WSCodeOK, resp2.Code)
 
-	filterReq2 := &api.WebSocketRequest{
+	filterReq2 := &wsRequest{
 		ID:      "multi-filter-2",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -379,7 +379,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	assert.Equal(t, api.WSCodeUpdated, fResp2.Code)
 
 	// conn1 unsubscribes — conn2 should still be active
-	unsubReq := &api.WebSocketRequest{
+	unsubReq := &wsRequest{
 		ID:      "multi-unsub-1",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUnsubscribeMeterData,
@@ -389,7 +389,7 @@ func TestWebSocketMeterDataMultipleConnections(t *testing.T) {
 	assert.Equal(t, api.WSCodeOK, unsubResp.Code)
 
 	// conn2 can still update its filter
-	filterReq3 := &api.WebSocketRequest{
+	filterReq3 := &wsRequest{
 		ID:      "multi-filter-3",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -406,7 +406,7 @@ func TestWebSocketMeterDataDisconnectCleansUp(t *testing.T) {
 
 	readWebSocketResponse(t, conn1, wsTestTimeout) // Skip welcome
 
-	subReq := &api.WebSocketRequest{
+	subReq := &wsRequest{
 		ID:      "disconnect-sub",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -414,7 +414,7 @@ func TestWebSocketMeterDataDisconnectCleansUp(t *testing.T) {
 	sendWebSocketRequest(t, conn1, subReq)
 	readWebSocketResponse(t, conn1, wsTestTimeout)
 
-	filterReq := &api.WebSocketRequest{
+	filterReq := &wsRequest{
 		ID:      "disconnect-filter",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -437,7 +437,7 @@ func TestWebSocketMeterDataDisconnectCleansUp(t *testing.T) {
 	assert.Equal(t, "welcome", welcome.Type)
 
 	// Can subscribe and set filter on new connection
-	subReq2 := &api.WebSocketRequest{
+	subReq2 := &wsRequest{
 		ID:      "disconnect-sub-2",
 		Version: api.WSCurrentVersion,
 		Type:    api.WSMsgTypeSubscribeMeterData,
@@ -459,13 +459,13 @@ func TestWebSocketMeterDataErrorCases(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		request      *api.WebSocketRequest
+		request      *wsRequest
 		expectedCode int
 		expectedType string
 	}{
 		{
 			name: "filter with null data",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "err-null-data",
 				Version: api.WSCurrentVersion,
 				Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -476,7 +476,7 @@ func TestWebSocketMeterDataErrorCases(t *testing.T) {
 		},
 		{
 			name: "filter with invalid JSON",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "err-invalid-json",
 				Version: api.WSCurrentVersion,
 				Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -487,7 +487,7 @@ func TestWebSocketMeterDataErrorCases(t *testing.T) {
 		},
 		{
 			name: "filter with wrong field type",
-			request: &api.WebSocketRequest{
+			request: &wsRequest{
 				ID:      "err-wrong-type",
 				Version: api.WSCurrentVersion,
 				Type:    api.WSMsgTypeUpdateMeterDataFilter,
@@ -519,7 +519,7 @@ func TestWebSocketMeterDataResponseIDs(t *testing.T) {
 	ids := []string{"id-alpha", "id-beta", "id-gamma"}
 
 	for _, id := range ids {
-		request := &api.WebSocketRequest{
+		request := &wsRequest{
 			ID:      id,
 			Version: api.WSCurrentVersion,
 			Type:    api.WSMsgTypeSubscribeMeterData,

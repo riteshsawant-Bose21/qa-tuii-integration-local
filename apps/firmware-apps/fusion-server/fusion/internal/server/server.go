@@ -1,11 +1,11 @@
 package server
 
 import (
-	stdjson "encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,12 +14,17 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
 	"fusion/internal/utils"
+	"fusion/internal/version"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // validKeyRe validates query parameter values contain only allowed characters.
@@ -134,73 +139,66 @@ func (s *FusionServer) StopTelemetrySubscriptions() {
 // cluster membership. Call this when cluster topology changes while VIP.
 func (s *FusionServer) ReconcileTelemetrySubscriptions() {
 	ips := s.clusterMemberZMQIPs()
-	s.telemetrySub.Start(ips)
+	s.telemetrySub.Reconcile(ips)
 }
 
-// GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
-func (s *FusionServer) GetValue(w http.ResponseWriter, r *http.Request) {
-
+// GetAudioSettings handles HTTP GET requests for audio settings data.
+func (s *FusionServer) GetAudioSettings(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
-	// Retrieve the "key" query parameter.
-	key, err := getSingleQueryParam(r, "key")
+	vars := mux.Vars(r)
+	key := "settings.audio"
+	if blockID := vars["blockId"]; blockID != "" {
+		key += "." + blockID
+	}
+
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists {
+		http.Error(w, "settings not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(value)
+}
+
+func (s *FusionServer) getSettingsSection(w http.ResponseWriter, key string, notFoundMessage string) {
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists || value == nil {
+		http.Error(w, notFoundMessage, http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(value)
+}
+
+// GetAudioSetting handles HTTP GET requests for a single audio setting value.
+func (s *FusionServer) GetAudioSetting(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	key, err := audioSettingKeyFromRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Use the handler to get the configuration value.
-	response, err := s.handler.HandleHTTPGet(key)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	value, exists := s.handler.StateManager.Get(key)
+	if !exists {
+		http.Error(w, "setting not found", http.StatusNotFound)
 		return
 	}
 
-	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]any{"value": value})
 }
 
-// SetValue handles HTTP PUT requests to set a configuration value.
-// It expects a JSON body containing the update data.
-func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	// Read the request body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal the JSON into a map.
-	var update map[string]any
-	if err := json.Unmarshal(body, &update); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	// Use the handler to update the configuration.
-	response, err := s.handler.HandleHTTPSet(update)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(response)
-}
-
-// UpdateValue handles HTTP PATCH requests to update a configuration value.
-// It supports partial updates based on the provided key query parameter or the entire JSON body.
-func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
+// PatchAudioSetting handles HTTP PATCH requests for audio setting updates.
+func (s *FusionServer) PatchAudioSetting(w http.ResponseWriter, r *http.Request) {
 	type patchResponse struct {
 		Status  string         `json:"status"`
 		Updates map[string]any `json:"updates"`
@@ -210,6 +208,12 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	key, err := audioSettingKeyFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -223,30 +227,12 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := getSingleQueryParam(r, "key")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Build minimal patch map
-	var patch map[string]any
-	if key != "" {
-		patch = map[string]any{
-			key: update["value"],
-		}
-	} else {
-		patch = update
-	}
-
-	// Apply patch (diff is computed inside handler)
-	diff, err := s.handler.HandleHTTPPatch(patch)
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: update["value"]})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Build response
 	resp := patchResponse{}
 	if diff == nil {
 		resp.Status = "noop"
@@ -256,15 +242,149 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		resp.Updates = diff
 	}
 
-	// Send
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *FusionServer) patchSettingsSection(w http.ResponseWriter, r *http.Request, key string) {
+	type patchResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var update map[string]any
+	if err := json.Unmarshal(body, &update); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: update["value"]})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := patchResponse{}
+	if diff == nil {
+		resp.Status = "noop"
+		resp.Updates = nil
+	} else {
+		resp.Status = "success"
+		resp.Updates = diff
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(resp)
+}
+
+// ClearAudioSettings handles HTTP DELETE requests to clear audio settings.
+func (s *FusionServer) ClearAudioSettings(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{"settings.audio": nil})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if diff == nil {
+		json.NewEncoder(w).Encode(map[string]any{"status": "noop"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"status": "success"})
+}
+
+func (s *FusionServer) clearSettingsSection(w http.ResponseWriter, key string) {
+	diff, err := s.handler.HandleHTTPPatch(map[string]any{key: nil})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	if diff == nil {
+		json.NewEncoder(w).Encode(map[string]any{"status": "noop"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{"status": "success"})
+}
+
+func (s *FusionServer) GetTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	s.getSettingsSection(w, "touchui_zone_config", "touchui zone config not found")
+}
+
+func (s *FusionServer) PatchTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	s.patchSettingsSection(w, r, "touchui_zone_config")
+}
+
+func (s *FusionServer) ClearTouchUIZoneConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.clearSettingsSection(w, "touchui_zone_config")
+}
+
+func (s *FusionServer) GetWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	s.getSettingsSection(w, "wall_controller_config", "wall controller config not found")
+}
+
+func (s *FusionServer) PatchWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	s.patchSettingsSection(w, r, "wall_controller_config")
+}
+
+func (s *FusionServer) ClearWallControllerConfig(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.clearSettingsSection(w, "wall_controller_config")
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
 func (s *FusionServer) ExportState(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	if key := r.URL.Query().Get("key"); key != "" {
+		response, err := s.handler.HandleHTTPGet(key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set(api.ContentType, api.JsonMIMEType)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			logging.GetLogger().Error("Export keyed state failed: %v", err)
+		}
 		return
 	}
 
@@ -305,6 +425,56 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
+// ClearState handles HTTP DELETE requests to wipe the entire configuration state.
+func (s *FusionServer) ClearState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	s.handler.StateManager.SetState(nil)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// PatchState handles private HTTP PATCH requests that apply a partial update to configuration state.
+func (s *FusionServer) PatchState(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePatch(w, r) {
+		return
+	}
+
+	patch, err := decodeValuePayload(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response, err := s.handler.HandleHTTPPatch(patch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.GetLogger().Error("Patch state failed: %v", err)
+	}
+}
+
+func decodeValuePayload(r *http.Request) (map[string]any, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	defer r.Body.Close()
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("invalid JSON format: %w", err)
+	}
+
+	return payload, nil
+}
+
 // HandleRoot handles requests to the root URL ("/") and returns server information.
 func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Only serve the root path.
@@ -321,14 +491,25 @@ func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(info)
+	if err := writeProtoJSON(w, info); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // GetVersion handles version HTTP requests.
 func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
+	}
+
+	resp := &model.VersionResponse{
+		Name:      "Fusion Server",
+		Version:   version.Version,
+		Commit:    version.Commit,
+		BuildTime: version.BuildTime,
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -343,10 +524,6 @@ func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 
 // GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
 func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
-	type databaseMetadataResponse struct {
-		Metadata *api.DatabaseMetadata `json:"metadata"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -358,9 +535,21 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Write the JSON response with metadata.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
+	resp := &model.DatabaseMetadataResponse{
+		Metadata: &model.DatabaseMetadata{
+			Version: &model.VersionInfo{
+				Epoch:   metadata.Version.Epoch,
+				Counter: metadata.Version.Counter,
+				NodeId:  metadata.Version.NodeId,
+			},
+			ActiveSnapshot: metadata.ActiveSnapshot,
+			Hash:           metadata.Hash,
+			Valid:          metadata.Valid,
+		},
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // ExportData handles HTTP GET requests to export all data.
@@ -410,22 +599,6 @@ func (s *FusionServer) ImportData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ClearAllValues handles HTTP DELETE requests to clear all configuration data.
-func (s *FusionServer) ClearAllValues(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequireDelete(w, r) {
-		return
-	}
-
-	// Clear the data using the handler.
-	if err := s.handler.HandleClearAllData(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // GetMembers handles HTTP GET requests to list all cluster members.
 func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
@@ -439,6 +612,26 @@ func (s *FusionServer) GetMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
+}
+
+func audioSettingKeyFromRequest(r *http.Request) (string, error) {
+	vars := mux.Vars(r)
+
+	blockID := vars["blockId"]
+	param := vars["param"]
+	if blockID == "" || param == "" {
+		return "", fmt.Errorf("blockId and param are required")
+	}
+
+	key := "settings.audio." + blockID + "." + param
+	if index := vars["index"]; index != "" {
+		if _, err := strconv.Atoi(index); err != nil {
+			return "", fmt.Errorf("index must be an integer")
+		}
+		key += "[" + index + "]"
+	}
+
+	return key, nil
 }
 
 func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
@@ -515,22 +708,21 @@ func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 
 // GetSessions handles HTTP GET requests to get SAP sessions
 func (s *FusionServer) GetSessions(w http.ResponseWriter, r *http.Request) {
-	type sessionsResponse struct {
-		Sessions map[string]*handler.SAPSession `json:"sessions"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	sessions := s.handler.HandleListSessions()
-
-	err := json.NewEncoder(w).Encode(sessionsResponse{Sessions: sessions})
+	resp, err := sessionsResponseToProto(sessions)
 	if err != nil {
+		logging.GetLogger().Error("Failed to marshal sessions response: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := writeProtoJSON(w, resp); err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
 // GetSession handles HTTP GET requests to get a SAP session by identifier
@@ -551,12 +743,66 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(session); err != nil {
+	resp, err := sapSessionToProto(session)
+	if err != nil {
+		logging.GetLogger().Error("Failed to marshal session response: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, resp); err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
+func sessionsResponseToProto(sessions map[string]*handler.SAPSession) (*model.SessionListResponse, error) {
+	out := &model.SessionListResponse{
+		Sessions: make(map[string]*model.SAPSession, len(sessions)),
+	}
+
+	for id, session := range sessions {
+		converted, err := sapSessionToProto(session)
+		if err != nil {
+			return nil, err
+		}
+		out.Sessions[id] = converted
+	}
+
+	return out, nil
+}
+
+func sapSessionToProto(session *handler.SAPSession) (*model.SAPSession, error) {
+	if session == nil {
+		return nil, nil
+	}
+
+	resp := &model.SAPSession{
+		Id:        session.ID,
+		Origin:    session.OriginIP,
+		Timestamp: timestamppb.New(session.Timestamp),
+	}
+
+	if session.Description != nil {
+		payloadBytes, err := json.Marshal(session.Description)
+		if err != nil {
+			return nil, err
+		}
+
+		var generic map[string]any
+		if err := json.Unmarshal(payloadBytes, &generic); err != nil {
+			return nil, err
+		}
+
+		description, err := structpb.NewStruct(generic)
+		if err != nil {
+			return nil, err
+		}
+
+		resp.Description = description
+	}
+
+	return resp, nil
 }
 
 // GetControllers handles HTTP GET requests to list registered controllers.
@@ -567,8 +813,20 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := s.handler.HandleGetControllers()
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(result)
+	response := &model.ControllerListResponse{
+		Controllers: make([]*model.ControllerInfo, 0, len(result)),
+	}
+	for _, controller := range result {
+		response.Controllers = append(response.Controllers, &model.ControllerInfo{
+			Id:      controller.Id,
+			Name:    controller.Name,
+			Address: controller.Address,
+			Version: controller.Version,
+		})
+	}
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+	}
 }
 
 // GetControllerByID handles HTTP GET requests to get a specific controller info.
@@ -599,19 +857,17 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(ctrl); err != nil {
+	response := &model.ControllerInfo{
+		Id:      ctrl.Id,
+		Name:    ctrl.Name,
+		Address: ctrl.Address,
+		Version: ctrl.Version,
+	}
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
 }
 func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
-	type winkResponse struct {
-		Status       string `json:"status"`
-		Message      string `json:"message"`
-		ControllerID string `json:"controller_id"`
-	}
-
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -634,14 +890,12 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return success response for wink command
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusOK)
-	response := winkResponse{
+	response := &model.ControllerWinkResponse{
 		Status:       "success",
 		Message:      "Wink command sent successfully",
-		ControllerID: id,
+		ControllerId: id,
 	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusOK, response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
 }

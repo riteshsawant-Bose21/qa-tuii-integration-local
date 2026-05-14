@@ -1,0 +1,23 @@
+meta {
+  name: Patch Audio Indexed Param
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{api_url}}/settings/audio/:blockId/:param/:index
+  body: json
+  auth: none
+}
+
+params:path {
+  blockId: PEQ4385417
+  param: frequency
+  index: 0
+}
+
+body:json {
+  {
+    "value": 1000.0
+  }
+}

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/network"
 	"fusion/internal/server/handler"
-	"io"
 	"net"
-	"net/http"
 	"os"
 	"runtime"
 	"strings"
@@ -123,7 +120,15 @@ func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse broadcast: %v", err)
 	}
-	if _, ok := msg["udp_broadcast_test"]; !ok {
+	payload, ok := msg["payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected broadcast payload shape: %s", string(buf[:n]))
+	}
+	updates, ok := payload["updates"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected broadcast updates shape: %s", string(buf[:n]))
+	}
+	if _, ok := updates["udp_broadcast_test"]; !ok {
 		t.Fatalf("unexpected broadcast payload: %s", string(buf[:n]))
 	}
 }
@@ -154,45 +159,11 @@ func TestFusionUDP_OversizedBroadcastRequiresConfigPull(t *testing.T) {
 
 	patchKey := fmt.Sprintf("settings.udp_buffer_limit.%d", time.Now().UnixNano())
 	oversizedValue := strings.Repeat("x", 70*1024)
-	patchBody, err := json.Marshal(map[string]any{"value": oversizedValue})
-	if err != nil {
-		t.Fatalf("marshal patch: %v", err)
-	}
 
 	httpBase := httpBaseForUDPAddr(getFusionUDPAddr())
-	patchURL := fmt.Sprintf("%s/value?key=%s", httpBase, patchKey)
-	req, err := http.NewRequest(
-		http.MethodPatch,
-		patchURL,
-		bytes.NewReader(patchBody),
-	)
-	if err != nil {
-		t.Fatalf("build patch request: %v", err)
-	}
-	req.Header.Set("Content-Type", api.JsonMIMEType)
-	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
-	if err != nil {
-		t.Fatalf("patch oversized value: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("patch oversized value status=%d body=%s", resp.StatusCode, string(body))
-	}
+	patchConfigViaWebSocket(t, httpBase, map[string]any{patchKey: oversizedValue})
 	defer func() {
-		cleanupBody, err := json.Marshal(map[string]any{"value": ""})
-		if err != nil {
-			return
-		}
-		req, err := http.NewRequest(http.MethodPatch, patchURL, bytes.NewReader(cleanupBody))
-		if err != nil {
-			return
-		}
-		req.Header.Set("Content-Type", api.JsonMIMEType)
-		resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
-		if err == nil {
-			_ = resp.Body.Close()
-		}
+		patchConfigViaWebSocket(t, httpBase, map[string]any{patchKey: nil})
 	}()
 
 	deadline := time.Now().Add(5 * time.Second)

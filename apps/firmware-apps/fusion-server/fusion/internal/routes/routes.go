@@ -2,10 +2,8 @@ package routes
 
 import (
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"net/http"
-
-	json "github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 )
@@ -126,14 +124,20 @@ const (
 	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
+	SettingsEndpoint                     = "/settings"
+	SettingsAudioEndpoint                = SettingsEndpoint + "/audio"
+	SettingsAudioBlockEndpoint           = SettingsAudioEndpoint + "/{blockId}"
+	SettingsAudioParamEndpoint           = SettingsAudioBlockEndpoint + "/{param}"
+	SettingsAudioIndexedParamEndpoint    = SettingsAudioParamEndpoint + "/{index}"
+	SettingsTouchUIZoneConfigEndpoint    = SettingsEndpoint + "/touchui_zone_config"
+	SettingsWallControllerConfigEndpoint = SettingsEndpoint + "/wall_controller_config"
+
 	TimeMachineEndpoint         = "/time-machine"
 	TimeMachineMetaEndpoint     = TimeMachineEndpoint + "/meta"
 	TimeMachineActiveEndpoint   = TimeMachineMetaEndpoint + "/active"
 	TimeMachineNameEndpoint     = TimeMachineEndpoint + "/{name}"
 	TimeMachineActivateEndpoint = TimeMachineEndpoint + "/activate/{name}"
 	TimeMachineUpdateEndpoint   = TimeMachineEndpoint + "/update/{name}"
-
-	ValueEndpoint = "/value"
 
 	VersionEndpoint = "/version"
 
@@ -209,10 +213,7 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
-	type routesResponse struct {
-		Routes []string `json:"routes"`
+	if err := writeProtoJSON(w, &model.EndpointListResponse{Routes: Endpoints}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(routesResponse{Routes: Endpoints})
 }

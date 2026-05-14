@@ -1,0 +1,15 @@
+meta {
+  name: Set VIP
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://192.168.2.38:8080/devices/vip/:vip
+  body: json
+  auth: none
+}
+
+params:path {
+  vip: 192.168.4.100
+}

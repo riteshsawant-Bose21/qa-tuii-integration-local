@@ -1,0 +1,44 @@
+meta {
+  name: Put Device Package
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{api_url}}/device
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "dro_conditioned_output": {
+      "devices": [
+        {
+          "id": "FUSIONDSP755722406",
+          "label": "Fusion DSP 1",
+          "location": "Rack A",
+          "dsp_static_config": {
+            "audio_tasks": []
+          }
+        }
+      ]
+    },
+    "fusion_connect_additions": {
+      "audio_streams": [
+        {
+          "dest_device_uid": "FUSIONDSP755722406",
+          "properties": {
+            "channels": 1,
+            "is_fusion_connect": true,
+            "source_port": 49152
+          },
+          "source_device_uid": "ENDPOINT9179164"
+        }
+      ],
+      "settings": {
+        "audio": {}
+      }
+    }
+  }
+}

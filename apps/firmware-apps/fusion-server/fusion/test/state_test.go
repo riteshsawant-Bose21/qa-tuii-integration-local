@@ -11,6 +11,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
@@ -629,9 +630,13 @@ func TestNotifyMsgVersionUpdateIgnoresSameHash(t *testing.T) {
 		api.NotifyOpVersionUpdate,
 		"peer-node",
 		api.WithVersionUpdate(&api.VersionUpdate{
-			Version: meta.Version,
-			Hash:    meta.Hash,
-			NodeID:  "peer-node",
+			Version: api.Version{
+				Epoch:   meta.GetVersion().GetEpoch(),
+				Counter: meta.GetVersion().GetCounter(),
+				NodeID:  meta.GetVersion().GetNodeId(),
+			},
+			Hash:   meta.Hash,
+			NodeID: "peer-node",
 		}),
 	)
 	msg.SentAt = time.Time{}
@@ -866,8 +871,8 @@ func TestRejoinDoesNotOverwriteNewerEpoch(t *testing.T) {
 // TestCalculateDiffPreservesNewArray is a regression test for the bug where
 // CalculateDiff converts a newly-set array into a string-keyed map
 // (e.g. {"0":true,"1":false,"2":false}) instead of keeping it as []any.
-// This manifests in PATCH /value responses where "band_enable":[true,false,false]
-// is returned in "updates" as {"band_enable":{"0":true,"1":false,"2":false}}.
+// This manifests in patch diff payloads where "band_enable":[true,false,false]
+// is represented as {"band_enable":{"0":true,"1":false,"2":false}}.
 func TestCalculateDiffPreservesNewArray(t *testing.T) {
 	before := map[string]any{}
 	after := map[string]any{
@@ -915,7 +920,7 @@ func TestDelegateMergeRemoteStateDoesNotMarkDirtyOnNoChange(t *testing.T) {
 	// saveFired receives a token whenever SaveState completes (metadata notifier is
 	// called with notify=true from updateHash inside SaveState).
 	saveFired := make(chan struct{}, 1)
-	p.SetMetadataNotifier(func(_ *api.DatabaseMetadata) {
+	p.SetMetadataNotifier(func(_ *model.DatabaseMetadata) {
 		select {
 		case saveFired <- struct{}{}:
 		default:
@@ -962,8 +967,8 @@ func TestDelegateMergeRemoteStateDoesNotMarkDirtyOnNoChange(t *testing.T) {
 }
 
 // TestPatchDiffPreservesArrayInUpdates is a regression test for the bug where
-// PATCH /value with a nested array value (e.g. band_enable) returns
-// {"0":true,"1":false,"2":false} in the "updates" response instead of [true,false,false].
+// a patch diff with a nested array value (e.g. band_enable) returns
+// {"0":true,"1":false,"2":false} instead of [true,false,false].
 // The diff computed after sm.Patch() must represent the array field as []any, not map[string]any.
 func TestPatchDiffPreservesArrayInUpdates(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
@@ -1003,7 +1008,7 @@ func TestPatchDiffPreservesArrayInUpdates(t *testing.T) {
 
 	bandEnable := peq["band_enable"]
 	if _, isMap := bandEnable.(map[string]any); isMap {
-		t.Errorf("band_enable in PATCH diff is a string-keyed map %v — this is the bug: PATCH /value response shows {\"0\":true,\"1\":false,\"2\":false} instead of [true,false,false]", bandEnable)
+		t.Errorf("band_enable in patch diff is a string-keyed map %v — this is the bug: patch diff shows {\"0\":true,\"1\":false,\"2\":false} instead of [true,false,false]", bandEnable)
 		return
 	}
 	arr, ok := bandEnable.([]any)

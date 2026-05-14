@@ -1,0 +1,32 @@
+meta {
+  name: Create Snapshot
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{api_url}}/snapshots
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "snapshot-test-01",
+    "name": "Snapshot Test 01",
+    "data": {
+      "settings": {
+        "audio": {
+          "GAIN528578446": {
+            "gain": -12.0,
+            "mute": false
+          }
+        }
+      }
+    }
+  }
+}

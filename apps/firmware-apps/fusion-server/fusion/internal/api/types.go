@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	model "fusion/internal/gen/proto/fusion"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -47,20 +48,6 @@ func (v Version) Less(other Version) bool {
 	return v.NodeID < other.NodeID
 }
 
-// AudioMetadata represents the persisted audio metadata.
-type AudioMetadata struct {
-	Id          string        `json:"id"`
-	OrigName    string        `json:"orig_name"`
-	DisplayName string        `json:"display_name"`
-	Filename    string        `json:"filename"`
-	MimeType    string        `json:"mime_type"`
-	Uploaded    time.Time     `json:"uploaded"`
-	Duration    time.Duration `json:"duration,omitempty"`
-	SizeBytes   int64         `json:"size_bytes"`
-	Tags        []string      `json:"tags"`
-	Checksum    string        `json:"checksum"`
-}
-
 // AudioRemoveUpdate represents an audio file to remove across nodes
 type AudioRemoveUpdate struct {
 	ID string `json:"id"`
@@ -68,19 +55,8 @@ type AudioRemoveUpdate struct {
 
 // AudioSyncUpdate represents an audio file to sync across nodes
 type AudioSyncUpdate struct {
-	Metadata AudioMetadata `json:"metadata"`
-	URL      string        `json:"url"`
-}
-
-// SoftwareUpdateSync carries the metadata for a bundle that is
-// available for followers to pull from the VIP node.
-type SoftwareUpdateSync struct {
-	Filename  string    `json:"filename"`
-	Checksum  string    `json:"checksum"`
-	SizeBytes int64     `json:"size_bytes"`
-	Uploaded  time.Time `json:"uploaded"`
-	SourceIP  string    `json:"source_ip"`
-	SyncID    string    `json:"sync_id,omitempty"` // For tracking cluster-wide sync
+	Metadata *model.AudioMetadata `json:"metadata"`
+	URL      string               `json:"url"`
 }
 
 // SoftwareUpdateSyncAck carries acknowledgment information when a node
@@ -165,6 +141,7 @@ type ConfigUpdate struct {
 	Hash         string         `json:"hash"`
 	Data         map[string]any `json:"data"`
 	ObserverData map[string]any `json:"observer_data,omitempty"`
+	PathValues   map[string]any `json:"path_values,omitempty"`
 	Version      Version        `json:"version"`
 	Clear        bool           `json:"clear,omitempty"`
 }
@@ -175,18 +152,11 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
-// DeviceInfo represents device configuration data.
-type DeviceInfo struct {
-	Address                  string `json:"address"`
-	Id                       string `json:"id"`
-	Location                 string `json:"location"`
-	Name                     string `json:"name"`
-	ModelName                string `json:"model_name"`
-	MacAddress               string `json:"mac_address"`
-	SerialNumber             string `json:"serial_number"`
-	IsPrimaryNode            bool   `json:"is_primary"`
-	SoftwareUpdateVersion    string `json:"software_update_version"`
-	IsDeviceCertificateValid bool   `json:"is_device_certificate_valid"`
+// DeviceRuntimeInfo extends the public device contract with internal build and
+// VRRP metadata. Public API and cluster notification paths should prefer
+// model.DeviceInfo directly.
+type DeviceRuntimeInfo struct {
+	model.DeviceInfo
 	FusionMonorepoBranch     string `json:"fusion_monorepo_branch,omitempty"`
 	FusionMonorepoCommitHash string `json:"fusion_monorepo_commit_hash,omitempty"`
 	JenkinsBuildNumber       string `json:"jenkins_build_number,omitempty"`
@@ -194,34 +164,10 @@ type DeviceInfo struct {
 	VrrpPriority             int    `json:"vrrp_priority"`
 }
 
-// DevicePatch represents patchable device configuration data.
-// When modifying this struct, please ensure to update validateNoDuplication, applyPatch
-type DevicePatch struct {
-	Id       *string `json:"id,omitempty"`
-	Location *string `json:"location,omitempty"`
-	Name     *string `json:"name,omitempty"`
-}
-
-// ControllerInfo represents a generic hardware controller
-type ControllerInfo struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Version string `json:"version,omitempty"`
-}
-
-// DatabaseMetadata holds metadata information from the database.
-type DatabaseMetadata struct {
-	Version        Version `json:"version"`
-	ActiveSnapshot string  `json:"active_snapshot"`
-	Hash           string  `json:"hash"`
-	Valid          bool    `json:"valid"`
-}
-
 // MemberMetadata associates a member to its database metadata.
 type MemberMetadata struct {
 	Member   *memberlist.Node
-	Metadata DatabaseMetadata
+	Metadata model.DatabaseMetadata
 }
 
 // RecurringWindow contains info to manage recurring tasks
@@ -256,29 +202,6 @@ type SceneOperation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// SnapshotDefinition represents a stored Snapshot definition.
-type SnapshotDefinition struct {
-	ID   string         `json:"id"`
-	Name string         `json:"name,omitempty"`
-	Data map[string]any `json:"data"`
-}
-
-// Scene represents a stored Scene definition.
-type Scene struct {
-	ID   string         `json:"id"`
-	Name string         `json:"name,omitempty"`
-	Data map[string]any `json:"data"`
-}
-
-// SceneSet represents a set of scenes and current/default scene tracking.
-type SceneSet struct {
-	SetID          string  `json:"set_id"`
-	Name           string  `json:"name,omitempty"`
-	DefaultSceneID string  `json:"default_scene,omitempty"`
-	CurrentSceneID string  `json:"current_scene_id,omitempty"`
-	Scenes         []Scene `json:"scenes"`
-}
-
 // ActivateSnapshotRequest is the request body for snapshot activation.
 type ActivateSnapshotRequest struct {
 	ID string `json:"id"`
@@ -288,39 +211,6 @@ type ActivateSnapshotRequest struct {
 type ActivateSceneSetRequest struct {
 	SetID   string `json:"set_id"`
 	SceneID string `json:"scene_id"`
-}
-
-// CurrentSceneResponse is the response body for current scene lookup.
-type CurrentSceneResponse struct {
-	SetID        string               `json:"set_id"`
-	CurrentScene CurrentSceneMetadata `json:"current_scene"`
-}
-
-// CurrentSceneMetadata identifies the active scene details for a scene set.
-type CurrentSceneMetadata struct {
-	SceneID string `json:"scene_id"`
-	Name    string `json:"name,omitempty"`
-}
-
-// SnapshotListResponse is the response body for listing stored snapshots.
-type SnapshotListResponse struct {
-	Snapshots []SnapshotDefinition `json:"snapshots"`
-}
-
-// SceneListResponse is the response body for listing stored scenes.
-type SceneListResponse struct {
-	Scenes []Scene `json:"scenes"`
-}
-
-// SceneSetListResponse is the response body for listing stored scene sets.
-type SceneSetListResponse struct {
-	SceneSets []SceneSet `json:"scene_sets"`
-}
-
-// SceneCatalogListResponse is the response body for listing all stored scene data.
-type SceneCatalogListResponse struct {
-	Snapshots []SnapshotDefinition `json:"snapshots"`
-	SceneSets []SceneSet           `json:"scene_sets"`
 }
 
 // TaskType represents scheduled task
@@ -347,95 +237,32 @@ type Task struct {
 	CronEntryID cron.EntryID     `json:"-"`
 }
 
-// TaskMessage represents a message playback task
-type TaskMessage struct {
-	ID          string           `json:"id"`
-	Description string           `json:"description"`
-	CronExpr    string           `json:"cron_expr"`
-	StartAt     time.Time        `json:"start_at"`
-	EndAt       time.Time        `json:"end_at"`
-	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
-	MessageID   string           `json:"message_id"`
-	Priority    int64            `json:"priority"`
-	Zones       []string         `json:"zones"`
-}
-
-// TaskMessagePatch represents a patchable message task
-type TaskMessagePatch struct {
-	Description *string          `json:"description,omitempty"`
-	CronExpr    *string          `json:"cron_expr,omitempty"`
-	StartAt     *time.Time       `json:"start_at,omitempty"`
-	EndAt       *time.Time       `json:"end_at,omitempty"`
-	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
-	MessageID   *string          `json:"message_id,omitempty"`
-	Priority    *int64           `json:"priority"`
-	Zones       *[]string        `json:"zones"`
-}
-
-// TaskSnapshopPatch represents a patchable snapshot task
-type TaskSnapshopPatch struct {
-	Description *string          `json:"description,omitempty"`
-	CronExpr    *string          `json:"cron_expr,omitempty"`
-	StartAt     *time.Time       `json:"start_at,omitempty"`
-	EndAt       *time.Time       `json:"end_at,omitempty"`
-	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
-	Snapshot    *string          `json:"snapshot,omitempty"`
-}
-
 // StateEntry represents a single entry in the state
 type StateEntry struct {
-	Data    any     `json:"data"`
-	Version Version `json:"version"`
+	Data           any                `json:"data"`
+	Version        Version            `json:"version"`
+	NestedVersions map[string]Version `json:"nested_versions,omitempty"`
+}
+
+// MeterDataMessage is the telemetry payload routed from the telemetry core to
+// WebSocket subscribers. Filtering is based on each sample's block_name.
+type MeterDataMessage struct {
+	MessageName string              `json:"message_name"`
+	Parameters  MeterDataParameters `json:"parameters"`
+}
+
+type MeterDataParameters struct {
+	Value []MeterDataSample `json:"value"`
+}
+
+type MeterDataSample struct {
+	BlockName string         `json:"block_name"`
+	Value     map[string]any `json:"value,omitempty"`
 }
 
 // StatusMessage contains fusion status information
 type StatusMessage struct {
 	VIP string `json:"vip"`
-}
-
-type ControllerTCPMessage struct {
-	Action  string          `json:"action"`
-	Payload json.RawMessage `json:"payload"`
-}
-
-type ControllerIdentifyResponse struct {
-	ID              string `json:"id"`
-	DeviceType      string `json:"deviceType"`
-	FirmwareVersion string `json:"firmwareVersion"`
-}
-
-type ControllerWinkResponse struct {
-	Status string `json:"status"`
-}
-
-// WebSocketRequest represents an incoming WebSocket request message
-type WebSocketRequest struct {
-	ID      string          `json:"id"`             // Unique request ID for response correlation
-	Version int             `json:"version"`        // Protocol version (currently 1)
-	Type    string          `json:"type"`           // Message type (devices, device_by_id, etc.)
-	Data    json.RawMessage `json:"data,omitempty"` // Request payload
-}
-
-// WebSocketResponse represents an outgoing WebSocket response message
-type WebSocketResponse struct {
-	ID        *string   `json:"id"`        // Request ID for correlation (null for server push)
-	Version   int       `json:"version"`   // Protocol version
-	Type      string    `json:"type"`      // Response type
-	Code      int       `json:"code"`      // Status code
-	Status    string    `json:"status"`    // Status (success, error, event)
-	Message   string    `json:"message"`   // Human-readable message
-	Data      any       `json:"data"`      // Response payload (can be null)
-	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
-}
-
-// WebSocketConfigUpdateEvent is the payload for pushed config_update events.
-// Clients should treat "patch" mode as a partial update that must be merged
-// into their local cached state, while "snapshot" mode replaces local state.
-type WebSocketConfigUpdateEvent struct {
-	Mode    string         `json:"mode"`              // "patch" or "snapshot"
-	Updates map[string]any `json:"updates,omitempty"` // Partial observer diff for patch mode
-	State   map[string]any `json:"state,omitempty"`   // Full state for snapshot mode
-	Clear   bool           `json:"clear,omitempty"`   // Indicates a clear-all snapshot
 }
 
 // WebSocketStats represents connection and usage statistics
@@ -459,72 +286,6 @@ type SoftwareUpdateProgressResponse struct {
 	Timestamp    string `json:"timestamp"`
 	SerialNumber string `json:"serial_number,omitempty"`
 }
-
-// SoftwareUpdateUploadResponse is the JSON body returned after a successful bundle upload.
-type SoftwareUpdateUploadResponse struct {
-	Filename  string    `json:"filename"`
-	Checksum  string    `json:"checksum"`
-	SizeBytes int64     `json:"size_bytes"`
-	Uploaded  time.Time `json:"uploaded"`
-}
-
-// MeterDataSample represents a single meter measurement from the telemetry core.
-type MeterDataSample struct {
-	BlockName  string          `json:"block_name"`
-	MeterName  string          `json:"meter_name"`
-	ValueType  string          `json:"value_type"`
-	Dimensions string          `json:"dimensions"`
-	Value      json.RawMessage `json:"value"`
-}
-
-// MeterDataParameters holds the parameters section of a meter_data message.
-type MeterDataParameters struct {
-	Name   string            `json:"name"`
-	Type   string            `json:"type"`
-	Length int               `json:"length"`
-	Value  []MeterDataSample `json:"value"`
-}
-
-// MeterDataMessage is the JSON envelope published by the telemetry core over ZMQ.
-type MeterDataMessage struct {
-	MessageName string              `json:"message_name"`
-	DeviceID    string              `json:"device_id"`
-	PacketID    uint64              `json:"packet_id"`
-	Parameters  MeterDataParameters `json:"parameters"`
-}
-
-// SwUpdateInfo represents the contents of the /etc/swupdate file.
-type SwUpdateInfo struct {
-	SerialNumber          string `json:"serial_number"`
-	CurrentBundleVersion  string `json:"current_bundle_version"`
-	PreviousBundleVersion string `json:"previous_bundle_version"`
-	Mount                 string `json:"mount"`
-	PreviousMount         string `json:"previous_mount"`
-	Status                string `json:"status"`
-	CurrentState          string `json:"current_state"`
-	BootPartition         string `json:"boot_partition"`
-	PreviousBootPartition string `json:"previous_boot_partition"`
-	Error                 string `json:"error"`
-	UpdatedAt             string `json:"updated_at"`
-}
-
-// softwareUpdateErrorResponse is the JSON body returned on bundle upload errors.
-type SoftwareUpdateErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
-}
-
-// TaskPatchRequest is the HTTP request body for PATCH /tasks/{id}.
-type TaskPatchRequest struct {
-	Description *string          `json:"description,omitempty"`
-	CronExpr    *string          `json:"cron_expr,omitempty"`
-	StartAt     *time.Time       `json:"start_at,omitempty"`
-	EndAt       *time.Time       `json:"end_at,omitempty"`
-	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
-	Params      map[string]any   `json:"params,omitempty"`
-	Snapshot    *string          `json:"snapshot,omitempty"`
-}
-
 type SoftwareUpdateInfo struct {
 	BuildConfiguration struct {
 		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
@@ -533,13 +294,6 @@ type SoftwareUpdateInfo struct {
 		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
 		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
-}
-
-// PAVA Messages
-
-type TriggerMessageRequest struct {
-	Priority int      `json:"priority,omitempty"`
-	Zones    []string `json:"zones,omitempty"`
 }
 
 type MessageTrigger struct {
