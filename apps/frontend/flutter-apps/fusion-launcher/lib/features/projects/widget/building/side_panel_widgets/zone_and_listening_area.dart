@@ -385,115 +385,115 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       Expanded(child: _buildZoneTitle(zone, isSelected)),
                       Builder(
                         builder: (BuildContext context) {
-                          if (serviceLocator<ProjectViewModel>().currentSelectedZoneId != null) {
-                            return const SizedBox(height: 24);
-                          } else {
-                            return SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: PopupMenuButton<String>(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
-                                  side: BorderSide(color: context.colorScheme.elevation4),
-                                ),
-                                padding: EdgeInsets.zero,
-                                color: context.colorScheme.elevation1,
-                                menuPadding: EdgeInsets.zero,
-                                shadowColor: Colors.transparent,
-                                iconSize: 12,
-                                position: PopupMenuPosition.under,
-                                icon: SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_actions_$index"),
-                                  child: const Icon(Icons.more_vert, size: 12, color: Colors.grey),
-                                ),
-                                tooltip: 'Zone actions',
-                                onSelected: (String value) {
-                                  switch (value) {
-                                    case 'add_subzone':
-                                      _addSubZoneToZone(zone.id);
-                                      break;
-                                    case 'add_listening_area':
-                                      // serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
-                                      break;
-                                    case 'delete':
-                                      _showDeleteConfirmation(zone);
-                                      break;
-                                  }
-                                },
-                                itemBuilder: (BuildContext context) {
-                                  final List<PopupMenuEntry<String>> items = <PopupMenuEntry<String>>[
-                                    PopupMenuItem<String>(
-                                      value: 'add_subzone',
-                                      child: SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(
-                                          SemanticTypes.container,
-                                          "add_subzone_menu_item_$index",
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Icon(
-                                              Icons.crop_free_sharp,
-                                              size: 16,
+                          // if (serviceLocator<ProjectViewModel>().currentSelectedZoneId != null) {
+                          //   return const SizedBox(height: 24);
+                          // } else {
+                          return SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: PopupMenuButton<String>(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                                side: BorderSide(color: context.colorScheme.elevation4),
+                              ),
+                              padding: EdgeInsets.zero,
+                              color: context.colorScheme.elevation1,
+                              menuPadding: EdgeInsets.zero,
+                              shadowColor: Colors.transparent,
+                              iconSize: 12,
+                              position: PopupMenuPosition.under,
+                              icon: SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_actions_$index"),
+                                child: const Icon(Icons.more_vert, size: 12, color: Colors.grey),
+                              ),
+                              tooltip: 'Zone actions',
+                              onSelected: (String value) {
+                                switch (value) {
+                                  case 'add_subzone':
+                                    _addSubZoneToZone(zone.id);
+                                    break;
+                                  case 'add_listening_area':
+                                    // serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
+                                    break;
+                                  case 'delete':
+                                    _showDeleteConfirmation(zone);
+                                    break;
+                                }
+                              },
+                              itemBuilder: (BuildContext context) {
+                                final List<PopupMenuEntry<String>> items = <PopupMenuEntry<String>>[
+                                  PopupMenuItem<String>(
+                                    value: 'add_subzone',
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(
+                                        SemanticTypes.container,
+                                        "add_subzone_menu_item_$index",
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Icon(
+                                            Icons.crop_free_sharp,
+                                            size: 16,
+                                            color: context.colorScheme.textPrimary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: 'Add Subzone',
+                                            style: context.textTheme.bodySmall?.copyWith(
                                               color: context.colorScheme.textPrimary,
                                             ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: 'Add Subzone',
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.textPrimary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ];
+                                  ),
+                                ];
 
-                                  final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
-                                  if (subZones.isEmpty) {
-                                    items.add(
-                                      PopupMenuItem<String>(
-                                        enabled: false,
-                                        padding: const EdgeInsets.only(),
-                                        child: SemanticHelper.container(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
-                                          child: SelectListeningAreaPopupButton(
-                                            zoneId: zone.id,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  items.add(const PopupMenuDivider(height: 0));
+                                final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
+                                if (subZones.isEmpty) {
                                   items.add(
                                     PopupMenuItem<String>(
-                                      value: 'delete',
+                                      enabled: false,
+                                      padding: const EdgeInsets.only(),
                                       child: SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "delete_zone_menu_item_$index"),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            const Icon(
-                                              LucideIcons.trash200,
-                                              size: 16,
-                                              color: Colors.red,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: 'Delete Zone',
-                                              style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                            ),
-                                          ],
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
+                                        child: SelectListeningAreaPopupButton(
+                                          zoneId: zone.id,
                                         ),
                                       ),
                                     ),
                                   );
-                                  return items;
-                                },
-                              ),
-                            );
-                          }
+                                }
+                                items.add(const PopupMenuDivider(height: 0));
+                                items.add(
+                                  PopupMenuItem<String>(
+                                    value: 'delete',
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "delete_zone_menu_item_$index"),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          const Icon(
+                                            LucideIcons.trash200,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: 'Delete Zone',
+                                            style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                                return items;
+                              },
+                            ),
+                          );
+                          // }
                         },
                       ),
                     ],
@@ -512,10 +512,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_color_selector"),
       child: ColorSelector(
         enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-        selectedColor: hexToColor(zone.zoneColor),
-        availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
-        onColorChanged: (Color color) {
-          serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: colorToHex(color)));
+        selectedColor: zone.zoneColor,
+        availableColors: Zone.zoneColors,
+        onColorChanged: (String color) {
+          serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: color));
         },
         width: 18,
         height: 18,
@@ -1234,205 +1234,207 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-              // Subzone Header with Speaker DragTarget
-              DragTarget<Speaker>(
-                onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
-                  // Check if speaker can be added to this subzone
-                  final String? speakerSubZoneId = _getSubZoneIdForSpeaker(details.data);
+                // Subzone Header with Speaker DragTarget
+                DragTarget<Speaker>(
+                  onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+                    // Check if speaker can be added to this subzone
+                    final String? speakerSubZoneId = _getSubZoneIdForSpeaker(details.data);
 
-                  // Speaker can be added to subzone circuit if it's in the same subzone
-                  return speakerSubZoneId == subZone.id;
-                },
-                onAcceptWithDetails: (DragTargetDetails<Speaker> details) {
-                  // Remove speaker from existing circuit if it's in one
-                  final CircuitModel? existingCircuit = _findCircuitForSpeaker(details.data);
-                  if (existingCircuit != null) {
-                    _removeSpeakerFromCircuit(details.data, existingCircuit);
-                  }
+                    // Speaker can be added to subzone circuit if it's in the same subzone
+                    return speakerSubZoneId == subZone.id;
+                  },
+                  onAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+                    // Remove speaker from existing circuit if it's in one
+                    final CircuitModel? existingCircuit = _findCircuitForSpeaker(details.data);
+                    if (existingCircuit != null) {
+                      _removeSpeakerFromCircuit(details.data, existingCircuit);
+                    }
 
-                  // Get the parent zone for this subzone
-                  final String? parentZoneId = _getParentZoneIdForSubZone(subZone.id);
-                  if (parentZoneId != null) {
-                    _createNewCircuitWithSpeaker(
-                      details.data,
-                      parentZoneId,
-                      subZone.id,
-                    );
-                  }
-                },
-                builder: (
-                  BuildContext context,
-                  List<Speaker?> candidateSpeakers,
-                  List<dynamic> rejectedSpeakers,
-                ) {
-                  final bool hasIncomingSpeaker = candidateSpeakers.isNotEmpty && candidateSpeakers.first != null;
+                    // Get the parent zone for this subzone
+                    final String? parentZoneId = _getParentZoneIdForSubZone(subZone.id);
+                    if (parentZoneId != null) {
+                      _createNewCircuitWithSpeaker(
+                        details.data,
+                        parentZoneId,
+                        subZone.id,
+                      );
+                    }
+                  },
+                  builder: (
+                    BuildContext context,
+                    List<Speaker?> candidateSpeakers,
+                    List<dynamic> rejectedSpeakers,
+                  ) {
+                    final bool hasIncomingSpeaker = candidateSpeakers.isNotEmpty && candidateSpeakers.first != null;
 
-                  bool canAcceptSpeaker = false;
-                  if (hasIncomingSpeaker && candidateSpeakers.first != null) {
-                    final Speaker candidateSpeaker = candidateSpeakers.first!;
-                    final String? speakerSubZoneId = _getSubZoneIdForSpeaker(candidateSpeaker);
-                    canAcceptSpeaker = speakerSubZoneId == subZone.id;
-                  }
+                    bool canAcceptSpeaker = false;
+                    if (hasIncomingSpeaker && candidateSpeakers.first != null) {
+                      final Speaker candidateSpeaker = candidateSpeakers.first!;
+                      final String? speakerSubZoneId = _getSubZoneIdForSpeaker(candidateSpeaker);
+                      canAcceptSpeaker = speakerSubZoneId == subZone.id;
+                    }
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color:
-                          hasIncomingSpeaker ? (canAcceptSpeaker ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)) : Colors.transparent,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+                    return Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
+                        color:
+                            hasIncomingSpeaker
+                                ? (canAcceptSpeaker ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
+                                : Colors.transparent,
                       ),
-                      child: InkWell(
-                        onTap: () {
-                          serviceLocator<ProjectViewModel>().selectSubZone(subZone.id);
-                        },
-                        child: Row(
-                          children: <Widget>[
-                            // Expand/Collapse icon
-                            InkWell(
-                              onTap: () => _toggleSubZoneExpansion(subZone.id),
-                              child: Icon(
-                                isExpanded ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            // Subzone icon
-                            // Icon(
-                            //   Icons.crop_free_sharp,
-                            //   size: 12,
-                            //   color: zone.color,
-                            // ),
-                            Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.elevation2,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: context.colorScheme.primaryWhite),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: _buildSubZoneTitle(subZone, false),
-                            ),
-                            SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: PopupMenuButton<String>(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    FusionSizes.borderRadius12,
-                                  ),
-                                  side: BorderSide(
-                                    color: context.colorScheme.elevation4,
-                                  ),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+                        decoration: BoxDecoration(
+                          color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            serviceLocator<ProjectViewModel>().selectSubZone(subZone.id);
+                          },
+                          child: Row(
+                            children: <Widget>[
+                              // Expand/Collapse icon
+                              InkWell(
+                                onTap: () => _toggleSubZoneExpansion(subZone.id),
+                                child: Icon(
+                                  isExpanded ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
+                                  size: 16,
                                 ),
-                                padding: EdgeInsets.zero,
-                                color: context.colorScheme.elevation1,
-                                menuPadding: EdgeInsets.zero,
-                                shadowColor: Colors.transparent,
-                                iconSize: 12,
-                                position: PopupMenuPosition.under,
-                                icon: SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(
-                                    SemanticTypes.button,
-                                    "subzone_actions_$index",
-                                  ),
-                                  child: const Icon(
-                                    Icons.more_vert,
-                                    size: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                tooltip: 'Subzone actions',
-                                onSelected: (String value) {
-                                  switch (value) {
-                                    case 'select_listening_areas_subzone':
-                                      serviceLocator<ProjectViewModel>().enterSubZoneSelectionMode(subZone);
-                                      break;
-                                    case 'delete':
-                                      _showDeleteSubZoneConfirmation(subZone);
-                                      break;
-                                  }
-                                },
-                                itemBuilder:
-                                    (BuildContext context) => <PopupMenuEntry<String>>[
-                                      PopupMenuItem<String>(
-                                        enabled: false,
-                                        child: SelectListeningAreaPopupButton(
-                                          zoneId: zone.id,
-                                          subZoneId: subZone.id,
-                                        ),
-                                      ),
-                                      const PopupMenuDivider(height: 0),
-                                      PopupMenuItem<String>(
-                                        value: 'delete',
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            const Icon(
-                                              LucideIcons.trash200,
-                                              size: 16,
-                                              color: Colors.red,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            FusionAppText(
-                                              text: 'Delete Subzone',
-                                              style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              // Subzone icon
+                              // Icon(
+                              //   Icons.crop_free_sharp,
+                              //   size: 12,
+                              //   color: zone.color,
+                              // ),
+                              Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation2,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: context.colorScheme.primaryWhite),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _buildSubZoneTitle(subZone, false),
+                              ),
+                              SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: PopupMenuButton<String>(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      FusionSizes.borderRadius12,
+                                    ),
+                                    side: BorderSide(
+                                      color: context.colorScheme.elevation4,
+                                    ),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  color: context.colorScheme.elevation1,
+                                  menuPadding: EdgeInsets.zero,
+                                  shadowColor: Colors.transparent,
+                                  iconSize: 12,
+                                  position: PopupMenuPosition.under,
+                                  icon: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.button,
+                                      "subzone_actions_$index",
+                                    ),
+                                    child: const Icon(
+                                      Icons.more_vert,
+                                      size: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  tooltip: 'Subzone actions',
+                                  onSelected: (String value) {
+                                    switch (value) {
+                                      case 'select_listening_areas_subzone':
+                                        serviceLocator<ProjectViewModel>().enterSubZoneSelectionMode(subZone);
+                                        break;
+                                      case 'delete':
+                                        _showDeleteSubZoneConfirmation(subZone);
+                                        break;
+                                    }
+                                  },
+                                  itemBuilder:
+                                      (BuildContext context) => <PopupMenuEntry<String>>[
+                                        PopupMenuItem<String>(
+                                          enabled: false,
+                                          child: SelectListeningAreaPopupButton(
+                                            zoneId: zone.id,
+                                            subZoneId: subZone.id,
+                                          ),
+                                        ),
+                                        const PopupMenuDivider(height: 0),
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              const Icon(
+                                                LucideIcons.trash200,
+                                                size: 16,
+                                                color: Colors.red,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              FusionAppText(
+                                                text: 'Delete Subzone',
+                                                style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-
-              // Expandable Content Section
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 250),
-                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                firstChild: Container(
-                  margin: EdgeInsets.symmetric(vertical: context.smallGap),
-                  decoration:
-                      isSelected
-                          ? BoxDecoration(
-                            borderRadius: BorderRadius.circular(context.smallRadius),
-                            border: Border.all(color: context.colorScheme.GreenThemeDisabled),
-                          )
-                          : null,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      // Show individual circuits in subzones
-                      ..._buildSubZoneCircuits(subZone),
-
-                      Container(
-                        margin: const EdgeInsets.only(
-                          left: 24,
-                          top: 1,
-                          right: 12,
-                          bottom: 1,
-                        ),
-                        child: _buildListeningAreaSectionForZone(
-                          subZoneId: subZone.id,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-                secondChild: const SizedBox.shrink(),
-              ),
+
+                // Expandable Content Section
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 250),
+                  crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                  firstChild: Container(
+                    margin: EdgeInsets.symmetric(vertical: context.smallGap),
+                    decoration:
+                        isSelected
+                            ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(context.smallRadius),
+                              border: Border.all(color: context.colorScheme.GreenThemeDisabled),
+                            )
+                            : null,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        // Show individual circuits in subzones
+                        ..._buildSubZoneCircuits(subZone),
+
+                        Container(
+                          margin: const EdgeInsets.only(
+                            left: 24,
+                            top: 1,
+                            right: 12,
+                            bottom: 1,
+                          ),
+                          child: _buildListeningAreaSectionForZone(
+                            subZoneId: subZone.id,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  secondChild: const SizedBox.shrink(),
+                ),
               ],
             ),
           ),

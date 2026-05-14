@@ -1,6 +1,8 @@
 part of 'add_output_device_vm.dart';
 
 class AddOutputDeviceVmState extends Equatable {
+  final String? zoneId;
+
   final String? outputDeviceName;
   final OutputDeviceType? outputType;
   final AudioChannel? audioChannel;
@@ -15,6 +17,7 @@ class AddOutputDeviceVmState extends Equatable {
   final int? selectedRightChannel;
 
   const AddOutputDeviceVmState({
+    this.zoneId,
     this.outputDeviceName,
     this.outputType,
     this.audioChannel,
@@ -29,6 +32,7 @@ class AddOutputDeviceVmState extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
+    zoneId,
     outputDeviceName,
     outputType,
     audioChannel,
@@ -40,6 +44,7 @@ class AddOutputDeviceVmState extends Equatable {
   ];
 
   AddOutputDeviceVmState copyWith({
+    ValueGetter<String?>? zoneId,
     ValueGetter<String?>? outputDeviceName,
     ValueGetter<OutputDeviceType?>? outputType,
     ValueGetter<AudioChannel?>? audioChannel,
@@ -50,6 +55,7 @@ class AddOutputDeviceVmState extends Equatable {
     ValueGetter<int?>? selectedRightChannel,
   }) {
     return AddOutputDeviceVmState(
+      zoneId: zoneId != null ? zoneId() : this.zoneId,
       outputDeviceName: outputDeviceName != null ? outputDeviceName() : this.outputDeviceName,
       outputType: outputType != null ? outputType() : this.outputType,
       audioChannel: audioChannel != null ? audioChannel() : this.audioChannel,
@@ -60,32 +66,4 @@ class AddOutputDeviceVmState extends Equatable {
       selectedRightChannel: selectedRightChannel != null ? selectedRightChannel() : this.selectedRightChannel,
     );
   }
-}
-
-enum OutputDeviceConnectionType {
-  analogOutput,
-  digitalOutput,
-  aes67,
-  bluetooth;
-
-  String get displayName => switch (this) {
-    OutputDeviceConnectionType.analogOutput => 'Analog Output',
-    OutputDeviceConnectionType.digitalOutput => 'Digital Output',
-    OutputDeviceConnectionType.aes67 => 'AES67',
-    OutputDeviceConnectionType.bluetooth => 'Bluetooth',
-  };
-}
-
-enum OutputDeviceType {
-  mediaRecorder,
-  amplifier,
-  speaker,
-  mixer;
-
-  String get displayName => switch (this) {
-    OutputDeviceType.mediaRecorder => 'Media Recorder',
-    OutputDeviceType.amplifier => 'Amplifier',
-    OutputDeviceType.speaker => 'Speaker',
-    OutputDeviceType.mixer => 'Mixer',
-  };
 }

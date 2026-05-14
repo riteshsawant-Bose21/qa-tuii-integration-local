@@ -44,7 +44,7 @@ class ListeningAreaProperties extends StatelessWidget {
 
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        ceilingHeightController.text = selectedListeningArea.ceilingHeight;
+        ceilingHeightController.text = selectedListeningArea.ceilingHeight.toString();
         listeningAreaController.text = selectedListeningArea.name;
 
         // Determine display value and if custom is selected based on listeningHeight double value

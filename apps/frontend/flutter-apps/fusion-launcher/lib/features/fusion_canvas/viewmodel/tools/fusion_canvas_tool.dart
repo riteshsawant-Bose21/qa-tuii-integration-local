@@ -7,16 +7,19 @@ import '../../state/fusion_canvas_input_state.dart';
 import '../../state/tools/drag_tool_state.dart';
 import '../../state/tools/measure_tool_state.dart';
 import '../../state/tools/pen_tool_state.dart';
+import '../../state/tools/rectangle_tool_state.dart';
 import '../../state/tools/select_tool_state.dart';
 import '../tool_helper/connection_tool_helper.dart';
 import '../tool_helper/drag_tool_helper.dart';
 import '../tool_helper/measure_tool_helper.dart';
 import '../tool_helper/pen_tool_helper.dart';
+import '../tool_helper/rectangle_tool_helper.dart';
 import '../tool_helper/selection_tool_helper.dart';
 
 class FusionCanvasTool<T extends FusionToolState> {
   static const FusionCanvasTool<MeasureToolState> measureTool = FusionCanvasTool<MeasureToolState>(transformer: MeasureToolHelper());
   static const FusionCanvasTool<PenToolState> penTool = FusionCanvasTool<PenToolState>(transformer: PenToolHelper());
+  static const FusionCanvasTool<RectangleToolState> rectangleTool = FusionCanvasTool<RectangleToolState>(transformer: RectangleToolHelper());
   static const FusionCanvasTool<DragToolState> dragTool = FusionCanvasTool<DragToolState>(transformer: DragToolHelper());
   static const FusionCanvasTool<SelectToolState> singleSelectionTool = FusionCanvasTool<SelectToolState>(
     transformer: SelectionToolHelper(
