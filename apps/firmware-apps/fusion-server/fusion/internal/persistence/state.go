@@ -801,6 +801,7 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	defer sm.Unlock()
 
 	sm.state.State = deepCopyState(state)
+	sm.version.Counter++
 	sm.markChecksumDirtyUnsafe()
 }
 
