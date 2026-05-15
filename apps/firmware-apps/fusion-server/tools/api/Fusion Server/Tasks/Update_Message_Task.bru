@@ -1,7 +1,7 @@
 meta {
-  name: Update Activate Snapshot Task
+  name: Update Message Task
   type: http
-  seq: 8
+  seq: 12
 }
 
 patch {
@@ -11,7 +11,7 @@ patch {
 }
 
 params:path {
-  id: Play
+  id: message-task-001
 }
 
 headers {
@@ -20,6 +20,8 @@ headers {
 
 body:json {
   {
-    "cron_expr": "@every 1m"
+    "description": "Play message at lower priority",
+    "priority": 5,
+    "zones": "zone-a"
   }
 }

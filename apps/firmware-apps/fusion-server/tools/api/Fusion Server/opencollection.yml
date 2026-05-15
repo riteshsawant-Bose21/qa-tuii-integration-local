@@ -71,8 +71,54 @@ docs:
     {
       "id": "task_id",
       "cron_expr": "*/5 * * * *",
-      "description": "Task description"
+      "description": "Task description",
+      "snapshot_id": "default"
     }
+    ```
+
+    Use one of the typed protobuf JSON bodies:
+    - `snapshot_id` for snapshot tasks
+    - `message_id` with `priority` and `zones` for message tasks
+    - `snapshot_definition_id` for scene snapshot tasks
+    - `set_id` and `scene_id` for scene activate tasks
+
+    ### `PATCH /tasks/{id}`
+    Update one scheduled task using the matching typed protobuf JSON body for that task kind.
+
+    ### `GET /tasks/history`
+    Returns typed execution history for scheduled tasks.
+
+    ---
+
+    ## 🕰️ Time Machine
+
+    ### `GET /time-machine`
+    Lists stored time-machine snapshots.
+
+    ### `GET /time-machine/meta/active`
+    Returns the active time-machine snapshot name.
+
+    ### `GET /time-machine/{name}`
+    Returns a typed protobuf snapshot payload:
+    ```json
+    {
+      "state": {
+        "some.key": 123
+      }
+    }
+    ```
+
+    ### `POST /time-machine/{name}`
+    Creates a time-machine snapshot from the current active state.
+
+    ### `POST /time-machine/activate/{name}`
+    Activates a stored time-machine snapshot.
+
+    ### `POST /time-machine/update/{name}`
+    Overwrites a stored time-machine snapshot with the current active state.
+
+    ### `DELETE /time-machine/{name}`
+    Deletes a stored time-machine snapshot.
   type: text/markdown
 bundled: false
 extensions:

@@ -1,0 +1,26 @@
+meta {
+  name: Update Scene Snapshot Task
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{api_url}}/tasks/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: scene-snapshot-task-001
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "description": "Activate alternate scene snapshot definition",
+    "snapshot_definition_id": "snapshot-test-02"
+  }
+}

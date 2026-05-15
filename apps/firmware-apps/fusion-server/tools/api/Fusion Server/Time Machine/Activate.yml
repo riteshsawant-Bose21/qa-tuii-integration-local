@@ -1,0 +1,20 @@
+info:
+  name: Activate
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{api_url}}/time-machine/activate/:name"
+  params:
+    - name: name
+      value: tm-test-01
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Activates a stored time-machine snapshot.

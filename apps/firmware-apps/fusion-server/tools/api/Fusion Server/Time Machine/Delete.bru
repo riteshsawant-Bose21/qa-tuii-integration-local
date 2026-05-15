@@ -1,0 +1,15 @@
+meta {
+  name: Delete
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{api_url}}/time-machine/:name
+  body: none
+  auth: none
+}
+
+params:path {
+  name: tm-test-01
+}

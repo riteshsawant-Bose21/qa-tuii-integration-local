@@ -1,0 +1,20 @@
+info:
+  name: Create
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{api_url}}/time-machine/:name"
+  params:
+    - name: name
+      value: tm-test-01
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a time-machine snapshot from the current active state.

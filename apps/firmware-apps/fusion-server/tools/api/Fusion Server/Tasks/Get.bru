@@ -6,7 +6,7 @@ meta {
 
 get {
   url: {{api_url}}/tasks/:id
-  body: json
+  body: none
   auth: none
 }
 
@@ -16,11 +16,4 @@ params:path {
 
 headers {
   Content-Type: application/json
-}
-
-body:json {
-  {
-    "cron_expr": "*/5 * * * *",
-    "description": "updated"
-  }
 }
