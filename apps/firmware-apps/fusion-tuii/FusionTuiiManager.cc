@@ -36,6 +36,8 @@ static std::unique_ptr<UDPValueMonitor> g_udpObserver;
 static std::shared_ptr<std::map<std::string, int>> g_objectTracker =
     std::make_shared<std::map<std::string, int>>();
 
+static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = NULL;
+#if 0
 static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = R"({
     "touchui_zone_config": {
         "zones": [
@@ -113,6 +115,7 @@ static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = R"({
         ]
     }
 })";
+#endif
 
 static const char *TUII_DEVICE_CONFIG_JSON_STRING_FOR_DEV = R"({
     "touchui_device_config": {
@@ -520,7 +523,7 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
         return;
     }
 
-    const TuiiZoneConfig &zone = zoneSnapshot[static_cast<std::size_t>(zoneIndex)];
+    TuiiZoneConfig &zone = zoneSnapshot[static_cast<std::size_t>(zoneIndex)];
 
     FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
     if (!bridge.isInitialized())
@@ -554,6 +557,9 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
         const double dBValue = static_cast<double>(zone.gain.minValue)
                                + (norm/100.0) * (static_cast<double>(zone.gain.maxValue)
                                          - static_cast<double>(zone.gain.minValue));
+        // Update local gain Value
+        zone.gain.gainValue = dBValue;
+
         bridge.sendGainToFusion(zone.gain.gainID, dBValue);
     }
     else if (action == "setMute")
@@ -570,6 +576,10 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
+
+        // Update local mute state
+        zone.gain.muteState = payload["state"].asBool();
+
         bridge.sendMuteToFusion(zone.gain.gainID, payload["state"].asBool());
     }
     else
@@ -595,6 +605,9 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
+
+        // Update local source index
+        zone.sourceIndex =  sourceIndex;
         bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex+1));
     }
 }
@@ -862,18 +875,72 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
         if (zoneEndResult == ZoneEndWaitResult::ack)
         {
             spdlog::info("[Protocol] zoneEnd acknowledged");
-            return true;
+            //return true;
         }
-
-        if (zoneEndResult == ZoneEndWaitResult::nack)
+        else if (zoneEndResult == ZoneEndWaitResult::nack)
         {
             spdlog::warn("[Protocol] zoneEndNack received; restarting initialization");
+            return false;
         }
         else
         {
             spdlog::warn("[Protocol] zoneEnd timeout; restarting initialization");
+            return false;
         }
-        return false;
+
+        for (const auto &zoneConfig : zoneSnapshot) ///SDAY
+        {
+            int updZoneIdx = 0;
+
+            spdlog::info("Starting Parameter update {} Def:{}, Gain:{}",zoneConfig.gain.gainID, zoneConfig.gain.defaultGainValue,  zoneConfig.gain.gainValue);
+            if (zoneConfig.gain.defaultGainValue != zoneConfig.gain.gainValue)
+            {
+                double norm = 0.0;
+                const double denom = static_cast<double>(zoneConfig.gain.maxValue) - static_cast<double>(zoneConfig.gain.minValue);
+
+                spdlog::info("Starting Gain update");
+
+                if (std::abs(denom) > 1e-9)
+                {
+                    norm = (zoneConfig.gain.gainValue - static_cast<double>(zoneConfig.gain.minValue)) * 100.0 / denom;
+                }
+                Json::Value payload(Json::objectValue);
+                payload["db"] = zoneConfig.gain.gainValue;
+                payload["norm"] = norm;
+                if (!SendRealtimeCommand("setGain", payload, updZoneIdx))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (zoneConfig.gain.defaultMuteValue != zoneConfig.gain.muteState)
+            {
+                Json::Value payload(Json::objectValue);
+
+                spdlog::info("Starting Mute update");
+
+                payload["state"] = zoneConfig.gain.muteState;
+
+                if (!SendRealtimeCommand("setMute", payload, updZoneIdx))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (zoneConfig.sourceIndex != 0)
+            {
+                Json::Value payload(Json::objectValue);
+                payload["index"] = zoneConfig.sourceIndex;
+
+                if (!SendRealtimeCommand("setSource", payload, zoneIndex))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+
+            updZoneIdx++;
+        }
     }
 
     return true;
@@ -1120,6 +1187,7 @@ void ProtocolWorkerLoop()
                 spdlog::warn("[Protocol] readyAck timeout; retrying ready");
                 continue;
             }
+            g_readyAckReceived = false;  // Reset readyAck flag.
 
             if (!PerformInitializationCycle(deviceSnapshot, zoneSnapshot))
             {
@@ -1145,6 +1213,14 @@ void ProtocolWorkerLoop()
                     {
                         break;
                     }
+
+                    // Check if display device was reset.
+                    if (g_readyAckReceived)
+                    {
+                        g_readyAckReceived = false;  // Reset readyAck flag.
+                        break;
+                    }
+
                     if (g_pendingDeviceConfig || g_pendingZoneConfig || g_pendingAudioSettings)
                     {
                         if (g_pendingDeviceConfig || g_pendingZoneConfig)
@@ -1498,6 +1574,17 @@ void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings)
         return;
     }
 
+    std::map<std::string, int> trackerSnapshot;
+    std::vector<TuiiZoneConfig> *zoneSnapshot;
+    {
+        std::lock_guard<std::mutex> lock(g_protocolMutex);
+        if (g_objectTracker)
+        {
+            trackerSnapshot = *g_objectTracker;
+        }
+        zoneSnapshot = &g_latestZoneConfigs;
+    }
+
     for (const auto &settingID : newSettings.getMemberNames())
     {
         const Json::Value &settings = newSettings[settingID];
@@ -1509,17 +1596,48 @@ void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings)
 
         if (settings.isMember("gain") && settings["gain"].isNumeric())
         {
+            if (trackerSnapshot.find(settingID) == trackerSnapshot.end())
+            {
+                spdlog::warn("[HandleTUIIAudioSettingsUpdate] setGain gainID '{}' not found in object tracker", settingID);
+                return;
+            }
+            int zoneIdx = trackerSnapshot[settingID];
+
+            std::lock_guard<std::mutex> lock(g_protocolMutex);
+            (*zoneSnapshot)[zoneIdx].gain.gainValue = settings["gain"].asDouble();
+
             bridge.handleFusionGainUpdate(settingID, settings["gain"].asDouble());
         }
 
         if (settings.isMember("mute") && settings["mute"].isBool())
         {
+            if (trackerSnapshot.find(settingID) == trackerSnapshot.end())
+            {
+                spdlog::warn("[HandleTUIIAudioSettingsUpdate] setGain gainID '{}' not found in object tracker", settingID);
+                return;
+            }
+            int zoneIdx = trackerSnapshot[settingID];
+
+            std::lock_guard<std::mutex> lock(g_protocolMutex);
+            (*zoneSnapshot)[zoneIdx].gain.muteState = settings["mute"].asBool();
+
             bridge.handleFusionMuteUpdate(settingID, settings["mute"].asBool());
         }
 
         if (settings.isMember("input") && settings["input"].isInt())
         {
             uint16_t sourceIndex = static_cast<uint16_t>(settings["input"].asInt());
+
+            if (trackerSnapshot.find(settingID) == trackerSnapshot.end())
+            {
+                spdlog::warn("[HandleTUIIAudioSettingsUpdate] setGain gainID '{}' not found in object tracker", settingID);
+                return;
+            }
+            int zoneIdx = trackerSnapshot[settingID];
+
+            std::lock_guard<std::mutex> lock(g_protocolMutex);
+            (*zoneSnapshot)[zoneIdx].sourceIndex = (sourceIndex - 1);
+
             bridge.handleFusionSourceUpdate(settingID, sourceIndex);
         }
     }
