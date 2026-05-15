@@ -135,6 +135,11 @@ func TestGetDevicesInfo(t *testing.T) {
 	for _, device := range list.Devices {
 		assert.NotEmpty(t, device.GetId(), "device id should be populated")
 		assert.NotEmpty(t, device.GetAddress(), "device address should be populated")
+		assert.NotEmpty(t, device.GetSoftwareUpdateVersion(), "software_update_version should be populated")
+		assert.NotEmpty(t, device.GetFusionMonorepoBranch(), "fusion_monorepo_branch should be populated")
+		assert.NotEmpty(t, device.GetFusionMonorepoCommitHash(), "fusion_monorepo_commit_hash should be populated")
+		assert.NotEmpty(t, device.GetJenkinsBuildNumber(), "jenkins_build_number should be populated")
+		assert.Greater(t, device.GetVrrpPriority(), int32(0), "vrrp_priority should be a positive value")
 	}
 }
 
