@@ -894,13 +894,12 @@ func (m *VIPMonitor) updateVIP(vipValue string) error {
 // node missed the original Set VIP fan-out (e.g. during bootstrap when
 // memberlist visibility was incomplete).
 func (m *VIPMonitor) selfHealVIPFromPeer(peerIP string) {
+	logger := logging.GetLogger()
 	defer func() {
 		m.selfHealMu.Lock()
 		m.selfHealActive = false
 		m.selfHealMu.Unlock()
 	}()
-
-	logger := logging.GetLogger()
 
 	// Fetch VIP config from the peer's admin endpoint
 	urlStr := fmt.Sprintf("%s%s", api.Protocol+net.JoinHostPort(peerIP, api.AdminPort), routes.DevicesVIPEndpoint)
@@ -1641,14 +1640,22 @@ func (m *VIPMonitor) HandleGetVIPStatus(w http.ResponseWriter, r *http.Request) 
 	status := m.getLatestVIPOperation()
 	if status == nil {
 		status = &VIPOperationStatus{
-			DesiredVIP:     m.GetCurrentVIP(),
-			StatusHost:     requestHostName(r.Host),
-			ObservedVIP:    m.GetCurrentVIP(),
-			ObservedHolder: m.GetVIPHolder(),
-			Phase:          VIPOperationPhaseIdle,
-			NodeResults:    map[string]VIPNodeResult{},
+			Phase:       VIPOperationPhaseIdle,
+			NodeResults: map[string]VIPNodeResult{},
 		}
 	}
+
+	statusHost := requestHostName(r.Host)
+	currentVIP := m.GetCurrentVIP()
+	desiredVIP := currentVIP
+	if configuredVIP, err := m.getConfiguredVIP(); err == nil && configuredVIP != "" {
+		desiredVIP = vip.Canonicalize(configuredVIP)
+	}
+
+	status.StatusHost = statusHost
+	status.DesiredVIP = desiredVIP
+	status.ObservedVIP = currentVIP
+	status.ObservedHolder = m.GetVIPHolder()
 
 	_ = writeProtoJSON(w, vipOperationStatusToProto(status))
 }

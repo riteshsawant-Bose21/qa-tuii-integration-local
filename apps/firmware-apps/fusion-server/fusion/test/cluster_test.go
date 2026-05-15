@@ -37,7 +37,32 @@ func helperAdminURL(path string) string {
 
 // TestUpdateDeviceInfoLocal exercises PATCH /device (UpdateDeviceInfoLocal).
 func TestUpdateDeviceInfoLocal(t *testing.T) {
+	resp, err := http.Get(helperAdminURL(routes.DeviceEndpoint))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected 200 OK on initial GET /device")
 
+	var original model.DeviceInfo
+	require.NoError(t, decodeProtoBody(resp.Body, &original), "Expected valid JSON for original device info")
+
+	defer func() {
+		restore := &model.DevicePatch{
+			Id:       ptrStringValue(original.GetId()),
+			Location: ptrStringValue(original.GetLocation()),
+			Name:     ptrStringValue(original.GetName()),
+		}
+		body, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(restore)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", api.JsonMIMEType)
+
+		restoreResp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer restoreResp.Body.Close()
+		assert.Equal(t, http.StatusNoContent, restoreResp.StatusCode, "restore PATCH /device should succeed")
+	}()
 	base := &model.DevicePatch{
 		Id:       ptrStringValue("test-device"),
 		Location: ptrStringValue("RoomB"),
@@ -49,7 +74,7 @@ func TestUpdateDeviceInfoLocal(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPatch, helperAdminURL(routes.DeviceEndpoint), bytes.NewReader(bytesBase))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", api.JsonMIMEType)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
 	defer resp.Body.Close()
@@ -163,15 +188,11 @@ func TestUpdateDeviceInfoSuccess(t *testing.T) {
 // TestUpdateDeviceInfoRejectsDuplicateID verifies that PATCH /devices/{id} returns
 // an error when attempting to set a device ID that is already in use by another node.
 func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
-	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
-		t.Skip("requires at least two cluster nodes")
-	}
+	list := getDevicesInfo(t)
+	require.GreaterOrEqual(t, len(list.Devices), 2, "requires at least two visible devices")
 
-	nodeA := clusterConfig.nodes[0]
-	nodeB := clusterConfig.nodes[1]
-
-	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+	infoA := list.Devices[0]
+	infoB := list.Devices[1]
 
 	// Attempt to set node A's device ID to the same value as node B's.
 	patch := &model.DevicePatch{Id: ptrStringValue(infoB.GetId())}
@@ -191,22 +212,26 @@ func TestUpdateDeviceInfoRejectsDuplicateID(t *testing.T) {
 		"PATCH /devices/{id} with duplicate ID should return 409 Conflict")
 
 	// Verify node A's ID was not changed.
-	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	refreshed := getDevicesInfo(t)
+	var afterA *model.DeviceInfo
+	for _, candidate := range refreshed.Devices {
+		if candidate.GetAddress() == infoA.GetAddress() {
+			afterA = candidate
+			break
+		}
+	}
+	require.NotNil(t, afterA, "node A device should still be present in GET /devices")
 	assert.Equal(t, infoA.GetId(), afterA.GetId(), "node A device ID must remain unchanged")
 }
 
 // TestUpdateDeviceInfoRejectsDuplicateName verifies that PATCH /devices/{id} returns
 // an error when attempting to set a device name that is already in use by another node.
 func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
-	if clusterConfig == nil || len(clusterConfig.nodes) < 2 {
-		t.Skip("requires at least two cluster nodes")
-	}
+	list := getDevicesInfo(t)
+	require.GreaterOrEqual(t, len(list.Devices), 2, "requires at least two visible devices")
 
-	nodeA := clusterConfig.nodes[0]
-	nodeB := clusterConfig.nodes[1]
-
-	infoA := getLocalDeviceInfoOnInstance(t, nodeA.name)
-	infoB := getLocalDeviceInfoOnInstance(t, nodeB.name)
+	infoA := list.Devices[0]
+	infoB := list.Devices[1]
 
 	// Attempt to set node A's name to the same value as node B's.
 	patch := &model.DevicePatch{Name: ptrStringValue(infoB.GetName())}
@@ -226,7 +251,15 @@ func TestUpdateDeviceInfoRejectsDuplicateName(t *testing.T) {
 		"PATCH /devices/{id} with duplicate name should return 409 Conflict")
 
 	// Verify node A's name was not changed.
-	afterA := getLocalDeviceInfoOnInstance(t, nodeA.name)
+	refreshed := getDevicesInfo(t)
+	var afterA *model.DeviceInfo
+	for _, candidate := range refreshed.Devices {
+		if candidate.GetAddress() == infoA.GetAddress() {
+			afterA = candidate
+			break
+		}
+	}
+	require.NotNil(t, afterA, "node A device should still be present in GET /devices")
 	assert.Equal(t, infoA.GetName(), afterA.GetName(), "node A device name must remain unchanged")
 }
 

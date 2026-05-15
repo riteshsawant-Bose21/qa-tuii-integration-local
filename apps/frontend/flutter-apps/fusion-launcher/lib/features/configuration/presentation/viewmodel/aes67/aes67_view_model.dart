@@ -269,4 +269,31 @@ extension Aes67ViewModel on ProjectViewModel {
       throwError("Reorder AES67 Output Streams Error: ${e.toString()}");
     }
   }
+
+  // ==================== OutputDevice ↔ Stream+Channel Mapping ====================
+
+  /// Assigns multiple stream-channel mappings to [outputDeviceId].
+  void assignStreamChannelsToOutputDevice({
+    required String outputDeviceId,
+    required List<AssignedStreamChannel> channels,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) recordSnapshot();
+      projectManager.assignStreamChannelsToOutputDevice(outputDeviceId: outputDeviceId, channels: channels);
+      if (autoSave) saveProject();
+    } catch (e) {
+      throwError('Assign Stream Channels to OutputDevice Error: ${e.toString()}');
+    }
+  }
+
+  /// Returns the assigned stream-channel mappings for a given [outputDeviceId].
+  List<AssignedStreamChannel> getStreamChannelsForOutputDevice(String outputDeviceId) {
+    try {
+      return projectManager.getStreamChannelsForOutputDevice(outputDeviceId);
+    } catch (e) {
+      throwError('Get Stream Channels for OutputDevice Error: ${e.toString()}');
+      return <AssignedStreamChannel>[];
+    }
+  }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/add_output_device_drawer/viewmodel/add_output_device_vm.dart';
-import 'package:fusion_launcher/features/create_zone_popup/view/widgets/CommonWidgets/zone_name_field_with_color.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/add_output_device/viewmodel/add_output_device_vm.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../add_source_popup/view/widgets/aes67_stream_section.dart';
@@ -9,15 +10,12 @@ import '../../add_source_popup/view/widgets/common_widgets/Fusion_radio_chip_sel
 import '../../add_source_popup/view/widgets/common_widgets/add_sources_dropdown.dart';
 import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_bordered_textfield.dart';
 import '../../create_zone_popup/view/widgets/CommonWidgets/create_zone_label_field.dart';
-import '../../create_zone_popup/view_model/create_zone_viewmodel.dart';
-import '../../create_zone_popup/view_model/create_zone_viewmodel_state.dart';
 
-class AddOutputDeviceDrawer {
-  AddOutputDeviceDrawer._();
+class AddOutputDevice {
+  AddOutputDevice._();
 
   static Future<void> show({
     required BuildContext context,
-    required CreateZoneViewModel vm,
     required String zoneColor,
     required String zoneName,
     required VoidCallback onBack,
@@ -35,7 +33,6 @@ class AddOutputDeviceDrawer {
       // header: _AddOutputDeviceHeader(onBack: onBack),
       content: MultiBlocProvider(
         providers: <BlocProvider<dynamic>>[
-          BlocProvider<CreateZoneViewModel>.value(value: vm),
           BlocProvider<AddOutputDeviceViewModel>.value(value: addOutputDeviceVm),
         ],
         child: _AddOutputDeviceContent(
@@ -55,6 +52,7 @@ class _AddOutputDeviceContent extends StatelessWidget {
     required this.zoneColor,
     required this.zoneName,
   });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -63,17 +61,7 @@ class _AddOutputDeviceContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
-            buildWhen: (CreateZoneViewModelState p, CreateZoneViewModelState c) => p.zoneName != c.zoneName || p.zoneColor != c.zoneColor,
-            builder: (BuildContext context, CreateZoneViewModelState state) {
-              return ZoneNameFieldWithColor(
-                zoneName: state.zoneName,
-                zoneColor: state.zoneColor,
-                onNameChanged: context.read<CreateZoneViewModel>().setZoneName,
-                onColorChanged: context.read<CreateZoneViewModel>().setZoneColor,
-              );
-            },
-          ),
+          _zoneSelection(context, "Zone"),
           const SizedBox(height: 20),
           _outputNameField(context, 'Output Name'),
           const SizedBox(height: 20),
@@ -86,6 +74,25 @@ class _AddOutputDeviceContent extends StatelessWidget {
           _aes67Config(context),
         ],
       ),
+    );
+  }
+
+  Widget _zoneSelection(BuildContext context, String text) {
+    return BlocBuilder<AddOutputDeviceViewModel, AddOutputDeviceVmState>(
+      builder: (BuildContext context, AddOutputDeviceVmState state) {
+        final AddOutputDeviceViewModel vm = context.read<AddOutputDeviceViewModel>();
+        final List<Zone> zones = serviceLocator<ProjectViewModel>().getAllZones();
+        final Zone? zone = serviceLocator<ProjectViewModel>().getZone(zoneId: state.zoneId ?? '');
+
+        return FusionOutlinedDropdown<Zone>(
+          value: zone,
+          label: 'Select Zone',
+          hint: 'Select Zone',
+          items: zones,
+          itemLabelBuilder: (Zone zone) => zone.name,
+          onChanged: (Zone zone) => vm.setZoneId(zone.id),
+        );
+      },
     );
   }
 
@@ -182,7 +189,7 @@ class _AddOutputDeviceContent extends StatelessWidget {
   Widget _aes67Config(BuildContext context) {
     return BlocBuilder<AddOutputDeviceViewModel, AddOutputDeviceVmState>(
       builder: (BuildContext context, AddOutputDeviceVmState state) {
-        if (state.connection != OutputDeviceConnectionType.aes67) return const SizedBox.shrink();
+        if (state.connection != OutputDeviceConnectionType.aes67Stream) return const SizedBox.shrink();
 
         final AddOutputDeviceViewModel addOutputDeviceVm = context.read<AddOutputDeviceViewModel>();
 

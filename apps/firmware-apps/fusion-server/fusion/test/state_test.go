@@ -16,6 +16,7 @@ import (
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
+	"github.com/stretchr/testify/require"
 )
 
 var stateConfig = api.AppConfig{
@@ -1018,4 +1019,61 @@ func TestPatchDiffPreservesArrayInUpdates(t *testing.T) {
 	if !reflect.DeepEqual(arr, expected) {
 		t.Errorf("Expected band_enable=%v, got %v", expected, arr)
 	}
+}
+// ---------------------------------------------------------------------------
+// CalculateDiff tests
+// ---------------------------------------------------------------------------
+
+func TestCalculateDiffPrimitives(t *testing.T) {
+	require.Nil(t, utils.CalculateDiff("hello", "hello"))
+	diff := utils.CalculateDiff("hello", "world")
+	require.NotNil(t, diff)
+	require.Equal(t, "world", diff[""])
+}
+
+func TestCalculateDiffMaps(t *testing.T) {
+	before := map[string]any{"a": float64(1), "b": float64(2), "c": float64(3)}
+	after := map[string]any{"a": float64(1), "b": float64(99), "d": float64(4)}
+
+	diff := utils.CalculateDiff(before, after)
+	require.NotNil(t, diff)
+	require.Equal(t, float64(99), diff["b"])
+	require.Equal(t, float64(4), diff["d"])
+	require.Contains(t, diff, "c")    // deleted key
+	require.NotContains(t, diff, "a") // unchanged
+}
+
+func TestCalculateDiffArraysAtomic(t *testing.T) {
+	before := []any{float64(1), float64(2)}
+	after := []any{float64(1), float64(2), float64(3)}
+
+	diff := utils.CalculateDiff(before, after)
+	require.NotNil(t, diff, "changed array should produce diff")
+
+	same := utils.CalculateDiff(before, []any{float64(1), float64(2)})
+	require.Nil(t, same, "same arrays should produce nil diff")
+}
+
+func TestCalculateDiffNestedMapChange(t *testing.T) {
+	before := map[string]any{
+		"audio": map[string]any{
+			"gain": float64(100),
+			"mute": false,
+			"eq":   map[string]any{"band1": float64(0)},
+		},
+	}
+	after := map[string]any{
+		"audio": map[string]any{
+			"gain": float64(200),
+			"mute": false,
+			"eq":   map[string]any{"band1": float64(0)},
+		},
+	}
+	diff := utils.CalculateDiff(before, after)
+	require.NotNil(t, diff)
+	audioDiff, ok := diff["audio"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, float64(200), audioDiff["gain"])
+	require.NotContains(t, audioDiff, "mute")
+	require.NotContains(t, audioDiff, "eq")
 }

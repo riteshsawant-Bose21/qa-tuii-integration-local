@@ -100,7 +100,8 @@ func (p *Persistence) DeleteSnapshot(snapshotName string) error {
 		return fmt.Errorf("failed to check snapshot %q existence: %w", snapshotName, err)
 	}
 	if !exists {
-		return fmt.Errorf("%w: snapshot %q does not exist", ErrNotFound, snapshotName)
+		logging.GetLogger().Debug("Snapshot delete skipped: snapshot=%s missing", snapshotName)
+		return nil
 	}
 
 	exists, err = p.keyExists(bucketSnapshots, snapshotName)
@@ -173,7 +174,9 @@ func (p *Persistence) SaveSnapshot(snapshotName string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	ps, err := p.persistState(snapshotName)
+	// Snapshot overwrite should refresh snapshot contents and DB hash, but it
+	// must not advance cluster-visible metadata version/epoch.
+	ps, err := p.persistStateToBucket(bucketSnapshots, snapshotName, false)
 	if err != nil {
 		return err
 	}

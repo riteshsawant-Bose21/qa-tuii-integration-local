@@ -312,7 +312,6 @@ func (c *Cluster) startStateMonitor() {
 				status,
 			)
 		}
-
 		time.Sleep(monitorInterval)
 	}
 }

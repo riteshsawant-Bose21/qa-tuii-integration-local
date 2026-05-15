@@ -3,19 +3,17 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
-import 'package:fusion_lib/fusion_lib.dart' hide CoveragePreference;
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A widget for surface speaker placement calculation and visualization.
 class SurfaceSpeakerLayoutWidget extends StatefulWidget {
   const SurfaceSpeakerLayoutWidget({super.key});
 
   @override
-  State<SurfaceSpeakerLayoutWidget> createState() =>
-      _SurfaceSpeakerLayoutWidgetState();
+  State<SurfaceSpeakerLayoutWidget> createState() => _SurfaceSpeakerLayoutWidgetState();
 }
 
-class _SurfaceSpeakerLayoutWidgetState
-    extends State<SurfaceSpeakerLayoutWidget> {
+class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget> {
   // Form controllers
   final TextEditingController _lengthController = TextEditingController(
     text: '30.5',
@@ -65,8 +63,7 @@ class _SurfaceSpeakerLayoutWidgetState
   }
 
   void _calculatePlacement() {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate())
-      return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
 
     setState(() {
       _errorMessage = null;
@@ -74,9 +71,16 @@ class _SurfaceSpeakerLayoutWidgetState
     });
 
     try {
+      final double length = double.parse(_lengthController.text);
+      final double width = double.parse(_widthController.text);
+
       final SurfaceRoom room = SurfaceRoom(
-        length: double.parse(_lengthController.text),
-        width: double.parse(_widthController.text),
+        corners: <Offset>[
+          const Offset(0, 0),
+          Offset(length, 0),
+          Offset(length, width),
+          Offset(0, width),
+        ],
         ceilingHeight: double.parse(_heightController.text),
         listenerHeight: double.parse(_listenerHeightController.text),
       );
@@ -92,12 +96,11 @@ class _SurfaceSpeakerLayoutWidgetState
         enableDebugOutput: false,
       );
 
-      final SurfacePlacementResult result =
-          SurfaceSpeakerPlacer.calculatePlacement(
-            room: room,
-            speaker: speaker,
-            config: config,
-          );
+      final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
+        room: room,
+        speaker: speaker,
+        config: config,
+      );
 
       // Additional validation checks
 
@@ -243,9 +246,7 @@ class _SurfaceSpeakerLayoutWidgetState
             //   prefixIcon: Icon(Icons.speaker),
             //   border: OutlineInputBorder(),
             // ),
-            validator:
-                (String? value) =>
-                    value?.isEmpty == true ? 'Please enter speaker type' : null,
+            validator: (String? value) => value?.isEmpty == true ? 'Please enter speaker type' : null,
           ),
           const SizedBox(height: 16),
           _buildNumberField(
@@ -373,8 +374,7 @@ class _SurfaceSpeakerLayoutWidgetState
         )
         .split(' ')
         .map(
-          (String word) =>
-              word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
+          (String word) => word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
         )
         .join(' ')
         .trim();
@@ -455,28 +455,22 @@ class _SurfaceSpeakerLayoutWidgetState
                 _buildTableRow(
                   'Less than 2.4',
                   '-5',
-                  _result?.mountingHeight != null &&
-                      _result!.mountingHeight < 2.4,
+                  _result?.mountingHeight != null && _result!.mountingHeight < 2.4,
                 ),
                 _buildTableRow(
                   '2.4 - 4.6',
                   '-15',
-                  _result?.mountingHeight != null &&
-                      _result!.mountingHeight >= 2.4 &&
-                      _result!.mountingHeight <= 4.6,
+                  _result?.mountingHeight != null && _result!.mountingHeight >= 2.4 && _result!.mountingHeight <= 4.6,
                 ),
                 _buildTableRow(
                   '4.6 - 5.5',
                   '-30',
-                  _result?.mountingHeight != null &&
-                      _result!.mountingHeight >= 4.6 &&
-                      _result!.mountingHeight <= 5.5,
+                  _result?.mountingHeight != null && _result!.mountingHeight >= 4.6 && _result!.mountingHeight <= 5.5,
                 ),
                 _buildTableRow(
                   '5.5 and above',
                   '-45',
-                  _result?.mountingHeight != null &&
-                      _result!.mountingHeight >= 5.5,
+                  _result?.mountingHeight != null && _result!.mountingHeight >= 5.5,
                 ),
               ],
             ),
@@ -531,10 +525,7 @@ class _SurfaceSpeakerLayoutWidgetState
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color:
-                    isHighlighted
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
+                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
               ),
             ),
           ),
@@ -549,10 +540,7 @@ class _SurfaceSpeakerLayoutWidgetState
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color:
-                    isHighlighted
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
+                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
               ),
             ),
           ),
@@ -587,8 +575,7 @@ class _SurfaceSpeakerLayoutWidgetState
         if (value?.isEmpty == true) return 'Please enter $label';
         final double? number = double.tryParse(value!);
         if (number == null) return 'Please enter a valid number';
-        if (number < min || number > max)
-          return 'Value must be between $min and $max';
+        if (number < min || number > max) return 'Value must be between $min and $max';
         return null;
       },
       onChanged: (_) => _calculatePlacement(),
@@ -627,18 +614,9 @@ class _SurfaceSpeakerLayoutWidgetState
 
   Widget _buildErrorCard() {
     final bool isWarning = _errorMessage!.startsWith('Warning:');
-    final Color backgroundColor =
-        isWarning
-            ? Colors.orange.shade100
-            : Theme.of(context).colorScheme.errorContainer;
-    final Color iconColor =
-        isWarning
-            ? Colors.orange.shade700
-            : Theme.of(context).colorScheme.error;
-    final Color textColor =
-        isWarning
-            ? Colors.orange.shade700
-            : Theme.of(context).colorScheme.onErrorContainer;
+    final Color backgroundColor = isWarning ? Colors.orange.shade100 : Theme.of(context).colorScheme.errorContainer;
+    final Color iconColor = isWarning ? Colors.orange.shade700 : Theme.of(context).colorScheme.error;
+    final Color textColor = isWarning ? Colors.orange.shade700 : Theme.of(context).colorScheme.onErrorContainer;
     final IconData icon = isWarning ? Icons.warning : Icons.error;
 
     return Card(
@@ -769,16 +747,13 @@ class _SurfaceSpeakerLayoutWidgetState
             stepNumber: 1,
             title: 'Find Distance from Loudspeaker to Listener Plane',
             icon: Icons.straighten,
-            formula:
-                'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
+            formula: 'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
             calculation:
                 'd_horiz = (${_result!.mountingHeight.toStringAsFixed(1)} - ${double.parse(_listenerHeightController.text)}) / tan(${_result!.downAngle.abs().toStringAsFixed(0)}°)\n'
                 'd_horiz = ${(_result!.mountingHeight - double.parse(_listenerHeightController.text)).toStringAsFixed(1)} / ${(tan(_result!.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
                 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
-            result:
-                'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
-            explanation:
-                'Horizontal distance from loudspeaker to the listener plane using the down-angle',
+            result: 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
+            explanation: 'Horizontal distance from loudspeaker to the listener plane using the down-angle',
           ),
 
           // Step 2: Determine horizontal coverage
@@ -793,8 +768,7 @@ class _SurfaceSpeakerLayoutWidgetState
                 'Horizontal_coverage = 2 × ${(tan((double.parse(_coverageAngleController.text) / 2) * pi / 180)).toStringAsFixed(3)} × ${_result!.distanceToListenerPlane.toStringAsFixed(2)}\n'
                 'Horizontal_coverage = ${_result!.coverageWidth.toStringAsFixed(2)} m',
             result: '${_result!.coverageWidth.toStringAsFixed(2)} m',
-            explanation:
-                'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
+            explanation: 'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
           ),
 
           // Step 3: Place speakers around perimeter with overlap
@@ -802,16 +776,14 @@ class _SurfaceSpeakerLayoutWidgetState
             stepNumber: 3,
             title: 'Place Horizontal Loudspeakers Around Perimeter',
             icon: Icons.grid_view,
-            formula:
-                'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
+            formula: 'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
             calculation:
                 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × ${_coveragePreference.overlapMultiplier} (${_coveragePreference.name}) = ${_result!.effectiveCoverage.toStringAsFixed(2)} m\n\n'
                 'Length Walls (${double.parse(_lengthController.text)} m): ceil(${double.parse(_lengthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnLength} each\n'
                 'Width Walls (${double.parse(_widthController.text)} m): ceil(${double.parse(_widthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnWidth} each\n\n'
                 'Total: (${_result!.speakersOnLength} × 2) + (${_result!.speakersOnWidth} × 2) = ${_result!.totalSpeakers} speakers',
             result: 'Total: ${_result!.totalSpeakers} speakers',
-            explanation:
-                'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
+            explanation: 'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
           ),
         ],
       ),
@@ -1316,8 +1288,7 @@ class _SurfaceSpeakerLayoutWidgetState
             'Back Wall (Length)',
             _result!.positions
                 .where(
-                  (SpeakerPosition p) =>
-                      p.y == double.parse(_widthController.text),
+                  (SpeakerPosition p) => p.y == double.parse(_widthController.text),
                 )
                 .toList(),
           ),
@@ -1331,8 +1302,7 @@ class _SurfaceSpeakerLayoutWidgetState
             'Right Wall (Width)',
             _result!.positions
                 .where(
-                  (SpeakerPosition p) =>
-                      p.x == double.parse(_lengthController.text),
+                  (SpeakerPosition p) => p.x == double.parse(_lengthController.text),
                 )
                 .toList(),
           ),
@@ -1550,16 +1520,12 @@ class RoomLayoutPainter extends CustomPainter {
       if (onFrontWall || onBackWall) {
         maxCoverageDistance = roomWidth; // Front/back walls cover across width
       } else {
-        maxCoverageDistance =
-            roomLength; // Left/right walls cover across length
+        maxCoverageDistance = roomLength; // Left/right walls cover across length
       }
 
       // Use the smaller of calculated distance or room dimension for visualization
       final double actualDistance = result.distanceToListenerPlane;
-      final double visualDistance =
-          (actualDistance < maxCoverageDistance)
-              ? actualDistance
-              : maxCoverageDistance;
+      final double visualDistance = (actualDistance < maxCoverageDistance) ? actualDistance : maxCoverageDistance;
       final double coverageDistance = visualDistance * scale;
       final double coverageWidth = result.coverageWidth * scale;
 
@@ -1639,8 +1605,7 @@ class RoomLayoutPainter extends CustomPainter {
     final double directionRadians = directionDegrees * 3.14159 / 180;
 
     // Use actual horizontal coverage angle from speaker specification
-    final double halfAngleRadians =
-        (result.horizontalCoverageAngle * 3.14159 / 180) / 2;
+    final double halfAngleRadians = (result.horizontalCoverageAngle * 3.14159 / 180) / 2;
 
     // Calculate the sector endpoints
     final double leftAngle = directionRadians - halfAngleRadians;

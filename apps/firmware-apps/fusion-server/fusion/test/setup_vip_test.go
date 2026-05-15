@@ -237,7 +237,12 @@ func waitForVIPState(t *testing.T, vipHost string) *model.CurrentVIPResponse {
 			if decodeErr != nil {
 				lastErr = fmt.Errorf("decode response: %w", decodeErr)
 			} else {
-				lastErr = fmt.Errorf("status=%d payload=%v", getResp.StatusCode, payload)
+				lastErr = fmt.Errorf(
+					"status=%d vip=%q local=%q",
+					getResp.StatusCode,
+					payload.GetVip(),
+					payload.GetLocal(),
+				)
 			}
 		} else {
 			lastErr = err

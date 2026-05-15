@@ -380,7 +380,12 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	existing := sm.patchBaseStateUnsafe(update)
-	before := utils.DeepCopy(existing)
+
+	// Snapshot only the keys being patched for diff (avoids a full deep copy).
+	before := make(map[string]any, len(existing))
+	for k, v := range existing {
+		before[k] = utils.DeepCopy(v)
+	}
 
 	if err := utils.ApplyPatch(existing, update); err != nil {
 		sm.Unlock()
@@ -408,9 +413,10 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	localVersion := sm.version
 
 	configUpdate := api.ConfigUpdate{
-		Data:    existing,
-		Version: localVersion,
-		Clear:   false,
+		Data:       existing,
+		PathValues: utils.DeepCopy(update).(map[string]any),
+		Version:    localVersion,
+		Clear:      false,
 	}
 
 	// Apply the update to internal state entries while still holding the lock.
@@ -572,6 +578,19 @@ func (sm *StateManager) applyWhileLocked(
 	for key, rawValue := range update.Data {
 		localEntry, exists := sm.state.State[key]
 
+		scopedValues := filterScopedPathValues(update.PathValues, key)
+		if len(scopedValues) > 0 {
+			applied, err := applyScopedEntryUpdate(localEntry, exists, key, rawValue, scopedValues, incomingVersion, effectiveVersion)
+			if err != nil {
+				return false, err
+			}
+			if applied != nil {
+				sm.state.State[key] = applied
+				dirty = true
+			}
+			continue
+		}
+
 		// Skip if the local entry version is newer or equal to the incoming
 		// update's version for this key.
 		//
@@ -611,8 +630,9 @@ func (sm *StateManager) applyWhileLocked(
 
 		// Store the new entry with the effective local version (the receive event).
 		sm.state.State[key] = &api.StateEntry{
-			Data:    newData,
-			Version: effectiveVersion,
+			Data:           newData,
+			Version:        effectiveVersion,
+			NestedVersions: nil,
 		}
 
 		dirty = true
@@ -645,6 +665,31 @@ func (sm *StateManager) GetFullState() VersionedState {
 		Checksum: checksum,
 		State:    state,
 	}
+}
+
+// MarshalLocalState serializes the state directly under RLock without deep-copying.
+// This is safe because json.Marshal only reads the data. The caller must not retain
+// or mutate the returned byte slice's backing data beyond its immediate use.
+func (sm *StateManager) MarshalLocalState(version api.Version, nodeID string) ([]byte, int) {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	snapshot := struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}{
+		Version: version,
+		NodeID:  nodeID,
+		State:   sm.state.State,
+	}
+
+	data, err := json.Marshal(snapshot)
+	if err != nil {
+		logging.GetLogger().Error("MarshalLocalState: %v", err)
+		return nil, 0
+	}
+	return data, len(sm.state.State)
 }
 
 func (sm *StateManager) patchBaseStateUnsafe(update map[string]any) map[string]any {
@@ -1125,6 +1170,12 @@ func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
 		// Create a copy of the struct, not the pointer
 		c := *v                         // copy the struct
 		c.Data = utils.DeepCopy(v.Data) // deep-copy the payload
+		if v.NestedVersions != nil {
+			c.NestedVersions = make(map[string]api.Version, len(v.NestedVersions))
+			for nk, nv := range v.NestedVersions {
+				c.NestedVersions[nk] = nv
+			}
+		}
 		dst[k] = &c
 	}
 	return dst
@@ -1138,5 +1189,105 @@ func deepCopyEntry(src *api.StateEntry) *api.StateEntry {
 	// Shallow copy of struct (copies Version by value)
 	dst := *src
 	dst.Data = utils.DeepCopy(src.Data)
+	if src.NestedVersions != nil {
+		dst.NestedVersions = make(map[string]api.Version, len(src.NestedVersions))
+		for k, v := range src.NestedVersions {
+			dst.NestedVersions[k] = v
+		}
+	}
 	return &dst
+}
+
+func filterScopedPathValues(pathValues map[string]any, topKey string) map[string]any {
+	if len(pathValues) == 0 {
+		return nil
+	}
+
+	prefix := topKey + "."
+	scoped := make(map[string]any)
+	for path, value := range pathValues {
+		if path == topKey || strings.HasPrefix(path, prefix) {
+			scoped[path] = utils.DeepCopy(value)
+		}
+	}
+	if len(scoped) == 0 {
+		return nil
+	}
+	return scoped
+}
+
+func applyScopedEntryUpdate(
+	localEntry *api.StateEntry,
+	exists bool,
+	topKey string,
+	rawValue any,
+	scopedValues map[string]any,
+	incomingVersion api.Version,
+	effectiveVersion api.Version,
+) (*api.StateEntry, error) {
+	var (
+		newData        any
+		nestedVersions map[string]api.Version
+	)
+
+	if exists && localEntry != nil {
+		newData = utils.DeepCopy(localEntry.Data)
+		if len(localEntry.NestedVersions) > 0 {
+			nestedVersions = make(map[string]api.Version, len(localEntry.NestedVersions))
+			for k, v := range localEntry.NestedVersions {
+				nestedVersions[k] = v
+			}
+		}
+	} else {
+		newData = utils.DeepCopy(rawValue)
+	}
+
+	if nestedVersions == nil {
+		nestedVersions = make(map[string]api.Version, len(scopedValues))
+	}
+
+	changed := false
+	for path, pathValue := range scopedValues {
+		localVersion := api.Version{}
+		hasLocalVersion := false
+		if exists && localEntry != nil {
+			if nested, ok := localEntry.NestedVersions[path]; ok {
+				localVersion = nested
+				hasLocalVersion = true
+			} else if path == topKey {
+				localVersion = localEntry.Version
+				hasLocalVersion = true
+			}
+		}
+		if hasLocalVersion && !localVersion.Less(incomingVersion) {
+			continue
+		}
+
+		if path == topKey {
+			newData = utils.DeepCopy(pathValue)
+		} else {
+			relPath := strings.TrimPrefix(path, topKey+".")
+			targetMap, ok := newData.(map[string]any)
+			if !ok || targetMap == nil {
+				targetMap = map[string]any{}
+			}
+			if err := utils.ApplyPatch(targetMap, map[string]any{relPath: utils.DeepCopy(pathValue)}); err != nil {
+				return nil, fmt.Errorf("failed to apply scoped patch for %s: %w", path, err)
+			}
+			newData = targetMap
+		}
+
+		nestedVersions[path] = effectiveVersion
+		changed = true
+	}
+
+	if !changed {
+		return nil, nil
+	}
+
+	return &api.StateEntry{
+		Data:           newData,
+		Version:        effectiveVersion,
+		NestedVersions: nestedVersions,
+	}, nil
 }

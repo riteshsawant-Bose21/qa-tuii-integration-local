@@ -89,9 +89,9 @@ class PEQController {
     }
     final int newBandIndex = bandCount;
     valueHandler.addProperty(PropertySetting(name: 'type', value: 'peq', dimension: newBandIndex));
-    valueHandler.addProperty(PropertySetting(name: 'frequency', value: 1000.0, dimension: newBandIndex));
+    valueHandler.addProperty(PropertySetting(name: 'frequency', value: 1000, dimension: newBandIndex));
     valueHandler.addProperty(PropertySetting(name: 'gain', value: 0.0, dimension: newBandIndex));
-    valueHandler.addProperty(PropertySetting(name: 'q', value: 1.0, dimension: newBandIndex));
+    valueHandler.addProperty(PropertySetting(name: 'q', value: isInBW ? qToBw(1.0) : 1.0, dimension: newBandIndex));
     valueHandler.addProperty(PropertySetting(name: 'bypass', value: false, dimension: newBandIndex));
   }
 
@@ -196,7 +196,7 @@ class PEQController {
       final num frequency = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'frequency')?.value ?? 1000;
       final num q = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'q')?.value ?? 1.0;
       final num gain = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'gain')?.value ?? 0.0;
-      final bool bypass = bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'band_enable')?.value ? false : true;
+      final bool bypass = (bandProperties.firstWhereOrNull((PropertySetting e) => e.name == 'band_enable')?.value ?? false) ? false : true;
 
       tableData.add(_PEQDataPoint(type: type, frequency: frequency, q: q, gain: gain, bypass: bypass));
     }
@@ -265,9 +265,9 @@ class PEQController {
   void resetAllBands() {
     for (final int bandIndex in bands) {
       valueHandler.updateValue(field: 'type', dimension: bandIndex, value: 'peq');
-      valueHandler.updateValue(field: 'frequency', dimension: bandIndex, value: 1000.0);
+      valueHandler.updateValue(field: 'frequency', dimension: bandIndex, value: 1000);
       valueHandler.updateValue(field: 'gain', dimension: bandIndex, value: 0.0);
-      valueHandler.updateValue(field: 'q', dimension: bandIndex, value: 1.0);
+      valueHandler.updateValue(field: 'q', dimension: bandIndex, value: isInBW ? qToBw(1.0) : 1.0);
       valueHandler.updateValue(field: 'band_enable', dimension: bandIndex, value: false);
     }
   }

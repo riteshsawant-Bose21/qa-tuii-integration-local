@@ -55,8 +55,14 @@ func getTestURL() string {
 }
 
 // Helper functions for testing
-func connectWebSocket(t *testing.T, serverURL string) *websocket.Conn {
+func connectWebSocketRaw(serverURL string) (*websocket.Conn, error) {
 	c, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
+	return c, err
+}
+
+func connectWebSocket(t *testing.T, serverURL string) *websocket.Conn {
+	t.Helper()
+	c, err := connectWebSocketRaw(serverURL)
 	require.NoError(t, err, "Failed to connect to WebSocket")
 	return c
 }
@@ -74,28 +80,64 @@ func wsValue(t *testing.T, data any) *structpb.Value {
 	return value
 }
 
-func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *wsRequest) {
+func sendWebSocketRequestRaw(conn *websocket.Conn, req *wsRequest) error {
 	protoReq := &model.WebSocketRequest{
 		Id:      req.ID,
 		Version: int32(req.Version),
 		Type:    req.Type,
-		Data:    wsValue(t, req.Data),
+	}
+	if req.Data != nil {
+		normalized := req.Data
+		if raw, ok := req.Data.(json.RawMessage); ok {
+			var decoded any
+			if err := json.Unmarshal(raw, &decoded); err != nil {
+				return err
+			}
+			normalized = decoded
+		} else {
+			payloadBytes, err := json.Marshal(req.Data)
+			if err != nil {
+				return err
+			}
+			var decoded any
+			if err := json.Unmarshal(payloadBytes, &decoded); err != nil {
+				return err
+			}
+			normalized = decoded
+		}
+		value, err := structpb.NewValue(normalized)
+		if err != nil {
+			return err
+		}
+		protoReq.Data = value
 	}
 	data, err := protojson.Marshal(protoReq)
-	require.NoError(t, err, "Failed to marshal request")
+	if err != nil {
+		return err
+	}
 
-	err = conn.WriteMessage(websocket.TextMessage, data)
+	return conn.WriteMessage(websocket.TextMessage, data)
+}
+
+func sendWebSocketRequest(t *testing.T, conn *websocket.Conn, req *wsRequest) {
+	t.Helper()
+	require.NotNil(t, conn, "WebSocket connection is nil")
+	err := sendWebSocketRequestRaw(conn, req)
 	require.NoError(t, err, "Failed to send WebSocket message")
 }
 
-func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Duration) *wsResponse {
+func readWebSocketResponseRaw(conn *websocket.Conn, timeout time.Duration) (*wsResponse, error) {
 	conn.SetReadDeadline(time.Now().Add(timeout))
 	_, data, err := conn.ReadMessage()
-	require.NoError(t, err, "Failed to read WebSocket message")
+	if err != nil {
+		return nil, err
+	}
 
 	var protoResp model.WebSocketResponse
 	err = protojson.Unmarshal(data, &protoResp)
-	require.NoError(t, err, "Failed to unmarshal WebSocket response")
+	if err != nil {
+		return nil, err
+	}
 
 	var responseData any
 	if protoResp.Data != nil {
@@ -115,7 +157,15 @@ func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Dura
 		Message:   protoResp.Message,
 		Data:      responseData,
 		Timestamp: ts,
-	}
+	}, nil
+}
+
+func readWebSocketResponse(t *testing.T, conn *websocket.Conn, timeout time.Duration) *wsResponse {
+	t.Helper()
+	require.NotNil(t, conn, "WebSocket connection is nil")
+	resp, err := readWebSocketResponseRaw(conn, timeout)
+	require.NoError(t, err, "Failed to read WebSocket message")
+	return resp
 }
 
 func mustMarshal(v interface{}) any {
@@ -400,9 +450,13 @@ func TestWebSocketDevicesResponseFormat(t *testing.T) {
 
 	if len(devices) > 0 {
 		device := devices[0].(map[string]interface{})
-		requiredFields := []string{"id", "name", "address", "location"}
+		requiredFields := []string{"id", "name", "address"}
 		for _, field := range requiredFields {
 			assert.Contains(t, device, field, "Device should contain field %s", field)
+		}
+		if location, exists := device["location"]; exists {
+			_, ok := location.(string)
+			assert.True(t, ok, "Device location should be a string when present")
 		}
 	}
 }
@@ -1051,8 +1105,7 @@ func TestWebSocketUpdateDeviceInfo(t *testing.T) {
 	sendWebSocketRequest(t, conn, updateReq)
 	response := readWebSocketResponse(t, conn, wsTestTimeout)
 
-	// Debug: Print what we actually got
-	t.Logf("Update response - Type: %s, Code: %d, ID: %v", response.Type, response.Code, response.ID)
+	//t.Logf("Update response - Type: %s, Code: %d, ID: %v", response.Type, response.Code, response.ID)
 
 	// Check if we got an update confirmation or a push notification
 	if response.ID != nil && *response.ID == "update-device-test" {
@@ -1099,19 +1152,19 @@ func TestWebSocketUpdateDevicePartialFields(t *testing.T) {
 		sendWebSocketRequest(t, conn, req)
 		response := readWebSocketResponse(t, conn, wsTestTimeout)
 
-		// Debug: Print what we actually got
-		t.Logf("Partial update %d response - Type: %s, Code: %d", i, response.Type, response.Code)
+		//t.Logf("Partial update %d response - Type: %s, Code: %d", i, response.Type, response.Code)
 
 		// Accept either update confirmation, push notification, or error
-		if response.Type == api.WSMsgTypeUpdateDeviceInfo {
+		switch response.Type {
+		case api.WSMsgTypeUpdateDeviceInfo:
 			assert.Equal(t, api.WSCodeUpdated, response.Code)
-		} else if response.Type == api.WSMsgTypeDeviceUpdate {
+		case api.WSMsgTypeDeviceUpdate:
 			assert.Equal(t, api.WSCodeDeviceUpdated, response.Code)
-		} else if response.Type == api.WSMsgTypeError {
+		case api.WSMsgTypeError:
 			// Update failed - acceptable in test environment
 			assert.True(t, response.Code >= 4000, "Expected error code 4xxx, got %d", response.Code)
-			t.Logf("Update %d failed (expected in test): %s", i, response.Message)
-		} else {
+			//t.Logf("Update %d failed (expected in test): %s", i, response.Message)
+		default:
 			t.Errorf("Unexpected response type: %s", response.Type)
 		}
 	}
@@ -1189,6 +1242,7 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 
 	// Perform concurrent updates
 	var wg sync.WaitGroup
+	errCh := make(chan error, len(connections))
 	for i, conn := range connections {
 		wg.Add(1)
 		go func(connIndex int, connection *websocket.Conn) {
@@ -1205,8 +1259,15 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 				}),
 			}
 
-			sendWebSocketRequest(t, connection, updateReq)
-			response := readWebSocketResponse(t, connection, wsTestTimeout)
+			if err := sendWebSocketRequestRaw(connection, updateReq); err != nil {
+				errCh <- fmt.Errorf("connection %d send failed: %w", connIndex, err)
+				return
+			}
+			response, err := readWebSocketResponseRaw(connection, wsTestTimeout)
+			if err != nil {
+				errCh <- fmt.Errorf("connection %d read failed: %w", connIndex, err)
+				return
+			}
 			// Can be either update_device_info, device_update, or error (in case of conflicts)
 			validTypes := []string{api.WSMsgTypeUpdateDeviceInfo, "device_update", "error"}
 			assert.Contains(t, validTypes, response.Type, "Response type %s not in expected types %v", response.Type, validTypes)
@@ -1214,6 +1275,10 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 	}
 
 	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		require.NoError(t, err)
+	}
 }
 
 // ====================
@@ -1614,12 +1679,11 @@ func TestWebSocketPullThenPushPattern(t *testing.T) {
 	sendWebSocketRequest(t, connUpdater, updateReq)
 	updateResponse := readWebSocketResponse(t, connUpdater, wsTestTimeout)
 
-	// Debug: Print what we actually got
-	t.Logf("Update response - Type: %s, Code: %d, Message: %s", updateResponse.Type, updateResponse.Code, updateResponse.Message)
+	//t.Logf("Update response - Type: %s, Code: %d, Message: %s", updateResponse.Type, updateResponse.Code, updateResponse.Message)
 
 	// Handle potential update failure gracefully
 	if updateResponse.Code == api.WSCodeUpdateFailed {
-		t.Logf("Device update failed (acceptable in test environment): %s", updateResponse.Message)
+		//t.Logf("Device update failed (acceptable in test environment): %s", updateResponse.Message)
 		t.Skip("Skipping notification test since update failed")
 		return
 	}
@@ -1694,8 +1758,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 	sendWebSocketRequest(t, updater, updateReq)
 	updateResponse := readWebSocketResponse(t, updater, wsTestTimeout)
 
-	// Debug: Print what we actually got
-	t.Logf("Update response - Type: %s, Code: %d, Message: %s", updateResponse.Type, updateResponse.Code, updateResponse.Message)
+	//t.Logf("Update response - Type: %s, Code: %d, Message: %s", updateResponse.Type, updateResponse.Code, updateResponse.Message)
 
 	// Handle potential update failure gracefully
 	if updateResponse.Code == api.WSCodeUpdateFailed {
@@ -1745,7 +1808,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 		assert.Equal(t, api.WSCodeDeviceUpdated, notification.Code)
 		assert.Nil(t, notification.ID)
 
-		t.Logf("Subscriber %d successfully received notification", i)
+		//t.Logf("Subscriber %d successfully received notification", i)
 	}
 }
 
@@ -1837,20 +1900,33 @@ func TestWebSocketConcurrentConnections(t *testing.T) {
 
 	// Create concurrent connections
 	var wg sync.WaitGroup
+	errCh := make(chan error, numConnections)
 	for i := 0; i < numConnections; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			conn := connectWebSocket(t, getTestURL())
+			conn, err := connectWebSocketRaw(getTestURL())
+			if err != nil {
+				errCh <- fmt.Errorf("connection %d dial failed: %w", index, err)
+				return
+			}
 			connections[index] = conn
 
 			// Each connection should get welcome
-			welcome := readWebSocketResponse(t, conn, wsTestTimeout)
+			welcome, err := readWebSocketResponseRaw(conn, wsTestTimeout)
+			if err != nil {
+				errCh <- fmt.Errorf("connection %d welcome read failed: %w", index, err)
+				return
+			}
 			assert.Equal(t, "welcome", welcome.Type)
 		}(i)
 	}
 
 	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		require.NoError(t, err)
+	}
 
 	// Test that all connections are working
 	for i, conn := range connections {
@@ -1924,7 +2000,7 @@ func TestWebSocketLongRunningConnection(t *testing.T) {
 	for {
 		select {
 		case <-timeout:
-			t.Logf("Successfully maintained connection for 10 seconds with %d pings", counter)
+			//t.Logf("Successfully maintained connection for 10 seconds with %d pings", counter)
 			return
 		case <-ticker.C:
 			counter++

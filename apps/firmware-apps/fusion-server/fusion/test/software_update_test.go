@@ -820,7 +820,8 @@ func TestSwUpdateInfoViaWebSocket(t *testing.T) {
 
 	// Each entry must have the expected fields present (even if empty strings on
 	// devices without /etc/swupdate-status).
-	for i, info := range infos {
+	for i := range infos {
+		info := &infos[i]
 		// All fields are strings; we just confirm the struct decoded without
 		// unexpected types by checking at least one field path exists.
 		_ = info.GetSerialNumber()
@@ -872,7 +873,8 @@ func TestListSoftwareUpdatesViaWebSocket(t *testing.T) {
 	}
 
 	// If bundles are present, verify required fields are non-empty.
-	for i, b := range bundles {
+	for i := range bundles {
+		b := &bundles[i]
 		if b.GetFilename() == "" {
 			t.Errorf("bundle[%d]: Filename is empty", i)
 		}
@@ -925,7 +927,8 @@ func TestListSoftwareUpdatesViaWebSocketAfterUpload(t *testing.T) {
 
 	// The uploaded bundle must appear in the list
 	found := false
-	for _, b := range bundles {
+	for i := range bundles {
+		b := &bundles[i]
 		if b.GetFilename() == filename {
 			found = true
 			if !strings.EqualFold(b.GetChecksum(), checksum) {

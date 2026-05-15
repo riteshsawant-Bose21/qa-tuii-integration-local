@@ -170,6 +170,16 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 		return nil, fmt.Errorf("task is nil")
 	}
 
+	enabled := task.Enabled
+	scheduled := task.CronEntryID != 0
+	if !task.StartAt.IsZero() && nowFunction().Before(task.StartAt) {
+		scheduled = false
+	}
+	if enabled && !task.EndAt.IsZero() && nowFunction().After(task.EndAt) {
+		enabled = false
+		scheduled = false
+	}
+
 	out := &model.Task{
 		Id:          task.ID,
 		Description: task.Description,
@@ -177,8 +187,8 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 		StartAt:     timeToProto(task.StartAt),
 		EndAt:       timeToProto(task.EndAt),
 		Recurrence:  recurringWindowToProto(task.Recurrence),
-		Enabled:     task.Enabled,
-		Scheduled:   task.CronEntryID != 0,
+		Enabled:     enabled,
+		Scheduled:   scheduled,
 	}
 
 	switch task.Type {

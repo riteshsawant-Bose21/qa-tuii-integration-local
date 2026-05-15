@@ -17,6 +17,9 @@ func websocketRequestDataToProto(value *structpb.Value, msg proto.Message) error
 	if value == nil {
 		return fmt.Errorf("missing data")
 	}
+	if _, ok := value.GetKind().(*structpb.Value_NullValue); ok {
+		return fmt.Errorf("missing data")
+	}
 	data, err := protojson.Marshal(value)
 	if err != nil {
 		return err
@@ -26,6 +29,9 @@ func websocketRequestDataToProto(value *structpb.Value, msg proto.Message) error
 
 func websocketRequestDataToAny(value *structpb.Value, target any) error {
 	if value == nil {
+		return fmt.Errorf("missing data")
+	}
+	if _, ok := value.GetKind().(*structpb.Value_NullValue); ok {
 		return fmt.Errorf("missing data")
 	}
 	data, err := protojson.Marshal(value)

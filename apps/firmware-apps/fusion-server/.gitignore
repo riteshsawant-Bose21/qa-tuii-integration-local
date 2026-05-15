@@ -13,6 +13,5 @@ multipass.env
 data
 ignoredFiles/*
 *.test
-test.text
 fusion/internal/gen/proto/
 fusion/fusion

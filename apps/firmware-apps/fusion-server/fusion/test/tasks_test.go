@@ -91,6 +91,23 @@ func clearTasks(t *testing.T) {
 		require.NoError(t, err)
 		respDel.Body.Close()
 	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		resp, err := http.Get(tasksURL)
+		require.NoError(t, err)
+
+		current := decodeTaskListResponse(t, resp.Body)
+		resp.Body.Close()
+		if len(current.Tasks) == 0 {
+			return
+		}
+
+		if time.Now().After(deadline) {
+			t.Fatalf("tasks were not fully cleared; remaining=%d", len(current.Tasks))
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func createTask(t *testing.T) {
@@ -99,6 +116,24 @@ func createTask(t *testing.T) {
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
 	require.NoError(t, err)
 	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		getResp, err := http.Get(tasksURL + "/" + testTaskId)
+		require.NoError(t, err)
+
+		if getResp.StatusCode == http.StatusOK {
+			getResp.Body.Close()
+			return
+		}
+
+		getResp.Body.Close()
+		if time.Now().After(deadline) {
+			t.Fatalf("task %q was not visible after creation; last status=%d", testTaskId, getResp.StatusCode)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // clearHistory clears the execution history on the live server.
@@ -415,7 +450,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
 	clearTasks(t)
 
-	start := time.Now().Add(5 * time.Second)
+	start := time.Now().Add(15 * time.Second)
 
 	body := marshalProtoMessage(t, &model.SnapshotTaskCreateRequest{
 		Id:          "future-task",

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,9 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// validKeyRe validates query parameter values contain only allowed characters.
+var validKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_.\[\]*]+$`)
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
@@ -162,7 +166,7 @@ func (s *FusionServer) GetAudioSettings(w http.ResponseWriter, r *http.Request) 
 
 func (s *FusionServer) getSettingsSection(w http.ResponseWriter, key string, notFoundMessage string) {
 	value, exists := s.handler.StateManager.Get(key)
-	if !exists {
+	if !exists || value == nil {
 		http.Error(w, notFoundMessage, http.StatusNotFound)
 		return
 	}
@@ -894,4 +898,28 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	if err := writeProtoJSONWithStatus(w, http.StatusOK, response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 	}
+}
+
+// getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
+// It returns an empty string if the parameter is missing and an error if it appears multiple times
+// or contains invalid characters.
+func getSingleQueryParam(r *http.Request, param string) (string, error) {
+	if strings.Count(r.RequestURI, "?") > 1 {
+		return "", fmt.Errorf("multiple values provided for parameter %q", param)
+	}
+
+	params := r.URL.Query()[param]
+	if len(params) > 1 {
+		return "", fmt.Errorf("multiple values provided for parameter %q", param)
+	}
+
+	if len(params) == 0 {
+		return "", nil
+	}
+
+	// Validate that the parameter contains only allowed characters.
+	if !validKeyRe.MatchString(params[0]) {
+		return "", fmt.Errorf("invalid characters in parameter %q", param)
+	}
+	return params[0], nil
 }

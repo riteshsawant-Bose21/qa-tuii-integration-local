@@ -43,6 +43,7 @@ class FusionCanvas extends StatelessWidget {
     this.tools = const <FusionCanvasTool<FusionToolState>>[
       FusionCanvasTool.measureTool,
       FusionCanvasTool.penTool,
+      FusionCanvasTool.rectangleTool,
       FusionCanvasTool.dragTool,
       FusionCanvasTool.singleSelectionTool,
     ],
@@ -288,6 +289,7 @@ class FusionCanvas extends StatelessWidget {
 
 class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
+  final FusionRectangleToolEvents? rectangleToolEvents;
   final FusionCanvasInputEvents? inputEvents;
   final ValueChanged<List<FusionBasePainter>?>? onLayerSelected;
   final ValueChanged<List<FusionBasePainter>>? onLayerDragStart;
@@ -304,6 +306,7 @@ class FusionCanvasEvents {
 
   FusionCanvasEvents({
     this.penToolEvents,
+    this.rectangleToolEvents,
     this.onLayerSelected,
     this.onLayerDragStart,
     this.onMoveLayer,
@@ -323,6 +326,14 @@ class FusionPenToolEvents {
   final ValueChanged<List<FusionCanvasPoint>>? onPathCancelled;
 
   FusionPenToolEvents({this.onPointsChanged, this.onPathClosed, this.onPathCancelled});
+}
+
+class FusionRectangleToolEvents {
+  final ValueChanged<List<FusionCanvasPoint>>? onRectangleChanged;
+  final ValueChanged<List<FusionCanvasPoint>>? onRectangleDrawn;
+  final ValueChanged<List<FusionCanvasPoint>>? onRectangleCancelled;
+
+  FusionRectangleToolEvents({this.onRectangleChanged, this.onRectangleDrawn, this.onRectangleCancelled});
 }
 
 ///

@@ -715,15 +715,23 @@ std::string query_device_ip(const std::string& device_uid, const std::string& sy
 
     SPDLOG_DEBUG("query_device_ip:{}", response);
 
-    // Parse JSON array
+    // Parse JSON response
     Json::Value root;
     Json::Reader reader;
-    if (!reader.parse(response, root) || !root.isArray()) {
-        SPDLOG_ERROR("Failed to parse devices response JSON or not an array: {}", response);
+    if (!reader.parse(response, root)) {
+        SPDLOG_ERROR("Failed to parse devices response JSON: {}", response);
         return "";
     }
 
-    for (const auto& device : root) {
+    Json::Value devices;
+    if (root.isObject() && root.isMember("devices") && root["devices"].isArray()) {
+        devices = root["devices"];
+    } else {
+        SPDLOG_ERROR("Unexpected devices response format: {}", response);
+        return "";
+    }
+
+    for (const auto& device : devices) {
         if (device.isMember("id") && device["id"].isString() &&
             device["id"].asString() == device_uid &&
             device.isMember("address") && device["address"].isString()) {

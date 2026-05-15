@@ -9,6 +9,7 @@ import (
 	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 	"reflect"
@@ -51,6 +52,45 @@ type MultipassNode struct {
 	State  string
 	IPAddr string
 	Image  string
+}
+
+func selectClusterIP(raw string) string {
+	candidates := strings.Fields(raw)
+	best := ""
+	bestScore := -1
+
+	for _, candidate := range candidates {
+		addr, err := netip.ParseAddr(candidate)
+		if err != nil || !addr.Is4() {
+			continue
+		}
+
+		score := ipPreferenceScore(addr)
+		if score > bestScore {
+			best = candidate
+			bestScore = score
+		}
+	}
+
+	return best
+}
+
+func ipPreferenceScore(addr netip.Addr) int {
+	if !addr.Is4() {
+		return -1
+	}
+
+	octets := addr.As4()
+	switch {
+	case octets[0] == 192 && octets[1] == 168 && octets[3] != 100:
+		return 300
+	case octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31:
+		return 200
+	case octets[0] == 10:
+		return 100
+	default:
+		return 0
+	}
 }
 
 const (
@@ -623,6 +663,57 @@ func TestClusterStateSync(t *testing.T) {
 		t.Skip("Cluster health check failed - requires 3 running nodes")
 	}
 
+	preflightKey := "cluster_sync_preflight"
+	preflightValue := "ready"
+	if err := patchAudioSetting(clusterConfig.vip, syncBlockID, preflightKey, preflightValue); err != nil {
+		t.Fatalf("Failed to seed cluster sync preflight value via VIP: %v", err)
+	}
+	if !waitForSync(5*time.Second, func() bool {
+		for _, node := range testNodes {
+			value, exists, err := getValueFromNode(node, preflightKey)
+			if err != nil || !exists || !valueEquals(value, preflightValue) {
+				return false
+			}
+		}
+		return true
+	}) {
+		t.Fatalf("Cluster sync preflight did not converge across all nodes")
+	}
+
+	directSyncNode := -1
+	for i, node := range testNodes {
+		directPreflightKey := fmt.Sprintf("cluster_sync_direct_preflight_%d", i)
+		directPreflightValue := "ready"
+		if err := setValueOnNode(node, directPreflightKey, directPreflightValue); err != nil {
+			continue
+		}
+
+		verifyNodes := make([]clusterNode, 0, len(testNodes)-1)
+		for j, peer := range testNodes {
+			if j == i {
+				continue
+			}
+			verifyNodes = append(verifyNodes, peer)
+		}
+
+		if waitForSync(5*time.Second, func() bool {
+			for _, peer := range verifyNodes {
+				value, exists, err := getValueFromNode(peer, directPreflightKey)
+				if err != nil || !exists || !valueEquals(value, directPreflightValue) {
+					return false
+				}
+			}
+			return true
+		}) {
+			directSyncNode = i
+			break
+		}
+	}
+
+	if directSyncNode < 0 {
+		t.Fatalf("No direct node cluster sync preflight converged across peer nodes")
+	}
+
 	tests := []struct {
 		name         string
 		key          string
@@ -636,8 +727,16 @@ func TestClusterStateSync(t *testing.T) {
 			name:         "Simple string value sync",
 			key:          "test_sync_string",
 			value:        "test_value",
-			updateNode:   0,
-			verifyNodes:  []int{1, 2},
+			updateNode:   directSyncNode,
+			verifyNodes:  func() []int {
+				out := make([]int, 0, len(testNodes)-1)
+				for i := range testNodes {
+					if i != directSyncNode {
+						out = append(out, i)
+					}
+				}
+				return out
+			}(),
 			expectedSync: true,
 			timeout:      testTimeout,
 		},
@@ -1097,12 +1196,12 @@ func discoverMultipassNodes(baseName string) ([]MultipassNode, error) {
 		node := MultipassNode{
 			Name:   name,
 			State:  record[1],
-			IPAddr: record[2],
+			IPAddr: selectClusterIP(record[2]),
 			Image:  record[3],
 		}
 
 		// Only include running nodes
-		if node.State == "Running" {
+		if node.State == "Running" && node.IPAddr != "" {
 			nodes = append(nodes, node)
 		}
 	}

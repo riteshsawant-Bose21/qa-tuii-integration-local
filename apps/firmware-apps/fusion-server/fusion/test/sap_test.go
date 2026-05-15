@@ -80,7 +80,12 @@ func TestMultipassSAPPropagation(t *testing.T) {
 	}
 
 	description := descriptions[0]
-	sessionName := description.GetFields()["session_name"].GetStringValue()
+	sessionName := ""
+	if field, ok := description.GetFields()["SessionName"]; ok {
+		sessionName = field.GetStringValue()
+	} else if field, ok := description.GetFields()["session_name"]; ok {
+		sessionName = field.GetStringValue()
+	}
 	if sessionName != "HELLO_SAP_TEST" {
 		t.Fatalf("Expected session-name %q in logs, but got: %s",
 			"HELLO_SAP_TEST", sessionName)

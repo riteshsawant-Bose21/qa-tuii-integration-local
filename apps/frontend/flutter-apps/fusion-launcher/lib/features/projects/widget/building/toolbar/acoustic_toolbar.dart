@@ -16,11 +16,25 @@ class AcousticToolBar extends StatelessWidget {
           onTap: () => context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: null)),
         ),
 
-        _ToolBarIcon(
-          icon: "spl.png",
-          label: "SPL",
-          isSelected: toolState is SplToolState,
-          onTap: () => context.read<BuildingPageViewModel>().setTool(SplSelectToolState()),
+        BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+          listener: (BuildContext context, ProjectViewModelState state) {
+            if (toolState is SplToolState) {
+              final bool canCalculateSpl = context.read<SplViewModel>().canCalculateSPL();
+              if (!canCalculateSpl) {
+                context.read<BuildingPageViewModel>().setTool(SelectToolState());
+              }
+            }
+          },
+          builder: (BuildContext context, ProjectViewModelState state) {
+            final bool canCalculateSpl = context.read<SplViewModel>().canCalculateSPL();
+            return _ToolBarIcon(
+              icon: "spl.png",
+              label: "SPL",
+              isEnabled: canCalculateSpl,
+              isSelected: toolState is SplToolState,
+              onTap: () => context.read<BuildingPageViewModel>().setTool(SplSelectToolState()),
+            );
+          },
         ),
         _ToolBarIcon(
           icon: "measure.png",

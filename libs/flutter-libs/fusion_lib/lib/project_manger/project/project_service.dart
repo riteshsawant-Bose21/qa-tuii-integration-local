@@ -483,6 +483,8 @@ class ProjectService {
         return HardwareRack.fromJson(m);
       } else if (m.containsKey('componentType') && m['componentType'] == 'networkSwitch') {
         return NetworkSwitch.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'outputDevice') {
+        return OutputDevice.fromJson(m);
       } else {
         return GenericHardwareComponent.fromJson(m);
       }

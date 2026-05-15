@@ -26,7 +26,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	logger := logging.GetLogger()
 
 	if err := json.Unmarshal(data, &msg); err != nil {
-		logger.Error("HandleUDPMessage error: %v", err)
+		logger.Debug("HandleUDPMessage invalid JSON: %v", err)
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 

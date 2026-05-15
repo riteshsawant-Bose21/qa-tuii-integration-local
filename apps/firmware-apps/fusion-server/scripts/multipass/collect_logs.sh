@@ -115,6 +115,9 @@ process_instance() {
     [[ -z "$prof_file" ]] && continue
     if ! multipass transfer "${instance}:${prof_file}" "$serverdir/" 2>/dev/null; then
       print_warn "[$instance] Failed to copy profiling file: $prof_file"
+    else
+      # Remove from VM so stale files don't get picked up on the next run
+      multipass exec "$instance" -- sudo rm -f "$prof_file" 2>/dev/null || true
     fi
   done <<< "$prof_files"
 

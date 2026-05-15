@@ -1250,6 +1250,15 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 		t.Fatalf("Create snapshot %q returned %d: %s", snapshotName, createResp.StatusCode, string(body))
 	}
 
+	// Ensure the snapshot exists cluster-wide before exercising the
+	// out-of-order activate/config-update delivery path.
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
+		return snapshotExistsOnAllNodes(t, snapshotName)
+	}) {
+		logPerNodeSnapshotStatus(t, snapshotName)
+		t.Fatalf("Snapshot %q did not propagate to all nodes before activation", snapshotName)
+	}
+
 	//
 	// Simulate out-of-order delivery:
 	// 1. Apply a state update first (ConfigUpdate)

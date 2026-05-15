@@ -485,7 +485,7 @@ func TestImportDataRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestDeleteSnapshotRejectsMissingSnapshot(t *testing.T) {
+func TestDeleteSnapshotMissingSnapshotIsNoOp(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "delete_missing_snapshot.db")
 
@@ -495,7 +495,7 @@ func TestDeleteSnapshotRejectsMissingSnapshot(t *testing.T) {
 	defer p.Close()
 
 	err = p.DeleteSnapshot("does-not-exist")
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestImportDataRejectsSnapshotsThatWouldOrphanExistingSnapshotTasks(t *testing.T) {
@@ -1287,6 +1287,58 @@ func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
 	require.Equal(t, "Node A", *storedA.Name)
 }
 
+func TestExportImportConvergesHashDespiteDifferentMetadataVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPathA := filepath.Join(tmpDir, "node_a.db")
+	dbPathB := filepath.Join(tmpDir, "node_b.db")
+
+	smA := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	pA, err := persistence.NewPersistence(dbPathA, smA)
+	require.NoError(t, err)
+	defer pA.Close()
+
+	smB := persistence.NewStateManager(&api.AppConfig{NodeName: "node-b"})
+	pB, err := persistence.NewPersistence(dbPathB, smB)
+	require.NoError(t, err)
+	defer pB.Close()
+
+	require.NoError(t, smA.Set("volume", 11))
+	require.NoError(t, pA.SaveState())
+
+	require.NoError(t, smB.Set("volume", 3))
+	require.NoError(t, pB.SaveState())
+
+	metaBeforeA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaBeforeB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.NotEqual(t, metaBeforeA.Version, metaBeforeB.Version)
+
+	exported, err := pA.ExportData()
+	require.NoError(t, err)
+
+	exportMap, ok := exported.(map[string]map[string]any)
+	require.True(t, ok)
+
+	importPayload := make(map[string]any, len(exportMap))
+	for key, value := range exportMap {
+		importPayload[key] = value
+	}
+	require.NoError(t, pB.ImportData(importPayload))
+
+	hashA, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	hashB, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, hashA, hashB)
+
+	metaAfterA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaAfterB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, metaAfterA.Hash, metaAfterB.Hash)
+}
+
 func readDatabaseMetadata(dbPath string) (*model.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
@@ -1504,5 +1556,58 @@ func TestPatchAfterSetStateNilDoesNotPanic(t *testing.T) {
 	}
 	if gotInt != 42 {
 		t.Errorf("expected foo.bar=42 after Patch, got %v", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MarshalLocalState tests
+// ---------------------------------------------------------------------------
+
+func TestMarshalLocalStateReturnsValidJSON(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("volume", float64(75)))
+	require.NoError(t, sm.Set("mute", false))
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "test-node")
+	require.NotNil(t, data)
+	require.Equal(t, 2, count)
+
+	var result struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &result))
+	require.Equal(t, "test-node", result.NodeID)
+	require.Len(t, result.State, 2)
+	require.Equal(t, version, result.Version)
+}
+
+func TestMarshalLocalStateEmptyState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "empty-node")
+	require.NotNil(t, data, "expected non-nil data even for empty state")
+	require.Equal(t, 0, count)
+}
+
+func TestMarshalLocalStateConsistentWithGetFullState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("settings", map[string]any{"audio": map[string]any{"gain": float64(50)}}))
+
+	version := sm.GetVersion()
+	data, _ := sm.MarshalLocalState(version, "node-x")
+
+	fullState := sm.GetFullState()
+
+	var marshaled struct {
+		State map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &marshaled))
+	require.Equal(t, len(fullState.State), len(marshaled.State))
+	for k := range fullState.State {
+		require.Contains(t, marshaled.State, k)
 	}
 }

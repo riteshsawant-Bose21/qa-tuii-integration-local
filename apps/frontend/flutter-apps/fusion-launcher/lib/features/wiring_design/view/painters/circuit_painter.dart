@@ -33,6 +33,7 @@ class CircuitPainter extends CustomPainter {
       size,
       offset,
       controller.canvasState.scale,
+      1.0,
     );
 
     // Paint components

@@ -135,7 +135,13 @@ func (h *Handler) HandleSAPMessage(data []byte) error {
 func (h *Handler) HandleListSessions() map[string]*SAPSession {
 	h.sessionsLock.RLock()
 	defer h.sessionsLock.RUnlock()
-	return h.sessions
+
+	snapshot := make(map[string]*SAPSession, len(h.sessions))
+	for key, session := range h.sessions {
+		snapshot[key] = session
+	}
+
+	return snapshot
 }
 
 // HandleGetSession returns the session based on session identifier.
