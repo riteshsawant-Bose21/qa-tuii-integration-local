@@ -13,7 +13,7 @@ OUT_DIR="$REPO_ROOT/libs/flutter-libs/fusion_lib/lib/generated/proto"
 PLUGIN="${APP_DIR}/tool/protoc-gen-dart"
 
 # Linux protobuf include path (override via env if needed)
-PROTOBUF_INCLUDE="${PROTOBUF_INCLUDE:-/usr/include}"
+PROTOBUF_INCLUDE="${PROTOBUF_INCLUDE:-/usr/local/include}"
 
 mkdir -p "$OUT_DIR"
 
