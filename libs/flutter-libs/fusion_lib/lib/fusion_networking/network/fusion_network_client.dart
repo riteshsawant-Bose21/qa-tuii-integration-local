@@ -1007,6 +1007,7 @@ enum FusionApiEndpoint {
   audioSettings('/settings/audio', FusionApiType.fusionServer),
   snapshots('/snapshots', FusionApiType.fusionServer),
   sceneSets('/scene-sets', FusionApiType.fusionServer),
+  scenes('/scenes', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
   softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer),
