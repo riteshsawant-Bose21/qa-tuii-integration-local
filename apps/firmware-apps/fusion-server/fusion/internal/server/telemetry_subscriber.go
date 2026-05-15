@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -138,20 +137,6 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
 			return
 		}
 	}
-}
-
-func logTelemetryReconnect(logger *logging.Logger, addr string, err error, delay time.Duration) {
-	message := fmt.Sprintf("TelemetrySubscriber: connection to %s lost (%v), reconnecting in %s", addr, err, delay)
-
-	// In Multipass and other test environments the telemetry core often is not
-	// running, so repeated dial refusals are expected noise rather than an
-	// actionable warning.
-	if strings.Contains(err.Error(), "connection refused") {
-		logger.Debug(message)
-		return
-	}
-
-	logger.Warn(message)
 }
 
 // connectAndRecv establishes a ZMQ SUB connection and reads messages until an
