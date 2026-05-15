@@ -10,7 +10,7 @@ PROTO_ROOT="$REPO_ROOT/libs/proto"
 OUT_DIR="$REPO_ROOT/libs/flutter-libs/fusion_lib/lib/generated/proto"
 
 # Use system-installed protoc-gen-dart or fallback to local tool
-PLUGIN="${APP_DIR}/tool/protoc-gen-dart"
+PLUGIN="/home/ec2-user/actions-runner/_work/fusion-monorepo/fusion-monorepo/apps/frontend/flutter-apps/fusion-launcher/tool/protoc-gen-dart"
 
 # Linux protobuf include path (override via env if needed)
 PROTOBUF_INCLUDE="${PROTOBUF_INCLUDE:-/usr/local/include}"
