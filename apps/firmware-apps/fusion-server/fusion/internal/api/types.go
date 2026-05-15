@@ -244,7 +244,6 @@ type StateEntry struct {
 	NestedVersions map[string]Version `json:"nested_versions,omitempty"`
 }
 
-
 // MeterDataSample represents a single meter measurement from the telemetry core.
 type MeterDataSample struct {
 	BlockName  string          `json:"block_name"`
