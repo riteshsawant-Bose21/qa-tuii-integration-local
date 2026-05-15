@@ -7,7 +7,7 @@ REPO_ROOT=$(cd "$APP_DIR/../../../.." && pwd)
 PROTO_ROOT="$REPO_ROOT/libs/proto"
 OUT_DIR="$REPO_ROOT/libs/flutter-libs/fusion_lib/lib/generated/proto"
 PLUGIN="$APP_DIR/tool/protoc-gen-dart"
-PROTOBUF_INCLUDE="/opt/homebrew/include"
+PROTOBUF_INCLUDE="$(brew --prefix protobuf)/include"
 
 mkdir -p "$OUT_DIR"
 
