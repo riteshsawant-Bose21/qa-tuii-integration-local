@@ -26,7 +26,7 @@ FusionTUIIBridge &FusionTUIIBridge::getInstance()
 
 bool FusionTUIIBridge::initialize(const std::string &serverIP,
                                    unsigned int serverPort,
-                                   std::shared_ptr<std::map<std::string, int>> objectTracker,
+                                   const std::map<std::string, int> &objectTracker,
                                    const std::vector<TuiiZoneConfig> &zoneConfigs,
                                    const Json::Value &deviceConfig)
 {
@@ -40,7 +40,7 @@ bool FusionTUIIBridge::initialize(const std::string &serverIP,
 
     try
     {
-        m_objectTrackerPtr = objectTracker;
+        m_objectTracker = objectTracker;
         m_zoneConfigs = zoneConfigs;
         m_deviceConfig = deviceConfig;
 
@@ -63,7 +63,7 @@ bool FusionTUIIBridge::initialize(const std::string &serverIP,
     }
 }
 
-bool FusionTUIIBridge::updateZoneConfiguration(std::shared_ptr<std::map<std::string, int>> objectTracker,
+bool FusionTUIIBridge::updateZoneConfiguration(const std::map<std::string, int> &objectTracker,
                                                const std::vector<TuiiZoneConfig> &zoneConfigs)
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
@@ -74,11 +74,11 @@ bool FusionTUIIBridge::updateZoneConfiguration(std::shared_ptr<std::map<std::str
         return false;
     }
 
-    m_objectTrackerPtr = objectTracker;
+    m_objectTracker = objectTracker;
     m_zoneConfigs = zoneConfigs;
 
     spdlog::info("[FusionTUIIBridge] Zone configuration updated: {} zones, {} keys",
-                 m_zoneConfigs.size(), m_objectTrackerPtr ? m_objectTrackerPtr->size() : 0U);
+                 m_zoneConfigs.size(), m_objectTracker.size());
     return true;
 }
 
@@ -180,7 +180,7 @@ void FusionTUIIBridge::shutdown()
     }
 
     m_initialized.store(false);
-    m_objectTrackerPtr.reset();
+    m_objectTracker.clear();
     m_zoneConfigs.clear();
     m_deviceConfig = Json::Value(Json::objectValue);
 
@@ -222,15 +222,16 @@ bool FusionTUIIBridge::checkInitialized() const
     return true;
 }
 
-std::shared_ptr<const std::map<std::string, int>> FusionTUIIBridge::getObjectTrackerSnapshot() const
+std::vector<TuiiZoneConfig> FusionTUIIBridge::getZoneConfigsSnapshot() const
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
-    if (!m_initialized.load())
-    {
-        spdlog::warn("[FusionTUIIBridge] Bridge not initialized");
-        return nullptr;
-    }
-    return m_objectTrackerPtr;
+    return m_zoneConfigs;
+}
+
+std::map<std::string, int> FusionTUIIBridge::getObjectTrackerSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(m_initMutex);
+    return m_objectTracker;
 }
 
 bool FusionTUIIBridge::sendMessageToFusion(const std::string &jsonMessage)
@@ -284,14 +285,8 @@ std::string FusionTUIIBridge::createSourceMessage(const std::string &zoneID, uin
 
 const TuiiZoneConfig *FusionTUIIBridge::getZoneConfigFromTracker(const std::string &id) const
 {
-    auto objectTrackerPtr = getObjectTrackerSnapshot();
-    if (!objectTrackerPtr)
-    {
-        return nullptr;
-    }
-
-    auto it = objectTrackerPtr->find(id);
-    if (it == objectTrackerPtr->end())
+    auto it = m_objectTracker.find(id);
+    if (it == m_objectTracker.end())
     {
         spdlog::warn("[FusionTUIIBridge] No object found for ID: {}", id);
         return nullptr;
@@ -356,14 +351,14 @@ bool FusionTUIIBridge::processGainUpdate(const std::string &gainID, double value
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
 
-    if (!m_objectTrackerPtr)
+    if (m_objectTracker.empty())
     {
-        spdlog::error("[FusionTUIIBridge] Gain update failed: object tracker is null");
+        spdlog::error("[FusionTUIIBridge] Gain update failed: object tracker is empty");
         return false;
     }
 
-    const auto it = m_objectTrackerPtr->find(gainID);
-    if (it == m_objectTrackerPtr->end())
+    const auto it = m_objectTracker.find(gainID);
+    if (it == m_objectTracker.end())
     {
         spdlog::error("[FusionTUIIBridge] Gain update failed: key '{}' not found in tracker", gainID);
         return false;
@@ -414,14 +409,14 @@ bool FusionTUIIBridge::processMuteUpdate(const std::string &gainID, bool muteSta
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
 
-    if (!m_objectTrackerPtr)
+    if (m_objectTracker.empty())
     {
-        spdlog::error("[FusionTUIIBridge] Mute update failed: object tracker is null");
+        spdlog::error("[FusionTUIIBridge] Mute update failed: object tracker is empty");
         return false;
     }
 
-    const auto it = m_objectTrackerPtr->find(gainID);
-    if (it == m_objectTrackerPtr->end())
+    const auto it = m_objectTracker.find(gainID);
+    if (it == m_objectTracker.end())
     {
         spdlog::error("[FusionTUIIBridge] Mute update failed: key '{}' not found in tracker", gainID);
         return false;
@@ -458,14 +453,14 @@ bool FusionTUIIBridge::processSourceUpdate(const std::string &zoneID, uint16_t s
 {
     std::lock_guard<std::mutex> lock(m_initMutex);
 
-    if (!m_objectTrackerPtr)
+    if (m_objectTracker.empty())
     {
-        spdlog::error("[FusionTUIIBridge] Source update failed: object tracker is null");
+        spdlog::error("[FusionTUIIBridge] Source update failed: object tracker is empty");
         return false;
     }
 
-    const auto it = m_objectTrackerPtr->find(zoneID);
-    if (it == m_objectTrackerPtr->end())
+    const auto it = m_objectTracker.find(zoneID);
+    if (it == m_objectTracker.end())
     {
         spdlog::error("[FusionTUIIBridge] Source update failed: key '{}' not found in tracker", zoneID);
         return false;
