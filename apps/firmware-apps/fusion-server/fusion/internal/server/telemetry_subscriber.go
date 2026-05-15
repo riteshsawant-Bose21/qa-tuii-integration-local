@@ -126,7 +126,7 @@ func (t *TelemetrySubscriber) listenLoop(ctx context.Context, deviceIP string) {
 		}
 
 		// Transient error — back off and retry
-		logger.Warn("TelemetrySubscriber: connection to %s lost (%v), reconnecting in %s", addr, err, delay)
+		logger.Debug("TelemetrySubscriber: connection to %s lost (%v), reconnecting in %s", addr, err, delay)
 		select {
 		case <-time.After(delay):
 			delay = min(delay*2, zmqReconnectMaxDelay)

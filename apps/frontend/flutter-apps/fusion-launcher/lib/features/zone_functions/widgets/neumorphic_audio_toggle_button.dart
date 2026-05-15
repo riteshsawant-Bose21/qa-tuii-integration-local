@@ -42,6 +42,7 @@ class NeumorphicAudioToggleButton extends StatelessWidget {
             child: Center(
               child: SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "audio_toggle"),
+                label: !isActive ? "volume_up" : "volume_off",
                 isSelected: isActive,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,

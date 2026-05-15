@@ -18,6 +18,14 @@ class _TernaryToolbar extends StatelessWidget {
             },
           ),
           _ToolBarIcon(
+            icon: "rectangle.png",
+            label: "Rectangle",
+            isSelected: currentMode is DrawingRectangleListeningAreaState,
+            onTap: () {
+              context.read<BuildingPageViewModel>().setTool(DrawingRectangleListeningAreaState(listeningAreaId: null));
+            },
+          ),
+          _ToolBarIcon(
             icon: "pointer.png",
             label: "Select",
             isSelected: currentMode is SelectToolState,

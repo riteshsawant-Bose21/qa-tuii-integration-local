@@ -25,7 +25,7 @@ const (
 	gossipInterval      = 20 * time.Millisecond
 	gossipToTheDeadTime = 30 * time.Second
 	probeInterval       = 100 * time.Millisecond
-	probeTimeout        = 100 * time.Millisecond
+	probeTimeout        = 50 * time.Millisecond
 	pushPullInterval    = 1 * time.Second
 	retryInterval       = 2 * time.Second
 	retryTimes          = 5
@@ -131,7 +131,9 @@ func (c *Cluster) JoinMemberlist() error {
 		lastErr = err
 		logger.Warn("[MEMBERLIST] Join attempt %d/%d failed: %v",
 			attempt+1, retryTimes, err)
-		time.Sleep(retryInterval)
+		if attempt < retryTimes-1 {
+			time.Sleep(retryInterval)
+		}
 	}
 
 	return fmt.Errorf("failed to join cluster after %d attempts: %w", retryTimes, lastErr)
@@ -187,14 +189,23 @@ func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 	}
 
 	logger := logging.GetLogger()
-	url := utils.BuildInternalURL(vip, api.HTTPPort, routes.ClusterMembersEndpoint)
 
 	backoff := vipMembersInitialBackoff
 	startTime := time.Now()
 	attempt := 0
 
+	currentVIP := vip
 	for {
 		attempt++
+
+		// On retries, re-resolve the VIP so that a failover during the retry
+		// window is picked up rather than retrying against a stale address.
+		if attempt > 1 {
+			if resolved := c.getCurrentVIP(); resolved != "" {
+				currentVIP = resolved
+			}
+		}
+		url := utils.BuildInternalURL(currentVIP, api.HTTPPort, routes.ClusterMembersEndpoint)
 
 		resp, err := c.httpClient.Get(url)
 		if err == nil {

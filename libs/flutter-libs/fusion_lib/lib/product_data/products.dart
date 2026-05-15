@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 
 import 'data_sources/product_catalog.dart';
 import 'models/models.dart';
+import 'models/output_product.dart';
 
 const _kCatalogCacheKey = 'products_catalog';
 
@@ -117,6 +118,7 @@ class Products {
   List<AccessoryProduct> get accessories => _filter(_catalog?.accessories, (a) => a.isFusionCompatible);
   List<IoEndpointProduct> get ioEndpoints => _filter(_catalog?.ioEndpoints, (e) => e.isFusionCompatible);
   List<SourceProduct> get sources => _filter(_catalog?.sources, (s) => true);
+  List<OutputProduct> get outputs => _filter(_catalog?.outputs, (o) => o.isFusionCompatible);
 
   // ── public: individual lookups ────────────────────────────────────────────
 
@@ -126,7 +128,8 @@ class Products {
   DspProduct? getDsp(int id) => _findById(dsps, (d) => d.productId == id);
   AccessoryProduct? getAccessory(int id) => _findById(accessories, (a) => a.productId == id);
   IoEndpointProduct? getIoEndpoint(int id) => _findById(ioEndpoints, (e) => e.productId == id);
-  SourceProduct? getSource(String id) => _findById(sources, (s) => s.productId == id);
+  SourceProduct? getSource(String id) => _findById(sources, (s) => s.productId.toString() == id);
+  OutputProduct? getOutput(int id) => _findById(outputs, (o) => o.id == id);
 
   // ── public: image access ──────────────────────────────────────────────────
 

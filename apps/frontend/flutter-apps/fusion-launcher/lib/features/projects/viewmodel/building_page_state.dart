@@ -255,6 +255,22 @@ class DrawingListeningAreaState extends ListeningAreaToolState {
   int get hashCode => listeningAreaId.hashCode;
 }
 
+class DrawingRectangleListeningAreaState extends ListeningAreaToolState {
+  final String? listeningAreaId;
+
+  DrawingRectangleListeningAreaState({required this.listeningAreaId});
+
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+
+    return other is DrawingRectangleListeningAreaState && other.listeningAreaId == listeningAreaId;
+  }
+
+  @override
+  int get hashCode => listeningAreaId.hashCode;
+}
+
 class SelectToolState extends ListeningAreaToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
