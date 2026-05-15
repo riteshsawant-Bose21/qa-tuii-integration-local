@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -89,8 +90,13 @@ class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
 
   /// Add a new snapshot
   void addSnapshot() {
+    final Set<String> existingNames = state.snapshots.map((SnapshotsModel s) => s.name).toSet();
+    final String uniqueName = Helper.generateUniqueName(
+      baseName: 'New Snapshot',
+      existingNames: existingNames,
+    );
     final SnapshotsModel newSnapshot = SnapshotsModel(
-      name: "New Snapshot ${state.snapshots.length + 1}",
+      name: uniqueName,
     );
     _projectViewModel.addNewSnapshots(scene: newSnapshot);
     _projectViewModel.setSelectedSnapshotId(newSnapshot.id);

@@ -288,6 +288,7 @@ class __ExpansionTileState extends State<_ExpansionTile> {
                             name: newValue,
                           ),
                         );
+                        return true;
                       },
                     ),
                   ),

@@ -206,6 +206,7 @@ class GpioPage extends StatelessWidget {
                                         style: context.textTheme.bodyMedium!,
                                         save: (String value) {
                                           context.read<GpioViewmodel>().updateGpio(gpio.copyWith(name: value));
+                                          return true;
                                         },
                                       ),
                                       RadioGroup<GpioDirection>(

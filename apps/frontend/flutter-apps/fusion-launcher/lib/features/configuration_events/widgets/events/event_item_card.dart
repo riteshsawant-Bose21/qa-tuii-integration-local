@@ -145,6 +145,7 @@ class _EventItemCardState extends State<EventItemCard> {
                         final FusionEvent newEvent = widget.eventData.copyWith(name: value);
                         widget.cubit.updateEvent(newEvent);
                       }
+                      return true;
                     },
                   ),
                 ),
