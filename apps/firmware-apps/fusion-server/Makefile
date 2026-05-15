@@ -12,7 +12,7 @@ DEBUG_FLAGS=-gcflags "all=-N -l"
 PROTOC ?= protoc
 PROTO_SRC_DIR=../../../libs/proto
 PROTO_GO_OUT=fusion/internal/gen/proto
-GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin
+GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin/linux_arm64
 PROTOC_GEN_GO := $(GO_BIN_DIR)/protoc-gen-go
 PROTOC_GEN_GO_VERSION ?= v1.36.6
 PROTO_FUSION_DIR=$(PROTO_SRC_DIR)/fusion
