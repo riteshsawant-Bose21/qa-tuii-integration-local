@@ -15,7 +15,7 @@ message VIPNodeResult {
   string node = 1;
   string host = 2;
   string phase = 3;
-  optional bool success = 4;
+	bool success = 4;
   int32 status_code = 5;
   string error = 6;
   google.protobuf.Timestamp started_at = 7;
