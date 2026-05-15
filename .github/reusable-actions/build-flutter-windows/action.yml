@@ -68,6 +68,8 @@ runs:
         }
 
         flutter pub get
+        chmod +x tool/generate_protos.sh
+        ./tool/generate_protos.sh
         moon run flutter-apps:build-win
         if ($LASTEXITCODE -ne 0) {
           Write-Error "moon run flutter-apps:build-win failed with exit code $LASTEXITCODE"
