@@ -1,13 +1,19 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-APP_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
-REPO_ROOT=$(cd "$APP_DIR/../../../.." && pwd)
+# Resolve directories
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$APP_DIR/../../../.." && pwd)"
+
 PROTO_ROOT="$REPO_ROOT/libs/proto"
 OUT_DIR="$REPO_ROOT/libs/flutter-libs/fusion_lib/lib/generated/proto"
-PLUGIN="$APP_DIR/tool/protoc-gen-dart"
-PROTOBUF_INCLUDE="$(brew --prefix protobuf)/include"
+
+# Use system-installed protoc-gen-dart or fallback to local tool
+PLUGIN="${APP_DIR}/tool/protoc-gen-dart"
+
+# Linux protobuf include path (override via env if needed)
+PROTOBUF_INCLUDE="${PROTOBUF_INCLUDE:-/usr/include}"
 
 mkdir -p "$OUT_DIR"
 
