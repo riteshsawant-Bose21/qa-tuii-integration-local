@@ -94,7 +94,7 @@ proto: proto-tools
 proto-tools:
 	@if [ ! -x "$(PROTOC_GEN_GO)" ]; then \
 		echo "Installing protoc-gen-go $(PROTOC_GEN_GO_VERSION) to $(GO_BIN_DIR)"; \
-		GOBIN="$(GO_BIN_DIR)" $(GOCMD) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION); \
+		$(GOCMD) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION); \
 	fi
 
 proto-clean:
