@@ -1,4 +1,5 @@
 import '../models/models.dart';
+import '../models/output_product.dart';
 
 /// Container for all product data from the API
 ///
@@ -13,6 +14,7 @@ class ProductCatalog {
   final List<AccessoryProduct> accessories;
   final List<IoEndpointProduct> ioEndpoints;
   final List<SourceProduct> sources;
+  final List<OutputProduct> outputs;
 
   const ProductCatalog({
     required this.version,
@@ -23,6 +25,7 @@ class ProductCatalog {
     this.accessories = const [],
     this.ioEndpoints = const [],
     this.sources = const [],
+    this.outputs = const [],
   });
 
   /// Creates an empty catalog with default version
@@ -39,6 +42,7 @@ class ProductCatalog {
       ioEndpoints: (json['io_endpoint'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       accessories: (json['additional_accessories'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       sources: (json['sources'] as List<dynamic>?)?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      outputs: (json['outputs'] as List<dynamic>?)?.map((e) => OutputProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
 
@@ -51,12 +55,9 @@ class ProductCatalog {
     'io_endpoint': ioEndpoints.map((e) => e.toJson()).toList(),
     'additional_accessories': accessories.map((e) => e.toJson()).toList(),
     'sources': sources.map((e) => e.toJson()).toList(),
+    'outputs': outputs.map((e) => e.toJson()).toList(),
   };
 
-  /// Check if catalog has any products
-  bool get isEmpty => speakers.isEmpty && amplifiers.isEmpty && controllers.isEmpty && dsps.isEmpty && accessories.isEmpty && ioEndpoints.isEmpty && sources.isEmpty;
-
-  /// Get total product count
   int get totalCount => speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length + sources.length;
 
   @override

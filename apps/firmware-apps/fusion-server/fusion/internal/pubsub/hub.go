@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const configUpdateReliableDebounce = 250 * time.Millisecond
+const (
+	configUpdateReliableDebounce = 250 * time.Millisecond
+	versionUpdateReliableDebounce = 250 * time.Millisecond // coalesces version updates that trail config updates
+)
 
 type Broadcaster interface {
 	BroadcastMessage(msg *api.NotifyMessage) error
@@ -40,7 +43,8 @@ type Hub struct {
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
 
-	configUpdates configUpdateDebounceState
+	configUpdates  configUpdateDebounceState
+	versionUpdates configUpdateDebounceState
 
 	// SWUpdate progress monitoring
 	swUpdateMutex    sync.RWMutex
@@ -55,6 +59,9 @@ func NewHub(stateManager *persistence.StateManager, persistence *persistence.Per
 		persistence:  persistence,
 		configUpdates: configUpdateDebounceState{
 			window: configUpdateReliableDebounce,
+		},
+		versionUpdates: configUpdateDebounceState{
+			window: versionUpdateReliableDebounce,
 		},
 		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
@@ -382,10 +389,9 @@ func (h *Hub) queueConfigUpdate(message *api.NotifyMessage) {
 
 	h.configUpdates.mu.Lock()
 	h.configUpdates.pending = cloneNotifyMessageForBroadcast(message)
-	if h.configUpdates.timer != nil {
-		h.configUpdates.timer.Stop()
+	if h.configUpdates.timer == nil {
+		h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	}
-	h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	h.configUpdates.mu.Unlock()
 }
 
@@ -444,7 +450,35 @@ func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata
 		}),
 	)
 
-	if err := h.BroadcastToNodes(msg); err != nil {
+	h.queueVersionUpdate(msg)
+}
+
+func (h *Hub) queueVersionUpdate(message *api.NotifyMessage) {
+	if message == nil {
+		return
+	}
+
+	h.versionUpdates.mu.Lock()
+	h.versionUpdates.pending = cloneNotifyMessageForBroadcast(message)
+	if h.versionUpdates.timer != nil {
+		h.versionUpdates.timer.Stop()
+	}
+	h.versionUpdates.timer = time.AfterFunc(h.versionUpdates.window, h.flushVersionUpdate)
+	h.versionUpdates.mu.Unlock()
+}
+
+func (h *Hub) flushVersionUpdate() {
+	h.versionUpdates.mu.Lock()
+	message := h.versionUpdates.pending
+	h.versionUpdates.pending = nil
+	h.versionUpdates.timer = nil
+	h.versionUpdates.mu.Unlock()
+
+	if message == nil {
+		return
+	}
+
+	if err := h.BroadcastToNodes(message); err != nil {
 		logging.GetLogger().Error("failed to broadcast version update: %v", err)
 	}
 }

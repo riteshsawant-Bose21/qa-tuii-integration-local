@@ -293,6 +293,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 
 	var (
 		update       bool
+		active       map[string]any
 		snapshots    map[string]any
 		snapshotDefs map[string]any
 		sceneSets    map[string]any
@@ -310,6 +311,17 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 			return fmt.Errorf("snapshots import must include default snapshot %q", keyDefaultSnapshot)
 		}
 		if err := validateImportedSnapshots(snapshots); err != nil {
+			return err
+		}
+		update = true
+	}
+
+	if activeData, exists := importData[bucketActive]; exists {
+		active, ok = activeData.(map[string]any)
+		if !ok {
+			return fmt.Errorf("active data is not in the expected format")
+		}
+		if err := validateImportedActive(active); err != nil {
 			return err
 		}
 		update = true
@@ -391,18 +403,26 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 				}
 			}
 
-			activeSnapshot, ok := snapshots[metadata.ActiveSnapshot]
-			if !ok {
-				return fmt.Errorf("active snapshot %q missing after import", metadata.ActiveSnapshot)
+			if active == nil {
+				activeSnapshot, ok := snapshots[metadata.ActiveSnapshot]
+				if !ok {
+					return fmt.Errorf("active snapshot %q missing after import", metadata.ActiveSnapshot)
+				}
+				activeState, ok := activeSnapshot.(map[string]any)
+				if !ok {
+					return fmt.Errorf("active snapshot %q is not in the expected format", metadata.ActiveSnapshot)
+				}
+				if err := replaceBucketDataTx(tx, bucketActive, map[string]any{
+					keyActiveState: activeState,
+				}); err != nil {
+					return fmt.Errorf("failed to refresh active state from snapshot import: %w", err)
+				}
 			}
-			activeState, ok := activeSnapshot.(map[string]any)
-			if !ok {
-				return fmt.Errorf("active snapshot %q is not in the expected format", metadata.ActiveSnapshot)
-			}
-			if err := replaceBucketDataTx(tx, bucketActive, map[string]any{
-				keyActiveState: activeState,
-			}); err != nil {
-				return fmt.Errorf("failed to refresh active state from snapshot import: %w", err)
+		}
+
+		if active != nil {
+			if err := replaceBucketDataTx(tx, bucketActive, active); err != nil {
+				return fmt.Errorf("failed to replace active state during import: %w", err)
 			}
 		}
 
@@ -459,6 +479,25 @@ func validateImportedSnapshots(snapshots map[string]any) error {
 		if err := json.Unmarshal(data, &ps); err != nil {
 			return fmt.Errorf("failed to unmarshal imported snapshot %q: %w", key, err)
 		}
+	}
+
+	return nil
+}
+
+func validateImportedActive(active map[string]any) error {
+	stateData, exists := active[keyActiveState]
+	if !exists {
+		return fmt.Errorf("active import must include key %q", keyActiveState)
+	}
+
+	data, err := json.Marshal(stateData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal imported active state %q: %w", keyActiveState, err)
+	}
+
+	var ps PersistentState
+	if err := json.Unmarshal(data, &ps); err != nil {
+		return fmt.Errorf("failed to unmarshal imported active state %q: %w", keyActiveState, err)
 	}
 
 	return nil
@@ -805,6 +844,10 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		if err := json.Unmarshal(value, &metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
 		}
+		// Version orders repairs, but it is not part of the converged payload.
+		// Including it in the DB hash causes perpetual anti-entropy loops after
+		// an import repairs the data but preserves the local node's metadata version.
+		metadata.Version = api.Version{}
 		metadata.Hash = ""
 		normalized, err := json.Marshal(metadata)
 		if err != nil {

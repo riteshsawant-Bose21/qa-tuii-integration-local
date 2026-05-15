@@ -34,6 +34,7 @@ enum RelationshipType {
   aes67InputStreams,
   aes67OutputStreams,
   sourceStreamMapping,
+  outputDeviceStreamMapping,
 
   // /// Maps a [FusionController] → its assigned zone/sub-zone IDs.
   // /// Mirrors the [messageZones] pattern used by the message player.
