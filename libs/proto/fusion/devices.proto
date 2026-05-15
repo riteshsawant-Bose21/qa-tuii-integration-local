@@ -12,9 +12,9 @@ message DeviceInfo {
   string model_name = 5;
   string mac_address = 6;
   string serial_number = 7;
-  bool is_primary = 8;
+  optional bool is_primary = 8;
   string software_update_version = 9;
-  bool is_device_certificate_valid = 10;
+  optional bool is_device_certificate_valid = 10;
   string fusion_monorepo_branch = 11;
   string fusion_monorepo_commit_hash = 12;
   string jenkins_build_number = 13;

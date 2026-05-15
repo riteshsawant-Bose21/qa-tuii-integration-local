@@ -21,5 +21,5 @@ message UDPDebugStats {
   uint64 last_broadcast_epoch = 14;
   uint64 last_broadcast_version = 15;
   int64 last_broadcast_sent_at_ns = 16;
-  bool maintenance_enabled = 17;
+  optional bool maintenance_enabled = 17;
 }

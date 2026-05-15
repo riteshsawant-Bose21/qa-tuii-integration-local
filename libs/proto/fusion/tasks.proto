@@ -47,8 +47,8 @@ message Task {
   google.protobuf.Timestamp start_at = 5;
   google.protobuf.Timestamp end_at = 6;
   RecurringWindow recurrence = 7;
-  bool enabled = 8;
-  bool scheduled = 9;
+  optional bool enabled = 8;
+  optional bool scheduled = 9;
 
   oneof details {
     SnapshotTaskDetails snapshot = 10;

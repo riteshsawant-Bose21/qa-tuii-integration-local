@@ -29,7 +29,7 @@ message WebSocketConfigUpdateEvent {
   string mode = 1;
   google.protobuf.Struct updates = 2;
   google.protobuf.Struct state = 3;
-  bool clear = 4;
+  optional bool clear = 4;
 }
 
 message WebSocketDeviceLookupRequest {
