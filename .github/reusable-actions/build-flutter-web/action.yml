@@ -58,8 +58,8 @@ runs:
         echo "$HOME/.proto/shims" >> $GITHUB_PATH
         cp ~/flutter-env/.env ./.env
         flutter pub get
-        chmod +x ../fusion-launcher/tool/generate_protos.sh
-        ../fusion-launcher/tool/generate_protos.sh
+        chmod +x ../fusion-launcher/tool/generate_protos_linux.sh
+        ../fusion-launcher/tool/generate_protos_linux.sh
         moon run flutter-apps:build-web
         cd build/web
         zip -r fusion_launcher_web_build.zip .
