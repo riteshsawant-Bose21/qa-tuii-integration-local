@@ -73,7 +73,7 @@ class ControllerSchedulePageConfig {
 
   const ControllerSchedulePageConfig({
     this.displayMode = 'all',
-    this.showUpcoming = false,
+    this.showUpcoming = true,
   });
 
   ControllerSchedulePageConfig copyWith({
@@ -94,7 +94,7 @@ class ControllerSchedulePageConfig {
   factory ControllerSchedulePageConfig.fromJson(Map<String, dynamic> json) {
     return ControllerSchedulePageConfig(
       displayMode: json['displayMode'] as String? ?? 'all',
-      showUpcoming: json['showUpcoming'] as bool? ?? false,
+      showUpcoming: json['showUpcoming'] as bool? ?? true,
     );
   }
 }
