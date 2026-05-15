@@ -576,7 +576,7 @@ func testDeviceConfigurationPackage(t *testing.T) (*model.DeviceConfigurationPac
 					DestDeviceUid:   sinkID,
 					Properties: &model.FusionConnectAudioStreamProperties{
 						Channels:        2,
-						IsFusionConnect: true,
+						IsFusionConnect: proto.Bool(true),
 					},
 				},
 			},
