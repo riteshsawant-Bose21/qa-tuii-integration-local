@@ -213,6 +213,38 @@ func TestTimeMachineCreateAndList(t *testing.T) {
 	}
 }
 
+func TestTimeMachineGetReturnsProtoSnapshotResponse(t *testing.T) {
+	snapshotName := fmt.Sprintf("test_snapshot_payload_%d", time.Now().UnixNano())
+
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+	resp.Body.Close()
+
+	getURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	resp, err = http.Get(getURL)
+	if err != nil {
+		t.Fatalf("Failed to get snapshot: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Get snapshot returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var snapshotResp model.TimeMachineSnapshotResponse
+	if err := decodeProtoBody(resp.Body, &snapshotResp); err != nil {
+		t.Fatalf("Failed to decode snapshot response: %v", err)
+	}
+
+	if len(snapshotResp.GetState()) == 0 {
+		t.Fatal("Snapshot response state was empty")
+	}
+}
+
 func TestTimeMachineActivateAndDelete(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)

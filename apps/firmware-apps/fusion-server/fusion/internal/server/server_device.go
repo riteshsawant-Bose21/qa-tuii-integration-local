@@ -311,9 +311,8 @@ func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 	response := &model.DeviceListResponse{
 		Devices: make([]*model.DeviceInfo, 0, len(info)),
 	}
-	for _, device := range info {
-		deviceCopy := device
-		response.Devices = append(response.Devices, &deviceCopy)
+	for i := range info {
+		response.Devices = append(response.Devices, &info[i])
 	}
 
 	if err := writeProtoJSON(w, response); err != nil {
@@ -357,7 +356,7 @@ func (c *FusionServer) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := c.handler.HandleUpdateDeviceInfo(deviceId, patchProto); err != nil {
+	if err := c.handler.HandleUpdateDeviceInfo(deviceId, &patchProto); err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
 			http.Error(w, err.Error(), http.StatusConflict)
 		} else {
@@ -387,7 +386,7 @@ func (c *FusionServer) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := c.handler.HandleUpdateDeviceInfoLocal(patchProto); err != nil {
+	if err := c.handler.HandleUpdateDeviceInfoLocal(&patchProto); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

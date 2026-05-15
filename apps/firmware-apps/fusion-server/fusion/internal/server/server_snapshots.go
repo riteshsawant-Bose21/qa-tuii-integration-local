@@ -33,14 +33,19 @@ func (s *FusionServer) GetTimeMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg, err := structpb.NewStruct(snapshotMap)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error encoding snapshot: %v", err), http.StatusInternalServerError)
-		return
+	state := make(map[string]*structpb.Value, len(snapshotMap))
+	for key, value := range snapshotMap {
+		protoValue, err := structpb.NewValue(value)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error encoding snapshot value for %q: %v", key, err), http.StatusInternalServerError)
+			return
+		}
+		state[key] = protoValue
 	}
 
+	msg := &model.TimeMachineSnapshotResponse{State: state}
 	if err := writeProtoJSON(w, msg); err != nil {
-		http.Error(w, fmt.Sprintf("Error writing snapshot: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error encoding snapshot: %v", err), http.StatusInternalServerError)
 	}
 }
 

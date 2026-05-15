@@ -24,6 +24,17 @@ var (
 	}
 )
 
+func recurringWindowFromProto(window *model.RecurringWindow) *api.RecurringWindow {
+	return window
+}
+
+func timeFromProto(ts *timestamppb.Timestamp) time.Time {
+	if ts == nil {
+		return time.Time{}
+	}
+	return ts.AsTime()
+}
+
 func writeProtoJSON(w http.ResponseWriter, msg proto.Message) error {
 	data, err := protoJSONMarshalOptions.Marshal(msg)
 	if err != nil {
@@ -34,86 +45,63 @@ func writeProtoJSON(w http.ResponseWriter, msg proto.Message) error {
 	return err
 }
 
-func recurringWindowToProto(window *api.RecurringWindow) *model.RecurringWindow {
-	if window == nil {
-		return nil
-	}
-
-	days := make([]int32, len(window.Days))
-	for i, day := range window.Days {
-		days[i] = int32(day)
-	}
-
-	return &model.RecurringWindow{
-		StartTime: window.StartTime,
-		EndTime:   window.EndTime,
-		Days:      days,
-	}
-}
-
-func recurringWindowFromProto(window *model.RecurringWindow) *api.RecurringWindow {
-	if window == nil {
-		return nil
-	}
-
-	days := make([]int, len(window.Days))
-	for i, day := range window.Days {
-		days[i] = int(day)
-	}
-
-	return &api.RecurringWindow{
-		StartTime: window.StartTime,
-		EndTime:   window.EndTime,
-		Days:      days,
-	}
-}
-
-func timeToProto(ts time.Time) *timestamppb.Timestamp {
-	if ts.IsZero() {
-		return nil
-	}
-	return timestamppb.New(ts)
-}
-
-func timeFromProto(ts *timestamppb.Timestamp) time.Time {
-	if ts == nil {
-		return time.Time{}
-	}
-	return ts.AsTime()
-}
-
 func snapshotCreateRequestToTask(req *model.SnapshotTaskCreateRequest) *api.Task {
-	return &api.Task{
-		ID:          req.Id,
-		Description: req.Description,
-		Type:        api.TaskTypeSnapshot,
-		CronExpr:    req.CronExpr,
-		StartAt:     timeFromProto(req.StartAt),
-		EndAt:       timeFromProto(req.EndAt),
-		Recurrence:  recurringWindowFromProto(req.Recurrence),
-		Enabled:     true,
-		Params: map[string]any{
-			api.SnapshotIDKey: req.SnapshotId,
-		},
-	}
+	task := &api.Task{}
+	task.Id = req.Id
+	task.Description = req.Description
+	task.Type = api.TaskTypeSnapshot
+	task.CronExpr = req.CronExpr
+	task.StartAt = req.StartAt
+	task.EndAt = req.EndAt
+	task.Recurrence = req.Recurrence
+	task.Enabled = true
+	_ = task.SetParam(api.SnapshotIDKey, req.SnapshotId)
+	return task
 }
 
 func messageCreateRequestToTask(req *model.MessageTaskCreateRequest) *api.Task {
-	return &api.Task{
-		ID:          req.Id,
-		Description: req.Description,
-		Type:        api.TaskTypeMessage,
-		CronExpr:    req.CronExpr,
-		StartAt:     timeFromProto(req.StartAt),
-		EndAt:       timeFromProto(req.EndAt),
-		Recurrence:  recurringWindowFromProto(req.Recurrence),
-		Enabled:     true,
-		Params: map[string]any{
-			api.MessageIDKey:       req.MessageId,
-			api.MessagePriorityKey: req.Priority,
-			api.MessageZonesKey:    messageZonesFromProto(req.Zones),
-		},
-	}
+	task := &api.Task{}
+	task.Id = req.Id
+	task.Description = req.Description
+	task.Type = api.TaskTypeMessage
+	task.CronExpr = req.CronExpr
+	task.StartAt = req.StartAt
+	task.EndAt = req.EndAt
+	task.Recurrence = req.Recurrence
+	task.Enabled = true
+	_ = task.SetParam(api.MessageIDKey, req.MessageId)
+	_ = task.SetParam(api.MessagePriorityKey, req.Priority)
+	_ = task.SetParam(api.MessageZonesKey, messageZonesFromProto(req.Zones))
+	return task
+}
+
+func sceneSnapshotCreateRequestToTask(req *model.SceneSnapshotTaskCreateRequest) *api.Task {
+	task := &api.Task{}
+	task.Id = req.Id
+	task.Description = req.Description
+	task.Type = api.TaskTypeSceneSnapshot
+	task.CronExpr = req.CronExpr
+	task.StartAt = req.StartAt
+	task.EndAt = req.EndAt
+	task.Recurrence = req.Recurrence
+	task.Enabled = true
+	_ = task.SetParam(api.SnapshotDefinitionIDKey, req.SnapshotDefinitionId)
+	return task
+}
+
+func sceneActivateCreateRequestToTask(req *model.SceneActivateTaskCreateRequest) *api.Task {
+	task := &api.Task{}
+	task.Id = req.Id
+	task.Description = req.Description
+	task.Type = api.TaskTypeSceneActivate
+	task.CronExpr = req.CronExpr
+	task.StartAt = req.StartAt
+	task.EndAt = req.EndAt
+	task.Recurrence = req.Recurrence
+	task.Enabled = true
+	_ = task.SetParam(api.SceneSetIDKey, req.SetId)
+	_ = task.SetParam(api.SceneIDKey, req.SceneId)
+	return task
 }
 
 func messageZonesFromProto(zones string) []string {
@@ -172,31 +160,23 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 
 	enabled := task.Enabled
 	scheduled := task.CronEntryID != 0
-	if !task.StartAt.IsZero() && nowFunction().Before(task.StartAt) {
+	if startAt := task.StartAtTime(); !startAt.IsZero() && nowFunction().Before(startAt) {
 		scheduled = false
 	}
-	if enabled && !task.EndAt.IsZero() && nowFunction().After(task.EndAt) {
+	if endAt := task.EndAtTime(); enabled && !endAt.IsZero() && nowFunction().After(endAt) {
 		enabled = false
 		scheduled = false
 	}
 
-	out := &model.Task{
-		Id:          task.ID,
-		Description: task.Description,
-		CronExpr:    task.CronExpr,
-		StartAt:     timeToProto(task.StartAt),
-		EndAt:       timeToProto(task.EndAt),
-		Recurrence:  recurringWindowToProto(task.Recurrence),
-		Enabled:     enabled,
-		Scheduled:   scheduled,
-	}
+	out := proto.Clone(&task.Task).(*model.Task)
+	out.Enabled = enabled
+	out.Scheduled = scheduled
 
 	switch task.Type {
 	case api.TaskTypeSnapshot:
-		out.Type = model.TaskType_TASK_TYPE_SNAPSHOT
-		snapshotID, ok := task.Params[api.SnapshotIDKey]
+		snapshotID, ok := task.GetParam(api.SnapshotIDKey)
 		if !ok {
-			return nil, fmt.Errorf("task %q missing snapshot_id", task.ID)
+			return nil, fmt.Errorf("task %q missing snapshot_id", task.Id)
 		}
 		out.Details = &model.Task_Snapshot{
 			Snapshot: &model.SnapshotTaskDetails{
@@ -204,21 +184,23 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 			},
 		}
 	case api.TaskTypeMessage:
-		out.Type = model.TaskType_TASK_TYPE_MESSAGE
-
-		messageID, ok := task.Params[api.MessageIDKey]
+		messageID, ok := task.GetParam(api.MessageIDKey)
 		if !ok {
-			return nil, fmt.Errorf("task %q missing message_id", task.ID)
+			return nil, fmt.Errorf("task %q missing message_id", task.Id)
 		}
 
-		priority, err := int64Param(task.Params[api.MessagePriorityKey])
+		priorityValue, ok := task.GetParam(api.MessagePriorityKey)
+		if !ok {
+			return nil, fmt.Errorf("task %q missing priority", task.Id)
+		}
+		priority, err := int64Param(priorityValue)
 		if err != nil {
-			return nil, fmt.Errorf("task %q invalid priority: %w", task.ID, err)
+			return nil, fmt.Errorf("task %q invalid priority: %w", task.Id, err)
 		}
 
-		zones, ok := task.Params[api.MessageZonesKey]
+		zones, ok := task.GetParam(api.MessageZonesKey)
 		if !ok {
-			return nil, fmt.Errorf("task %q missing zones", task.ID)
+			return nil, fmt.Errorf("task %q missing zones", task.Id)
 		}
 
 		out.Details = &model.Task_Message{
@@ -228,6 +210,33 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 				Zones:     messageZonesToProto(zones),
 			},
 		}
+	case api.TaskTypeSceneSnapshot:
+		snapshotDefinitionID, ok := task.GetParam(api.SnapshotDefinitionIDKey)
+		if !ok {
+			return nil, fmt.Errorf("task %q missing snapshot_definition_id", task.Id)
+		}
+		out.Details = &model.Task_SceneSnapshot{
+			SceneSnapshot: &model.SceneSnapshotTaskDetails{
+				SnapshotDefinitionId: fmt.Sprintf("%v", snapshotDefinitionID),
+			},
+		}
+	case api.TaskTypeSceneActivate:
+		setID, ok := task.GetParam(api.SceneSetIDKey)
+		if !ok {
+			return nil, fmt.Errorf("task %q missing set_id", task.Id)
+		}
+
+		sceneID, ok := task.GetParam(api.SceneIDKey)
+		if !ok {
+			return nil, fmt.Errorf("task %q missing scene_id", task.Id)
+		}
+
+		out.Details = &model.Task_SceneActivate{
+			SceneActivate: &model.SceneActivateTaskDetails{
+				SetId:   fmt.Sprintf("%v", setID),
+				SceneId: fmt.Sprintf("%v", sceneID),
+			},
+		}
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)
 	}
@@ -235,13 +244,13 @@ func taskToProto(task *api.Task) (*model.Task, error) {
 	return out, nil
 }
 
-func tasksToProto(tasks []api.Task) (*model.TaskListResponse, error) {
+func tasksToProto(tasks []*api.Task) (*model.TaskListResponse, error) {
 	resp := &model.TaskListResponse{
 		Tasks: make([]*model.Task, 0, len(tasks)),
 	}
 
-	for i := range tasks {
-		taskMsg, err := taskToProto(&tasks[i])
+	for _, task := range tasks {
+		taskMsg, err := taskToProto(task)
 		if err != nil {
 			return nil, err
 		}

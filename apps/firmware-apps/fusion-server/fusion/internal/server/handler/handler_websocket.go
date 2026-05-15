@@ -292,8 +292,8 @@ func (h *Handler) getDevicesList() ([]model.DeviceInfo, error) {
 
 func (h *Handler) getDeviceByID(deviceID string) (*model.DeviceInfo, error) {
 	allDevices := h.clusterTransport.GetAllDevicesInfo()
-	for i, deviceInfo := range allDevices {
-		if deviceInfo.Id == deviceID {
+	for i := range allDevices {
+		if allDevices[i].Id == deviceID {
 			return &allDevices[i], nil
 		}
 	}

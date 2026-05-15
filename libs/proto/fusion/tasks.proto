@@ -10,6 +10,8 @@ enum TaskType {
   TASK_TYPE_UNSPECIFIED = 0;
   TASK_TYPE_SNAPSHOT = 1;
   TASK_TYPE_MESSAGE = 2;
+  TASK_TYPE_SCENE_SNAPSHOT = 3;
+  TASK_TYPE_SCENE_ACTIVATE = 4;
 }
 
 message RecurringWindow {
@@ -28,6 +30,15 @@ message MessageTaskDetails {
   string zones = 3;
 }
 
+message SceneSnapshotTaskDetails {
+  string snapshot_definition_id = 1;
+}
+
+message SceneActivateTaskDetails {
+  string set_id = 1;
+  string scene_id = 2;
+}
+
 message Task {
   string id = 1;
   string description = 2;
@@ -42,6 +53,8 @@ message Task {
   oneof details {
     SnapshotTaskDetails snapshot = 10;
     MessageTaskDetails message = 11;
+    SceneSnapshotTaskDetails scene_snapshot = 12;
+    SceneActivateTaskDetails scene_activate = 13;
   }
 }
 
@@ -104,4 +117,44 @@ message MessageTaskUpdateRequest {
   optional string message_id = 6;
   optional int64 priority = 7;
   optional string zones = 8;
+}
+
+message SceneSnapshotTaskCreateRequest {
+  string id = 1;
+  string description = 2;
+  string cron_expr = 3;
+  google.protobuf.Timestamp start_at = 4;
+  google.protobuf.Timestamp end_at = 5;
+  RecurringWindow recurrence = 6;
+  string snapshot_definition_id = 7;
+}
+
+message SceneSnapshotTaskUpdateRequest {
+  optional string description = 1;
+  optional string cron_expr = 2;
+  google.protobuf.Timestamp start_at = 3;
+  google.protobuf.Timestamp end_at = 4;
+  RecurringWindow recurrence = 5;
+  optional string snapshot_definition_id = 6;
+}
+
+message SceneActivateTaskCreateRequest {
+  string id = 1;
+  string description = 2;
+  string cron_expr = 3;
+  google.protobuf.Timestamp start_at = 4;
+  google.protobuf.Timestamp end_at = 5;
+  RecurringWindow recurrence = 6;
+  string set_id = 7;
+  string scene_id = 8;
+}
+
+message SceneActivateTaskUpdateRequest {
+  optional string description = 1;
+  optional string cron_expr = 2;
+  google.protobuf.Timestamp start_at = 3;
+  google.protobuf.Timestamp end_at = 4;
+  RecurringWindow recurrence = 5;
+  optional string set_id = 6;
+  optional string scene_id = 7;
 }

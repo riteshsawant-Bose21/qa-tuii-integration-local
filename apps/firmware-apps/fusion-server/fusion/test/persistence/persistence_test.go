@@ -149,8 +149,8 @@ func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
 	require.NoError(t, err)
 
 	original := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
-		"two": {ID: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
+		"two": {Task: model.Task{Id: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(original))
 
@@ -511,13 +511,15 @@ func TestImportDataRejectsSnapshotsThatWouldOrphanExistingSnapshotTasks(t *testi
 	require.NoError(t, p.CreateSnapshot("other"))
 	require.NoError(t, p.SaveTasks(map[string]*api.Task{
 		"task-1": {
-			ID:          "task-1",
-			Description: "apply other snapshot",
-			Type:        api.TaskTypeSnapshot,
-			CronExpr:    "* * * * *",
-			Enabled:     true,
-			Params: map[string]any{
-				api.SnapshotIDKey: "other",
+			Task: model.Task{
+				Id:          "task-1",
+				Description: "apply other snapshot",
+				Type:        api.TaskTypeSnapshot,
+				CronExpr:    "* * * * *",
+				Enabled:     true,
+				Details: &model.Task_Snapshot{
+					Snapshot: &model.SnapshotTaskDetails{SnapshotId: "other"},
+				},
 			},
 		},
 	}))
@@ -584,7 +586,9 @@ func TestImportDataAcceptsSelfContainedSnapshotsAndTasksBundle(t *testing.T) {
 
 	task, err := p.GetTask("task-1")
 	require.NoError(t, err)
-	require.Equal(t, "other", task.Params[api.SnapshotIDKey])
+	value, ok := task.GetParam(api.SnapshotIDKey)
+	require.True(t, ok)
+	require.Equal(t, "other", value)
 }
 
 func TestImportDataIsAtomicWhenLaterSectionFails(t *testing.T) {
@@ -1038,7 +1042,7 @@ func TestTaskExistsReturnsFalseWithoutErrorWhenTasksBucketMissing(t *testing.T) 
 	})
 	require.NoError(t, err)
 
-	exists, err := p.TaskExists(&api.Task{ID: "does-not-exist"})
+	exists, err := p.TaskExists(&api.Task{Task: model.Task{Id: "does-not-exist"}})
 	require.NoError(t, err)
 	require.False(t, exists)
 }

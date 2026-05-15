@@ -337,7 +337,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpTaskDelete:
-		if err := d.taskManager.RemoveTask(message.Task.ID); err != nil {
+		if err := d.taskManager.RemoveTask(message.Task.Id); err != nil {
 			logger.Error("Error deleting task: %v", err)
 		}
 

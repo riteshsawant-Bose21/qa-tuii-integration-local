@@ -86,11 +86,15 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Trigger a task immediately
 	task := api.Task{
-		ID:          "message_trigger_immediate",
-		Description: "Immediate/manual audio message trigger",
-		Type:        api.TaskTypeMessage,
-		Enabled:     true,
-		Params:      params,
+		Task: model.Task{
+			Id:          "message_trigger_immediate",
+			Description: "Immediate/manual audio message trigger",
+			Type:        api.TaskTypeMessage,
+			Enabled:     true,
+		},
+	}
+	for key, value := range params {
+		_ = task.SetParam(key, value)
 	}
 
 	if err = tm.taskTriggerMessageFunc(&task)(r.Context()); err != nil {
@@ -119,14 +123,9 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 
-		// Params must exist
-		if t.Params == nil {
-			continue
-		}
-
 		// Safe extraction helpers
 		getString := func(key string) (string, bool) {
-			v, hasKey := t.Params[key]
+			v, hasKey := t.GetParam(key)
 			if !hasKey {
 				return "", false
 			}
@@ -135,7 +134,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 		}
 
 		getInt64 := func(key string) (int64, bool) {
-			v, hasKey := t.Params[key]
+			v, hasKey := t.GetParam(key)
 			if !hasKey {
 				return 0, false
 			}
@@ -151,7 +150,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 		}
 
 		getStringSliceLocal := func(key string) []string {
-			v, hasKey := t.Params[key]
+			v, hasKey := t.GetParam(key)
 			if !hasKey {
 				return []string{}
 			}
@@ -169,7 +168,7 @@ func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Requ
 		}
 
 		m := scheduledMessage{
-			ID:          t.ID,
+			ID:          t.Id,
 			MessageID:   msgID,
 			Description: t.Description,
 			CronExpr:    t.CronExpr,
@@ -244,16 +243,17 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		return
 	}
 
-	task := &api.Task{
-		ID:          taskMessage.ID,
-		Description: taskMessage.Description,
-		Type:        api.TaskTypeMessage,
-		CronExpr:    taskMessage.CronExpr,
-		StartAt:     taskMessage.StartAt,
-		EndAt:       taskMessage.EndAt,
-		Recurrence:  taskMessage.Recurrence,
-		Enabled:     true,
-		Params:      params,
+	task := &api.Task{}
+	task.Id = taskMessage.ID
+	task.Description = taskMessage.Description
+	task.Type = api.TaskTypeMessage
+	task.CronExpr = taskMessage.CronExpr
+	task.Recurrence = taskMessage.Recurrence
+	task.Enabled = true
+	task.SetStartAtTime(taskMessage.StartAt)
+	task.SetEndAtTime(taskMessage.EndAt)
+	for key, value := range params {
+		_ = task.SetParam(key, value)
 	}
 
 	if err := tm.AddTask(task); err != nil {
@@ -263,7 +263,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.ID})
+	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.Id})
 }
 
 // UpdateScheduleMessageTask handles HTTP PATCH requests to update an existing message task.
@@ -321,19 +321,25 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	}
 
 	if hasPriority {
-		task.Params[api.MessagePriorityKey] = patch.GetPriority()
+		if err := task.SetParam(api.MessagePriorityKey, patch.GetPriority()); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	if hasZones {
-		task.Params[api.MessageZonesKey] = messageZonesFromProto(patch.GetZones())
+		if err := task.SetParam(api.MessageZonesKey, messageZonesFromProto(patch.GetZones())); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	if hasStart {
-		task.StartAt = patch.StartAt.AsTime()
+		task.SetStartAtTime(patch.StartAt.AsTime())
 	}
 
 	if hasEnd {
-		task.EndAt = patch.EndAt.AsTime()
+		task.SetEndAtTime(patch.EndAt.AsTime())
 	}
 
 	logger := logging.GetLogger()
@@ -376,7 +382,10 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 			return
 		}
 
-		task.Params[api.MessageIDKey] = messageID
+		if err := task.SetParam(api.MessageIDKey, messageID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	err = tm.UpdateTask(task, tm.taskTriggerMessageFunc(task))
@@ -403,7 +412,7 @@ func (tm *TaskManager) taskTriggerMessageFunc(task *api.Task) TaskFunc {
 			return err
 		}
 
-		logging.GetLogger().Info("Message '%s' triggered successfully via task", task.ID)
+		logging.GetLogger().Info("Message '%s' triggered successfully via task", task.Id)
 
 		return nil
 	}
@@ -413,7 +422,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	// Helper to coerce any value to string
 	getString := func(key string) string {
-		if v, hasKey := task.Params[key]; hasKey && v != nil {
+		if v, hasKey := task.GetParam(key); hasKey && v != nil {
 			switch val := v.(type) {
 			case string:
 				return val
@@ -426,7 +435,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	// Helper to coerce any value to []string
 	getStringSlice := func(key string) []string {
-		v, hasKey := task.Params[key]
+		v, hasKey := task.GetParam(key)
 		if !hasKey {
 			return []string{}
 		}
@@ -435,7 +444,7 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 
 	// Helper to coerce any value to int
 	getInt := func(key string) int {
-		if v, hasKey := task.Params[key]; hasKey && v != nil {
+		if v, hasKey := task.GetParam(key); hasKey && v != nil {
 			switch val := v.(type) {
 			case int:
 				return val

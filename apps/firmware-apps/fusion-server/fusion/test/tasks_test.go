@@ -597,6 +597,216 @@ func createSnapshot(t *testing.T, id string) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode, "Snapshot must be created before scheduling tasks")
 }
 
+func seedSceneTaskFixtures(t *testing.T) (string, string, string, string, string) {
+	t.Helper()
+
+	snapshotDefinitionID := fmt.Sprintf("task-scene-snapshot-%d", time.Now().UnixNano())
+	sceneSetID := fmt.Sprintf("task-scene-set-%d", time.Now().UnixNano())
+	sceneNightID := fmt.Sprintf("task-scene-night-%d", time.Now().UnixNano())
+	sceneDayID := fmt.Sprintf("task-scene-day-%d", time.Now().UnixNano())
+
+	upsertSnapshotDefs(t, []*model.SnapshotDefinition{
+		snapshotDef(snapshotDefinitionID, "Task Scene Snapshot", map[string]any{
+			"feature_probe": map[string]any{"mode": "scene-snapshot"},
+		}),
+	})
+
+	upsertSceneSets(t, []*model.SceneSet{
+		sceneSet(sceneSetID, "Task Scene Set",
+			scene(sceneNightID, "Night", map[string]any{
+				"feature_probe": map[string]any{"mode": "night"},
+			}),
+			scene(sceneDayID, "Day", map[string]any{
+				"feature_probe": map[string]any{"mode": "day"},
+			}),
+		),
+	})
+
+	return snapshotDefinitionID, sceneSetID, sceneNightID, sceneDayID, "not-in-set"
+}
+
+func TestSceneSnapshotTaskCRUD(t *testing.T) {
+	clearTasks(t)
+	snapshotDefinitionID, _, _, _, _ := seedSceneTaskFixtures(t)
+
+	taskID := fmt.Sprintf("scene-snapshot-task-%d", time.Now().UnixNano())
+	createBody := marshalProtoMessage(t, &model.SceneSnapshotTaskCreateRequest{
+		Id:                   taskID,
+		CronExpr:             "*/5 * * * *",
+		Description:          "Scene snapshot task",
+		SnapshotDefinitionId: snapshotDefinitionID,
+	})
+
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(createBody))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/" + taskID)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	task := decodeTaskResponse(t, resp.Body)
+	assert.Equal(t, taskID, task.Id)
+	assert.Equal(t, model.TaskType_TASK_TYPE_SCENE_SNAPSHOT, task.Type)
+	require.NotNil(t, task.GetSceneSnapshot())
+	assert.Equal(t, snapshotDefinitionID, task.GetSceneSnapshot().GetSnapshotDefinitionId())
+
+	desc := "Updated scene snapshot task"
+	updateBody := marshalProtoMessage(t, &model.SceneSnapshotTaskUpdateRequest{
+		Description: &desc,
+	})
+
+	req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+taskID, bytes.NewReader(updateBody))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/" + taskID)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	updated := decodeTaskResponse(t, resp.Body)
+	assert.Equal(t, desc, updated.Description)
+	assert.Equal(t, model.TaskType_TASK_TYPE_SCENE_SNAPSHOT, updated.Type)
+	require.NotNil(t, updated.GetSceneSnapshot())
+	assert.Equal(t, snapshotDefinitionID, updated.GetSceneSnapshot().GetSnapshotDefinitionId())
+}
+
+func TestSceneActivateTaskCRUD(t *testing.T) {
+	clearTasks(t)
+	_, sceneSetID, sceneNightID, sceneDayID, _ := seedSceneTaskFixtures(t)
+
+	taskID := fmt.Sprintf("scene-activate-task-%d", time.Now().UnixNano())
+	createBody := marshalProtoMessage(t, &model.SceneActivateTaskCreateRequest{
+		Id:          taskID,
+		CronExpr:    "*/5 * * * *",
+		Description: "Scene activate task",
+		SetId:       sceneSetID,
+		SceneId:     sceneNightID,
+	})
+
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(createBody))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/" + taskID)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	task := decodeTaskResponse(t, resp.Body)
+	assert.Equal(t, model.TaskType_TASK_TYPE_SCENE_ACTIVATE, task.Type)
+	require.NotNil(t, task.GetSceneActivate())
+	assert.Equal(t, sceneSetID, task.GetSceneActivate().GetSetId())
+	assert.Equal(t, sceneNightID, task.GetSceneActivate().GetSceneId())
+
+	updateBody := marshalProtoMessage(t, &model.SceneActivateTaskUpdateRequest{
+		SceneId: &sceneDayID,
+	})
+
+	req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+taskID, bytes.NewReader(updateBody))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/" + taskID)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	updated := decodeTaskResponse(t, resp.Body)
+	assert.Equal(t, model.TaskType_TASK_TYPE_SCENE_ACTIVATE, updated.Type)
+	require.NotNil(t, updated.GetSceneActivate())
+	assert.Equal(t, sceneSetID, updated.GetSceneActivate().GetSetId())
+	assert.Equal(t, sceneDayID, updated.GetSceneActivate().GetSceneId())
+}
+
+func TestSceneTaskValidationErrors(t *testing.T) {
+	clearTasks(t)
+	snapshotDefinitionID, sceneSetID, sceneNightID, _, missingSceneID := seedSceneTaskFixtures(t)
+
+	t.Run("SceneSnapshot missing snapshot_definition_id", func(t *testing.T) {
+		body := marshalProtoMessage(t, &model.SceneSnapshotTaskCreateRequest{
+			Id:          fmt.Sprintf("scene-snapshot-missing-%d", time.Now().UnixNano()),
+			CronExpr:    "*/5 * * * *",
+			Description: "missing snapshot definition",
+		})
+
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("SceneSnapshot unknown snapshot_definition_id", func(t *testing.T) {
+		body := marshalProtoMessage(t, &model.SceneSnapshotTaskCreateRequest{
+			Id:                   fmt.Sprintf("scene-snapshot-unknown-%d", time.Now().UnixNano()),
+			CronExpr:             "*/5 * * * *",
+			Description:          "unknown snapshot definition",
+			SnapshotDefinitionId: snapshotDefinitionID + "-missing",
+		})
+
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("SceneActivate missing set_id", func(t *testing.T) {
+		body := marshalProtoMessage(t, &model.SceneActivateTaskCreateRequest{
+			Id:          fmt.Sprintf("scene-activate-missing-set-%d", time.Now().UnixNano()),
+			CronExpr:    "*/5 * * * *",
+			Description: "missing set id",
+			SceneId:     sceneNightID,
+		})
+
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("SceneActivate unknown set_id", func(t *testing.T) {
+		body := marshalProtoMessage(t, &model.SceneActivateTaskCreateRequest{
+			Id:          fmt.Sprintf("scene-activate-unknown-set-%d", time.Now().UnixNano()),
+			CronExpr:    "*/5 * * * *",
+			Description: "unknown set id",
+			SetId:       sceneSetID + "-missing",
+			SceneId:     sceneNightID,
+		})
+
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("SceneActivate scene not in set", func(t *testing.T) {
+		body := marshalProtoMessage(t, &model.SceneActivateTaskCreateRequest{
+			Id:          fmt.Sprintf("scene-activate-not-member-%d", time.Now().UnixNano()),
+			CronExpr:    "*/5 * * * *",
+			Description: "scene not in set",
+			SetId:       sceneSetID,
+			SceneId:     missingSceneID,
+		})
+
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusConflict, resp.StatusCode)
+	})
+}
+
 // ===== Recurrence tests =====
 
 // Test that a task with a recurring window that lies completely in the future

@@ -74,6 +74,10 @@ message ActiveTimeMachineResponse {
   string active_snapshot = 1;
 }
 
+message TimeMachineSnapshotResponse {
+  map<string, google.protobuf.Value> state = 1;
+}
+
 message TimeMachineOperationStatus {
   string name = 1;
   string status = 2;
