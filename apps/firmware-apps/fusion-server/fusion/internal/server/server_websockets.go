@@ -479,6 +479,10 @@ func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 
 	// Clean up failed connections
 	if len(failedConnections) > 0 {
+		addrs := s.clusterMemberFilterAddrs()
+		for _, conn := range failedConnections {
+			s.meterFilterManager.RemoveFilter(conn, addrs)
+		}
 		s.wsLock.Lock()
 		for _, conn := range failedConnections {
 			if s.subscriptions[topic] != nil {
