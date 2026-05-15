@@ -210,6 +210,7 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 // the master filter sent to all cluster device telemetry cores.
 func (s *FusionServer) SetMeterFilter(conn *websocket.Conn, ids []string) {
 	s.meterFilterManager.SetFilter(conn, ids, s.clusterMemberFilterAddrs())
+	s.telemetrySub.Start(s.clusterMemberZMQIPs())
 }
 
 // RemoveMeterFilter removes the meter ID filter for a WebSocket connection and updates
