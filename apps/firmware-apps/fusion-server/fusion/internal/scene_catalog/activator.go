@@ -37,7 +37,13 @@ func (a *Activator) ActivateSnapshotByID(id string) error {
 		return err
 	}
 
-	result, err := a.stateManager.Patch(def.Data)
+	var patchData map[string]any
+	if def.GetData() != nil {
+		patchData = def.GetData().AsMap()
+	} else {
+		patchData = map[string]any{}
+	}
+	result, err := a.stateManager.Patch(patchData)
 	if err != nil {
 		return err
 	}
@@ -66,7 +72,13 @@ func (a *Activator) ActivateScene(setID, sceneID string) error {
 		return err
 	}
 
-	result, err := a.stateManager.Patch(scene.Data)
+	var patchData map[string]any
+	if scene.GetData() != nil {
+		patchData = scene.GetData().AsMap()
+	} else {
+		patchData = map[string]any{}
+	}
+	result, err := a.stateManager.Patch(patchData)
 	if err != nil {
 		return err
 	}

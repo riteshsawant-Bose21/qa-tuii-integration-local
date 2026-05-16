@@ -22,6 +22,13 @@ class PavaMessageModel {
   });
 
   factory PavaMessageModel.fromJson(Map<String, dynamic> json) {
+    final dynamic rawSize = json['size_bytes'];
+    final int parsedSize = rawSize is int
+        ? rawSize
+        : rawSize is num
+        ? rawSize.toInt()
+        : int.tryParse(rawSize?.toString() ?? '') ?? 0;
+
     return PavaMessageModel(
       id: json['id'] as String,
       origName: json['orig_name'] as String,
@@ -29,7 +36,7 @@ class PavaMessageModel {
       filename: json['filename'] as String,
       mimeType: json['mime_type'] as String,
       uploaded: DateTime.parse(json['uploaded'] as String),
-      sizeBytes: json['size_bytes'] as int,
+      sizeBytes: parsedSize,
       tags: List<String>.from(json['tags'] as List<dynamic>? ?? <dynamic>[]),
       checksum: json['checksum'] as String,
     );

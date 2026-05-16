@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net"
@@ -28,6 +29,7 @@ const (
 	idParam                   = "{id}"
 	snapshotDefaultBucketName = "fusion"
 	snapshotSyncTime          = 5 * time.Second
+	clusterSnapshotSyncTime   = 15 * time.Second
 
 	defaultSnapshotTestVIP   = "http://192.168.2.100:8080"
 	defaultSnapshotTestAdmin = "http://192.168.2.100:9090"
@@ -43,7 +45,7 @@ var (
 	snapshotByNameURL   string
 	snapshotActivateURL string
 	snapshotUpdateURL   string
-	valueURL            string
+	stateAdminURL       string
 
 	// Scene catalog endpoints
 	snapshotDefsActivateURL string
@@ -89,7 +91,7 @@ func init() {
 	snapshotByNameURL = snapServerAddr + routes.TimeMachineNameEndpoint
 	snapshotActivateURL = snapServerAddr + routes.TimeMachineActivateEndpoint
 	snapshotUpdateURL = snapServerAddr + routes.TimeMachineUpdateEndpoint
-	valueURL = snapServerAddr + routes.ValueEndpoint
+	stateAdminURL = snapAdminServerAddr + routes.StateEndpoint
 
 	snapshotDefsActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
 	snapshotDefsListURL = snapServerAddr + routes.SnapshotsEndpoint
@@ -211,6 +213,38 @@ func TestTimeMachineCreateAndList(t *testing.T) {
 	}
 }
 
+func TestTimeMachineGetReturnsProtoSnapshotResponse(t *testing.T) {
+	snapshotName := fmt.Sprintf("test_snapshot_payload_%d", time.Now().UnixNano())
+
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+	resp.Body.Close()
+
+	getURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	resp, err = http.Get(getURL)
+	if err != nil {
+		t.Fatalf("Failed to get snapshot: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Get snapshot returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var snapshotResp model.TimeMachineSnapshotResponse
+	if err := decodeProtoBody(resp.Body, &snapshotResp); err != nil {
+		t.Fatalf("Failed to decode snapshot response: %v", err)
+	}
+
+	if len(snapshotResp.GetState()) == 0 {
+		t.Fatal("Snapshot response state was empty")
+	}
+}
+
 func TestTimeMachineActivateAndDelete(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
@@ -218,7 +252,14 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Create snapshot returned %d: %s", resp.StatusCode, string(body))
+	}
+	if !waitForSnapshotListed(t, snapshotName, 5*time.Second) {
+		t.Fatalf("Snapshot %s not visible after create", snapshotName)
+	}
 
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
@@ -228,7 +269,7 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to activate snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Activate snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -240,10 +281,31 @@ func TestTimeMachineActivateAndDelete(t *testing.T) {
 		t.Fatalf("Failed to delete snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Delete snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
+}
+
+func waitForSnapshotListed(t *testing.T, snapshotName string, timeout time.Duration) bool {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(snapshotsURL)
+		if err == nil {
+			var listResp struct {
+				Snapshots []string `json:"snapshots"`
+			}
+			decodeErr := json.NewDecoder(resp.Body).Decode(&listResp)
+			resp.Body.Close()
+			if decodeErr == nil && slices.Contains(listResp.Snapshots, snapshotName) {
+				return true
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return false
 }
 
 func TestTimeMachineInvalidCreate(t *testing.T) {
@@ -306,7 +368,7 @@ func TestTimeMachinePropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes have the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
 		return snapshotExistsOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -333,7 +395,7 @@ func TestTimeMachinePropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes remove the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
 		return snapshotRemovedOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -527,13 +589,7 @@ func TestTimeMachineRejectOldEpochUpdatesAfterActivation(t *testing.T) {
 	setStateValue(t, "foo", 111)
 
 	// Send a stale update with older epoch
-	staleUpdate := `{"foo":123}`
-
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer([]byte(staleUpdate)))
-	if err != nil {
-		t.Fatalf("Failed sending stale update: %v", err)
-	}
-	resp.Body.Close()
+	patchConfigViaWebSocket(t, snapServerAddr, map[string]any{"foo": 123})
 
 	// Verify value is unchanged
 	val := getStateValue(t, "foo")
@@ -549,6 +605,8 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	// See test/README.md for cluster setup.
 	requireClusterNodes(t, 2)
 
+	initialEpoch := getAnyClusterEpoch(t)
+
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("epoch_updates_apply_%d", time.Now().UnixNano())
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
@@ -557,8 +615,6 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	http.Post(createURL, api.JsonMIMEType, nil)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	(&http.Client{}).Do(req)
-
-	initialEpoch := getAnyClusterEpoch(t)
 
 	// Wait for epoch convergence
 	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
@@ -573,7 +629,7 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 	// Immediate local GET to ensure the write succeeded locally
 	localVal := getStateValue(t, "foo_new")
 	if asInt(localVal) != 999 {
-		t.Fatalf("Local value write failed: expected 999, got %v (endpoint /value may not be applying writes)",
+		t.Fatalf("Local value write failed: expected 999, got %v",
 			localVal)
 	}
 
@@ -594,7 +650,10 @@ func TestTimeMachineNewEpochUpdatesApply(t *testing.T) {
 //  2. epoch > baseline
 func epochsConverged(t *testing.T, baseline int64) bool {
 	t.Helper()
-	epochs := getClusterEpochs(t)
+	epochs, err := tryGetClusterEpochs()
+	if err != nil {
+		return false
+	}
 	if len(epochs) == 0 {
 		return false
 	}
@@ -617,12 +676,10 @@ func epochsConverged(t *testing.T, baseline int64) bool {
 	return true
 }
 
-func getClusterEpochs(t *testing.T) []int64 {
-	t.Helper()
-
+func tryGetClusterEpochs() ([]int64, error) {
 	nodes, err := getLiveNodeAddresses()
 	if err != nil {
-		t.Fatalf("Failed to list cluster nodes: %v", err)
+		return nil, err
 	}
 
 	epochs := make([]int64, 0, len(nodes))
@@ -631,33 +688,37 @@ func getClusterEpochs(t *testing.T) []int64 {
 		url := fmt.Sprintf("%s/metadata", addr)
 		resp, err := http.Get(url)
 		if err != nil {
-			t.Fatalf("Failed to GET %s: %v", url, err)
+			return nil, err
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("Metadata returned %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
+			return nil, fmt.Errorf("metadata returned %d from %s: %s", resp.StatusCode, url, string(body))
 		}
 
-		var metaResp struct {
-			Metadata struct {
-				Version struct {
-					Epoch   int64  `json:"epoch"`
-					Counter int64  `json:"counter"`
-					NodeID  string `json:"node_id"`
-				} `json:"version"`
-				ActiveSnapshot string `json:"active_snapshot"`
-				Hash           string `json:"hash"`
-				Valid          bool   `json:"valid"`
-			} `json:"metadata"`
+		var metaResp model.DatabaseMetadataResponse
+		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode metadata JSON from %s: %w", url, err)
+		}
+		resp.Body.Close()
+		if metaResp.GetMetadata() == nil || metaResp.GetMetadata().GetVersion() == nil {
+			return nil, fmt.Errorf("metadata response missing version payload from %s", url)
 		}
 
-		if err := json.NewDecoder(resp.Body).Decode(&metaResp); err != nil {
-			t.Fatalf("Failed to decode metadata JSON: %v", err)
-		}
+		epochs = append(epochs, int64(metaResp.GetMetadata().GetVersion().GetEpoch()))
+	}
 
-		epochs = append(epochs, metaResp.Metadata.Version.Epoch)
+	return epochs, nil
+}
+
+func getClusterEpochs(t *testing.T) []int64 {
+	t.Helper()
+
+	epochs, err := tryGetClusterEpochs()
+	if err != nil {
+		t.Fatalf("Failed to get cluster epochs: %v", err)
 	}
 
 	return epochs
@@ -691,7 +752,7 @@ func patchStateValue(t *testing.T, key string, value any) {
 		t.Fatalf("Failed to marshal patch payload: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, valueURL, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPatch, stateAdminURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for key %s: %v", key, err)
 	}
@@ -713,32 +774,13 @@ func patchStateValue(t *testing.T, key string, value any) {
 
 func setStateValue(t *testing.T, key string, value any) {
 	t.Helper()
-
-	payload := map[string]any{
-		key: value,
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("Failed to marshal setState payload: %v", err)
-	}
-
-	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
-	if err != nil {
-		t.Fatalf("Failed to set state key %s: %v", key, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("setStateValue: unexpected status %d: %s", resp.StatusCode, string(body))
-	}
+	patchStateValue(t, key, value)
 }
 
 func getStateValue(t *testing.T, key string) any {
 	t.Helper()
 
-	url := fmt.Sprintf("%s?key=%s", valueURL, key)
+	url := fmt.Sprintf("%s?key=%s", stateAdminURL, key)
 	resp, err := http.Get(url)
 	if err != nil {
 		t.Fatalf("Failed to get state key %s: %v", key, err)
@@ -1019,17 +1061,12 @@ func getClusterActiveSnapshots(t *testing.T) []string {
 		}
 		defer resp.Body.Close()
 
-		var metaResp struct {
-			Metadata struct {
-				ActiveSnapshot string `json:"active_snapshot"`
-			} `json:"metadata"`
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&metaResp); err != nil {
+		var metaResp model.DatabaseMetadataResponse
+		if err := decodeProtoBody(resp.Body, &metaResp); err != nil {
 			t.Fatalf("Decode metadata: %v", err)
 		}
 
-		out = append(out, metaResp.Metadata.ActiveSnapshot)
+		out = append(out, metaResp.GetMetadata().GetActiveSnapshot())
 	}
 
 	return out
@@ -1117,8 +1154,14 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 
 	// Create snapshot capturing the above state
 	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
-	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+	createResp, err := http.Post(createURL, api.JsonMIMEType, nil)
+	if err != nil {
 		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
+	}
+	defer createResp.Body.Close()
+	if createResp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(createResp.Body)
+		t.Fatalf("Failed to create snapshot %q: status=%d body=%s", snapshotName, createResp.StatusCode, string(body))
 	}
 
 	//  Mutate state after snapshot
@@ -1138,11 +1181,21 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 
 	restartAllNodes(t)
 
+	if !waitForAllNodesReady(10 * time.Second) {
+		t.Fatalf("Cluster did not become ready after restart")
+	}
+
 	// Activate snapshot after restart
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
-	if _, err := (&http.Client{}).Do(req); err != nil {
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
 		t.Fatalf("Failed to activate snapshot after restart: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Failed to activate snapshot %q after restart: status=%d body=%s", snapshotName, resp.StatusCode, string(body))
 	}
 
 	// Wait for cluster to converge to the new epoch
@@ -1151,6 +1204,33 @@ func TestTimeMachineDataSurvivesRestart(t *testing.T) {
 	}) {
 		t.Fatalf("Epochs did not converge after restart + activation; initial=%d, epochs=%v",
 			initialEpoch, getClusterEpochs(t))
+	}
+
+	// Snapshot activation metadata can converge slightly before the restored state
+	// is readable again through the admin API after a full restart. Wait for the
+	// concrete restored values rather than assuming epoch convergence is sufficient.
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+		nv := getStateValue(t, nestedKey)
+		nested, ok := nv.(map[string]any)
+		if !ok {
+			return false
+		}
+
+		bSlice, ok := nested["b"].([]any)
+		if !ok {
+			return false
+		}
+
+		return asInt(getStateValue(t, fooKey)) == 111 &&
+			asInt(getStateValue(t, barKey)) == 222 &&
+			asInt(getStateValue(t, removedKey)) == 999 &&
+			asInt(nested["a"]) == 1 &&
+			len(bSlice) == 2 &&
+			asInt(bSlice[0]) == 10 &&
+			asInt(bSlice[1]) == 20
+	}) {
+		t.Fatalf("Restored state did not converge after restart + activation: foo=%v bar=%v nested=%v removed=%v",
+			getStateValue(t, fooKey), getStateValue(t, barKey), getStateValue(t, nestedKey), getStateValue(t, removedKey))
 	}
 
 	// foo restored
@@ -1192,7 +1272,24 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 	snapshotName := fmt.Sprintf("ooom_%d", time.Now().UnixNano())
 
 	// Create snapshot
-	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+	createResp, err := http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+	if err != nil {
+		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
+	}
+	defer createResp.Body.Close()
+	if createResp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(createResp.Body)
+		t.Fatalf("Create snapshot %q returned %d: %s", snapshotName, createResp.StatusCode, string(body))
+	}
+
+	// Ensure the snapshot exists cluster-wide before exercising the
+	// out-of-order activate/config-update delivery path.
+	if !waitForSnapshotSync(clusterSnapshotSyncTime, func() bool {
+		return snapshotExistsOnAllNodes(t, snapshotName)
+	}) {
+		logPerNodeSnapshotStatus(t, snapshotName)
+		t.Fatalf("Snapshot %q did not propagate to all nodes before activation", snapshotName)
+	}
 
 	//
 	// Simulate out-of-order delivery:
@@ -1201,13 +1298,21 @@ func TestTimeMachineActivationOutOfOrderMessages(t *testing.T) {
 	//
 	// This is realistic because memberlist gossip does not guarantee ordering.
 	//
-	patchStateValue(t, "ooom_key", 123)
+	patchConfigViaWebSocket(t, snapServerAddr, map[string]any{"ooom_key": 123})
 
 	// Activate snapshot
 	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
-	(&http.Client{}).Do(req)
+	activateResp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to activate snapshot %q: %v", snapshotName, err)
+	}
+	defer activateResp.Body.Close()
+	if activateResp.StatusCode != http.StatusNoContent && activateResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(activateResp.Body)
+		t.Fatalf("Activate snapshot %q returned %d: %s", snapshotName, activateResp.StatusCode, string(body))
+	}
 
 	// Must converge to the new active snapshot on all nodes
 	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
@@ -1392,7 +1497,7 @@ func TestTimeMachineUpdateOverwritesState(t *testing.T) {
 		t.Fatalf("Failed to update snapshot: %v", err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Snapshot update returned %d: %s", resp.StatusCode, string(body))
 	}

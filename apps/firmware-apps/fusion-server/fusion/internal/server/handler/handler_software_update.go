@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 	"io"
 	"mime"
@@ -20,8 +21,8 @@ import (
 	"syscall"
 	"time"
 
-	json "github.com/goccy/go-json"
 	"github.com/oklog/ulid/v2"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Sentinel errors for upload validation
@@ -34,9 +35,10 @@ var (
 
 // writeSoftwareUpdateError writes a JSON error response for SoftwareUpdate endpoints.
 func writeSoftwareUpdateError(w http.ResponseWriter, statusCode int, errMsg, detail string) {
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(api.SoftwareUpdateErrorResponse{Error: errMsg, Message: detail})
+	_ = writeProtoJSONWithStatus(w, statusCode, &model.SoftwareUpdateErrorResponse{
+		Error:   errMsg,
+		Message: detail,
+	})
 }
 
 // HandleSoftwareUpdateUpload handles POST /softwareUpdate/upload.
@@ -250,16 +252,7 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	// If no other nodes in cluster, respond immediately
 	if len(expectedNodes) == 0 {
 		logger.Info("[SoftwareUpdateUpload] Single node cluster - responding immediately")
-		resp := api.SoftwareUpdateUploadResponse{
-			Filename:  origName,
-			Checksum:  actualChecksum,
-			SizeBytes: written,
-			Uploaded:  uploaded,
-		}
-
-		w.Header().Set(api.ContentType, api.JsonMIMEType)
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
+		if err := writeProtoJSONWithStatus(w, http.StatusCreated, softwareUpdateUploadResponseToProto(origName, actualChecksum, written, uploaded)); err != nil {
 			logger.Error("SoftwareUpdate upload: json encode: %v", err)
 		}
 		return
@@ -278,16 +271,16 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	// Broadcast SoftwareUpdate availability to cluster so followers can initiate download
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	update := &api.SoftwareUpdateSync{
+	update := &model.SoftwareUpdateBundle{
 		Filename:  origName,
 		Checksum:  actualChecksum,
 		SizeBytes: written,
-		Uploaded:  uploaded,
-		SourceIP:  sourceIP,
+		Uploaded:  timestamppb.New(uploaded),
+		SourceIp:  sourceIP,
 	}
 
 	// Add sync ID to the update for tracking
-	update.SyncID = syncID
+	update.SyncId = syncID
 
 	msg := api.NewNotifyMessage(
 		api.NotifyOpSoftwareUpdateAvailable,
@@ -318,16 +311,7 @@ func (h *Handler) HandleSoftwareUpdateUpload(w http.ResponseWriter, r *http.Requ
 	logger.Info("[SoftwareUpdateUpload] Cluster sync completed successfully - sending response")
 
 	// Send successful response after cluster sync completion
-	resp := api.SoftwareUpdateUploadResponse{
-		Filename:  origName,
-		Checksum:  actualChecksum,
-		SizeBytes: written,
-		Uploaded:  uploaded,
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
+	if err := writeProtoJSONWithStatus(w, http.StatusCreated, softwareUpdateUploadResponseToProto(origName, actualChecksum, written, uploaded)); err != nil {
 		logger.Error("SoftwareUpdate upload: json encode: %v", err)
 	}
 
@@ -424,8 +408,9 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No SoftwareUpdate directory yet — return empty list
-			w.Header().Set(api.ContentType, api.JsonMIMEType)
-			w.Write([]byte("[]"))
+			if err := writeProtoJSON(w, &model.SoftwareUpdateListResponse{}); err != nil {
+				logger.Error("SoftwareUpdate list (local): json encode empty list: %v", err)
+			}
 			return
 		}
 		logger.Error("SoftwareUpdate list (local): readdir %s: %v", api.SoftwareUpdateOTAPath, err)
@@ -435,7 +420,7 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 
 	sourceIP := h.clusterTransport.LocalNode().Addr.String()
 
-	var bundles []api.SoftwareUpdateSync
+	var bundles []*model.SoftwareUpdateBundle
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -458,21 +443,20 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 			continue
 		}
 
-		bundles = append(bundles, api.SoftwareUpdateSync{
+		bundles = append(bundles, &model.SoftwareUpdateBundle{
 			Filename:  name,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),
-			Uploaded:  info.ModTime().UTC(),
-			SourceIP:  sourceIP,
+			Uploaded:  timestamppb.New(info.ModTime().UTC().Round(0)),
+			SourceIp:  sourceIP,
 		})
 	}
 
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(bundles); err != nil {
+	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
 		logger.Error("SoftwareUpdate list (local): json encode: %v", err)
 	}
 }
@@ -481,12 +465,28 @@ func (h *Handler) HandleSoftwareUpdateListLocal(w http.ResponseWriter, r *http.R
 func (h *Handler) HandleSoftwareUpdateList(w http.ResponseWriter, r *http.Request) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(bundles); err != nil {
+	if err := writeProtoJSON(w, softwareUpdateListToProto(bundles)); err != nil {
 		logging.GetLogger().Error("SoftwareUpdate list: json encode: %v", err)
 	}
+}
+
+func softwareUpdateUploadResponseToProto(filename, checksum string, sizeBytes int64, uploaded time.Time) *model.SoftwareUpdateUploadResponse {
+	return &model.SoftwareUpdateUploadResponse{
+		Filename:  filename,
+		Checksum:  checksum,
+		SizeBytes: sizeBytes,
+		Uploaded:  timestamppb.New(uploaded),
+	}
+}
+
+func softwareUpdateListToProto(bundles []*model.SoftwareUpdateBundle) *model.SoftwareUpdateListResponse {
+	resp := &model.SoftwareUpdateListResponse{
+		Bundles: make([]*model.SoftwareUpdateBundle, 0, len(bundles)),
+	}
+	resp.Bundles = append(resp.Bundles, bundles...)
+	return resp
 }
 
 // processSoftwareUpdateStream processes a SoftwareUpdate file stream directly to disk without buffering in memory
@@ -554,18 +554,18 @@ func (h *Handler) processSoftwareUpdateStream(part *multipart.Part, origName str
 }
 
 // handleSwUpdateInfo fetches /etc/swupdate from all cluster nodes and returns the aggregated results.
-func (h *Handler) handleSwUpdateInfo(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+func (h *Handler) handleSwUpdateInfo(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	infos := h.clusterTransport.GetAllSwUpdateInfo()
-	return createSuccessResponse(&request.ID, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
+	return createSuccessResponse(&request.Id, api.WSMsgTypeSwUpdateInfo, api.WSCodeOK, "OK", infos), nil
 }
 
 // handleListSoftwareUpdates fetches the OTA bundle list from every cluster node
-func (h *Handler) handleListSoftwareUpdates(request *api.WebSocketRequest) (*api.WebSocketResponse, error) {
+func (h *Handler) handleListSoftwareUpdates(request *model.WebSocketRequest) (*model.WebSocketResponse, error) {
 	bundles := h.clusterTransport.GetAllSoftwareUpdateList()
 	if bundles == nil {
-		bundles = []api.SoftwareUpdateSync{}
+		bundles = []*model.SoftwareUpdateBundle{}
 	}
-	return createSuccessResponse(&request.ID, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
+	return createSuccessResponse(&request.Id, api.WSMsgTypeListSoftwareUpdates, api.WSCodeOK, "OK", bundles), nil
 }
 
 // Helper functions for improved error handling and validation
@@ -810,13 +810,13 @@ func (h *Handler) ensureSWUFilesOnFollowers(swuFilePaths []string) (int, error) 
 		h.StartSyncTracking(syncID, filename, checksum, followers, 5*time.Minute)
 
 		// Broadcast availability gossip so followers HTTP-pull if they don't have it yet
-		update := &api.SoftwareUpdateSync{
+		update := &model.SoftwareUpdateBundle{
 			Filename:  filename,
 			Checksum:  checksum,
 			SizeBytes: info.Size(),
-			Uploaded:  info.ModTime().UTC(),
-			SourceIP:  localIP,
-			SyncID:    syncID,
+			Uploaded:  timestamppb.New(info.ModTime().UTC().Round(0)),
+			SourceIp:  localIP,
+			SyncId:    syncID,
 		}
 		msg := api.NewNotifyMessage(
 			api.NotifyOpSoftwareUpdateAvailable,

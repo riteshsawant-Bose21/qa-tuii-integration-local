@@ -1,0 +1,24 @@
+info:
+  name: Get Audio Indexed Param
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{api_url}}/settings/audio/:blockId/:param/:index"
+  params:
+    - name: blockId
+      value: PEQ4385417
+      type: path
+    - name: param
+      value: frequency
+      type: path
+    - name: index
+      value: "0"
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

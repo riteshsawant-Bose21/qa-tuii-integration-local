@@ -34,7 +34,7 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
   void initState() {
     super.initState();
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
-    _meterDataViewModel.registerObserver(this);
+    _meterDataViewModel.registerObserver(this, <String>{widget.meterId ?? ''});
   }
 
   @override

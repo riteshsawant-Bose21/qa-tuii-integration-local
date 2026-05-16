@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
+	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
+	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
+	"fusion/internal/utils"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -12,13 +18,6 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
-
-	"fusion-services-core/logging"
-	"fusion/internal/api"
-	"fusion/internal/persistence"
-	"fusion/internal/pubsub"
-	"fusion/internal/utils"
-
 	"github.com/robfig/cron/v3"
 )
 
@@ -29,6 +28,7 @@ const (
 )
 
 var ErrTaskNotFound = errors.New("task not found")
+var nowFunction = time.Now
 
 // ExecutionRecord represents a log entry for a task execution.
 type ExecutionRecord struct {
@@ -61,7 +61,7 @@ type TaskManager struct {
 	historyTimer     *time.Timer
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
-	actionFactories  map[api.TaskType]func(*api.Task) func()
+	actionFactories  map[model.TaskType]func(*api.Task) func()
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
@@ -95,7 +95,7 @@ func NewTaskManager(
 		tasks:            make(map[string]*api.Task),
 	}
 
-	tm.actionFactories = map[api.TaskType]func(*api.Task) func(){
+	tm.actionFactories = map[model.TaskType]func(*api.Task) func(){
 		api.TaskTypeSnapshot: func(t *api.Task) func() {
 			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(t))
 		},
@@ -116,8 +116,8 @@ func (tm *TaskManager) AddTask(t *api.Task) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	if _, ok := tm.tasks[t.ID]; ok {
-		return fmt.Errorf("task %q exists", t.ID)
+	if _, ok := tm.tasks[t.Id]; ok {
+		return fmt.Errorf("task %q exists", t.Id)
 	}
 
 	fn, err := tm.makeTaskFunc(t)
@@ -131,7 +131,7 @@ func (tm *TaskManager) AddTask(t *api.Task) error {
 		return err
 	}
 
-	tm.tasks[t.ID] = t
+	tm.tasks[t.Id] = t
 	return tm.saveTasks()
 }
 
@@ -140,18 +140,20 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	if _, exists := tm.tasks[task.ID]; !exists {
+	existing, exists := tm.tasks[task.Id]
+	if !exists {
 		return ErrTaskNotFound
 	}
 
-	// Remove old cron entry
-	if task.CronEntryID != 0 {
-		tm.cron.Remove(task.CronEntryID)
-		task.CronEntryID = 0
+	// Remove the currently-registered cron entry for this task on this node.
+	// The incoming task payload may have CronEntryID unset because it is not serialized.
+	if existing.CronEntryID != 0 {
+		tm.cron.Remove(existing.CronEntryID)
 	}
+	task.CronEntryID = 0
 
 	now := time.Now()
-	if !task.EndAt.IsZero() && now.After(task.EndAt) {
+	if endAt := task.EndAtTime(); !endAt.IsZero() && now.After(endAt) {
 		tm.disableTaskLocked(task)
 		return nil
 	}
@@ -161,7 +163,7 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 		return err
 	}
 
-	tm.tasks[task.ID] = task
+	tm.tasks[task.Id] = task
 	return tm.saveTasks()
 }
 
@@ -190,14 +192,17 @@ func (tm *TaskManager) RemoveTask(id string) error {
 	return tm.saveTasks()
 }
 
-// ListTasks returns a list of all tasks currently managed by the TaskManager.
-func (tm *TaskManager) ListTasks() []api.Task {
+// ListTasks returns the tasks currently managed by the TaskManager.
+func (tm *TaskManager) ListTasks() []*api.Task {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	tasks := make([]api.Task, 0, len(tm.tasks))
+	tasks := make([]*api.Task, 0, len(tm.tasks))
 	for _, task := range tm.tasks {
-		tasks = append(tasks, *task)
+		if endAt := task.EndAtTime(); task.Enabled && !endAt.IsZero() && time.Now().After(endAt) {
+			tm.disableTaskLocked(task)
+		}
+		tasks = append(tasks, task)
 	}
 
 	return tasks
@@ -211,7 +216,7 @@ func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 	record := ExecutionRecord{
 		Description: task.Description,
 		Status:      status,
-		TaskID:      task.ID,
+		TaskID:      task.Id,
 		Timestamp:   time.Now(),
 	}
 
@@ -255,7 +260,7 @@ func (tm *TaskManager) Start() {
 
 	// Window manager loop
 	go func() {
-		ticker := time.NewTicker(30 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
 		for range ticker.C {
 			tm.evalTaskWindows()
 		}
@@ -282,7 +287,15 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 	tasks := tm.ListTasks()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(tasks)
+	response, err := tasksToProto(tasks)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // GetTaskHandler handles HTTP GET requests to get a single task
@@ -305,7 +318,15 @@ func (tm *TaskManager) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(task)
+	response, err := taskToProto(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := writeProtoJSON(w, response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // DeleteTask handles HTTP DELETE requests to remove a task by ID.
@@ -327,6 +348,11 @@ func (tm *TaskManager) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskDelete, &api.Task{Task: model.Task{Id: id}}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -342,7 +368,7 @@ func (tm *TaskManager) GetHistory(w http.ResponseWriter, r *http.Request) {
 	tm.mu.Unlock()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(history)
+	_ = writeProtoJSON(w, historyToProto(history))
 }
 
 // ClearHistory handles HTTP DELETE requests to clear the execution history.
@@ -398,6 +424,11 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 	tm.tasks[id] = task
 	tm.saveTasks()
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -430,7 +461,21 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 
 	tm.saveTasks()
 
+	if err := tm.broadcastTaskOperation(api.NotifyOpTaskUpdate, task); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (tm *TaskManager) broadcastTaskOperation(op api.NotifyOp, task *api.Task) error {
+	if tm.hub == nil || task == nil {
+		return nil
+	}
+
+	msg := api.NewNotifyMessage(op, tm.node, api.WithTask(task))
+	return tm.hub.BroadcastToNodes(msg)
 }
 
 // wrapTask wraps a task function to track execution history and handle panics.
@@ -438,38 +483,38 @@ func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
 	logger := logging.GetLogger()
 
 	return func() {
-		now := time.Now()
+		now := nowFunction()
 
 		// Skip before start window
-		if !task.StartAt.IsZero() && now.Before(task.StartAt) {
-			logger.Debug("[TASKS] Skipping task '%s': before start time %s", task.ID, task.StartAt)
+		if startAt := task.StartAtTime(); !startAt.IsZero() && now.Before(startAt) {
+			logger.Debug("[TASKS] Skipping task '%s': before start time %s", task.Id, startAt)
 			return
 		}
 
 		// If past window, disable permanently
-		if !task.EndAt.IsZero() && now.After(task.EndAt) {
-			logger.Debug("[TASKS] Auto-disabling task '%s' after end time", task.ID)
+		if endAt := task.EndAtTime(); !endAt.IsZero() && now.After(endAt) {
+			logger.Debug("[TASKS] Auto-disabling task '%s' after end time", task.Id)
 			tm.disableTask(task)
 			return
 		}
 
 		// Enforce recurring window, if present
 		if task.Recurrence != nil && !withinRecurringWindow(task.Recurrence, now) {
-			logger.Debug("[TASKS] Skipping task '%s': outside recurring window", task.ID)
+			logger.Debug("[TASKS] Skipping task '%s': outside recurring window", task.Id)
 			return
 		}
 
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("[TASKS] Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
+				logger.Error("[TASKS] Task '%s' panic: %v\n%s", task.Id, r, debug.Stack())
 			}
 		}()
 
 		ctx := context.Background()
 		if err := fn(ctx); err != nil {
 			tm.RecordExecution(task, "failed")
-			logger.Error("[TASKS] Task '%s' error: %v", task.ID, err)
+			logger.Error("[TASKS] Task '%s' error: %v", task.Id, err)
 			return
 		}
 
@@ -495,7 +540,7 @@ func (tm *TaskManager) LoadTasks() error {
 			continue
 		}
 		if _, err := tm.makeTaskFunc(task); err != nil {
-			logging.GetLogger().Warn("[TASKS] Disabling invalid persisted task %q: %v", task.ID, err)
+			logging.GetLogger().Warn("[TASKS] Disabling invalid persisted task %q: %v", task.Id, err)
 			task.Enabled = false
 			task.CronEntryID = 0
 			dirty = true
@@ -615,11 +660,11 @@ func (tm *TaskManager) registerEnabledTasks() error {
 		}
 		f, err := tm.makeTaskFunc(t)
 		if err != nil {
-			return fmt.Errorf("task %s: %w", t.ID, err)
+			return fmt.Errorf("task %s: %w", t.Id, err)
 		}
 		entryID, err := tm.cron.AddFunc(t.CronExpr, tm.wrapTask(t, f))
 		if err != nil {
-			return fmt.Errorf("task %s: %w", t.ID, err)
+			return fmt.Errorf("task %s: %w", t.Id, err)
 		}
 		t.CronEntryID = entryID
 	}
@@ -636,12 +681,15 @@ func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 	if !ok {
 		return nil, ErrTaskNotFound
 	}
+	if endAt := task.EndAtTime(); task.Enabled && !endAt.IsZero() && time.Now().After(endAt) {
+		tm.disableTaskLocked(task)
+	}
 	return task, nil
 }
 
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	requiredStringParam := func(key string) error {
-		value, ok := task.Params[key]
+		value, ok := task.GetParam(key)
 		if !ok {
 			return fmt.Errorf("missing '%s'", key)
 		}
@@ -667,13 +715,14 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 		if err := requiredStringParam(api.SnapshotIDKey); err != nil {
 			return nil, err
 		}
-		snapshotId := task.Params[api.SnapshotIDKey].(string)
-		exists, err := tm.persistence.SnapshotExists(snapshotId)
+		snapshotId, _ := task.GetParam(api.SnapshotIDKey)
+		snapshotIdString := snapshotId.(string)
+		exists, err := tm.persistence.SnapshotExists(snapshotIdString)
 		if err != nil {
-			return nil, fmt.Errorf("check snapshot %q: %w", snapshotId, err)
+			return nil, fmt.Errorf("check snapshot %q: %w", snapshotIdString, err)
 		}
 		if !exists {
-			return nil, fmt.Errorf("snapshot %q not found", snapshotId)
+			return nil, fmt.Errorf("snapshot %q not found", snapshotIdString)
 		}
 		return tm.taskActivateSnapshotFunc(task), nil
 
@@ -704,13 +753,13 @@ func (tm *TaskManager) scheduleTaskIfNeeded(task *api.Task, fn TaskFunc) error {
 	now := time.Now()
 
 	// Too early → do NOT attach cron yet.
-	if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+	if startAt := task.StartAtTime(); !startAt.IsZero() && now.Before(startAt) {
 		task.CronEntryID = 0
 		return nil
 	}
 
 	// Too late → auto-disable.
-	if !task.EndAt.IsZero() && now.After(task.EndAt) {
+	if endAt := task.EndAtTime(); !endAt.IsZero() && now.After(endAt) {
 		tm.disableTaskLocked(task)
 		return nil
 	}
@@ -728,7 +777,7 @@ func (tm *TaskManager) scheduleTaskIfNeeded(task *api.Task, fn TaskFunc) error {
 	}
 
 	task.CronEntryID = entryID
-	tm.taskFuncs[task.ID] = wrapped
+	tm.taskFuncs[task.Id] = wrapped
 	return nil
 }
 
@@ -739,7 +788,7 @@ func (tm *TaskManager) disableTaskLocked(task *api.Task) {
 		task.CronEntryID = 0
 	}
 	task.Enabled = false
-	tm.tasks[task.ID] = task
+	tm.tasks[task.Id] = task
 	tm.saveTasks()
 }
 
@@ -750,7 +799,7 @@ func (tm *TaskManager) disableTask(task *api.Task) {
 	tm.mu.Unlock()
 }
 
-// Reevaluates windows every 30 seconds in case StartAt/EndAt change or clock drift
+// Reevaluates windows every few seconds in case StartAt/EndAt change or clock drift.
 func (tm *TaskManager) evalTaskWindows() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -762,13 +811,13 @@ func (tm *TaskManager) evalTaskWindows() {
 		}
 
 		// End-of-window → disable
-		if !task.EndAt.IsZero() && now.After(task.EndAt) {
+		if endAt := task.EndAtTime(); !endAt.IsZero() && now.After(endAt) {
 			tm.disableTaskLocked(task)
 			continue
 		}
 
 		// Before start window → ensure unscheduled
-		if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+		if startAt := task.StartAtTime(); !startAt.IsZero() && now.Before(startAt) {
 			if task.CronEntryID != 0 {
 				tm.cron.Remove(task.CronEntryID)
 				task.CronEntryID = 0

@@ -7,8 +7,8 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 
-	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,8 +24,8 @@ const (
 
 // safeWriteJSON safely marshals with go-json and writes a text frame using the
 // per-connection mutex. This avoids gorilla/websocket's stdlib JSON path.
-func (s *FusionServer) safeWriteJSON(conn *websocket.Conn, v interface{}) error {
-	data, err := json.Marshal(v)
+func (s *FusionServer) safeWriteProto(conn *websocket.Conn, msg *model.WebSocketResponse) error {
+	data, err := marshalWebSocketProto(msg)
 	if err != nil {
 		return err
 	}
@@ -117,18 +117,9 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send welcome message with connection info
-	welcomeResponse := &api.WebSocketResponse{
-		ID:        nil, // null for server push
-		Version:   api.WSCurrentVersion,
-		Type:      "welcome",
-		Code:      api.WSCodeConnected,
-		Status:    api.WSStatusEvent,
-		Message:   "Connected successfully",
-		Data:      initialState,
-		Timestamp: time.Now(),
-	}
+	welcomeResponse := websocketResponse(nil, "welcome", api.WSCodeConnected, api.WSStatusEvent, "Connected successfully", initialState)
 
-	if err := s.safeWriteJSON(conn, welcomeResponse); err != nil {
+	if err := s.safeWriteProto(conn, welcomeResponse); err != nil {
 		logger.Error("Failed to send welcome message: %v", err)
 		return
 	}
@@ -196,7 +187,7 @@ func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 		return
 	}
 
-	if err := s.safeWriteJSON(conn, response); err != nil {
+	if err := s.safeWriteProto(conn, response); err != nil {
 		logger.Error("Error sending response: %v", err)
 	}
 }
@@ -208,18 +199,9 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 		id = &requestID
 	}
 
-	errorResponse := &api.WebSocketResponse{
-		ID:        id, // null for server errors
-		Version:   api.WSCurrentVersion,
-		Type:      api.WSMsgTypeError,
-		Code:      code,
-		Status:    status,
-		Message:   message,
-		Data:      nil,
-		Timestamp: time.Now(),
-	}
+	errorResponse := websocketResponse(id, api.WSMsgTypeError, code, status, message, nil)
 
-	if err := s.safeWriteJSON(conn, errorResponse); err != nil {
+	if err := s.safeWriteProto(conn, errorResponse); err != nil {
 		logging.GetLogger().Error("Failed to send error response: %v", err)
 	}
 }
@@ -252,16 +234,7 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo != nil {
 			// Convert device update to WebSocket response format
-			updateMessage := &api.WebSocketResponse{
-				ID:        nil, // Push notifications have null ID
-				Version:   api.WSCurrentVersion,
-				Type:      api.WSMsgTypeDeviceUpdate,
-				Code:      api.WSCodeDeviceUpdated,
-				Status:    api.WSStatusEvent,
-				Message:   fmt.Sprintf("Device %s updated", message.DeviceInfo.Id),
-				Data:      message.DeviceInfo,
-				Timestamp: time.Now(),
-			}
+			updateMessage := websocketResponse(nil, api.WSMsgTypeDeviceUpdate, api.WSCodeDeviceUpdated, api.WSStatusEvent, fmt.Sprintf("Device %s updated", message.DeviceInfo.Id), message.DeviceInfo)
 			// Send to topic-based subscribers
 			return s.BroadcastToTopic(api.WSTopicDeviceUpdates, updateMessage)
 		}
@@ -314,18 +287,9 @@ func (s *FusionServer) flushConfigUpdateQueue() {
 		return
 	}
 
-	message := &api.WebSocketResponse{
-		ID:        nil,
-		Version:   api.WSCurrentVersion,
-		Type:      api.WSMsgTypeConfigUpdate,
-		Code:      api.WSCodeUpdated,
-		Status:    api.WSStatusEvent,
-		Message:   "Configuration updated",
-		Data:      wsConfigUpdatePayload(data, snapshot, clear),
-		Timestamp: time.Now(),
-	}
+	message := websocketResponse(nil, api.WSMsgTypeConfigUpdate, api.WSCodeUpdated, api.WSStatusEvent, "Configuration updated", wsConfigUpdatePayload(data, snapshot, clear))
 
-	payloadBytes, err := json.Marshal(message)
+	payloadBytes, err := marshalWebSocketProto(message)
 	if err != nil {
 		logging.GetLogger().Error("Error marshaling coalesced config update: %v", err)
 	} else if err := s.BroadcastRawToTopic(api.WSTopicConfigUpdates, payloadBytes); err != nil {
@@ -380,18 +344,20 @@ func wsConfigUpdatePayloadData(update *api.ConfigUpdate) (map[string]any, bool, 
 	return cloneObserverDiff(update.Data), true, update.Clear
 }
 
-func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *api.WebSocketConfigUpdateEvent {
+func wsConfigUpdatePayload(data map[string]any, snapshot bool, clear bool) *model.WebSocketConfigUpdateEvent {
 	if snapshot {
-		return &api.WebSocketConfigUpdateEvent{
+		state, _ := websocketStructFromMap(data)
+		return &model.WebSocketConfigUpdateEvent{
 			Mode:  "snapshot",
-			State: data,
+			State: state,
 			Clear: clear,
 		}
 	}
 
-	return &api.WebSocketConfigUpdateEvent{
+	updates, _ := websocketStructFromMap(data)
+	return &model.WebSocketConfigUpdateEvent{
 		Mode:    "patch",
-		Updates: data,
+		Updates: updates,
 	}
 }
 
@@ -472,8 +438,8 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 }
 
 // BroadcastToTopic sends a message to all clients subscribed to a specific topic
-func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
-	data, err := json.Marshal(message)
+func (s *FusionServer) BroadcastToTopic(topic string, message *model.WebSocketResponse) error {
+	data, err := marshalWebSocketProto(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal WebSocket message: %w", err)
 	}
@@ -545,24 +511,14 @@ func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
 		return nil
 	}
 
-	now := time.Now()
 	var failedConnections []*websocket.Conn
 	for _, conn := range conns {
 		filtered := s.meterFilterManager.FilterMeterDataForConn(conn, msg)
 		if filtered == nil {
 			continue
 		}
-		wsMsg := &api.WebSocketResponse{
-			ID:        nil,
-			Version:   api.WSCurrentVersion,
-			Type:      api.WSMsgTypeMeterData,
-			Code:      api.WSCodeDeviceUpdated,
-			Status:    api.WSStatusEvent,
-			Message:   "meter_data",
-			Data:      filtered,
-			Timestamp: now,
-		}
-		if err := s.safeWriteJSON(conn, wsMsg); err != nil {
+		wsMsg := websocketResponse(nil, api.WSMsgTypeMeterData, api.WSCodeDeviceUpdated, api.WSStatusEvent, "meter_data", filtered)
+		if err := s.safeWriteProto(conn, wsMsg); err != nil {
 			logging.GetLogger().Error("Error routing meter data to WebSocket client: %v", err)
 			failedConnections = append(failedConnections, conn)
 		}
@@ -585,22 +541,13 @@ func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
 }
 
 func (s *FusionServer) broadcastGenericNotification(message *api.NotifyMessage) error {
-	broadcastMessage := &api.WebSocketResponse{
-		ID:        nil, // Push notifications have null ID
-		Version:   api.WSCurrentVersion,
-		Type:      "notification",
-		Code:      api.WSCodeDeviceUpdated, // Use event code for notifications
-		Status:    api.WSStatusEvent,
-		Message:   fmt.Sprintf("System notification: %s", message.Operation),
-		Data:      message, // Include the original NotifyMessage as data
-		Timestamp: time.Now(),
-	}
+	broadcastMessage := websocketResponse(nil, "notification", api.WSCodeDeviceUpdated, api.WSStatusEvent, fmt.Sprintf("System notification: %s", message.Operation), message)
 	return s.broadcastToAllClients(broadcastMessage)
 }
 
 // broadcastToAllClients sends a WebSocket response to every connected client,
 // cleaning up any connections that fail during the send.
-func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) error {
+func (s *FusionServer) broadcastToAllClients(message *model.WebSocketResponse) error {
 	s.wsLock.RLock()
 	clients := make([]*websocket.Conn, 0, len(s.wsClients))
 	for conn := range s.wsClients {
@@ -609,7 +556,7 @@ func (s *FusionServer) broadcastToAllClients(message *api.WebSocketResponse) err
 	s.wsLock.RUnlock()
 
 	// Pre-serialize once for all clients.
-	data, err := json.Marshal(message)
+	data, err := marshalWebSocketProto(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal WebSocket broadcast: %w", err)
 	}

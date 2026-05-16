@@ -43,7 +43,7 @@ Pre-built config files are in the `configs/` directory:
 | `configs/high_rate.json` | High-rate stress | 1000 updates/sec, 10000 total, 6 WS + 9 UDP listeners across all 3 nodes. Tests server throughput limits. |
 | `configs/burst_mode.json` | Bursty traffic | 5× burst multiplier with verbose output. Tests how the server handles spiky write patterns. |
 | `configs/soak_30m.json` | 30-minute soak | Runs for 30 minutes at 50/sec across 2 nodes. Tests long-running reliability and memory stability. |
-| `configs/http_writer.json` | HTTP PATCH writer | Uses HTTP `PATCH /value` instead of WebSocket for writes. Useful for comparing transport overhead. |
+| `configs/http_writer.json` | HTTP PATCH writer | Uses admin HTTP `PATCH /state` on port `9090` instead of WebSocket for writes. Useful for comparing transport overhead. |
 | `configs/mixed_topology.json` | Mixed topology | Writer on `.131`, WS across all 3 nodes, UDP on `.132`. 500/sec, verbose. Full cluster coverage test. |
 
 ### Running with a sample config
@@ -67,7 +67,7 @@ Pre-built config files are in the `configs/` directory:
 # 30-minute soak — long-running reliability and memory stability test
 ./stress_tester -config configs/soak_30m.json
 
-# HTTP writer — compare HTTP PATCH overhead vs WebSocket writer
+# HTTP writer — compare admin HTTP PATCH overhead vs WebSocket writer
 ./stress_tester -config configs/http_writer.json
 
 # Mixed topology — full cluster coverage: writer on .131, listeners on all 3 nodes

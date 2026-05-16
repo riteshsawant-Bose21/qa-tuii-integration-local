@@ -52,7 +52,8 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
 
     // Register as meter observer so telemetry stays alive while this widget is mounted.
-    _meterDataViewModel.registerObserver(this);
+    _meterDataViewModel.registerObserver(this, zoneFunction != null ? <String>{zoneFunction!.id} : <String>{});
+
 
     if (zoneFunction != null) {
       // Fetch the latest server-authoritative selected input on load.

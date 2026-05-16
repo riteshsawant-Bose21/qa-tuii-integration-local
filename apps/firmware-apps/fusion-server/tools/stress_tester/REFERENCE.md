@@ -195,8 +195,8 @@ Detailed explanation of every configuration parameter:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `writer_mode` | `string` | `"ws"` | Transport protocol for sending patch updates. **`ws`** sends WebSocket `patch_config` messages to the `/ws` endpoint. **`http`** sends HTTP `PATCH /value` requests. WebSocket mode is recommended as it matches the primary client protocol and avoids per-request TCP overhead. |
-| `writer_host` | `string` | `"localhost:8080"` | The `host:port` of the fusion-server node that receives all writes. This is the node whose state is mutated. In cross-node tests, point this at one node and listeners at different nodes to measure cluster propagation. |
+| `writer_mode` | `string` | `"ws"` | Transport protocol for sending patch updates. **`ws`** sends WebSocket `patch_config` messages to the `/ws` endpoint. **`http`** sends admin HTTP `PATCH /state` requests on port `9090` for the same host. WebSocket mode is recommended as it matches the primary client protocol and avoids per-request TCP overhead. |
+| `writer_host` | `string` | `"localhost:8080"` | The `host:port` of the fusion-server node that receives all writes. For `writer_mode: "http"`, the tool rewrites this host to port `9090` automatically and sends requests to the admin API. In cross-node tests, point this at one node and listeners at different nodes to measure cluster propagation. |
 | `enable_profiling` | `bool` | `false` | When `true`, the tool starts CPU profiling on each target node before creating listeners or sending traffic, and stops profiling on exit. |
 | `profile_hosts` | `[]string` | inferred from targets on port `9090` | Optional explicit debug endpoint `host:port` list for profiling. If omitted, the tool infers unique hosts from `writer_host`, `ws_listener_hosts`, and `udp_server_host`, then rewrites them to port `9090`. |
 

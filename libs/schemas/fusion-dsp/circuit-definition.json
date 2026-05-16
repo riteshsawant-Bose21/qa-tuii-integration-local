@@ -1,0 +1,171 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "circuit-definition.json",
+    "title": "Circuit Definitions",
+    "description": "Definitions of DSP circuits, their interfaces, and implementations.",
+    "type": "object",
+    "properties": {
+        "version": {
+            "title": "Circuit Definitions Version",
+            "description": "The version of this collection of circuit definitions.",
+            "$ref": "interface-definition.json#/$defs/version"
+        },
+        "circuits": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/circuit"
+            }
+        }
+    },
+    "required": ["circuits"],
+    "$defs": {
+        "circuit": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Circuit Name",
+                    "description": "The name of the circuit, which must be unique among all circuits and algorithms in use by the system.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "is_opaque": {
+                    "title": "Is Opaque Circuit",
+                    "description": "Indicates whether this circuit is opaque (i.e., its internal implementation is hidden).",
+                    "type": "boolean",
+                    "default": false
+                },
+                "properties": {
+                    "title": "Property Definitions",
+                    "description": "An array of definitions for the properties provided by this circuit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/property"
+                    }
+                },
+                "terminals": {
+                    "title": "Terminal Definitions",
+                    "description": "An array of definitions for the terminals provided by this circuit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/terminal"
+                    }
+                },
+                "parameters": {
+                    "title": "Parameter Definitions",
+                    "description": "An array of definitions for the parameters provided by this circuit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/parameter"
+                    }
+                },
+                "telemetry": {
+                    "title": "Telemetry Definitions",
+                    "description": "An array of definitions for the telemetry provided by this circuit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/telemetry"
+                    }
+                },
+                "implementation": {
+                    "title": "Circuit Implementation",
+                    "description": "The implementation details for this circuit.",
+                    "$ref": "#/$defs/implementation"
+                }
+            },
+            "required": ["name", "terminals"]
+        },
+        "implementation": {
+            "title": "Circuit Implementation",
+            "description": "The implementation details for a circuit.",
+            "type": "object",
+            "properties": {
+                "blocks": {
+                    "title": "Block Specifications",
+                    "description": "An array of specifications for the blocks running within this circuit's implementation.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "static-configuration.json#/$defs/block"
+                    }
+                },
+                "block_connections": {
+                    "title": "Block Connection Specifications",
+                    "description": "An array of specifications for signal connections between blocks in this circuit's implementation.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/block_connection"
+                    }
+                },
+                "parameter_map": {
+                    "title": "Parameter Map Specifications",
+                    "description": "An array of specifications mapping circuit parameters to block parameters.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/parameter_map"
+                    }
+                },
+                "telemetry_map": {
+                    "title": "Telemetry Map Specifications",
+                    "description": "An array of specifications mapping block telemetry to circuit telemetry.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/telemetry_map"
+                    }
+                },
+                "parameter_settings": {
+                    "title": "Parameter Setting Specifications",
+                    "description": "An array of specifications for parameter settings for the blocks in this circuit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/parameter_setting"
+                    }
+                }
+            },
+            "required": ["blocks", "block_connections"]
+        },
+        "parameter_map": {
+            "title": "Parameter Map Specification",
+            "description": "A specification mapping a circuit parameter to a block parameter.",
+            "type": "object",
+            "properties": {
+                "circuit_parameter": {
+                    "title": "Circuit Parameter Name",
+                    "description": "The name of the circuit parameter being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "block_name": {
+                    "title": "Block Name",
+                    "description": "The name of the block containing the parameter being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "block_parameter": {
+                    "title": "Block Parameter Name",
+                    "description": "The name of the block parameter being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                }
+            },
+            "required": ["circuit_parameter", "block_name", "block_parameter"]
+        },
+        "telemetry_map": {
+            "title": "Telemetry Map Specification",
+            "description": "A specification mapping block telemetry to circuit telemetry.",
+            "type": "object",
+            "properties": {
+                "circuit_telemetry": {
+                    "title": "Circuit Telemetry Name",
+                    "description": "The name of the circuit telemetry being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "block_name": {
+                    "title": "Block Name",
+                    "description": "The name of the block containing the telemetry being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "block_telemetry": {
+                    "title": "Block Telemetry Name",
+                    "description": "The name of the block telemetry being mapped.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                }
+            },
+            "required": ["circuit_telemetry", "block_name", "block_telemetry"]
+        }
+    }
+}

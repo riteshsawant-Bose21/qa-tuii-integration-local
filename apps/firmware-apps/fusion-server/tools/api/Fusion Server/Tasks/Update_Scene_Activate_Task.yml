@@ -1,0 +1,31 @@
+info:
+  name: Update Scene Activate Task
+  type: http
+  seq: 14
+
+http:
+  method: PATCH
+  url: "{{api_url}}/tasks/:id"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: scene-activate-task-001
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "description": "Activate morning scene instead",
+        "set_id": "scene-set-test-01",
+        "scene_id": "scene-morning-01"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Updates a scene activate task using the protobuf JSON request shape.

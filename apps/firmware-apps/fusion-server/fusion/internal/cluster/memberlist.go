@@ -193,7 +193,6 @@ func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 	backoff := vipMembersInitialBackoff
 	startTime := time.Now()
 	attempt := 0
-
 	currentVIP := vip
 	for {
 		attempt++

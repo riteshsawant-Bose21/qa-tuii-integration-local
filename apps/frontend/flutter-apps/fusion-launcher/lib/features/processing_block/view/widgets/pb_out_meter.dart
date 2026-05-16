@@ -32,7 +32,7 @@ class _PbOutMeterState extends State<PbOutMeter> {
   void initState() {
     super.initState();
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
-    _meterDataViewModel.registerObserver(this);
+    _meterDataViewModel.registerObserver(this, <String>{widget.blockId});
   }
 
   @override

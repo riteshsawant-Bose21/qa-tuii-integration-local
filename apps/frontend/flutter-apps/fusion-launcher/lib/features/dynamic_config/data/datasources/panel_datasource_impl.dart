@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/fusion_networking/network/models/fusion_state_models.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../core/models/zmq_meter_data/meter_data.dart';
@@ -20,20 +21,29 @@ class PanelDataSourceImpl implements PanelDataSource {
   // final FusionNetworkingInterface restNetworkingInterface = serviceLocator<FusionNetworkingInterface>(instanceName: 'rest');
   // final FusionNetworkingInterface zeroMQNetworkingInterface = serviceLocator<FusionNetworkingInterface>(instanceName: 'zeromq');
 
-  final FusionNetworkClient fusionNetworkClient = serviceLocator<FusionNetworkClient>();
+  final FusionNetworkClient fusionNetworkClient =
+      serviceLocator<FusionNetworkClient>();
+
+  String get _vip => serviceLocator<ProjectViewModel>().virtualIP ?? '';
 
   @override
   Future<PanelEntity> fetchPanelData(PanelEntity panelEntity) async {
     try {
-      final ResponseCallback<dynamic> response = await fusionNetworkClient.get(
-        api: FusionApiEndpoint.fusionValue,
-      );
+      final ResponseCallback<FusionStateSnapshot> response =
+          await fusionNetworkClient.getStateSnapshot(
+            isSecure: false,
+            baseUrlToOverride: _vip,
+          );
 
-      if (response.success) {
+      if (response.success && response.data != null) {
         final PanelModel panelModel = PanelModel.fromDomain(panelEntity);
         late Map<String, dynamic> responseDict;
         try {
-          responseDict = response.data as Map<String, dynamic>;
+          responseDict = <String, dynamic>{
+            'settings': <String, dynamic>{
+              'audio': response.data!.state,
+            },
+          };
         } catch (e) {
           debugPrint("Error parsing response data: $e");
         }
@@ -70,38 +80,31 @@ class PanelDataSourceImpl implements PanelDataSource {
     String blockId,
     String blockName,
   ) async {
-    final ResponseCallback<dynamic> response = await fusionNetworkClient.get(
-      api: FusionApiEndpoint.fusionValue,
-    );
+    final ResponseCallback<FusionStateValue<dynamic>> response =
+        await fusionNetworkClient.getStateValue<dynamic>(
+          key: 'settings.audio.$blockId.$blockName',
+          isSecure: false,
+          baseUrlToOverride: _vip,
+          decodeValue: (dynamic value) => value,
+        );
 
-    if (response.success) {
-      final Map<String, dynamic> responseDict = response.data as Map<String, dynamic>;
-      final Map<String, dynamic> settings = responseDict['settings'] as Map<String, dynamic>;
-
-      if (settings['audio'] is Map<String, dynamic>) {
-        final Map<String, dynamic> audio = settings['audio'] as Map<String, dynamic>;
-
-        if (audio.containsKey(blockId)) {
-          final Map<String, dynamic> blockData = audio[blockId] as Map<String, dynamic>;
-          if (blockData.containsKey(blockName)) {
-            if (blockData[blockName] is List) {
-              // If the block data is a list, return the first element
-              return blockData[blockName][0];
-            } else if (blockData[blockName] is Map) {
-              // If the block data is a map, return the map
-              return blockData[blockName];
-            } else {
-              // Otherwise, return the value directly
-              return blockData[blockName];
-            }
-          }
-        }
+    if (response.success && response.data != null && response.data!.exists) {
+      final dynamic blockValue = response.data!.value;
+      if (blockValue is List) {
+        return blockValue.isNotEmpty ? blockValue.first : null;
+      } else if (blockValue is Map) {
+        return blockValue;
+      } else {
+        return blockValue;
       }
     }
     return null;
   }
 
-  AudioWidgetEntity? _getUpdatedWidgetModelFromJSON(Map<String, dynamic> widgetUpdateJSON, AudioWidgetEntity oldModel) {
+  AudioWidgetEntity? _getUpdatedWidgetModelFromJSON(
+    Map<String, dynamic> widgetUpdateJSON,
+    AudioWidgetEntity oldModel,
+  ) {
     Map<String, dynamic> settings = <String, dynamic>{};
     Map<String, dynamic> audio = <String, dynamic>{};
 
@@ -113,27 +116,43 @@ class PanelDataSourceImpl implements PanelDataSource {
 
         for (final MapEntry<String, dynamic> entry in audio.entries) {
           final String blockId = entry.key;
-          final Map<String, dynamic> values = entry.value as Map<String, dynamic>;
+          final Map<String, dynamic> values =
+              entry.value as Map<String, dynamic>;
 
-          for (final MapEntry<String, dynamic> parameterEntry in values.entries) {
+          for (final MapEntry<String, dynamic> parameterEntry
+              in values.entries) {
             final String parameterName = parameterEntry.key;
             final dynamic updatedValue = parameterEntry.value;
             //FIXME: 2 loops?
 
-            if ((oldModel.isWidgetDependentOnDimensions && oldModel.id == blockId && oldModel.name == parameterName)) {
-              if (updatedValue is List && updatedValue.length > (oldModel.dimensionIndex!)) {
+            if ((oldModel.isWidgetDependentOnDimensions &&
+                oldModel.id == blockId &&
+                oldModel.name == parameterName)) {
+              if (updatedValue is List &&
+                  updatedValue.length > (oldModel.dimensionIndex!)) {
                 return oldModel.copyWith(
-                  value: AudioWidgetValue.from(updatedValue[oldModel.dimensionIndex!], oldModel.value.valueType),
+                  value: AudioWidgetValue.from(
+                    updatedValue[oldModel.dimensionIndex!],
+                    oldModel.value.valueType,
+                  ),
                 );
               } else {
                 FusionLogger.log(
                   tag: LogTag.panel,
-                  message: "widget id ${oldModel.id} doesn't exist in the response $updatedValue, $entry, $parameterEntry ",
+                  message:
+                      "widget id ${oldModel.id} doesn't exist in the response $updatedValue, $entry, $parameterEntry ",
                   logLevel: LogLevel.warning,
                 );
               }
-            } else if ((!oldModel.isWidgetDependentOnDimensions && oldModel.id == blockId && oldModel.name == parameterName)) {
-              return oldModel.copyWith(value: AudioWidgetValue.from(updatedValue, oldModel.value.valueType));
+            } else if ((!oldModel.isWidgetDependentOnDimensions &&
+                oldModel.id == blockId &&
+                oldModel.name == parameterName)) {
+              return oldModel.copyWith(
+                value: AudioWidgetValue.from(
+                  updatedValue,
+                  oldModel.value.valueType,
+                ),
+              );
             }
           }
         }
@@ -144,20 +163,31 @@ class PanelDataSourceImpl implements PanelDataSource {
 
         for (final MapEntry<String, dynamic> entry in audio.entries) {
           final String blockName = entry.key;
-          final Map<String, dynamic> values = entry.value as Map<String, dynamic>;
+          final Map<String, dynamic> values =
+              entry.value as Map<String, dynamic>;
 
-          for (final MapEntry<String, dynamic> parameterEntry in values.entries) {
+          for (final MapEntry<String, dynamic> parameterEntry
+              in values.entries) {
             final String parameterName = parameterEntry.key;
             final dynamic updatedValue = parameterEntry.value;
             //FIXME: 2 loops?
 
-            if ((oldModel.isWidgetDependentOnDimensions && oldModel.id == blockName && oldModel.name == parameterName)) {
-              if (updatedValue is List && updatedValue.length > (oldModel.dimensionIndex! - 1)) {
-                return oldModel.copyWith(value: updatedValue[oldModel.dimensionIndex!]);
+            if ((oldModel.isWidgetDependentOnDimensions &&
+                oldModel.id == blockName &&
+                oldModel.name == parameterName)) {
+              if (updatedValue is List &&
+                  updatedValue.length > (oldModel.dimensionIndex! - 1)) {
+                return oldModel.copyWith(
+                  value: updatedValue[oldModel.dimensionIndex!],
+                );
               } else {
-                debugPrint("Failed to fetch panel data - could not find the expected meter info at the specified index");
+                debugPrint(
+                  "Failed to fetch panel data - could not find the expected meter info at the specified index",
+                );
               }
-            } else if ((!oldModel.isWidgetDependentOnDimensions && oldModel.id == blockName && oldModel.name == parameterName)) {
+            } else if ((!oldModel.isWidgetDependentOnDimensions &&
+                oldModel.id == blockName &&
+                oldModel.name == parameterName)) {
               return oldModel.copyWith(value: updatedValue);
             }
           }
@@ -165,7 +195,8 @@ class PanelDataSourceImpl implements PanelDataSource {
       } else {
         FusionLogger.log(
           tag: LogTag.panel,
-          message: "Warning: 'audio' key is missing or not a valid Map<String, dynamic> ",
+          message:
+              "Warning: 'audio' key is missing or not a valid Map<String, dynamic> ",
           logLevel: LogLevel.warning,
         );
         return oldModel;
@@ -173,7 +204,8 @@ class PanelDataSourceImpl implements PanelDataSource {
     } else {
       FusionLogger.log(
         tag: LogTag.panel,
-        message: "Warning: 'settings' key is missing or not a valid Map<String, dynamic>",
+        message:
+            "Warning: 'settings' key is missing or not a valid Map<String, dynamic>",
         logLevel: LogLevel.warning,
       );
       return oldModel;
@@ -182,35 +214,60 @@ class PanelDataSourceImpl implements PanelDataSource {
   }
 
   @override
-  Future<AudioWidgetEntity> sendWidgetData(AudioWidgetEntity audioWidgetEntity, AudioWidgetValue updatedValue) async {
-    Map<String, String> urlParams;
-    final AudioWidgetModel audioWidget = AudioWidgetModel.fromDomain(audioWidgetEntity);
+  Future<AudioWidgetEntity> sendWidgetData(
+    AudioWidgetEntity audioWidgetEntity,
+    AudioWidgetValue updatedValue,
+  ) async {
+    final AudioWidgetModel audioWidget = AudioWidgetModel.fromDomain(
+      audioWidgetEntity,
+    );
 
     final dynamic newValue = updatedValue.value;
 
-    if (audioWidget.isWidgetDependentOnDimensions) {
-      urlParams = <String, String>{
-        "key": "settings.audio.${audioWidget.id}.${audioWidget.name}[${audioWidget.dimensionIndex}]",
-      };
-    } else {
-      urlParams = <String, String>{};
-    }
-
-    final Map<String, dynamic> messageToSend = _getUpdateRequestJSONForWidget(audioWidget, newValue);
-
-    final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.patch(
-      api: FusionApiEndpoint.fusionValue,
-      data: messageToSend,
-      urlParameters: urlParams,
+    final Map<String, dynamic> messageToSend = _getUpdateRequestJSONForWidget(
+      newValue,
     );
 
+    final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient
+        .patch(
+          api: FusionApiEndpoint.fusionState,
+          isSecure: false,
+          baseUrlToOverride: _vip,
+          data:
+              audioWidget.isWidgetDependentOnDimensions
+                  ? <String, dynamic>{
+                    'settings': <String, dynamic>{
+                      'audio': <String, dynamic>{
+                        audioWidget.id: <String, dynamic>{
+                          audioWidget.name: _buildDimensionList(
+                            newValue,
+                            audioWidget.dimensionIndex!,
+                          ),
+                        },
+                      },
+                    },
+                  }
+                  : <String, dynamic>{
+                    'settings': <String, dynamic>{
+                      'audio': <String, dynamic>{
+                        audioWidget.id: <String, dynamic>{
+                          audioWidget.name: messageToSend['value'],
+                        },
+                      },
+                    },
+                  },
+        );
+
     if (responseCallback.success) {
-      final String? response = responseCallback.data;
       Map<String, dynamic> responseDict = <String, dynamic>{};
 
-      if (response != null) {
+      if (responseCallback.data is Map<String, dynamic>) {
+        responseDict = responseCallback.data as Map<String, dynamic>;
+      } else if (responseCallback.data is String) {
         try {
-          responseDict = jsonDecode(response);
+          responseDict =
+              jsonDecode(responseCallback.data as String)
+                  as Map<String, dynamic>;
         } catch (e) {
           debugPrint("Error parsing response data: $e");
         }
@@ -219,7 +276,9 @@ class PanelDataSourceImpl implements PanelDataSource {
       debugPrint("Response from server: $responseDict");
 
       if (responseDict['status'] == 'success') {
-        debugPrint("Widget data updated successfully: ${audioWidget.name}  ${audioWidget.value.toString()}");
+        debugPrint(
+          "Widget data updated successfully: ${audioWidget.name}  ${audioWidget.value.toString()}",
+        );
         return audioWidget.copyWith(value: updatedValue.value).toDomain();
 
         /// FIXME: Currently updateValue API return complete information and not just the updated part and hence things
@@ -247,54 +306,27 @@ class PanelDataSourceImpl implements PanelDataSource {
     return audioWidgetEntity;
   }
 
-  Map<String, dynamic> _getUpdateRequestJSONForWidget(AudioWidgetModel widgetModel, dynamic newValue) {
-    if (widgetModel.isWidgetDependentOnDimensions) {
-      return <String, dynamic>{"value": newValue};
-    } else if (widgetModel.isWidgetPhantomPower) {
-      //TODO: remove this as it is debug code for proto1 (phantom_power)
-      return <String, dynamic>{
-        "settings": <String, dynamic>{
-          "fw": <String, dynamic>{
-            widgetModel.id: <String, dynamic>{widgetModel.name: newValue},
-          },
-        },
-      };
-    } else {
-      return <String, dynamic>{
-        "settings": <String, dynamic>{
-          "audio": <String, dynamic>{
-            widgetModel.id: <String, dynamic>{
-              widgetModel.name: newValue, // Use newValue directly
-            },
-          },
-        },
-      };
-    }
+  Map<String, dynamic> _getUpdateRequestJSONForWidget(dynamic newValue) {
+    return <String, dynamic>{"value": newValue};
+  }
+
+  List<dynamic> _buildDimensionList(dynamic value, int dimension) {
+    return List<dynamic>.filled(dimension + 1, null)..[dimension] = value;
   }
 
   @override
-  Future<bool> resetFusion() async {
-    //final String? response = await restNetworkingInterface.send("", APIType.DELETE, EndPoint.FUSION_DELETE, "");
-    final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient.delete(
-      api: FusionApiEndpoint.fusionDelete,
-    );
+  Future<bool> clearAudioSettings() async {
+    final ResponseCallback<dynamic> responseCallback = await fusionNetworkClient
+        .delete(
+          api: FusionApiEndpoint.audioSettings,
+        );
 
     if (responseCallback.success) {
-      final Map<String, dynamic> responseDict = responseCallback.data;
-
-      if (responseDict['status'] == 'success') {
-        return true;
-      } else {
-        FusionLogger.log(
-          tag: LogTag.panel,
-          message: "Error in resetFusion: ${responseDict['error']}",
-          logLevel: LogLevel.error,
-        );
-      }
+      return true;
     } else {
       FusionLogger.log(
         tag: LogTag.panel,
-        message: "Error in resetFusion: ${responseCallback.message}",
+        message: "Error in clearAudioSettings: ${responseCallback.message}",
         logLevel: LogLevel.error,
       );
     }
@@ -304,11 +336,14 @@ class PanelDataSourceImpl implements PanelDataSource {
   @override
   Stream<Map<String, dynamic>> getMeterStream() async* {
     // print("getMeterStream called");
-    await for (ResponseCallback<dynamic> response in fusionNetworkClient.responseMessages) {
+    await for (ResponseCallback<dynamic> response
+        in fusionNetworkClient.responseMessages) {
       try {
         // print("getMeterStream response received: ${response.success} ${response.data} ${response.message}");
         if (response.success) {
-          final MeterDataModel meterData = MeterDataModel.fromJson(response.data as Map<String, dynamic>);
+          final MeterDataModel meterData = MeterDataModel.fromJson(
+            response.data as Map<String, dynamic>,
+          );
 
           if (meterData.messageName == MessageName.meterData) {
             final List<ValueItem> listOfMessages = meterData.parameters.value;
@@ -325,32 +360,45 @@ class PanelDataSourceImpl implements PanelDataSource {
                   } else if (meterMessage.valueType == 'int') {
                     meterMessage.value[i] = int.parse(meterMessage.value[i]);
                   } else if (meterMessage.valueType == 'bool') {
-                    meterMessage.value[i] = meterMessage.value[i].toString() == 'true';
+                    meterMessage.value[i] =
+                        meterMessage.value[i].toString() == 'true';
                   } else {
                     meterMessage.value[i] = meterMessage.value[i];
                   }
                   final dynamic value = meterMessage.value[i];
-                  final String key = '${meterMessage.blockName}#${meterMessage.meterName}';
+                  final String key =
+                      '${meterMessage.blockName}#${meterMessage.meterName}';
                   yield <String, dynamic>{key: value};
                 }
               } else {
                 // Property is a dimensionless value
-                final String key = '${meterMessage.blockName}#${meterMessage.meterName}';
+                final String key =
+                    '${meterMessage.blockName}#${meterMessage.meterName}';
 
                 if (meterMessage.valueType == 'float') {
-                  yield <String, dynamic>{key: double.parse(meterMessage.value)};
+                  yield <String, dynamic>{
+                    key: double.parse(meterMessage.value),
+                  };
                 } else if (meterMessage.valueType == 'int') {
                   yield <String, dynamic>{key: int.parse(meterMessage.value)};
                 } else if (meterMessage.valueType == 'bool') {
-                  yield <String, dynamic>{key: meterMessage.value.toString() == 'true'};
+                  yield <String, dynamic>{
+                    key: meterMessage.value.toString() == 'true',
+                  };
                 } else {
-                  yield <String, dynamic>{key: double.parse(meterMessage.value)};
+                  yield <String, dynamic>{
+                    key: double.parse(meterMessage.value),
+                  };
                 }
               }
             }
           }
         } else {
-          FusionLogger.log(tag: LogTag.panel, message: response.message, logLevel: LogLevel.error);
+          FusionLogger.log(
+            tag: LogTag.panel,
+            message: response.message,
+            logLevel: LogLevel.error,
+          );
         }
       } catch (ex) {
         FusionLogger.log(
@@ -363,7 +411,9 @@ class PanelDataSourceImpl implements PanelDataSource {
   }
 
   @override
-  Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc) async {
+  Future<PanelEntity> getPanelEntity(
+    ProcessingBlockModel processingBloc,
+  ) async {
     return buildPanelModelsForDesign(processingBloc: processingBloc);
   }
 

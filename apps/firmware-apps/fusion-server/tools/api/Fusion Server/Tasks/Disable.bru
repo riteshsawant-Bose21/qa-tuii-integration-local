@@ -1,0 +1,15 @@
+meta {
+  name: Disable
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{api_url}}/tasks/:id/disable
+  body: none
+  auth: none
+}
+
+params:path {
+  id: analog-input
+}

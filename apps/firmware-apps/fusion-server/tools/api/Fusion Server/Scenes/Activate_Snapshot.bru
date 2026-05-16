@@ -1,0 +1,15 @@
+meta {
+  name: Activate Snapshot
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{api_url}}/snapshots/activate/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: snapshot-test-01
+}

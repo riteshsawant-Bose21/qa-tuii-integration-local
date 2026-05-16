@@ -19,6 +19,7 @@ Set up the node IPs to match what you've go running on Multipass.
 
 ```bash
 VIP="http://192.168.2.100:8080"
+ADMIN="http://192.168.2.100:9090"
 NODE1="http://192.168.2.84:8080"
 NODE2="http://192.168.2.85:8080"
 NODE3="http://192.168.2.86:8080"
@@ -32,50 +33,49 @@ curl -i -sS "$VIP/health"
 curl -i -sS "$VIP/cluster/members"
 ```
 
-**1) Create snapshot + scene-set definitions via `/value`**
+**1) Create snapshot + scene-set definitions**
 ```bash
-curl -i -sS -X PATCH "$VIP/value" \
+curl -i -sS -X POST "$VIP/snapshots" \
   -H "Content-Type: application/json" \
   -d '{
-    "snapshots": [
+    "id": "snapshot-test-01",
+    "name": "Snapshot Test",
+    "data": {
+      "feature_probe": {
+        "mode": "snapshot",
+        "level": 10
+      }
+    }
+  }'
+```
+
+```bash
+curl -i -sS -X POST "$VIP/scene-sets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "set_id": "scene-set-test-01",
+    "name": "Dayparts",
+    "default_scene": "scene-morning-01",
+    "scenes": [
       {
-        "id": "snapshot-test-01",
-        "name": "Snapshot Test",
+        "id": "scene-morning-01",
+        "name": "Morning",
         "data": {
           "feature_probe": {
-            "mode": "snapshot",
-            "level": 10
+            "mode": "morning",
+            "level": 1
           }
         }
-      }
-    ],
-    "scene_sets": [
+      },
       {
-        "set_id": "scene-set-test-01",
-        "name": "Dayparts",
-        "default_scene": "scene-morning-01",
-        "scenes": [
-          {
-            "id": "scene-morning-01",
-            "name": "Morning",
-            "data": {
-              "feature_probe": {
-                "mode": "morning",
-                "level": 1
-              }
-            }
-          },
-          {
-            "id": "scene-evening-01",
-            "name": "Evening",
-            "data": {
-              "feature_probe": {
-                "mode": "evening",
-                "level": 9
-              }
-            }
+        "id": "scene-evening-01",
+        "name": "Evening",
+        "data": {
+          "feature_probe": {
+            "mode": "evening",
+            "level": 9
           }
-        ]
+        }
       }
     ]
   }'
@@ -103,7 +103,7 @@ curl -i -sS -X POST "$VIP/snapshots/activate/snapshot-test-01"
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 **3) Activate scene and verify current scene tracking**
@@ -117,7 +117,7 @@ curl -i -sS -X POST "$VIP/scene-sets/activate" \
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 ```bash
@@ -130,21 +130,17 @@ curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
 
 **4) Verify clobber overwrite by reusing same snapshot ID**
 ```bash
-curl -i -sS -X PATCH "$VIP/value" \
+curl -i -sS -X PUT "$VIP/snapshots/snapshot-test-01" \
   -H "Content-Type: application/json" \
   -d '{
-    "snapshots": [
-      {
-        "id": "snapshot-test-01",
-        "name": "Snapshot Test v2",
-        "data": {
-          "feature_probe": {
-            "mode": "snapshot-v2",
-            "level": 99
-          }
-        }
+    "id": "snapshot-test-01",
+    "name": "Snapshot Test v2",
+    "data": {
+      "feature_probe": {
+        "mode": "snapshot-v2",
+        "level": 99
       }
-    ]
+    }
   }'
 ```
 
@@ -153,7 +149,7 @@ curl -i -sS -X POST "$VIP/snapshots/activate/snapshot-test-01"
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 **5) Negative-path checks**
@@ -228,48 +224,47 @@ Expect `404` for each missing ID.
 
 **7) Re-create definitions for delete-all checks**
 ```bash
-curl -i -sS -X PATCH "$VIP/value" \
+curl -i -sS -X POST "$VIP/snapshots" \
   -H "Content-Type: application/json" \
   -d '{
-    "snapshots": [
+    "id": "snapshot-test-01",
+    "name": "Snapshot Test",
+    "data": {
+      "feature_probe": {
+        "mode": "snapshot",
+        "level": 10
+      }
+    }
+  }'
+```
+
+```bash
+curl -i -sS -X POST "$VIP/scene-sets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "set_id": "scene-set-test-01",
+    "name": "Dayparts",
+    "default_scene": "scene-morning-01",
+    "scenes": [
       {
-        "id": "snapshot-test-01",
-        "name": "Snapshot Test",
+        "id": "scene-morning-01",
+        "name": "Morning",
         "data": {
           "feature_probe": {
-            "mode": "snapshot",
-            "level": 10
+            "mode": "morning",
+            "level": 1
           }
         }
-      }
-    ],
-    "scene_sets": [
+      },
       {
-        "set_id": "scene-set-test-01",
-        "name": "Dayparts",
-        "default_scene": "scene-morning-01",
-        "scenes": [
-          {
-            "id": "scene-morning-01",
-            "name": "Morning",
-            "data": {
-              "feature_probe": {
-                "mode": "morning",
-                "level": 1
-              }
-            }
-          },
-          {
-            "id": "scene-evening-01",
-            "name": "Evening",
-            "data": {
-              "feature_probe": {
-                "mode": "evening",
-                "level": 9
-              }
-            }
+        "id": "scene-evening-01",
+        "name": "Evening",
+        "data": {
+          "feature_probe": {
+            "mode": "evening",
+            "level": 9
           }
-        ]
+        }
       }
     ]
   }'

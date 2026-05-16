@@ -1,0 +1,36 @@
+info:
+  name: Create Snapshot
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{api_url}}/snapshots"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "id": "snapshot-test-01",
+        "name": "Snapshot Test 01",
+        "data": {
+          "settings": {
+            "audio": {
+              "GAIN528578446": {
+                "gain": -12.0,
+                "mute": false
+              }
+            }
+          }
+        }
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a new snapshot definition. Body must include id.

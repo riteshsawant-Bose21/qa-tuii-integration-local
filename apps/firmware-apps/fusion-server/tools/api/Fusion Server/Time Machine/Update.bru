@@ -1,0 +1,15 @@
+meta {
+  name: Update
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{api_url}}/time-machine/update/:name
+  body: none
+  auth: none
+}
+
+params:path {
+  name: tm-test-01
+}

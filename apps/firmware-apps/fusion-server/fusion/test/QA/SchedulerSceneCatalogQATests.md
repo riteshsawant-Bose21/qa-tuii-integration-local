@@ -21,6 +21,7 @@ Set up node IPs to match your Multipass/cluster environment.
 
 ```bash
 VIP="http://192.168.2.100:8080"
+ADMIN="http://192.168.2.100:9090"
 NODE1="http://192.168.2.84:8080"
 NODE2="http://192.168.2.85:8080"
 NODE3="http://192.168.2.86:8080"
@@ -37,55 +38,54 @@ curl -i -sS "$VIP/cluster/members"
 ## 1) Seed snapshot definitions + scene set data
 
 ```bash
-curl -i -sS -X PATCH "$VIP/value" \
+curl -i -sS -X POST "$VIP/snapshots" \
   -H "Content-Type: application/json" \
   -d '{
-    "snapshots": [
+    "id": "sched-snapshot-01",
+    "name": "Scheduled Snapshot",
+    "data": {
+      "feature_probe": {
+        "mode": "scheduled-snapshot",
+        "level": 101
+      }
+    }
+  }'
+```
+
+```bash
+curl -i -sS -X POST "$VIP/scene-sets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "set_id": "sched-scene-set-01",
+    "name": "Scheduler Scene Set",
+    "default_scene": "sched-scene-day-01",
+    "scenes": [
       {
-        "id": "sched-snapshot-01",
-        "name": "Scheduled Snapshot",
+        "id": "sched-scene-day-01",
+        "name": "Day",
         "data": {
           "feature_probe": {
-            "mode": "scheduled-snapshot",
-            "level": 101
+            "mode": "scheduled-day",
+            "level": 201
           }
         }
-      }
-    ],
-    "scene_sets": [
+      },
       {
-        "set_id": "sched-scene-set-01",
-        "name": "Scheduler Scene Set",
-        "default_scene": "sched-scene-day-01",
-        "scenes": [
-          {
-            "id": "sched-scene-day-01",
-            "name": "Day",
-            "data": {
-              "feature_probe": {
-                "mode": "scheduled-day",
-                "level": 201
-              }
-            }
-          },
-          {
-            "id": "sched-scene-night-01",
-            "name": "Night",
-            "data": {
-              "feature_probe": {
-                "mode": "scheduled-night",
-                "level": 202
-              }
-            }
+        "id": "sched-scene-night-01",
+        "name": "Night",
+        "data": {
+          "feature_probe": {
+            "mode": "scheduled-night",
+            "level": 202
           }
-        ]
+        }
       }
     ]
   }'
 ```
 
 ```bash
-curl -i -sS "$VIP/scene-catalog-list"
+curl -i -sS "$VIP/scene-catalog"
 ```
 
 ## 2) Create a scheduled Scene Snapshot activation task
@@ -115,7 +115,7 @@ curl -i -sS "$VIP/tasks/history"
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 Expected: `feature_probe.mode` becomes `scheduled-snapshot`.
@@ -150,7 +150,7 @@ curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 Expected: current scene is `sched-scene-night-01` and `feature_probe.mode` becomes `scheduled-night`.
@@ -210,7 +210,7 @@ curl -i -sS -X POST "$VIP/scene-sets/current-scene" \
 ```
 
 ```bash
-curl -i -sS "$VIP/value?key=feature_probe"
+curl -i -sS "$ADMIN/state?key=feature_probe"
 ```
 
 Expected: current scene is `sched-scene-day-01` and `feature_probe.mode` becomes `scheduled-day`.
