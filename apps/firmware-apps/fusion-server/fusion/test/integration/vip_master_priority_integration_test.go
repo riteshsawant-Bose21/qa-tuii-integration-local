@@ -6,7 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"net/url"
