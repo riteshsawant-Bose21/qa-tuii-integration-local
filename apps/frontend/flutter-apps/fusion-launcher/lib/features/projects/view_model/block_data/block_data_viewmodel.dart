@@ -593,18 +593,15 @@ class BlockDataViewmodel extends Cubit<BlockDataState> with WidgetsBindingObserv
 
     // Fallback to REST.
     try {
-      final ResponseCallback<FusionStateValue<Map<String, dynamic>>> response = await _networkClient.getStateValue<Map<String, dynamic>>(
-        key: 'settings.audio.$blockId',
+      final ResponseCallback<Map<String, dynamic>> response = await _networkClient.get(
+        api: FusionApiEndpoint.audioSettings,
         isSecure: false,
         baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP!,
-        decodeValue:
-            (dynamic value) => Map<String, dynamic>.from(
-              value as Map<dynamic, dynamic>,
-            ),
+        additionalPath: blockId,
       );
 
-      if (response.success && response.data != null && response.data!.exists) {
-        final Map<String, dynamic> currentValue = response.data!.value!;
+      if (response.success && response.data != null) {
+        final Map<String, dynamic> currentValue = response.data!;
         final Map<String, Map<String, dynamic>> updated = Map<String, Map<String, dynamic>>.from(state.allBlockData)..[blockId] = currentValue;
         emit(
           state.copyWith(

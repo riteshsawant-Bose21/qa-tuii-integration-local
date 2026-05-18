@@ -221,7 +221,7 @@ class _DeviceLeftSideBarState extends State<DeviceLeftSideBar> {
                       final bool hasLiveData = meterState.isConnected && sysInfo != null && sysInfo.hasData;
 
                       final String tempLabel = hasLiveData ? "${sysInfo.temperature.toStringAsFixed(1)}°C" : "--";
-                      final String cpuLabel = hasLiveData ? "${sysInfo.ram.toStringAsFixed(1)}%" : "--";
+                      final String cpuLabel = hasLiveData ? "${sysInfo.cpu.toStringAsFixed(1)}%" : "--";
                       final String diskLabel = hasLiveData ? "${sysInfo.emmc.toStringAsFixed(1)}%" : "--";
 
                       return Padding(

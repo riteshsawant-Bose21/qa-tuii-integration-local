@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 )
 
@@ -23,7 +24,10 @@ func TestMakeTaskFunc_RejectsInvalidSceneSnapshotParams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := &api.Task{Type: api.TaskTypeSceneSnapshot, Params: tt.params}
+			task := &api.Task{Task: model.Task{Type: api.TaskTypeSceneSnapshot}}
+			for key, value := range tt.params {
+				_ = task.SetParam(key, value)
+			}
 			_, err := tm.makeTaskFunc(task)
 			if err == nil {
 				t.Fatalf("expected error for %s", tt.name)
@@ -39,19 +43,36 @@ func TestMakeTaskFunc_AcceptsValidRequiredParams(t *testing.T) {
 	}{
 		{
 			name: "message",
-			task: &api.Task{Type: api.TaskTypeMessage, Params: map[string]any{api.MessageIDKey: "message-1"}},
+			task: func() *api.Task {
+				task := &api.Task{Task: model.Task{Type: api.TaskTypeMessage}}
+				_ = task.SetParam(api.MessageIDKey, "message-1")
+				return task
+			}(),
 		},
 		{
 			name: "snapshot",
-			task: &api.Task{Type: api.TaskTypeSnapshot, Params: map[string]any{api.SnapshotIDKey: "snapshot-1"}},
+			task: func() *api.Task {
+				task := &api.Task{Task: model.Task{Type: api.TaskTypeSnapshot}}
+				_ = task.SetParam(api.SnapshotIDKey, "snapshot-1")
+				return task
+			}(),
 		},
 		{
 			name: "scene snapshot",
-			task: &api.Task{Type: api.TaskTypeSceneSnapshot, Params: map[string]any{api.SnapshotDefinitionIDKey: "definition-1"}},
+			task: func() *api.Task {
+				task := &api.Task{Task: model.Task{Type: api.TaskTypeSceneSnapshot}}
+				_ = task.SetParam(api.SnapshotDefinitionIDKey, "definition-1")
+				return task
+			}(),
 		},
 		{
 			name: "scene activate",
-			task: &api.Task{Type: api.TaskTypeSceneActivate, Params: map[string]any{api.SceneSetIDKey: "set-1", api.SceneIDKey: "scene-1"}},
+			task: func() *api.Task {
+				task := &api.Task{Task: model.Task{Type: api.TaskTypeSceneActivate}}
+				_ = task.SetParam(api.SceneSetIDKey, "set-1")
+				_ = task.SetParam(api.SceneIDKey, "scene-1")
+				return task
+			}(),
 		},
 	}
 

@@ -7,6 +7,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/tasks"
 
@@ -41,12 +42,14 @@ func TestAddTaskRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil, nil)
 
 	err = tm.AddTask(&api.Task{
-		ID:          "snap-task-1",
-		CronExpr:    "* * * * *",
-		Description: "apply missing snapshot",
-		Type:        api.TaskTypeSnapshot,
-		Params: map[string]any{
-			api.SnapshotIDKey: "does-not-exist",
+		Task: model.Task{
+			Id:          "snap-task-1",
+			CronExpr:    "* * * * *",
+			Description: "apply missing snapshot",
+			Type:        api.TaskTypeSnapshot,
+			Details: &model.Task_Snapshot{
+				Snapshot: &model.SnapshotTaskDetails{SnapshotId: "does-not-exist"},
+			},
 		},
 	})
 	require.Error(t, err)
@@ -70,13 +73,15 @@ func TestLoadTasksDisablesInvalidPersistedSnapshotTask(t *testing.T) {
 
 	require.NoError(t, p.SaveTasks(map[string]*api.Task{
 		"bad-task": {
-			ID:          "bad-task",
-			CronExpr:    "* * * * *",
-			Description: "apply missing snapshot",
-			Type:        api.TaskTypeSnapshot,
-			Enabled:     true,
-			Params: map[string]any{
-				api.SnapshotIDKey: "does-not-exist",
+			Task: model.Task{
+				Id:          "bad-task",
+				CronExpr:    "* * * * *",
+				Description: "apply missing snapshot",
+				Type:        api.TaskTypeSnapshot,
+				Enabled:     true,
+				Details: &model.Task_Snapshot{
+					Snapshot: &model.SnapshotTaskDetails{SnapshotId: "does-not-exist"},
+				},
 			},
 		},
 	}))

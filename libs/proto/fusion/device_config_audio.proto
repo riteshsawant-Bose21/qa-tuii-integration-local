@@ -17,8 +17,8 @@ message FusionConnectAudioStreamProperties {
   string dest_ip = 2;
   uint32 channels = 3;
   uint32 source_port = 4;
-  bool is_source = 5;
-  bool is_fusion_connect = 6;
+  optional bool is_source = 5;
+  optional bool is_fusion_connect = 6;
 }
 
 message FusionConnectAudioSettings {

@@ -13,13 +13,6 @@ http:
     - name: id
       value: activate-snap-001
       type: path
-  body:
-    type: json
-    data: |-
-      {
-        "cron_expr": "*/5 * * * *",
-        "description": "updated"
-      }
 
 settings:
   encodeUrl: true

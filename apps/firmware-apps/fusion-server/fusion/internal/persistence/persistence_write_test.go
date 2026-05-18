@@ -67,8 +67,8 @@ func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
 	defer p.Close()
 
 	original := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
-		"two": {ID: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
+		"two": {Task: model.Task{Id: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(original))
 
@@ -96,10 +96,12 @@ func TestPersistenceCompactsDatabaseOnReopen(t *testing.T) {
 	for i := 0; i < 48; i++ {
 		id := fmt.Sprintf("task-%03d", i)
 		largeTasks[id] = &api.Task{
-			ID:          id,
-			CronExpr:    "* * * * *",
-			Description: strings.Repeat("payload-", 4096),
-			Type:        api.TaskTypeSnapshot,
+			Task: model.Task{
+				Id:          id,
+				CronExpr:    "* * * * *",
+				Description: strings.Repeat("payload-", 4096),
+				Type:        api.TaskTypeSnapshot,
+			},
 		}
 	}
 	require.NoError(t, p.SaveTasks(largeTasks))
@@ -142,7 +144,7 @@ func TestSaveTasksNoOpDoesNotRewriteDatabase(t *testing.T) {
 	defer p.Close()
 
 	tasks := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(tasks))
 	before := stableDBSnapshot(t, p, dbPath)
@@ -224,7 +226,7 @@ func TestMaybeCompactOnOpenSkipsWhenBelowThreshold(t *testing.T) {
 	defer p.Close()
 
 	tasks := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "small", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "small", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(tasks))
 

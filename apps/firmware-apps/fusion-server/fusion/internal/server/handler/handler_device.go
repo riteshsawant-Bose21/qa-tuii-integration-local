@@ -21,12 +21,12 @@ func (h *Handler) HandleGetDeviceInfo() model.DeviceInfo {
 	return h.clusterTransport.GetDeviceInfoLocal()
 }
 
-func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch model.DevicePatch) error {
-	return h.clusterTransport.UpdateDeviceInfo(deviceID, &patch)
+func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch *model.DevicePatch) error {
+	return h.clusterTransport.UpdateDeviceInfo(deviceID, patch)
 }
 
-func (h *Handler) HandleUpdateDeviceInfoLocal(patch model.DevicePatch) error {
-	return h.clusterTransport.UpdateDeviceInfoLocal(&patch)
+func (h *Handler) HandleUpdateDeviceInfoLocal(patch *model.DevicePatch) error {
+	return h.clusterTransport.UpdateDeviceInfoLocal(patch)
 }
 
 // HandleGetCSR retrieves the CSR for the specified device ID. If the target device ID is the local device, it will read the CSR from the local file system. If the target device is remote, it will send a request to the remote device to fetch its CSR.

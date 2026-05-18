@@ -91,7 +91,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
 
         final double temperature = sysInfo?.temperature ?? 0;
         final double diskUsage = sysInfo?.emmc ?? 0;
-        final double cpuUsage = sysInfo?.ram ?? 0;
+        final double cpuUsage = sysInfo?.cpu ?? 0;
 
         return _buildCard(
           context,
@@ -303,12 +303,12 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     ? Row(
                                       children: <Widget>[
                                         GaugeWidget(
-                                          value: diskUsage,
+                                          value: cpuUsage,
                                           size: const Size(24, 24),
                                         ),
                                         const SizedBox(width: 6),
                                         FusionAppText(
-                                          text: "${diskUsage.toInt()}%",
+                                          text: "${cpuUsage.toInt()}%",
                                           style: context.textTheme.labelMedium,
                                         ),
                                       ],
@@ -323,12 +323,12 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                     ? Row(
                                       children: <Widget>[
                                         DiskUsageWidget(
-                                          value: cpuUsage,
+                                          value: diskUsage,
                                           size: const Size(24, 24),
                                         ),
                                         const SizedBox(width: 6),
                                         FusionAppText(
-                                          text: "${cpuUsage.toInt()}%",
+                                          text: "${diskUsage.toInt()}%",
                                           style: context.textTheme.labelMedium,
                                         ),
                                       ],

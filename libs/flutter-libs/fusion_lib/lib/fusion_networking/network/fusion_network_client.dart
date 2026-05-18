@@ -841,7 +841,7 @@ class FusionNetworkClient {
 
     await for (final dynamic message in webSocketService.stream) {
       try {
-        print("WebSocket raw message: $message");
+        // print("Webocket raw message: $message");
         // Attempt to decode JSON if applicable, otherwise return raw string
         dynamic decodedData;
         try {
@@ -1007,6 +1007,7 @@ enum FusionApiEndpoint {
   audioSettings('/settings/audio', FusionApiType.fusionServer),
   snapshots('/snapshots', FusionApiType.fusionServer),
   sceneSets('/scene-sets', FusionApiType.fusionServer),
+  scenes('/scenes', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
   softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer),

@@ -14,7 +14,8 @@ func (tm *TaskManager) taskActivateSceneSnapshotFunc(task *api.Task) TaskFunc {
 			return errors.New("scene catalog handler is not configured")
 		}
 
-		snapshotDefinitionID, ok := task.Params[api.SnapshotDefinitionIDKey].(string)
+		value, ok := task.GetParam(api.SnapshotDefinitionIDKey)
+		snapshotDefinitionID, ok := value.(string)
 		if !ok || snapshotDefinitionID == "" {
 			return fmt.Errorf("%s required for scene_snapshot tasks", api.SnapshotDefinitionIDKey)
 		}
@@ -29,12 +30,14 @@ func (tm *TaskManager) taskActivateSceneFunc(task *api.Task) TaskFunc {
 			return errors.New("scene catalog handler is not configured")
 		}
 
-		setID, ok := task.Params[api.SceneSetIDKey].(string)
+		setValue, ok := task.GetParam(api.SceneSetIDKey)
+		setID, ok := setValue.(string)
 		if !ok || setID == "" {
 			return fmt.Errorf("%s required for scene_activate tasks", api.SceneSetIDKey)
 		}
 
-		sceneID, ok := task.Params[api.SceneIDKey].(string)
+		sceneValue, ok := task.GetParam(api.SceneIDKey)
+		sceneID, ok := sceneValue.(string)
 		if !ok || sceneID == "" {
 			return fmt.Errorf("%s required for scene_activate tasks", api.SceneIDKey)
 		}

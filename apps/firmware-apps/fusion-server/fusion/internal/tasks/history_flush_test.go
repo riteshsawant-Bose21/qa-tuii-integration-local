@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestRecordExecutionDebouncesHistoryFlush(t *testing.T) {
 	tm := NewTaskManager(&api.AppConfig{NodeName: "test-node"}, p, nil, nil)
 	tm.historyFilePath = historyPath
 
-	task := &api.Task{ID: "task-1", Description: "test"}
+	task := &api.Task{Task: model.Task{Id: "task-1", Description: "test"}}
 
 	tm.RecordExecution(task, "success")
 	_, err = os.Stat(historyPath)

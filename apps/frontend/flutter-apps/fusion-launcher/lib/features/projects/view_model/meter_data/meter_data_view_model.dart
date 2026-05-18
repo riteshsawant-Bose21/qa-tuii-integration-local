@@ -389,7 +389,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   // ═══════════════════════════════════════════════════════════════════════════
 
   void _onWsMessage(ResponseCallback<dynamic> response) {
-    print("[MeterData] Received WS message: ${response.data}");
+    // print("[MeterData] Received WS message: ${response.data}");
     if (!response.success) return;
 
     if (!state.isConnected && !isClosed) {
@@ -404,8 +404,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       // Only process meter_data envelopes.
       if (type != 'meter_data') return;
 
-      FusionLogger.log(tag: 'MeterDataViewModel', message: 'Received WS message: ${response.data}');
-      FusionLogger.log(tag: 'MeterDataViewModel', message: 'Current state before processing message: $_observers');
+      // FusionLogger.log(tag: 'MeterDataViewModel', message: 'Received WS message: ${response.data}');
+      // FusionLogger.log(tag: 'MeterDataViewModel', message: 'Current state before processing message: $_observers');
 
       final dynamic data = envelope['data'];
       if (data is! Map<String, dynamic>) return;
@@ -446,6 +446,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
   /// Extracts [DeviceSystemInfo] from a `fusion_system_monitor` [MeterPacket].
   DeviceSystemInfo _parseSystemInfo(MeterPacket packet) {
     double emmc = 0;
+    double cpu = 0;
     double ram = 0;
     double temperature = 0;
     double usbStorage = 0;
@@ -454,6 +455,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
       if (block.blockName != 'system_info') continue;
       final double val = block.value.isNotEmpty ? block.value.first : 0;
       switch (block.meterName) {
+        case 'cpu':
+          cpu = val;
         case 'emmc':
           emmc = val;
         case 'ram':
@@ -468,6 +471,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> with WidgetsBindingObserv
     return DeviceSystemInfo(
       emmc: emmc,
       ram: ram,
+      cpu: cpu,
       temperature: temperature,
       usbStorage: usbStorage,
       updatedAt: DateTime.now(),

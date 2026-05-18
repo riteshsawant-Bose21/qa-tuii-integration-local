@@ -61,8 +61,7 @@ final GetIt serviceLocator = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
   final Map<String, dynamic> jsonMap = jsonDecode(algoMetadataJSON);
-  final FusionAlgorithmsConfig fusionAlgorithmsConfig =
-      FusionAlgorithmsConfig.fromJson(jsonMap);
+  final FusionAlgorithmsConfig fusionAlgorithmsConfig = FusionAlgorithmsConfig.fromJson(jsonMap);
   serviceLocator.registerSingleton<FusionAlgorithmsConfig>(
     fusionAlgorithmsConfig,
   );
@@ -394,7 +393,7 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<SnapshotSyncViewModel>(
     () => SnapshotSyncViewModel(
-      sceneCatalogSyncService: serviceLocator<FusionSceneCatalogSyncService>(),
+      snapshotActivateService: serviceLocator<SnapshotActivateService>(),
     ),
   );
 

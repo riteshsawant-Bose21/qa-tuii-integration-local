@@ -280,7 +280,7 @@ class FusionDeviceService {
       serialNumber: serialNumber,
       isPrimary: device.isPrimary,
       macAddress: device.macAddress,
-      softwareUpdateVersion: device.firmwareVersion,
+      softwareUpdateVersion: device.softwareUpdateVersion,
       isDeviceCertificateValid: device.isDeviceCertificateValid,
     );
   }

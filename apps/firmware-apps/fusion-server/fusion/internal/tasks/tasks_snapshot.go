@@ -35,7 +35,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	task := snapshotCreateRequestToTask(&request)
 
-	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
+	if task.Id == "" || task.CronExpr == "" || task.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
 		return
 	}
@@ -45,7 +45,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	rawSnapID, ok := task.Params[api.SnapshotIDKey]
+	rawSnapID, ok := task.GetParam(api.SnapshotIDKey)
 	if !ok {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
@@ -92,7 +92,7 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
-	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.ID})
+	_ = writeProtoJSON(w, &model.CreateTaskResponse{Id: task.Id})
 }
 
 // UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
@@ -161,15 +161,18 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		task.Params[api.SnapshotIDKey] = snapshotID
+		if err := task.SetParam(api.SnapshotIDKey, snapshotID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	if hasStart {
-		task.StartAt = patch.StartAt.AsTime()
+		task.SetStartAtTime(patch.StartAt.AsTime())
 	}
 
 	if hasEnd {
-		task.EndAt = patch.EndAt.AsTime()
+		task.SetEndAtTime(patch.EndAt.AsTime())
 	}
 
 	if hasRecurrence {
@@ -199,7 +202,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 
 		// Safely extract snapID as a string
 		var snapID string
-		if v, ok := t.Params[api.SnapshotIDKey]; ok && v != nil {
+		if v, ok := t.GetParam(api.SnapshotIDKey); ok && v != nil {
 			switch val := v.(type) {
 			case string:
 				snapID = val
