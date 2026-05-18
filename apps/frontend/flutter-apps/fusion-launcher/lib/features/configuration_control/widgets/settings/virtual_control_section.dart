@@ -183,16 +183,16 @@ class VirtualControlSection extends StatelessWidget {
             Row(
               spacing: 6,
               children: <Widget>[
-                FusionAppButton(
-                  semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
-                  text: 'Download',
-                  height: 32,
-                  width: 110,
-                  showSuffixIcon: true,
-                  suffixIcon: Icons.download_outlined,
-                  style: FusionAppButtonStyle.primary,
-                  onPressed: () => _downloadQrAsImage(context),
-                ),
+                // FusionAppButton(
+                //   semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescdownloadbutton,
+                //   text: 'Download',
+                //   height: 32,
+                //   width: 110,
+                //   showSuffixIcon: true,
+                //   suffixIcon: Icons.download_outlined,
+                //   style: FusionAppButtonStyle.primary,
+                //   onPressed: () => _downloadQrAsImage(context),
+                // ),
                 FusionAppButton(
                   semanticId: FusionTestKeys.instance.settingsTabvirtualControlsectiondescprintbutton,
                   text: 'Print',

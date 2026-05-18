@@ -201,7 +201,8 @@ class ProcessingBlockModel {
       id: id ?? this.id,
       isforUser: isForUser ?? this.isforUser,
       algorithmId: algorithmId ?? this.algorithmId,
-      properties: properties ?? this.properties,
+      // Deep copy properties to avoid shared references
+      properties: properties != null ? properties.map((val) => val.copyWith()).toList() : this.properties.map((val) => val.copyWith()).toList(),
     );
   }
 
@@ -246,7 +247,8 @@ class ProcessingBlockModel {
       name: name,
       isforUser: isforUser,
       algorithmId: algorithmId,
-      properties: model.properties,
+      // Deep copy properties to avoid shared references
+      properties: model.properties.map((val) => val.copyWith()).toList(),
     );
   }
 
