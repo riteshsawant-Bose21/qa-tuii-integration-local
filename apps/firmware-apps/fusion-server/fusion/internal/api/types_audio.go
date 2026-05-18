@@ -15,22 +15,6 @@ type AudioSyncUpdate struct {
 	URL      string               `json:"url"`
 }
 
-// MeterDataMessage is the telemetry payload routed from the telemetry core to
-// WebSocket subscribers. Filtering is based on each sample's block_name.
-type MeterDataMessage struct {
-	MessageName string              `json:"message_name"`
-	Parameters  MeterDataParameters `json:"parameters"`
-}
-
-type MeterDataParameters struct {
-	Value []MeterDataSample `json:"value"`
-}
-
-type MeterDataSample struct {
-	BlockName string         `json:"block_name"`
-	Value     map[string]any `json:"value,omitempty"`
-}
-
 type MessageTrigger struct {
 	ID        string   `json:"id"`
 	Path      string   `json:"path"`

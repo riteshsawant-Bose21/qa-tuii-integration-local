@@ -6,7 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"sort"
 	"strings"
 	"testing"
@@ -23,7 +23,7 @@ type FusionCluster struct {
 type FusionNode struct {
 	MultipassName string
 	MultipassIPs  []string
-	Device        api.DeviceRuntimeInfo
+	Device        model.DeviceInfo
 }
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
@@ -242,7 +242,7 @@ func (fc FusionCluster) Primary() (FusionNode, error) {
 		return FusionNode{}, fmt.Errorf("get devices: %w", err)
 	}
 
-	var primary *api.DeviceRuntimeInfo
+	var primary *model.DeviceInfo
 	for i := range devices {
 		if devices[i].IsPrimary {
 			if primary != nil {
