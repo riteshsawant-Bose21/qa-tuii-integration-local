@@ -24,6 +24,10 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
           selectedBlock: blocks.first,
         ),
       );
+    } else {
+      emit(
+        EmptyProcessingChainState(),
+      );
     }
   }
 
