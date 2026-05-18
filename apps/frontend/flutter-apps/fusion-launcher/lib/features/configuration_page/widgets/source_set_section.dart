@@ -631,21 +631,26 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: FusionButton(
-                    width: double.infinity,
-                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontSize: 10,
-                    ),
-
-                    label: "Create",
-                    isActive:
-                        widget.sourceSetNameController.text.trim().isNotEmpty &&
-                        widget.selectedSources.length >= 2 &&
-                        !widget.isNameExists(widget.sourceSetNameController.text.trim()),
-                    onTap: () {
-                      widget.onAddSourceSet.call();
+                  child: Builder(
+                    builder: (BuildContext context) {
+                      final bool isButtonActive =
+                          widget.sourceSetNameController.text.trim().isNotEmpty &&
+                          widget.selectedSources.length >= 2 &&
+                          !widget.isNameExists(widget.sourceSetNameController.text.trim());
+                      return FusionButton(
+                        width: double.infinity,
+                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 10,
+                          color: isButtonActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
+                        ),
+                        label: "Create",
+                        isActive: isButtonActive,
+                        onTap: () {
+                          widget.onAddSourceSet.call();
+                        },
+                        accessLabel: 'create',
+                      );
                     },
-                    accessLabel: 'create',
                   ),
                 ),
               ],
