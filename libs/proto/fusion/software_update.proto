@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package fusion.softwareupdate.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message SoftwareUpdateBundle {
+  string filename = 1;
+  string checksum = 2;
+  int64 size_bytes = 3;
+  google.protobuf.Timestamp uploaded = 4;
+  string source_ip = 5;
+  string sync_id = 6;
+}
+
+message SoftwareUpdateUploadResponse {
+  string filename = 1;
+  string checksum = 2;
+  int64 size_bytes = 3;
+  google.protobuf.Timestamp uploaded = 4;
+}
+
+message SoftwareUpdateListResponse {
+  repeated SoftwareUpdateBundle bundles = 1;
+}
+
+message SoftwareUpdateErrorResponse {
+  string error = 1;
+  string message = 2;
+}
+
+message SwUpdateInfo {
+  string serial_number = 1;
+  string current_bundle_version = 2;
+  string previous_bundle_version = 3;
+  string mount = 4;
+  string previous_mount = 5;
+  string status = 6;
+  string current_state = 7;
+  string boot_partition = 8;
+  string previous_boot_partition = 9;
+  string error = 10;
+  string updated_at = 11;
+}

@@ -47,6 +47,7 @@ dependencies:
   multicast_dns: 0.3.3
 
   web_socket_channel: ^3.0.3
+  protobuf: ^4.2.0
 
 
 dev_dependencies:

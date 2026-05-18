@@ -19,9 +19,14 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   final ProcessingBlockModel processingBlock;
   final FusionAlgorithmsConfig config;
 
-  AlgorithmDataViewmodel({required this.processingBlock, required this.config}) {
+  AlgorithmDataViewmodel({
+    required this.processingBlock,
+    required this.config,
+  }) {
     final String algorithmId = processingBlock.algorithmId;
-    algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
+    algorithm = config.algorithms.firstWhereOrNull(
+      (Algorithm element) => element.name == algorithmId,
+    );
     _loadLayout();
     getParameterValueFromServer();
     _subscribeToBlockDataStream();
@@ -60,8 +65,11 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   /// block-data updates for this processing block in real time.
   void _subscribeToBlockDataStream() {
     final BlockDataViewmodel blockDataVM = serviceLocator<BlockDataViewmodel>();
-    _blockDataSubscription = blockDataVM.stream.listen((BlockDataState blockState) {
-      final Map<String, dynamic>? blockData = blockState.allBlockData[processingBlock.id];
+    _blockDataSubscription = blockDataVM.stream.listen((
+      BlockDataState blockState,
+    ) {
+      final Map<String, dynamic>? blockData =
+          blockState.allBlockData[processingBlock.id];
       if (blockData == null || blockData.isEmpty) return;
 
       bool changed = false;
@@ -69,12 +77,16 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
         if (value is List<dynamic>) {
           for (int i = 0; i < value.length; i++) {
             if (value[i] != null) {
-              processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+              processingBlock.updateProperty(
+                PropertySetting(name: key, value: value[i], dimension: i),
+              );
               changed = true;
             }
           }
         } else {
-          processingBlock.updateProperty(PropertySetting(name: key, value: value));
+          processingBlock.updateProperty(
+            PropertySetting(name: key, value: value),
+          );
           changed = true;
         }
       });
@@ -98,11 +110,21 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   @override
   dynamic getValue(PBItem param) {
     return processingBlock.properties
-            .firstWhereOrNull((PropertySetting element) => element.name == param.field && element.dimension == param.dimension)
+            .firstWhereOrNull(
+              (PropertySetting element) =>
+                  element.name == param.field &&
+                  element.dimension == param.dimension,
+            )
             ?.value ??
         resolveValue(
-          algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == param.field)?.defaultValue ??
-              algorithm?.telemetry?.firstWhereOrNull((Telemetry e) => e.name == param.field)?.defaultValue,
+          algorithm?.parameters
+                  ?.firstWhereOrNull(
+                    (Parameter element) => element.name == param.field,
+                  )
+                  ?.defaultValue ??
+              algorithm?.telemetry
+                  ?.firstWhereOrNull((Telemetry e) => e.name == param.field)
+                  ?.defaultValue,
         );
   }
 
@@ -112,18 +134,26 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   void getParameterValueFromServer() async {
-    if (serviceLocator<ProjectViewModel>().virtualIP != null && serviceLocator<ProjectViewModel>().isInControlMode) {
-      final Map<String, dynamic>? responseCallback = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: processingBlock.id);
+    if (serviceLocator<ProjectViewModel>().virtualIP != null &&
+        serviceLocator<ProjectViewModel>().isInControlMode) {
+      final Map<String, dynamic>? responseCallback =
+          await serviceLocator<BlockDataViewmodel>().getBlockData(
+            blockId: processingBlock.id,
+          );
       if (responseCallback != null) {
         responseCallback.forEach((String key, dynamic value) {
           if (value is List<dynamic>) {
             for (int i = 0; i < value.length; i++) {
               if (value[i] != null) {
-                processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+                processingBlock.updateProperty(
+                  PropertySetting(name: key, value: value[i], dimension: i),
+                );
               }
             }
           } else {
-            processingBlock.updateProperty(PropertySetting(name: key, value: value));
+            processingBlock.updateProperty(
+              PropertySetting(name: key, value: value),
+            );
           }
         });
         notifyListeners();
@@ -131,9 +161,15 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     }
   }
 
-  void updateValue({required String field, int? dimension, required dynamic value}) {
+  void updateValue({
+    required String field,
+    int? dimension,
+    required dynamic value,
+  }) {
     // Always update the local model immediately for responsive UI
-    processingBlock.updateProperty(PropertySetting(name: field, value: value, dimension: dimension));
+    processingBlock.updateProperty(
+      PropertySetting(name: field, value: value, dimension: dimension),
+    );
     notifyListeners();
 
     // Store the latest request (discards any older pending one)
@@ -162,11 +198,13 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   void _flushPendingUpdate() {
-    final ({String field, int? dimension, dynamic value})? pending = _pendingUpdate;
+    final ({String field, int? dimension, dynamic value})? pending =
+        _pendingUpdate;
     if (pending == null) return;
     _pendingUpdate = null;
 
-    if (serviceLocator<ProjectViewModel>().isInControlMode && serviceLocator<ProjectViewModel>().virtualIP != null) {
+    if (serviceLocator<ProjectViewModel>().isInControlMode &&
+        serviceLocator<ProjectViewModel>().virtualIP != null) {
       // serviceLocator<BlockDataViewmodel>().updateBlockParameter(
       //   blockId: processingBlock.id,
       //   parameter: pending.field,
@@ -178,7 +216,6 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
         parameter: pending.field,
         value: pending.value,
         dimension: pending.dimension,
-        processingBlock: processingBlock,
       );
     } else {
       serviceLocator<ProjectViewModel>().updateProcessingBlock(
@@ -189,7 +226,13 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
 
   @override
   void addValue(PBItem item, dynamic value) {
-    addProperty(PropertySetting(name: item.field, value: value, dimension: item.dimension));
+    addProperty(
+      PropertySetting(
+        name: item.field,
+        value: value,
+        dimension: item.dimension,
+      ),
+    );
   }
 
   void addProperty(PropertySetting property) {
@@ -227,14 +270,18 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   PBSliderParam resolveSliderParam(PBItem item) {
-    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == item.field);
+    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull(
+      (Parameter element) => element.name == item.field,
+    );
     if (parameter != null) {
       return (item.param as PBSliderParam).copyWith(
         min: resolveValue(parameter.minimumValue) ?? 0,
         max: resolveValue(parameter.maximumValue) ?? 100,
       );
     }
-    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull((Telemetry element) => element.name == item.field);
+    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull(
+      (Telemetry element) => element.name == item.field,
+    );
     if (telemetry != null) {
       return (item.param as PBSliderParam).copyWith(
         min: resolveValue(telemetry.minimumValue) ?? 0,
@@ -245,14 +292,18 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   PBTextfieldParam resolveTextfieldParam(PBItem item) {
-    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == item.field);
+    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull(
+      (Parameter element) => element.name == item.field,
+    );
     if (parameter != null) {
       return (item.param as PBTextfieldParam).copyWith(
         min: resolveValue(parameter.minimumValue) ?? 0,
         max: resolveValue(parameter.maximumValue) ?? 100,
       );
     }
-    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull((Telemetry element) => element.name == item.field);
+    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull(
+      (Telemetry element) => element.name == item.field,
+    );
     if (telemetry != null) {
       return (item.param as PBTextfieldParam).copyWith(
         min: resolveValue(telemetry.minimumValue) ?? 0,
@@ -263,7 +314,9 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   PBDropdownParam resolveDropdownParam(PBItem item) {
-    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == item.field);
+    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull(
+      (Parameter element) => element.name == item.field,
+    );
     if (parameter != null) {
       final List<String> options = <String>[];
       if (parameter.allowedValues != null) {
@@ -279,14 +332,18 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   PBMeterParam resolveMeterParam(PBItem item) {
-    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == item.field);
+    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull(
+      (Parameter element) => element.name == item.field,
+    );
     if (parameter != null) {
       return (item.param as PBMeterParam).copyWith(
         min: resolveValue(parameter.minimumValue) ?? 0,
         max: resolveValue(parameter.maximumValue) ?? 100,
       );
     }
-    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull((Telemetry element) => element.name == item.field);
+    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull(
+      (Telemetry element) => element.name == item.field,
+    );
     if (telemetry != null) {
       return (item.param as PBMeterParam).copyWith(
         min: resolveValue(telemetry.minimumValue) ?? 0,
@@ -298,7 +355,10 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
 
   dynamic resolveValue(dynamic val) {
     if (val is String) {
-      return algorithm?.properties?.firstWhereOrNull((Property element) => element.name == val)?.defaultValue ?? val;
+      return algorithm?.properties
+              ?.firstWhereOrNull((Property element) => element.name == val)
+              ?.defaultValue ??
+          val;
     }
     return val;
   }

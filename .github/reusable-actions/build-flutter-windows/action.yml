@@ -68,6 +68,7 @@ runs:
         }
 
         flutter pub get
+        powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\generate_protos.ps1
         moon run flutter-apps:build-win
         if ($LASTEXITCODE -ne 0) {
           Write-Error "moon run flutter-apps:build-win failed with exit code $LASTEXITCODE"

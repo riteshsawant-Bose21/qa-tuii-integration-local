@@ -1,0 +1,28 @@
+info:
+  name: Create Snapshot Task
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{api_url}}/tasks"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "id": "activate-snap-001",
+        "description": "Activate snapshot every five minutes",
+        "cron_expr": "*/5 * * * *",
+        "snapshot_id": "default"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a snapshot task using the protobuf JSON request shape.

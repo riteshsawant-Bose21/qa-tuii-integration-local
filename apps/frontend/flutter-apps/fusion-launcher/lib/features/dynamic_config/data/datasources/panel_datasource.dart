@@ -14,7 +14,7 @@ abstract class PanelDataSource {
 
   Future<AudioWidgetEntity> sendWidgetData(AudioWidgetEntity audioWidgetEntity, AudioWidgetValue updatedValue);
 
-  Future<bool> resetFusion();
+  Future<bool> clearAudioSettings();
 
   Stream<Map<String, dynamic>> getMeterStream();
 

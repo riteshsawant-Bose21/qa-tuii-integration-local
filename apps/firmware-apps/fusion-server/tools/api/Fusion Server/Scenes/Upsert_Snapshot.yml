@@ -1,0 +1,40 @@
+info:
+  name: Upsert Snapshot
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{api_url}}/snapshots/:id"
+  params:
+    - name: id
+      value: snapshot-test-01
+      type: path
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "id": "snapshot-test-01",
+        "name": "Snapshot Test 01 Updated",
+        "data": {
+          "settings": {
+            "audio": {
+              "GAIN528578446": {
+                "gain": -10.0,
+                "mute": false
+              }
+            }
+          }
+        }
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates or overwrites a snapshot definition. If body id is present, it must match the path id.

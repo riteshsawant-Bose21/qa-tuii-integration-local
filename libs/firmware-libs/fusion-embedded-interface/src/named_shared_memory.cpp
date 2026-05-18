@@ -225,14 +225,15 @@ bosepro::NamedSharedMemory::NamedSharedMemory(const char* name)
 
 /**
  * Destructor
- * Cleans up shared memory regions and mutex.
+ * Unlinks owned shared memory regions.
  */
 bosepro::NamedSharedMemory::~NamedSharedMemory() {
     try {
-        if (ownsSharedResources_ && sharedMutex_) {
-            pthread_mutex_destroy(sharedMutex_);
-        }
         if (ownsSharedResources_) {
+            // Other processes may still have this region mapped while
+            // deregistration messages already queued to them are being drained.
+            // Unlink the names, but do not destroy the process-shared mutex in
+            // mapped memory here.
             shared_memory_object::remove(metaData.name);
             shared_memory_object::remove((std::string(metaData.name) + "_metadata").c_str());
         }

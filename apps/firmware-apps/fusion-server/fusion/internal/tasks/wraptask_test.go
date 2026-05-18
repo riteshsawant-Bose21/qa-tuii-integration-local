@@ -7,6 +7,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 )
 
 type mockTM struct {
@@ -30,8 +31,6 @@ func runWrapped(tm *mockTM, task *api.Task, now time.Time) (called bool) {
 	return
 }
 
-var nowFunction = time.Now
-
 func init() {
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "test",
@@ -46,14 +45,16 @@ func TestWrapTask_AllowsExecutionInsideRecurringWindow(t *testing.T) {
 	tm := &mockTM{}
 
 	task := &api.Task{
-		ID:          "rec-win",
-		Description: "test recurring window",
-		Type:        api.TaskTypeMessage,
-		Enabled:     true,
-		Recurrence: &api.RecurringWindow{
-			StartTime: "09:00",
-			EndTime:   "17:00",
-			Days:      []int{1, 2, 3, 4, 5}, // Mon–Fri
+		Task: model.Task{
+			Id:          "rec-win",
+			Description: "test recurring window",
+			Type:        api.TaskTypeMessage,
+			Enabled:     true,
+			Recurrence: &api.RecurringWindow{
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Days:      []int32{1, 2, 3, 4, 5}, // Mon–Fri
+			},
 		},
 	}
 
@@ -70,14 +71,16 @@ func TestWrapTask_RespectsDayOfWeek(t *testing.T) {
 	tm := &mockTM{}
 
 	task := &api.Task{
-		ID:          "dow",
-		Description: "test dow",
-		Type:        api.TaskTypeMessage,
-		Enabled:     true,
-		Recurrence: &api.RecurringWindow{
-			StartTime: "09:00",
-			EndTime:   "17:00",
-			Days:      []int{1}, // Monday only
+		Task: model.Task{
+			Id:          "dow",
+			Description: "test dow",
+			Type:        api.TaskTypeMessage,
+			Enabled:     true,
+			Recurrence: &api.RecurringWindow{
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Days:      []int32{1}, // Monday only
+			},
 		},
 	}
 
@@ -94,9 +97,11 @@ func TestWrapTask_ExecutesWhenNoWindows(t *testing.T) {
 	tm := &mockTM{}
 
 	task := &api.Task{
-		ID:      "simple",
-		Type:    api.TaskTypeMessage,
-		Enabled: true,
+		Task: model.Task{
+			Id:      "simple",
+			Type:    api.TaskTypeMessage,
+			Enabled: true,
+		},
 	}
 
 	now := time.Now()

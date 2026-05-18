@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gibson042/canonicaljson-go"
 	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
@@ -56,6 +58,8 @@ var antiEntropyBuckets = []string{
 	bucketTasks,
 	bucketSnapshotDefs,
 	bucketSceneSets,
+	bucketAudio,
+	bucketDevice,
 }
 
 type saveState struct {
@@ -78,7 +82,7 @@ type Persistence struct {
 	dbOptions        *bbolt.Options
 	mutex            sync.RWMutex
 	notifierMu       sync.RWMutex
-	metadataNotifier func(*api.DatabaseMetadata)
+	metadataNotifier func(*model.DatabaseMetadata)
 	lastSave         time.Time
 	saveDebounce     time.Duration
 	minSaveGap       time.Duration
@@ -165,7 +169,7 @@ func (p *Persistence) Close() {
 	})
 }
 
-func (p *Persistence) SetMetadataNotifier(notifier func(*api.DatabaseMetadata)) {
+func (p *Persistence) SetMetadataNotifier(notifier func(*model.DatabaseMetadata)) {
 	p.notifierMu.Lock()
 	defer p.notifierMu.Unlock()
 	p.metadataNotifier = notifier
@@ -204,7 +208,7 @@ func (p *Persistence) SaveState() error {
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	metadata.Version = ps.Version
+	metadata.Version = versionInfoFromAPI(ps.Version)
 	metadata.Valid = len(ps.State) > 0
 
 	if err := p.saveMetadataWithNotify(metadata, false); err != nil {
@@ -510,7 +514,7 @@ func validateImportedAudio(audio map[string]any) error {
 			return fmt.Errorf("failed to marshal imported audio metadata %q: %w", key, err)
 		}
 
-		var meta api.AudioMetadata
+		var meta model.AudioMetadata
 		if err := json.Unmarshal(data, &meta); err != nil {
 			return fmt.Errorf("failed to unmarshal imported audio metadata %q: %w", key, err)
 		}
@@ -527,7 +531,7 @@ func validateImportedDevice(device map[string]any) error {
 		}
 
 		if key == keyDeviceInfo {
-			var info api.DevicePatch
+			var info model.DevicePatch
 			if err := json.Unmarshal(data, &info); err != nil {
 				return fmt.Errorf("failed to unmarshal imported device record %q: %w", key, err)
 			}
@@ -656,8 +660,8 @@ func (p *Persistence) persistActiveState() (*PersistentState, error) {
 	return p.persistStateToBucket(bucketActive, keyActiveState, false)
 }
 
-// loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
-func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
+// loadMetadata retrieves and unmarshals the model.DatabaseMetadata from the database.
+func (p *Persistence) loadMetadata() (*model.DatabaseMetadata, error) {
 	var dataCopy []byte
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		var err error
@@ -670,12 +674,12 @@ func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
 	return decodeMetadataBytes(dataCopy)
 }
 
-// saveMetadata saves the api.DatabaseMetadata into the metadata bucket.
-func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
+// saveMetadata saves the model.DatabaseMetadata into the metadata bucket.
+func (p *Persistence) saveMetadata(meta *model.DatabaseMetadata) error {
 	return p.saveMetadataWithNotify(meta, true)
 }
 
-func (p *Persistence) saveMetadataWithNotify(meta *api.DatabaseMetadata, notify bool) error {
+func (p *Persistence) saveMetadataWithNotify(meta *model.DatabaseMetadata, notify bool) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -716,18 +720,39 @@ func metadataBytesFromTx(tx *bbolt.Tx) ([]byte, error) {
 	return append([]byte(nil), data...), nil
 }
 
-func decodeMetadataBytes(data []byte) (*api.DatabaseMetadata, error) {
-	var metadata api.DatabaseMetadata
+func decodeMetadataBytes(data []byte) (*model.DatabaseMetadata, error) {
+	var metadata model.DatabaseMetadata
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, err
 	}
 	metadata.ActiveSnapshot = strings.Clone(metadata.ActiveSnapshot)
 	metadata.Hash = strings.Clone(metadata.Hash)
-	metadata.Version.NodeID = strings.Clone(metadata.Version.NodeID)
+	if metadata.Version != nil {
+		metadata.Version.NodeId = strings.Clone(metadata.Version.NodeId)
+	}
 	return &metadata, nil
 }
 
-func loadMetadataFromTx(tx *bbolt.Tx) (*api.DatabaseMetadata, error) {
+func versionInfoFromAPI(v api.Version) *model.VersionInfo {
+	return &model.VersionInfo{
+		Epoch:   v.Epoch,
+		Counter: v.Counter,
+		NodeId:  v.NodeID,
+	}
+}
+
+func apiVersionFromProto(v *model.VersionInfo) api.Version {
+	if v == nil {
+		return api.Version{}
+	}
+	return api.Version{
+		Epoch:   v.Epoch,
+		Counter: v.Counter,
+		NodeID:  v.NodeId,
+	}
+}
+
+func loadMetadataFromTx(tx *bbolt.Tx) (*model.DatabaseMetadata, error) {
 	data, err := metadataBytesFromTx(tx)
 	if err != nil {
 		return nil, err
@@ -735,7 +760,7 @@ func loadMetadataFromTx(tx *bbolt.Tx) (*api.DatabaseMetadata, error) {
 	return decodeMetadataBytes(data)
 }
 
-func saveMetadataToTx(tx *bbolt.Tx, meta *api.DatabaseMetadata) error {
+func saveMetadataToTx(tx *bbolt.Tx, meta *model.DatabaseMetadata) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -757,8 +782,10 @@ func (p *Persistence) updateHash(notify bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
-	if metadata.Version.NodeID == "" {
-		metadata.Version.NodeID = p.stateManager.GetVersion().NodeID
+	if metadata.Version == nil {
+		metadata.Version = versionInfoFromAPI(p.stateManager.GetVersion())
+	} else if metadata.Version.NodeId == "" {
+		metadata.Version.NodeId = p.stateManager.GetVersion().NodeID
 	}
 	metadata.Hash = newHash
 	return p.saveMetadataWithNotify(metadata, notify)
@@ -775,7 +802,7 @@ func (p *Persistence) updateHashWithVersionBump(notify bool) error {
 		return fmt.Errorf("failed to load metadata: %w", err)
 	}
 
-	metadata.Version = p.stateManager.NextVersionAfter(metadata.Version)
+	metadata.Version = versionInfoFromAPI(p.stateManager.NextVersionAfter(apiVersionFromProto(metadata.Version)))
 	metadata.Hash = newHash
 	metadata.Valid = true
 
@@ -810,46 +837,48 @@ func (p *Persistence) computeHash() (string, error) {
 
 func computeHashTx(tx *bbolt.Tx) (string, error) {
 	hash := sha256.New()
-	if err := tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-		bucketName := string(name)
+	for _, bucketName := range antiEntropyBuckets {
+
 		// Device identity is node-local and must not influence the cluster hash.
 		if bucketName == bucketDevice {
-			return nil
+			continue
 		}
-		hash.Write(name)
+
+		b := tx.Bucket([]byte(bucketName))
+
+		if b == nil {
+			continue
+		}
+
+		hash.Write([]byte(bucketName))
+
 		cursor := b.Cursor()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			hash.Write(k)
 
-			sanitized, err := sanitizeHashValue(bucketName, string(k), v)
+			sanitized, err := normalizeBucketValueForHash(bucketName, string(k), v)
 			if err != nil {
-				return err
+				return "", err
 			}
 			hash.Write(sanitized)
 		}
-		return nil
-	}); err != nil {
-		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
+func normalizeBucketValueForHash(bucketName, key string, value []byte) ([]byte, error) {
 	switch bucketName {
 	case bucketFusion:
 		if key != keyMetadata {
 			return value, nil
 		}
-		var metadata api.DatabaseMetadata
+		var metadata model.DatabaseMetadata
 		if err := json.Unmarshal(value, &metadata); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal metadata for hashing: %w", err)
 		}
-		// Version orders repairs, but it is not part of the converged payload.
-		// Including it in the DB hash causes perpetual anti-entropy loops after
-		// an import repairs the data but preserves the local node's metadata version.
-		metadata.Version = api.Version{}
 		metadata.Hash = ""
-		normalized, err := json.Marshal(metadata)
+		metadata.Version = nil
+		normalized, err := canonicaljson.Marshal(metadata)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal normalized metadata for hashing: %w", err)
 		}
@@ -857,7 +886,7 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 
 	case bucketSnapshots, bucketActive:
 		// Strip the Timestamp field so that nodes with logically identical
-		// state but different save times produce the same hash. This must
+		// state but different local wrapper metadata produce the same hash. This must
 		// match the normalization applied in normalizeAntiEntropyValue;
 		// without it, the hash and the diff diverge, causing perpetual
 		// anti-entropy repair loops.
@@ -865,10 +894,18 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 		if err := json.Unmarshal(value, &state); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal persistent state for hashing (bucket=%s key=%s): %w", bucketName, key, err)
 		}
+		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
-		normalized, err := json.Marshal(state)
+		normalized, err := canonicaljson.Marshal(state)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal normalized persistent state for hashing (bucket=%s key=%s): %w", bucketName, key, err)
+		}
+		return normalized, nil
+
+	case bucketTasks, bucketSnapshotDefs, bucketSceneSets, bucketAudio, bucketDevice:
+		normalized, err := canonicalizeHashJSONValue(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to canonicalize JSON for hashing (bucket=%s key=%s): %w", bucketName, key, err)
 		}
 		return normalized, nil
 
@@ -877,30 +914,25 @@ func sanitizeHashValue(bucketName, key string, value []byte) ([]byte, error) {
 	}
 }
 
-func normalizeAntiEntropyValue(bucketName string, value any) (any, error) {
-	switch bucketName {
-	case bucketSnapshots, bucketActive:
-		raw, err := json.Marshal(value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal persistent state for normalization (bucket=%s): %w", bucketName, err)
-		}
-		var state PersistentState
-		if err := json.Unmarshal(raw, &state); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal persistent state for normalization (bucket=%s): %w", bucketName, err)
-		}
-		state.Timestamp = time.Time{}
-		return state, nil
-	default:
-		return value, nil
+func canonicalizeHashJSONValue(value []byte) ([]byte, error) {
+	var decoded any
+	if err := json.Unmarshal(value, &decoded); err != nil {
+		return nil, err
 	}
+	return canonicaljson.Marshal(decoded)
 }
 
 func antiEntropyValueChecksum(bucketName string, value any) (string, error) {
-	normalized, err := normalizeAntiEntropyValue(bucketName, value)
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal value for anti-entropy checksum (bucket=%s): %w", bucketName, err)
+	}
+	normalized, err := normalizeBucketValueForHash(bucketName, "", raw)
 	if err != nil {
 		return "", err
 	}
-	return utils.JSONChecksum(normalized)
+	sum := sha256.Sum256(normalized)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func mapStringAny(value any) map[string]any {
@@ -1237,8 +1269,8 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) (bool, error) {
 		return false, nil
 	}
 
-	meta := &api.DatabaseMetadata{
-		Version:        p.stateManager.GetVersion(),
+	meta := &model.DatabaseMetadata{
+		Version:        versionInfoFromAPI(p.stateManager.GetVersion()),
 		ActiveSnapshot: keyDefaultSnapshot,
 		Hash:           "",
 		Valid:          true,
@@ -1354,6 +1386,10 @@ func (p *Persistence) RemoveAudioFile(id string) error {
 
 // SyncAudioFile retrieves an audio file from another node and stores metadata.
 func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
+	if update == nil || update.Metadata == nil {
+		return fmt.Errorf("audio sync update missing metadata")
+	}
+
 	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
 
 	// Attempt to open a temp file with O_CREATE|O_EXCL
@@ -1366,7 +1402,7 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 		if os.IsExist(err) {
 			if _, statErr := os.Stat(finalPath); statErr == nil {
 				// The file is already present; ensure metadata is present as well.
-				return p.SaveAudioMeta(&update.Metadata)
+				return p.SaveAudioMeta(update.Metadata)
 			}
 			// If .part exists but final doesn't, someone else is writing it — treat as in progress
 			return nil
@@ -1416,7 +1452,7 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 		return fmt.Errorf("rename %s → %s: %w", tmpPath, finalPath, err)
 	}
 
-	if err := p.SaveAudioMeta(&update.Metadata); err != nil {
+	if err := p.SaveAudioMeta(update.Metadata); err != nil {
 		return fmt.Errorf("SaveAudioMeta: %w", err)
 	}
 

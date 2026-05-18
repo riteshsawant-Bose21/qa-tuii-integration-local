@@ -2,22 +2,22 @@ package handler
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	model "fusion/internal/gen/proto/fusion"
 )
 
-func (h *Handler) HandleGetControllers() []*api.ControllerInfo {
+func (h *Handler) HandleGetControllers() []*model.ControllerInfo {
 	logger := logging.GetLogger()
 
 	controllers := h.controllerManager.GetActiveControllers()
 
 	for i, controller := range controllers {
-		logger.Debug("  Controller %d: ID=%s, Name=%s, Version=%s", i+1, controller.ID, controller.Name, controller.Version)
+		logger.Debug("  Controller %d: ID=%s, Name=%s, Version=%s", i+1, controller.Id, controller.Name, controller.Version)
 	}
 	return controllers
 }
 
-func (h *Handler) HandleGetControllerByID(controllerID string) (*api.ControllerInfo, error) {
+func (h *Handler) HandleGetControllerByID(controllerID string) (*model.ControllerInfo, error) {
 	logger := logging.GetLogger()
 
 	if controllerID == "" {

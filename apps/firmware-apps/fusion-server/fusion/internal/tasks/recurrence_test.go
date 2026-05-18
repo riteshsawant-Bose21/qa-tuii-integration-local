@@ -45,7 +45,7 @@ func TestValidateRecurringWindow_Valid(t *testing.T) {
 	r := &api.RecurringWindow{
 		StartTime: "09:00",
 		EndTime:   "17:00",
-		Days:      []int{1, 2, 3, 4, 5},
+		Days:      []int32{1, 2, 3, 4, 5},
 	}
 	if err := validateRecurringWindow(r); err != nil {
 		t.Fatalf("validateRecurringWindow returned error for valid window: %v", err)
@@ -56,7 +56,7 @@ func TestValidateRecurringWindow_InvalidTimes(t *testing.T) {
 	r := &api.RecurringWindow{
 		StartTime: "9:00", // invalid format
 		EndTime:   "17:00",
-		Days:      []int{1},
+		Days:      []int32{1},
 	}
 	if err := validateRecurringWindow(r); err == nil {
 		t.Fatal("validateRecurringWindow expected error for invalid start_time, got nil")
@@ -65,7 +65,7 @@ func TestValidateRecurringWindow_InvalidTimes(t *testing.T) {
 	r = &api.RecurringWindow{
 		StartTime: "09:00",
 		EndTime:   "25:00", // invalid hour
-		Days:      []int{1},
+		Days:      []int32{1},
 	}
 	if err := validateRecurringWindow(r); err == nil {
 		t.Fatal("validateRecurringWindow expected error for invalid end_time, got nil")
@@ -76,7 +76,7 @@ func TestValidateRecurringWindow_InvalidDays(t *testing.T) {
 	r := &api.RecurringWindow{
 		StartTime: "09:00",
 		EndTime:   "17:00",
-		Days:      []int{-1, 0, 7},
+		Days:      []int32{-1, 0, 7},
 	}
 	if err := validateRecurringWindow(r); err == nil {
 		t.Fatal("validateRecurringWindow expected error for invalid days, got nil")
@@ -128,7 +128,7 @@ func TestWithinRecurringWindow_DaysOfWeek(t *testing.T) {
 	r := &api.RecurringWindow{
 		StartTime: "09:00",
 		EndTime:   "17:00",
-		Days:      []int{1, 2, 3, 4, 5}, // Mon–Fri
+		Days:      []int32{1, 2, 3, 4, 5}, // Mon–Fri
 	}
 
 	tuesday := makeTime(time.Tuesday, 10, 0)

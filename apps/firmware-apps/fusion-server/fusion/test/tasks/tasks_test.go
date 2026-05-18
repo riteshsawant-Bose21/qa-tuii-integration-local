@@ -1,11 +1,13 @@
 package tasks_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/tasks"
 
@@ -25,21 +27,29 @@ func init() {
 func TestAddTaskRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "tasks_validation.db")
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(tmpDir, "audio")
+	require.NoError(t, os.MkdirAll(api.AudioFilesLocation, 0755))
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
 	p, err := persistence.NewPersistence(dbPath, sm)
 	require.NoError(t, err)
 	defer p.Close()
 
-	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil)
+	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil, nil)
 
 	err = tm.AddTask(&api.Task{
-		ID:          "snap-task-1",
-		CronExpr:    "* * * * *",
-		Description: "apply missing snapshot",
-		Type:        api.TaskTypeSnapshot,
-		Params: map[string]any{
-			api.SnapshotIDKey: "does-not-exist",
+		Task: model.Task{
+			Id:          "snap-task-1",
+			CronExpr:    "* * * * *",
+			Description: "apply missing snapshot",
+			Type:        api.TaskTypeSnapshot,
+			Details: &model.Task_Snapshot{
+				Snapshot: &model.SnapshotTaskDetails{SnapshotId: "does-not-exist"},
+			},
 		},
 	})
 	require.Error(t, err)
@@ -49,6 +59,12 @@ func TestAddTaskRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 func TestLoadTasksDisablesInvalidPersistedSnapshotTask(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "tasks_load_validation.db")
+	prevAudioDir := api.AudioFilesLocation
+	api.AudioFilesLocation = filepath.Join(tmpDir, "audio")
+	require.NoError(t, os.MkdirAll(api.AudioFilesLocation, 0755))
+	t.Cleanup(func() {
+		api.AudioFilesLocation = prevAudioDir
+	})
 
 	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
 	p, err := persistence.NewPersistence(dbPath, sm)
@@ -57,18 +73,20 @@ func TestLoadTasksDisablesInvalidPersistedSnapshotTask(t *testing.T) {
 
 	require.NoError(t, p.SaveTasks(map[string]*api.Task{
 		"bad-task": {
-			ID:          "bad-task",
-			CronExpr:    "* * * * *",
-			Description: "apply missing snapshot",
-			Type:        api.TaskTypeSnapshot,
-			Enabled:     true,
-			Params: map[string]any{
-				api.SnapshotIDKey: "does-not-exist",
+			Task: model.Task{
+				Id:          "bad-task",
+				CronExpr:    "* * * * *",
+				Description: "apply missing snapshot",
+				Type:        api.TaskTypeSnapshot,
+				Enabled:     true,
+				Details: &model.Task_Snapshot{
+					Snapshot: &model.SnapshotTaskDetails{SnapshotId: "does-not-exist"},
+				},
 			},
 		},
 	}))
 
-	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil)
+	tm := tasks.NewTaskManager(&api.AppConfig{NodeName: "node-a"}, p, nil, nil)
 
 	require.NoError(t, tm.LoadTasks())
 

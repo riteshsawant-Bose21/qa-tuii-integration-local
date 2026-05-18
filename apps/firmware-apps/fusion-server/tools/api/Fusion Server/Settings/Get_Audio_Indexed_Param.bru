@@ -1,0 +1,17 @@
+meta {
+  name: Get Audio Indexed Param
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{api_url}}/settings/audio/:blockId/:param/:index
+  body: none
+  auth: none
+}
+
+params:path {
+  blockId: PEQ4385417
+  param: frequency
+  index: 0
+}

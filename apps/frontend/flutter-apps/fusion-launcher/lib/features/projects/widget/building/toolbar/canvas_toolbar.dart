@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_control/widgets/controllers/add_controller/add_controller_dialog.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/rectangle_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/presentation/project_work_area.dart';
 import 'package:fusion_launcher/features/projects/view_model/spl_viewmodel.dart';
@@ -40,6 +41,8 @@ class CanvasToolBar extends StatelessWidget {
               context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState());
             } else if (state.toolState is DrawingListeningAreaState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
+            } else if (state.toolState is DrawingRectangleListeningAreaState) {
+              context.read<FusionCanvasToolViewModel>().setTool(IdleRectangleToolState());
             } else if (state.toolState is DrawingWallState) {
               context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
             } else if (state.toolState is MeasuringToolState) {

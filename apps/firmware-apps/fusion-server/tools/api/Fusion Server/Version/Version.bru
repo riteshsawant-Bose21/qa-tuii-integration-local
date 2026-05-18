@@ -1,0 +1,15 @@
+meta {
+  name: Version
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{api_url}}/version
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}

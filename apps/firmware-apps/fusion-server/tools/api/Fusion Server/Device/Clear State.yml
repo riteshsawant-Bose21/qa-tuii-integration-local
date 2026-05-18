@@ -1,0 +1,14 @@
+info:
+  name: Clear State
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{api_url}}/state"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

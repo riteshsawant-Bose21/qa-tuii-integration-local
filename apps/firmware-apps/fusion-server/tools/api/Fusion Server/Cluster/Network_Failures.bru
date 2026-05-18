@@ -1,0 +1,11 @@
+meta {
+  name: Network Failures
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{metrics_url}}/cluster/latency/network/failures
+  body: none
+  auth: none
+}

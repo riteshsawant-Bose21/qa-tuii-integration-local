@@ -7,6 +7,7 @@ DSP_DIR="$ROOT_DIR/apps/firmware-apps/fusion-dsp"
 SERVER_BIN="${SERVER_BIN:-$SERVER_DIR/build/fusion-server_darwin_arm64}"
 DSP_BIN="${DSP_BIN:-$DSP_DIR/build/fusion_dsp}"
 API_URL="${API_URL:-http://127.0.0.1:8080}"
+ADMIN_URL="${ADMIN_URL:-http://127.0.0.1:9090}"
 DEVICES_URL="${DEVICES_URL:-$API_URL/devices}"
 SERVER_IP="${SERVER_IP:-127.0.0.1}"
 FIXTURE_TEMPLATE="${FIXTURE_TEMPLATE:-$DSP_DIR/config/test_local_udp.json}"
@@ -116,7 +117,8 @@ DEVICE_JSON="$(curl -sf "$DEVICES_URL")"
 DEVICE_ID="$(
   DEVICE_JSON="$DEVICE_JSON" python3 - <<'PY'
 import json, os
-devices = json.loads(os.environ["DEVICE_JSON"])
+payload = json.loads(os.environ["DEVICE_JSON"])
+devices = payload.get("devices", payload)
 print(devices[0]["id"])
 PY
 )"
@@ -140,10 +142,10 @@ PY
 
 echo "Seeding server state..."
 curl -sf \
-  -X POST \
+  -X PATCH \
   -H 'Content-Type: application/json' \
   --data @"$STATE_JSON" \
-  "$API_URL/value" >/dev/null
+  "$ADMIN_URL/state" >/dev/null
 
 echo "Starting fusion_dsp..."
 (
@@ -167,7 +169,7 @@ curl -sf \
   -X PATCH \
   -H 'Content-Type: application/json' \
   --data "$PATCH_ONE" \
-  "$API_URL/value" >/dev/null
+  "$ADMIN_URL/state" >/dev/null
 
 wait_for_log 'Server update: {"name":"gain","target":"GAIN_LOCAL","value":-12.5}' "$DSP_LOG"
 
@@ -177,7 +179,7 @@ curl -sf \
   -X PATCH \
   -H 'Content-Type: application/json' \
   --data "$PATCH_TWO" \
-  "$API_URL/value" >/dev/null
+  "$ADMIN_URL/state" >/dev/null
 
 wait_for_log 'Server update: {"name":"mute","target":"GAIN_LOCAL","value":true}' "$DSP_LOG"
 
@@ -193,6 +195,6 @@ fi
 
 echo
 echo "Success."
-echo "  fusion-server accepted POST/PATCH updates on $API_URL/value"
+echo "  fusion-server accepted PATCH updates on $ADMIN_URL/state"
 echo "  fusion_dsp connected to $SERVER_IP:7947 and received live gain/mute updates"
 echo "  output wav created at $OUTPUT_WAV"

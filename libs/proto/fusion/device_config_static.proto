@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package fusion.deviceconfig.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+// StaticConfiguration mirrors the conditioned DSP output shape currently stored
+// under result.devices[*].dsp_static_config.
+message StaticConfiguration {
+  SessionConfiguration session = 1;
+  repeated AudioTask audio_tasks = 2;
+  repeated TaskConnection task_connections = 3;
+  repeated ParameterSetting parameter_settings = 4;
+}
+
+message SessionConfiguration {
+  repeated PropertySetting property_settings = 1;
+}
+
+message AudioTask {
+  string name = 1;
+  repeated PropertySetting property_settings = 2;
+  repeated Block blocks = 3;
+  repeated BlockConnection block_connections = 4;
+}
+
+message Block {
+  string name = 1;
+  string algorithm = 2;
+  repeated PropertySetting property_settings = 3;
+  repeated TerminalChannels terminal_channels = 4;
+}
+
+message PropertySetting {
+  string name = 1;
+  google.protobuf.Value value = 2;
+}
+
+message TerminalChannels {
+  string name = 1;
+  uint32 channels = 2;
+}
+
+message BlockConnection {
+  string source_block = 1;
+  string output_terminal = 2;
+  uint32 output_channel = 3;
+  string destination_block = 4;
+  string input_terminal = 5;
+  uint32 input_channel = 6;
+}
+
+message TaskConnection {
+  string source_task = 1;
+  string output_block = 2;
+  uint32 output_channel = 3;
+  string destination_task = 4;
+  string input_block = 5;
+  uint32 input_channel = 6;
+}
+
+message ParameterSetting {
+  string target = 1;
+  string name = 2;
+  repeated uint32 index = 3;
+  google.protobuf.Value value = 4;
+}

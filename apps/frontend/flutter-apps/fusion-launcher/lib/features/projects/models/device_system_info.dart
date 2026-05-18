@@ -4,6 +4,9 @@
 /// `block_name: system_info` and meter names `emmc`, `ram`, `temperature`,
 /// `usb_storage`.
 class DeviceSystemInfo {
+  /// CPU usage
+  final double cpu;
+
   /// eMMC (disk) usage percentage (0–100).
   final double emmc;
 
@@ -22,6 +25,8 @@ class DeviceSystemInfo {
   const DeviceSystemInfo({
     this.emmc = 0,
     this.ram = 0,
+    this.cpu = 0,
+
     this.temperature = 0,
     this.usbStorage = 0,
     required this.updatedAt,
@@ -30,6 +35,7 @@ class DeviceSystemInfo {
   DeviceSystemInfo copyWith({
     double? emmc,
     double? ram,
+    double? cpu,
     double? temperature,
     double? usbStorage,
     DateTime? updatedAt,
@@ -37,6 +43,7 @@ class DeviceSystemInfo {
     return DeviceSystemInfo(
       emmc: emmc ?? this.emmc,
       ram: ram ?? this.ram,
+      cpu: cpu ?? this.cpu,
       temperature: temperature ?? this.temperature,
       usbStorage: usbStorage ?? this.usbStorage,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -44,10 +51,11 @@ class DeviceSystemInfo {
   }
 
   /// Whether we have received meaningful data (at least one non-zero metric).
-  bool get hasData => emmc > 0 || ram > 0 || temperature > 0 || usbStorage > 0;
+  bool get hasData => emmc > 0 || ram > 0 || temperature > 0 || usbStorage > 0 || cpu > 0;
 
   @override
   String toString() =>
       'DeviceSystemInfo(emmc: ${emmc.toStringAsFixed(1)}%, ram: ${ram.toStringAsFixed(1)}%, '
-      'temp: ${temperature.toStringAsFixed(1)}°C, usb: ${usbStorage.toStringAsFixed(1)}%)';
+      'temp: ${temperature.toStringAsFixed(1)}°C, usb: ${usbStorage.toStringAsFixed(1)}%)'
+      'cpu: ${cpu.toStringAsFixed(1)}%';
 }

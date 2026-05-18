@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -12,20 +13,20 @@ import (
 	"os"
 )
 
-func (h *Handler) HandleGetDevicesInfo() []api.DeviceInfo {
+func (h *Handler) HandleGetDevicesInfo() []model.DeviceInfo {
 	return h.clusterTransport.GetAllDevicesInfo()
 }
 
-func (h *Handler) HandleGetDeviceInfo() api.DeviceInfo {
+func (h *Handler) HandleGetDeviceInfo() model.DeviceInfo {
 	return h.clusterTransport.GetDeviceInfoLocal()
 }
 
-func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch api.DevicePatch) error {
-	return h.clusterTransport.UpdateDeviceInfo(deviceID, &patch)
+func (h *Handler) HandleUpdateDeviceInfo(deviceID string, patch *model.DevicePatch) error {
+	return h.clusterTransport.UpdateDeviceInfo(deviceID, patch)
 }
 
-func (h *Handler) HandleUpdateDeviceInfoLocal(patch api.DevicePatch) error {
-	return h.clusterTransport.UpdateDeviceInfoLocal(&patch)
+func (h *Handler) HandleUpdateDeviceInfoLocal(patch *model.DevicePatch) error {
+	return h.clusterTransport.UpdateDeviceInfoLocal(patch)
 }
 
 // HandleGetCSR retrieves the CSR for the specified device ID. If the target device ID is the local device, it will read the CSR from the local file system. If the target device is remote, it will send a request to the remote device to fetch its CSR.
@@ -96,6 +97,10 @@ func (h *Handler) getRemoteCSR(url string) ([]byte, error) {
 
 // setLocalCertificate writes the provided certificate content to the local file system, replacing the existing certificate if necessary
 func (h *Handler) setLocalCertificate(certPEM []byte) error {
+	if err := os.MkdirAll(api.DefaultIdentityFilePath, 0755); err != nil {
+		logging.GetLogger().Error("Error creating identity directory: %v", err)
+		return err
+	}
 
 	// Check if we should replace the certificate
 	shouldReplace, err := shouldReplaceCertificate(fmt.Sprintf("%s%s", api.DefaultIdentityFilePath, api.DefaultCertFileName), certPEM)

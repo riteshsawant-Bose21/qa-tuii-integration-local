@@ -315,11 +315,11 @@ class SpeakerPlacementAlgorithmResult {
   });
 }
 
-class AutoPlacementResult {
+class AutoPlacementParam {
   final CoveragePreference autoPlaceCoveragePreference;
   final LayoutPattern autoPlaceLayoutPattern;
 
-  const AutoPlacementResult({
+  const AutoPlacementParam({
     this.autoPlaceCoveragePreference = CoveragePreference.minimumOverlap,
     this.autoPlaceLayoutPattern = LayoutPattern.hexagonal,
   });
@@ -329,7 +329,7 @@ class AutoPlacementResult {
     'autoPlaceLayoutPattern': autoPlaceLayoutPattern.name,
   };
 
-  factory AutoPlacementResult.fromJson(Map<String, dynamic> json) {
+  factory AutoPlacementParam.fromJson(Map<String, dynamic> json) {
     final autoPlaceCoveragePreference = switch (json['autoPlaceCoveragePreference'] as String?) {
       'minimumOverlap' => CoveragePreference.minimumOverlap,
       'edgeToEdge' => CoveragePreference.edgeToEdge,
@@ -343,17 +343,17 @@ class AutoPlacementResult {
       _ => LayoutPattern.hexagonal,
     };
 
-    return AutoPlacementResult(
+    return AutoPlacementParam(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern,
     );
   }
 
-  AutoPlacementResult copyWith({
+  AutoPlacementParam copyWith({
     CoveragePreference? autoPlaceCoveragePreference,
     LayoutPattern? autoPlaceLayoutPattern,
   }) {
-    return AutoPlacementResult(
+    return AutoPlacementParam(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference ?? this.autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern ?? this.autoPlaceLayoutPattern,
     );
@@ -389,7 +389,7 @@ class ListeningArea {
   final WiringType? wiringType;
   final BackgroundNoise? backgroundNoise;
   final bool autoPlacement;
-  final AutoPlacementResult? autoPlacementResult;
+  final AutoPlacementParam? autoPlacementResult;
 
   ListeningArea({
     String? id,
@@ -527,7 +527,7 @@ class ListeningArea {
     SpeakerSelectModeArgs? speakerSelectModeArgs,
     SpeakerSuggestModeArgs? speakerSuggestModeArgs,
     bool? autoPlacement,
-    AutoPlacementResult? autoPlacementResult,
+    AutoPlacementParam? autoPlacementResult,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -624,7 +624,7 @@ class ListeningArea {
       backgroundNoise: BackgroundNoise.fromJson(json['backgroundNoise']),
       speakerSelectionMode: SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
       autoPlacement: json['autoPlacement'] as bool? ?? false,
-      autoPlacementResult: json['autoPlacementResult'] != null ? AutoPlacementResult.fromJson(json['autoPlacementResult'] as Map<String, dynamic>) : null,
+      autoPlacementResult: json['autoPlacementResult'] != null ? AutoPlacementParam.fromJson(json['autoPlacementResult'] as Map<String, dynamic>) : null,
       speakerSelectModeArgs: json['speakerSelectModeArgs'] != null
           ? SpeakerSelectModeArgs.fromJson(json['speakerSelectModeArgs'] as Map<String, dynamic>)
           : const SpeakerSelectModeArgs(),

@@ -10,10 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var initTestLogger sync.Once
@@ -65,8 +67,8 @@ func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
 	defer p.Close()
 
 	original := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
-		"two": {ID: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
+		"two": {Task: model.Task{Id: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(original))
 
@@ -94,10 +96,12 @@ func TestPersistenceCompactsDatabaseOnReopen(t *testing.T) {
 	for i := 0; i < 48; i++ {
 		id := fmt.Sprintf("task-%03d", i)
 		largeTasks[id] = &api.Task{
-			ID:          id,
-			CronExpr:    "* * * * *",
-			Description: strings.Repeat("payload-", 4096),
-			Type:        api.TaskTypeSnapshot,
+			Task: model.Task{
+				Id:          id,
+				CronExpr:    "* * * * *",
+				Description: strings.Repeat("payload-", 4096),
+				Type:        api.TaskTypeSnapshot,
+			},
 		}
 	}
 	require.NoError(t, p.SaveTasks(largeTasks))
@@ -140,7 +144,7 @@ func TestSaveTasksNoOpDoesNotRewriteDatabase(t *testing.T) {
 	defer p.Close()
 
 	tasks := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(tasks))
 	before := stableDBSnapshot(t, p, dbPath)
@@ -159,12 +163,12 @@ func TestSaveAudioMetaNoOpDoesNotRewriteDatabase(t *testing.T) {
 	p := newTestPersistence(t, dbPath)
 	defer p.Close()
 
-	meta := &api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio 1",
 		Filename:    "audio-1.wav",
 		MimeType:    "audio/wav",
-		Uploaded:    time.Unix(1700000000, 0).UTC(),
+		Uploaded:    timestamppb.New(time.Unix(1700000000, 0).UTC()),
 		SizeBytes:   1234,
 		Checksum:    "abc",
 	}
@@ -186,7 +190,7 @@ func TestSetDeviceInfoNoOpDoesNotRewriteDatabase(t *testing.T) {
 	defer p.Close()
 
 	name := "Fusion"
-	info := &api.DevicePatch{Name: &name}
+	info := &model.DevicePatch{Name: &name}
 	require.NoError(t, p.SetDeviceInfo(info))
 	before := stableDBSnapshot(t, p, dbPath)
 
@@ -222,7 +226,7 @@ func TestMaybeCompactOnOpenSkipsWhenBelowThreshold(t *testing.T) {
 	defer p.Close()
 
 	tasks := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "small", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "small", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(tasks))
 

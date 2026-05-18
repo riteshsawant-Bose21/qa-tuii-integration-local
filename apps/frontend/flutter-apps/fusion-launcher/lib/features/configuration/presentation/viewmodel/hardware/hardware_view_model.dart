@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/usecase/auto_placement_usecase.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -284,7 +285,19 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
       if (listeningAreaId == null) throw Exception("No listening area selected");
-      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+      return getNonPlacedSpeakersForListeningArea(areaId: listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <Speaker>[];
+    }
+  }
+
+  List<Speaker> getNonPlacedSpeakersForListeningArea({required String areaId}) {
+    try {
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithoutPosition(areaId);
       return hardwares.whereType<Speaker>().toList();
     } catch (e) {
       FusionLogger.log(
@@ -299,7 +312,19 @@ extension HardwareViewModel on ProjectViewModel {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
       if (listeningAreaId == null) throw Exception("No listening area selected");
-      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+      return getPlacedSpeakersForListeningArea(areaId: listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get placed hardware for listening area: $e",
+      );
+      return <Speaker>[];
+    }
+  }
+
+  List<Speaker> getPlacedSpeakersForListeningArea({required String areaId}) {
+    try {
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithPosition(areaId);
       return hardwares.whereType<Speaker>().toList();
     } catch (e) {
       FusionLogger.log(
@@ -310,7 +335,7 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+  ResponseCallback<SpeakerPlacementAlgorithmResult> runAutoPlacementForCurrentListeningArea({required AutoPlacementParam autoPlacementResult}) {
     try {
       final String? listeningAreaId = currentSelectedListeningAreaId;
       if (listeningAreaId == null) return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Select a listening area first.');
@@ -322,72 +347,35 @@ extension HardwareViewModel on ProjectViewModel {
         return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure('Listening area shape is invalid. Redraw the area and try again.');
       }
 
-      final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
-      final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
-
-      final Speaker referenceSpeaker = _getAutoPlacementTargetSpeaker();
-
-      final ({
-        List<Offset> positions,
-        SurfacePlacementResult? surfacePlacementResult,
-        PlacementResult? placementResult,
-        CeilingPlacementParams? ceilingPlacementParams,
-      })
-      autoPlacedDetails = _calculateAutoPlacedPositions(
+      final ResponseCallback<AutoPlacementResult> newSpeakers = AutoPlacementUsecase().runAutoPlacementForCurrentListeningArea(
         listeningArea: listeningArea,
-        catalogSpeakers: catalogSpeakers,
-        referenceSpeaker: referenceSpeaker,
         autoPlacementResult: autoPlacementResult,
       );
-
-      final List<Offset> candidatePoints = autoPlacedDetails.positions;
-
-      final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
-
-      if (candidatePoints.isEmpty) {
-        FusionLogger.log(tag: LogTag.project, message: 'Auto-placement candidate points: $candidatePoints');
-        return ResponseCallback<SpeakerPlacementAlgorithmResult>.success(
-          SpeakerPlacementAlgorithmResult(
-            positions: <Offset>[],
-            surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
-            placementResult: autoPlacedDetails.placementResult,
-            ceilingPlacementParams: autoPlacedDetails.ceilingPlacementParams,
-            coverageAngle: _resolveCoverageAngle(speakerProduct),
-            listnersHeight: listeningArea.listeningHeight,
-            coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
-            width: listeningArea.getBoundsForVertices().roomWidthInMeters,
-            length: listeningArea.getBoundsForVertices().roomLengthInMeters,
-          ),
-          message: 'No valid placement positions found. Adjust your listening area shape or auto-placement settings and try again.',
-        );
+      if (!newSpeakers.success) {
+        return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(newSpeakers.message ?? 'Auto-placement failed.');
       }
-
-      final List<Offset> sortedPoints = _sortPlacementPoints(listeningArea: listeningArea, points: candidatePoints);
-      final int placeCount = sortedPoints.length;
-      final ListeningAreaRoomBounds roomBounds = listeningArea.getBoundsForVertices();
-
       recordSnapshot();
 
-      // Save auto-placement result to listening area for future reference and to display in UI if needed.
-      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
-      updateListeningArea(area: updatedListeningArea, autoSave: false);
+      // // Save auto-placement result to listening area for future reference and to display in UI if needed.
+      // final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
+      // updateListeningArea(area: updatedListeningArea, autoSave: false);
 
       // Hard reset speaker inventory in current LA: remove all existing placed + unplaced speakers.
-      removeAllSpeakersFromCurrentListeningArea(autoSave: false);
+      if (newSpeakers.data?.speakers.isNotEmpty ?? false) removeAllSpeakersFromCurrentListeningArea(autoSave: false);
 
       // Add a fresh set of algorithm-placed speakers only.
-      for (final Offset point in sortedPoints) {
-        final ({double pitch, double yaw}) orientation = _resolveOrientationForPlacement(
-          mountingType: listeningArea.mountingType,
-          position: point,
-          bounds: roomBounds,
-        );
-        final Speaker clonedSpeaker = referenceSpeaker.getClone().copyWith(
-          pitch: orientation.pitch,
-          yaw: orientation.yaw,
-        );
-        clonedSpeaker.pos = point;
-        addHardware(hardware: clonedSpeaker, autoSave: false);
+      for (final Speaker point in newSpeakers.data?.speakers ?? <Speaker>[]) {
+        // final ({double pitch, double yaw}) orientation = _resolveOrientationForPlacement(
+        //   mountingType: listeningArea.mountingType,
+        //   position: point,
+        //   bounds: roomBounds,
+        // );
+        // final Speaker clonedSpeaker = referenceSpeaker.getClone().copyWith(
+        //   pitch: orientation.pitch,
+        //   yaw: orientation.yaw,
+        // );
+        // clonedSpeaker.pos = point;
+        addHardware(hardware: point, autoSave: false);
       }
 
       saveProject();
@@ -395,174 +383,22 @@ extension HardwareViewModel on ProjectViewModel {
 
       return ResponseCallback<SpeakerPlacementAlgorithmResult>.success(
         SpeakerPlacementAlgorithmResult(
-          positions: sortedPoints,
-          surfacePlacementResult: autoPlacedDetails.surfacePlacementResult,
-          placementResult: autoPlacedDetails.placementResult,
-          coverageAngle: _resolveCoverageAngle(speakerProduct),
+          positions: newSpeakers.data!.speakers.map((Speaker s) => s.pos!).toList(),
+          surfacePlacementResult: newSpeakers.data!.surfacePlacementResult,
+          placementResult: newSpeakers.data!.placementResult,
+          coverageAngle: 0, //_resolveCoverageAngle(speakerProduct),
           listnersHeight: listeningArea.listeningHeight,
           coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
           width: listeningArea.getBoundsForVertices().roomWidthInMeters,
           length: listeningArea.getBoundsForVertices().roomLengthInMeters,
+          ceilingPlacementParams: newSpeakers.data!.ceilingPlacementParams,
         ),
-        message: 'Auto-placement successful. Placed $placeCount speakers.',
+        message: 'Auto-placement successful. Placed ${newSpeakers.data!.speakers.length} speakers.',
       );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
       return ResponseCallback<SpeakerPlacementAlgorithmResult>.failure(e.toString().replaceFirst('Invalid argument(s): ', ''));
     }
-  }
-
-  // Helper methods for auto-placement
-  Speaker _getAutoPlacementTargetSpeaker() {
-    final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
-    final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
-    final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers].where((Speaker element) => !element.isSubwoofer).toList();
-
-    final Iterable<Speaker> filteredSpeakers = allSpeakers.where(
-      (Speaker speaker) {
-        return speaker.productId != null && !speaker.isSubwoofer && speaker.mountingType != null;
-      },
-    );
-
-    if (filteredSpeakers.isEmpty) {
-      throw Exception(
-        'No valid speakers found for auto-placement. Add at least one non-subwoofer speaker with a defined product and mounting type to the listening area and try again.',
-      );
-    }
-
-    return filteredSpeakers.first;
-  }
-
-  // Sort candidate points based on distance from center of listening area, closest first.
-  // This is a heuristic to try to place speakers in a more balanced way in irregularly shaped rooms
-  // where the algorithm may return clusters of points in certain areas.
-  List<Offset> _sortPlacementPoints({required ListeningArea listeningArea, required List<Offset> points}) {
-    final Offset center = listeningArea.getCenterPositionOfVertices() ?? points.first;
-    return List<Offset>.from(points)..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
-  }
-
-  ({List<Offset> positions, SurfacePlacementResult? surfacePlacementResult, PlacementResult? placementResult, CeilingPlacementParams? ceilingPlacementParams})
-  _calculateAutoPlacedPositions({
-    required ListeningArea listeningArea,
-    required List<SpeakerProduct> catalogSpeakers,
-    required Speaker referenceSpeaker,
-    required AutoPlacementResult autoPlacementResult,
-  }) {
-    final MountingType mountingType = listeningArea.mountingType;
-
-    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
-    final double coverageAngle = _resolveCoverageAngle(speakerProduct);
-
-    final ListeningAreaRoomBounds bounds = listeningArea.getBoundsForVertices();
-    final double roomLength = bounds.roomLengthInMeters;
-    final double roomWidth = bounds.roomWidthInMeters;
-
-    if (roomLength <= 0 || roomWidth <= 0) {
-      throw ArgumentError('Invalid room dimensions calculated from listening area vertices. Length and width must be greater than 0.');
-    }
-    final double listenerHeight = listeningArea.listeningHeight;
-
-    if (listenerHeight <= 0) throw ArgumentError('Listener height must be greater than 0.');
-
-    final double parsedCeilingHeight = listeningArea.ceilingHeight;
-    if (parsedCeilingHeight <= listenerHeight) throw ArgumentError('Ceiling height must be greater than listener height.');
-
-    final double ceilingHeight = parsedCeilingHeight;
-
-    if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
-      final List<Point2D> geometry = <Point2D>[
-        ...listeningArea.vertices.map(
-          (FusionCanvasPoint point) {
-            return Point2D(
-              (point.position.dx - bounds.minX) / 100,
-              (point.position.dy - bounds.minY) / 100,
-            );
-          },
-        ),
-      ];
-
-      final Room room = Room.asymmetrical(geometry: geometry, ceilingHeight: ceilingHeight, listenerHeight: listenerHeight);
-
-      final SpeakerType speakerType = mountingType == MountingType.pendant ? SpeakerType.pendant : SpeakerType.ceiling;
-
-      final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
-        room: room,
-        speakerSpec: SpeakerSpec(
-          coverageAngle: coverageAngle,
-          type: speakerType,
-          pendantHeight: listeningArea.ceilingHeight - listeningArea.listeningHeight,
-        ),
-        coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
-        layoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-      );
-
-      final List<Offset> positions = result.speakerPositions.map((Point2D p) => Offset((p.x * 100) + bounds.minX, (p.y * 100) + bounds.minY)).toList();
-
-      return (
-        positions: positions,
-        surfacePlacementResult: null,
-        placementResult: result,
-        ceilingPlacementParams: CeilingPlacementParams(
-          room: room,
-          coverageAngle: coverageAngle,
-          selectedLayoutPattern: autoPlacementResult.autoPlaceLayoutPattern,
-          boundaryOverlapThreshold: 0.2,
-          selectedCoveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
-          selectedSpeakerType: speakerType,
-          selectedRoomType: room.roomType,
-        ),
-      );
-    } else {
-      final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
-        room: SurfaceRoom(
-          length: roomLength,
-          width: roomWidth,
-          ceilingHeight: ceilingHeight,
-          listenerHeight: listenerHeight,
-        ),
-        speaker: Loudspeaker(horizontalCoverageAngle: coverageAngle, type: referenceSpeaker.speakerSKU),
-        config: PlacementConfig(
-          coveragePreference: autoPlacementResult.autoPlaceCoveragePreference,
-        ),
-      );
-
-      final List<Offset> positions = <Offset>[
-        ...result.positions.map(
-          (SpeakerPosition p) {
-            return Offset(
-              (p.x * 100) + bounds.minX,
-              (p.y * 100) + bounds.minY,
-            );
-          },
-        ),
-      ];
-      return (positions: positions, surfacePlacementResult: result, placementResult: null, ceilingPlacementParams: null);
-    }
-  }
-
-  double _resolveCoverageAngle(SpeakerProduct? product) {
-    if (product == null || product.coverage.isEmpty) return 90.0;
-    final int angle = product.coverage.firstOrNull?.horizontalDeg ?? 90;
-    return angle <= 0 ? 90.0 : angle.toDouble();
-  }
-
-  ({double pitch, double yaw}) _resolveOrientationForPlacement({
-    required MountingType mountingType,
-    required Offset position,
-    required ListeningAreaRoomBounds bounds,
-  }) {
-    if (mountingType == MountingType.pendant || mountingType == MountingType.ceiling) return (pitch: 90.0, yaw: 0.0);
-    if (mountingType != MountingType.surface) return (pitch: 0.0, yaw: 0.0);
-
-    final double dLeft = (position.dx - bounds.minX).abs();
-    final double dTop = (position.dy - bounds.minY).abs();
-    final double dRight = (bounds.maxX - position.dx).abs();
-    final double dBottom = (bounds.maxY - position.dy).abs();
-
-    if (dLeft <= dTop && dLeft <= dRight && dLeft <= dBottom) return (pitch: 0.0, yaw: 0.0); // Left wall
-    if (dTop <= dRight && dTop <= dBottom) return (pitch: 0.0, yaw: 90.0); // Top wall
-    if (dRight <= dBottom) return (pitch: 0.0, yaw: 180.0); // Right wall
-    return (pitch: 0.0, yaw: -90.0); // Bottom wall
   }
 
   ResponseCallback<bool> moveHardware({
