@@ -16,11 +16,13 @@ import (
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
 	hashicorpMemberlist "github.com/hashicorp/memberlist"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -96,6 +98,65 @@ type VIPApplyStatus struct {
 	Message     string        `json:"message,omitempty"`
 	StartedAt   *time.Time    `json:"started_at,omitempty"`
 	CompletedAt *time.Time    `json:"completed_at,omitempty"`
+}
+
+func vipNodeResultToProto(result VIPNodeResult) *model.VIPNodeResult {
+	resp := &model.VIPNodeResult{
+		Node:       result.Node,
+		Host:       result.Host,
+		Phase:      result.Phase,
+		Success:    result.Success,
+		StatusCode: int32(result.StatusCode),
+		Error:      result.Error,
+	}
+	if !result.StartedAt.IsZero() {
+		resp.StartedAt = timestamppb.New(result.StartedAt)
+	}
+	if result.CompletedAt != nil {
+		resp.CompletedAt = timestamppb.New(*result.CompletedAt)
+	}
+	return resp
+}
+
+func vipOperationStatusToProto(status *VIPOperationStatus) *model.VIPOperationStatus {
+	if status == nil {
+		return nil
+	}
+	resp := &model.VIPOperationStatus{
+		Id:             status.ID,
+		DesiredVip:     status.DesiredVIP,
+		StatusHost:     status.StatusHost,
+		ObservedVip:    status.ObservedVIP,
+		ObservedHolder: status.ObservedHolder,
+		Phase:          string(status.Phase),
+		Message:        status.Message,
+		NodeResults:    make(map[string]*model.VIPNodeResult, len(status.NodeResults)),
+	}
+	if !status.StartedAt.IsZero() {
+		resp.StartedAt = timestamppb.New(status.StartedAt)
+	}
+	if status.CompletedAt != nil {
+		resp.CompletedAt = timestamppb.New(*status.CompletedAt)
+	}
+	for key, value := range status.NodeResults {
+		resp.NodeResults[key] = vipNodeResultToProto(value)
+	}
+	return resp
+}
+
+func vipApplyStatusToProto(status VIPApplyStatus) *model.VIPApplyStatus {
+	resp := &model.VIPApplyStatus{
+		DesiredVip: status.DesiredVIP,
+		Phase:      string(status.Phase),
+		Message:    status.Message,
+	}
+	if status.StartedAt != nil {
+		resp.StartedAt = timestamppb.New(*status.StartedAt)
+	}
+	if status.CompletedAt != nil {
+		resp.CompletedAt = timestamppb.New(*status.CompletedAt)
+	}
+	return resp
 }
 
 type vipAdminTarget struct {
@@ -833,13 +894,12 @@ func (m *VIPMonitor) updateVIP(vipValue string) error {
 // node missed the original Set VIP fan-out (e.g. during bootstrap when
 // memberlist visibility was incomplete).
 func (m *VIPMonitor) selfHealVIPFromPeer(peerIP string) {
+	logger := logging.GetLogger()
 	defer func() {
 		m.selfHealMu.Lock()
 		m.selfHealActive = false
 		m.selfHealMu.Unlock()
 	}()
-
-	logger := logging.GetLogger()
 
 	// Fetch VIP config from the peer's admin endpoint
 	urlStr := fmt.Sprintf("%s%s", api.Protocol+net.JoinHostPort(peerIP, api.AdminPort), routes.DevicesVIPEndpoint)
@@ -1518,10 +1578,9 @@ func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"local": vipValue,
-		"vip":   vipValue,
+	_ = writeProtoJSON(w, &model.CurrentVIPResponse{
+		Local: vipValue,
+		Vip:   vipValue,
 	})
 }
 
@@ -1550,8 +1609,6 @@ func (m *VIPMonitor) HandleGetVIP(w http.ResponseWriter, r *http.Request) {
 		logging.GetLogger().Warn("More than one VIP found.")
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-
 	isVip, err := vip.IsIPPresentOnLocalInterface(vipValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1564,9 +1621,9 @@ func (m *VIPMonitor) HandleGetVIP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]string{
-			"local": local.String(),
-			"vip":   vipAddr.String(),
+		_ = writeProtoJSON(w, &model.CurrentVIPResponse{
+			Local: local.String(),
+			Vip:   vipAddr.String(),
 		})
 		return
 	}
@@ -1583,17 +1640,24 @@ func (m *VIPMonitor) HandleGetVIPStatus(w http.ResponseWriter, r *http.Request) 
 	status := m.getLatestVIPOperation()
 	if status == nil {
 		status = &VIPOperationStatus{
-			DesiredVIP:     m.GetCurrentVIP(),
-			StatusHost:     requestHostName(r.Host),
-			ObservedVIP:    m.GetCurrentVIP(),
-			ObservedHolder: m.GetVIPHolder(),
-			Phase:          VIPOperationPhaseIdle,
-			NodeResults:    map[string]VIPNodeResult{},
+			Phase:       VIPOperationPhaseIdle,
+			NodeResults: map[string]VIPNodeResult{},
 		}
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(status)
+	statusHost := requestHostName(r.Host)
+	currentVIP := m.GetCurrentVIP()
+	desiredVIP := currentVIP
+	if configuredVIP, err := m.getConfiguredVIP(); err == nil && configuredVIP != "" {
+		desiredVIP = vip.Canonicalize(configuredVIP)
+	}
+
+	status.StatusHost = statusHost
+	status.DesiredVIP = desiredVIP
+	status.ObservedVIP = currentVIP
+	status.ObservedHolder = m.GetVIPHolder()
+
+	_ = writeProtoJSON(w, vipOperationStatusToProto(status))
 }
 
 // HandleGetVIPOperation handles GET /devices/vip/operations/{id}
@@ -1614,8 +1678,7 @@ func (m *VIPMonitor) HandleGetVIPOperation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(status)
+	_ = writeProtoJSON(w, vipOperationStatusToProto(status))
 }
 
 // HandleGetVIPReloadStatus handles GET /device/reload/vip/status
@@ -1624,8 +1687,7 @@ func (m *VIPMonitor) HandleGetVIPReloadStatus(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(m.getVIPApplyStatus())
+	_ = writeProtoJSON(w, vipApplyStatusToProto(m.getVIPApplyStatus()))
 }
 
 // HandleUpdateVIPLocal handles POST /devices/vip/{vip} on admin port (local update only)
@@ -1701,9 +1763,7 @@ func (m *VIPMonitor) HandleSetVIP(w http.ResponseWriter, r *http.Request) {
 	op := m.createVIPOperation(vipValue)
 	go m.runVIPOperation(op.ID, vipValue)
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(op)
+	_ = writeProtoJSONWithStatus(w, http.StatusAccepted, vipOperationStatusToProto(op))
 }
 
 // HandleReloadVIP handles POST /device/reload/vip (reloads on all nodes)
@@ -1733,9 +1793,7 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 		m.runVIPReloadOperation(op.ID, desiredVIP)
 	}()
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(op)
+	_ = writeProtoJSONWithStatus(w, http.StatusAccepted, vipOperationStatusToProto(op))
 }
 
 // HandleSetMasterPriorityLocal handles POST /devices/{id}/vip/master-priority/{mode} on admin port.

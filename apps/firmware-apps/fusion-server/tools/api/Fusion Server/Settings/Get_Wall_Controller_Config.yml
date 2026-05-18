@@ -1,0 +1,14 @@
+info:
+  name: Get Wall Controller Config
+  type: http
+  seq: 10
+
+http:
+  method: GET
+  url: "{{api_url}}/settings/wall_controller_config"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

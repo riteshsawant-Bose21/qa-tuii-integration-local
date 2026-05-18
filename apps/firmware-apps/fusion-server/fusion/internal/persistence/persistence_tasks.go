@@ -3,9 +3,9 @@ package persistence
 import (
 	"bytes"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"strings"
-	"fusion-services-core/logging"
 
 	json "github.com/goccy/go-json"
 
@@ -28,7 +28,7 @@ func validateSnapshotTaskRefs(tasks map[string]any, snapshotExists func(string) 
 			continue
 		}
 
-		snapshotIDValue, ok := task.Params[api.SnapshotIDKey]
+		snapshotIDValue, ok := task.GetParam(api.SnapshotIDKey)
 		if !ok {
 			return fmt.Errorf("imported snapshot task %q missing %q", key, api.SnapshotIDKey)
 		}
@@ -217,7 +217,7 @@ func (p *Persistence) TaskExists(task *api.Task) (bool, error) {
 			exists = false
 			return nil
 		}
-		exists = b.Get([]byte(task.ID)) != nil
+		exists = b.Get([]byte(task.Id)) != nil
 		return nil
 	})
 	return exists, err
@@ -293,7 +293,7 @@ func (p *Persistence) GetTaskIDsBySnapshot(snapshotID string) ([]string, error) 
 			if t.Type != api.TaskTypeSnapshot {
 				return nil
 			}
-			if id, ok := t.Params[api.SnapshotIDKey]; ok && id == snapshotID {
+			if id, ok := t.GetParam(api.SnapshotIDKey); ok && id == snapshotID {
 				taskIDs = append(taskIDs, string(k))
 			}
 			return nil

@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/generated/proto/fusion/websocket.pb.dart' as wsmodel;
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
+import 'package:protobuf/protobuf.dart' as $pb;
 
 import '../../service/auth/fusion_auth_service.dart';
 import 'dartzmq_stub.dart' if (dart.library.io) 'package:dartzmq/dartzmq.dart';
@@ -32,17 +35,54 @@ class FusionNetworkClient {
 
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
+  // ── WebSocket ping/pong heartbeat ─────────────────────────────────────────
+  //
+  // Managed here so every consumer gets liveness events from a single source.
+  // Consumers listen to [wsAliveStream]; they do not implement ping/pong themselves.
 
-  String getApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
+  /// Broadcasts `false` when a pong timeout occurs (connection is dead).
+  /// Consumers should trigger a reconnect on `false`.
+  final StreamController<bool> _wsAliveController = StreamController<bool>.broadcast();
+  Stream<bool> get wsAliveStream => _wsAliveController.stream;
+
+  Timer? _wsPingTimer;
+  Timer? _wsPongTimeoutTimer;
+  StreamSubscription<dynamic>? _wsPongListenerSubscription;
+  bool _wsWaitingForPong = false;
+
+  static const Duration _kWsPingInterval = Duration(seconds: 8);
+  static const Duration _kWsPongTimeout = Duration(seconds: 5);
+
+  String getApiUrl(
+    FusionApiEndpoint api, {
+    String? baseUrlToOverride,
+    bool isSecure = true,
+  }) => geApiUrl(
+    api,
+    baseUrlToOverride: baseUrlToOverride,
+    isSecure: isSecure,
+  );
+
+  String geApiUrl(
+    FusionApiEndpoint api, {
+    String? baseUrlToOverride,
+    bool isSecure = true,
+  }) {
     if (baseUrlToOverride != null) {
-      return isSecure
-          ? "https://$baseUrlToOverride${api.path}"
-          : "http://${baseUrlToOverride.contains(':') ? baseUrlToOverride : '$baseUrlToOverride:8080'}${api.path}";
+      final String host = baseUrlToOverride.contains(':')
+          ? baseUrlToOverride
+          : switch (api.type) {
+              FusionApiType.fusionAdminServer => '$baseUrlToOverride:9090',
+              _ => '$baseUrlToOverride:8080',
+            };
+      return isSecure ? "https://$baseUrlToOverride${api.path}" : "http://$host${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
       return "http://localhost:8080${api.path}";
     } else if (api.type == FusionApiType.fusionServer) {
       return "http://TODO:8080${api.path}";
+    } else if (api.type == FusionApiType.fusionAdminServer) {
+      return "http://TODO:9090${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
       return "$apiBaseUrl${api.path}";
     } else {
@@ -69,12 +109,21 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
-    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (canCallCloudApis(api.type))
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     try {
       final String url = additionalPath != null
-          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -85,52 +134,64 @@ class FusionNetworkClient {
       final bool isBinary = T == Uint8List;
 
       final Options options = Options(
-        validateStatus: (_) => true,
         headers: <String, dynamic>{...headers},
         responseType: isBinary ? ResponseType.bytes : ResponseType.json,
       );
 
-      final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
+      final Response<dynamic> response = await httpClient.dioInstance.get(
+        url,
+        options: options,
+        queryParameters: urlParameters,
+      );
 
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         if (isBinary) {
-          return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T?, statusCode: response.statusCode);
+          return ResponseCallback<T>(
+            success: true,
+            message: "Binary file fetched successfully",
+            data: response.data as T?,
+            statusCode: response.statusCode,
+          );
         } else {
           T? data = fromJson != null ? fromJson(response.data) : response.data;
-          return ResponseCallback<T>.success(data, statusCode: response.statusCode);
+          return ResponseCallback<T>.success(
+            data,
+            statusCode: response.statusCode,
+          );
         }
       } else {
-        final dynamic rawError = response.data;
-
-        String bodyMessage = '';
-        if (rawError is String) {
-          bodyMessage = rawError.trim();
-        } else if (rawError is Map<String, dynamic>) {
-          final dynamic m = rawError['message'];
-          final dynamic e = rawError['error'];
-          final dynamic d = rawError['details'];
-
-          if (m is String && m.trim().isNotEmpty) {
-            bodyMessage = m.trim();
-          } else if (e is String && e.trim().isNotEmpty) {
-            bodyMessage = e.trim();
-          } else if (d is String) {
-            bodyMessage = d.trim();
-          }
-        }
-
-        final String fallback = httpClient.handleStatusCodeError(response.statusCode);
         return ResponseCallback<T>(
           success: false,
-          message: bodyMessage.isNotEmpty ? bodyMessage : fallback,
+          message: httpClient.handleStatusCodeError(response.statusCode),
           statusCode: response.statusCode,
-          data: rawError is T ? rawError : null,
         );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.get() - $ex", statusCode: null);
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.get() - $ex",
+        statusCode: null,
+      );
     }
+  }
+
+  Future<ResponseCallback<T>> getProto<T extends $pb.GeneratedMessage>({
+    required FusionApiEndpoint api,
+    required T Function() create,
+    Map<String, dynamic>? urlParameters,
+    String? additionalPath,
+    String? baseUrlToOverride,
+    bool isSecure = true,
+  }) {
+    return get<T>(
+      api: api,
+      urlParameters: urlParameters,
+      additionalPath: additionalPath,
+      baseUrlToOverride: baseUrlToOverride,
+      isSecure: isSecure,
+      fromJson: (dynamic json) => decodeProtoJson<T>(json, create),
+    );
   }
 
   Future<ResponseCallback<T>> put<T>({
@@ -142,12 +203,21 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
-    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (canCallCloudApis(api.type))
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     try {
       final String url = additionalPath != null
-          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -155,19 +225,34 @@ class FusionNetworkClient {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final Options options = Options(validateStatus: (_) => true, headers: <String, dynamic>{...headers});
+      final Options options = Options(headers: <String, dynamic>{...headers});
 
-      final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
+      final Response<dynamic> response = await httpClient.dioInstance.put(
+        url,
+        options: options,
+        data: _normalizeRequestBody(data),
+      );
 
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
-        return ResponseCallback<T>.success(data, statusCode: response.statusCode);
+        return ResponseCallback<T>.success(
+          data,
+          statusCode: response.statusCode,
+        );
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: httpClient.handleStatusCodeError(response.statusCode),
+          statusCode: response.statusCode,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.put() - $ex");
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.put() - $ex", statusCode: null);
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.put() - $ex",
+        statusCode: null,
+      );
     }
   }
 
@@ -180,12 +265,21 @@ class FusionNetworkClient {
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
-    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (canCallCloudApis(api.type))
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     try {
       final String url = additionalPath != null
-          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -195,41 +289,58 @@ class FusionNetworkClient {
 
       /// Detect content type based on data type
       final Options options = Options(
-        validateStatus: (_) => true,
-        headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
+        headers: <String, dynamic>{
+          ...headers,
+          if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json',
+        },
       );
 
       // final dynamic body = data is FormData ? data : jsonEncode(data);
 
       final Response<dynamic> response = await httpClient.dioInstance.post(
         url,
-        data: data,
+        data: _normalizeRequestBody(data),
         options: options,
         queryParameters: urlParameters,
       );
 
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
-        return ResponseCallback<T>.success(data, statusCode: response.statusCode);
+        return ResponseCallback<T>.success(
+          data,
+          statusCode: response.statusCode,
+        );
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: httpClient.handleStatusCodeError(response.statusCode),
+          statusCode: response.statusCode,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.post() - $ex");
-      return ResponseCallback.failure("Exception in FusionNetworkClient.post() - $ex", statusCode: null);
+      return ResponseCallback.failure(
+        "Exception in FusionNetworkClient.post() - $ex",
+        statusCode: null,
+      );
     }
   }
 
   Future<ResponseCallback<T>> patch<T>({
     required FusionApiEndpoint api,
-    Map<String, dynamic>? data,
+    dynamic data,
     Map<String, dynamic>? urlParameters,
     String? additionalPath,
     String? baseUrlToOverride,
     bool isSecure = true,
     T Function(dynamic)? fromJson,
   }) async {
-    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (canCallCloudApis(api.type))
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     try {
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
@@ -240,37 +351,73 @@ class FusionNetworkClient {
 
       /// Detect content type based on data type
       final Options options = Options(
-        validateStatus: (_) => true,
-        headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
+        headers: <String, dynamic>{
+          ...headers,
+          if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json',
+        },
       );
 
       final Response<dynamic> response = await httpClient.dioInstance.patch(
         additionalPath != null
-            ? "${getApiUrl(
-                api,
-                baseUrlToOverride: baseUrlToOverride,
-                isSecure: isSecure,
-              )}/$additionalPath"
-            : getApiUrl(
+            ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+            : geApiUrl(
                 api,
                 baseUrlToOverride: baseUrlToOverride,
                 isSecure: isSecure,
               ),
         options: options,
-        data: data,
+        data: _normalizeRequestBody(data),
         queryParameters: urlParameters,
       );
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T data = fromJson != null ? fromJson(response.data) : response.data;
-        return ResponseCallback<T>.success(data, statusCode: response.statusCode);
+        return ResponseCallback<T>.success(
+          data,
+          statusCode: response.statusCode,
+        );
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: httpClient.handleStatusCodeError(response.statusCode),
+          statusCode: response.statusCode,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
       // FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.patch() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.patch() - $ex", statusCode: null);
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.patch() - $ex",
+        statusCode: null,
+      );
     }
+  }
+
+  Future<ResponseCallback<FusionStateSnapshot>> getStateSnapshot({
+    required String baseUrlToOverride,
+    bool isSecure = true,
+  }) {
+    return get<FusionStateSnapshot>(
+      api: FusionApiEndpoint.fusionState,
+      baseUrlToOverride: baseUrlToOverride,
+      isSecure: isSecure,
+      fromJson: FusionStateSnapshot.fromJson,
+    );
+  }
+
+  Future<ResponseCallback<FusionStateValue<T>>> getStateValue<T>({
+    required String key,
+    required String baseUrlToOverride,
+    required T Function(dynamic value) decodeValue,
+    bool isSecure = true,
+  }) {
+    return get<FusionStateValue<T>>(
+      api: FusionApiEndpoint.fusionState,
+      baseUrlToOverride: baseUrlToOverride,
+      isSecure: isSecure,
+      urlParameters: <String, dynamic>{'key': key},
+      fromJson: (dynamic json) => FusionStateValue<T>.fromJson(json, decodeValue),
+    );
   }
 
   Future<ResponseCallback<T>> delete<T>({
@@ -281,12 +428,21 @@ class FusionNetworkClient {
     bool isSecure = true,
     String? baseUrlToOverride,
   }) async {
-    if (canCallCloudApis(api.type)) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (canCallCloudApis(api.type))
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     try {
       final String url = additionalPath != null
-          ? "${getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
-          : getApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -295,22 +451,41 @@ class FusionNetworkClient {
       }
 
       /// Detect content type based on data type
-      final Options options = Options(validateStatus: (_) => true, headers: <String, dynamic>{...headers});
+      final Options options = Options(headers: <String, dynamic>{...headers});
 
-      final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
+      final Response<dynamic> response = await httpClient.dioInstance.delete(
+        url,
+        options: options,
+        queryParameters: urlParameters,
+      );
 
       if (response.statusCode! >= 200 && response.statusCode! < 300) {
         T? data = fromJson != null ? fromJson(response.data) : response.data;
-        return ResponseCallback<T>.success(data, statusCode: response.statusCode);
+        return ResponseCallback<T>.success(
+          data,
+          statusCode: response.statusCode,
+        );
       } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
-        return ResponseCallback<T>(success: true, message: "Resource deleted successfully", statusCode: response.statusCode);
+        return ResponseCallback<T>(
+          success: true,
+          message: "Resource deleted successfully",
+          statusCode: response.statusCode,
+        );
       } else {
-        return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode), statusCode: response.statusCode);
+        return ResponseCallback<T>(
+          success: false,
+          message: httpClient.handleStatusCodeError(response.statusCode),
+          statusCode: response.statusCode,
+        );
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
       // FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.delete() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.delete() - $ex", statusCode: null);
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.delete() - $ex",
+        statusCode: null,
+      );
     }
   }
 
@@ -325,7 +500,12 @@ class FusionNetworkClient {
     required void Function(int received, int total) onProgress,
   }) async {
     final isNetworkUrl = url.startsWith('http://') || url.startsWith('https://');
-    if (isNetworkUrl && !HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
+    if (isNetworkUrl && !HAS_CLOUD_ACCESS)
+      return ResponseCallback<T>(
+        success: false,
+        message: "Access to APIs is not allowed.",
+        statusCode: null,
+      );
 
     final Dio cleanDio = Dio();
     try {
@@ -339,19 +519,29 @@ class FusionNetworkClient {
           headers: <String, dynamic>{'Accept': '*/*'},
         ),
       );
-      return ResponseCallback<T>(success: true, message: 'File downloaded successfully', statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: 'File downloaded successfully',
+        statusCode: 200,
+      );
     } catch (ex) {
       debugPrint('Exception in FusionNetworkClient.downloadFile() - $ex');
-      return ResponseCallback<T>(success: false, message: 'Exception in FusionNetworkClient.downloadFile() - $ex', statusCode: null);
+      return ResponseCallback<T>(
+        success: false,
+        message: 'Exception in FusionNetworkClient.downloadFile() - $ex',
+        statusCode: null,
+      );
     } finally {
       cleanDio.close();
     }
   }
 
   Future<ResponseCallback<T>> connect<T>({required String vip}) async {
-    // if (!HAS_CLOUD_ACCESS) return ResponseCallback<T>(success: false, message: "Access to APIs is not allowed.", statusCode: null);
-
     try {
+      FusionLogger.log(
+        tag: LogTag.zmq,
+        message: "ZMQ debug 0",
+      );
       // Close any existing socket to prevent leaks on reconnect.
       if (subscriberSocket != null) {
         try {
@@ -363,16 +553,43 @@ class FusionNetworkClient {
       }
 
       await telemetryData.initializeTelemetryAddresses(this, vip);
+      FusionLogger.log(
+        tag: LogTag.zmq,
+        message: "ZMQ debug 1",
+      );
       subscriberSocket = _context.createSocket(SocketType.sub);
+      FusionLogger.log(
+        tag: LogTag.zmq,
+        message: "ZMQ debug 2",
+      );
       for (String url in TelemetryData.telemetryAddresses) {
+        FusionLogger.log(
+          tag: LogTag.zmq,
+          message: "ZMQ debug 3",
+        );
         subscriberSocket!.connect(url);
-        FusionLogger.log(tag: LogTag.zmq, message: "ZMQ Subscriber Connected to $url!!!");
+        FusionLogger.log(
+          tag: LogTag.zmq,
+          message: "ZMQ Subscriber Connected to $url!!!",
+        );
       }
       subscriberSocket!.subscribe(""); // Subscribe to all topics
-      return ResponseCallback<T>(success: true, message: "ZMQ Subscriber Connected", statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: "ZMQ Subscriber Connected",
+        statusCode: 200,
+      );
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.connect() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.connect() - $ex", statusCode: null);
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: "Exception in FusionNetworkClient.connect() - $ex",
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.connect() - $ex",
+        statusCode: null,
+      );
     }
   }
 
@@ -383,16 +600,32 @@ class FusionNetworkClient {
         subscriberSocket = null;
       }
       FusionLogger.log(tag: LogTag.zmq, message: "ZMQ Socket Disconnected!!!");
-      return ResponseCallback<T>(success: true, message: "ZMQ Socket Disconnected", statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: "ZMQ Socket Disconnected",
+        statusCode: 200,
+      );
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.disconnect() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.disconnect() - $ex", statusCode: null);
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: "Exception in FusionNetworkClient.disconnect() - $ex",
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.disconnect() - $ex",
+        statusCode: null,
+      );
     }
   }
 
   Stream<ResponseCallback<dynamic>> get responseMessages async* {
     if (subscriberSocket == null) {
-      yield ResponseCallback<dynamic>(success: false, message: 'No server socket available', statusCode: null);
+      yield ResponseCallback<dynamic>(
+        success: false,
+        message: 'No server socket available',
+        statusCode: null,
+      );
       return;
     }
 
@@ -405,23 +638,123 @@ class FusionNetworkClient {
 
       try {
         final String message = utf8.decode(frame.payload, allowMalformed: true);
-        yield ResponseCallback<dynamic>(success: true, message: "New data received", data: jsonDecode(message), statusCode: 200);
+        yield ResponseCallback<dynamic>(
+          success: true,
+          message: "New data received",
+          data: jsonDecode(message),
+          statusCode: 200,
+        );
       } catch (ex) {
-        yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.responseMessages - $ex ', statusCode: null);
+        yield ResponseCallback<dynamic>(
+          success: false,
+          message: 'Exception in FusionNetworkClient.responseMessages - $ex ',
+          statusCode: null,
+        );
       }
     }
+  }
+
+  // ── WebSocket heartbeat management ────────────────────────────────────────
+
+  /// Starts periodic ping/pong. Call once after [connectWebSocket] succeeds.
+  /// Safe to call multiple times — any running heartbeat is replaced.
+  void startWsHeartbeat() {
+    stopWsHeartbeat();
+    _wsPongListenerSubscription = webSocketService.stream.listen(
+      (dynamic message) {
+        try {
+          final dynamic decoded = jsonDecode(message.toString());
+          if (decoded is Map<String, dynamic> && decoded['type'] == 'pong') {
+            _handleWsPong();
+          }
+        } catch (_) {}
+      },
+      onError: (_) {},
+    );
+    _wsPingTimer = Timer.periodic(_kWsPingInterval, (_) => _sendWsPing());
+  }
+
+  /// Stops the heartbeat and clears all pending timers.
+  void stopWsHeartbeat() {
+    _wsPingTimer?.cancel();
+    _wsPingTimer = null;
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = null;
+    _wsWaitingForPong = false;
+    _wsPongListenerSubscription?.cancel();
+    _wsPongListenerSubscription = null;
+  }
+
+  /// Sends a ping and starts the pong-timeout timer.
+  void _sendWsPing() {
+    if (!webSocketService.isConnected) {
+      FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Ping skipped — not connected.');
+      _wsAliveController.add(false);
+      return;
+    }
+
+    if (_wsWaitingForPong) {
+      // Previous ping never got a pong — connection is dead.
+      FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong timeout — connection dead.');
+      stopWsHeartbeat();
+      _wsAliveController.add(false);
+      return;
+    }
+
+    final String pingId = 'ping-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    webSocketService.sendMessage(
+      jsonEncode(<String, dynamic>{
+        'id': pingId,
+        'version': 1,
+        'type': 'ping',
+      }),
+    );
+    _wsWaitingForPong = true;
+    // FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Ping sent ($pingId).');
+
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = Timer(_kWsPongTimeout, () {
+      if (_wsWaitingForPong) {
+        FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong timeout expired.');
+        _wsWaitingForPong = false;
+        _wsAliveController.add(false);
+      }
+    });
+  }
+
+  /// Called internally when a pong frame arrives on the WebSocket stream.
+  void _handleWsPong() {
+    _wsPongTimeoutTimer?.cancel();
+    _wsPongTimeoutTimer = null;
+    _wsWaitingForPong = false;
+    // FusionLogger.log(tag: LogTag.network, message: '[WS Heartbeat] Pong received — connection alive.');
   }
 
   /// Connects to a WebSocket URL using the injected WebSocketService
   Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
     try {
       await webSocketService.connect(url);
-      FusionLogger.log(tag: LogTag.network, message: "WebSocket connecting to $url");
+      FusionLogger.log(
+        tag: LogTag.network,
+        message: "WebSocket connecting to $url",
+      );
 
-      return ResponseCallback<T>(success: true, message: "WebSocket connection initiated", statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: "WebSocket connection initiated",
+        statusCode: 200,
+      );
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex", statusCode: null);
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: "Exception in FusionNetworkClient.connectWebSocket() - $ex",
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.connectWebSocket() - $ex",
+        statusCode: null,
+      );
     }
   }
 
@@ -429,43 +762,86 @@ class FusionNetworkClient {
   Future<ResponseCallback<T>> sendWebSocketMessage<T>(dynamic message) async {
     try {
       if (!webSocketService.isConnected) {
-        return ResponseCallback<T>(success: false, message: "WebSocket is not connected", statusCode: null);
+        return ResponseCallback<T>(
+          success: false,
+          message: "WebSocket is not connected",
+          statusCode: null,
+        );
       }
 
       // If the message isn't a string (e.g., a Map), JSON encode it
-      final dynamic payload = message is String ? message : jsonEncode(message);
+      final dynamic payload = message is String ? message : jsonEncode(_normalizeRequestBody(message));
       webSocketService.sendMessage(payload);
 
       FusionLogger.log(tag: LogTag.dspConfig, message: "WS Payload $payload");
 
-      return ResponseCallback<T>(success: true, message: "Message sent successfully", statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: "Message sent successfully",
+        statusCode: 200,
+      );
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex", statusCode: null);
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex",
+        statusCode: null,
+      );
     }
+  }
+
+  Future<ResponseCallback<T>> sendWebSocketRequest<T>(
+    wsmodel.WebSocketRequest request,
+  ) {
+    return sendWebSocketMessage<T>(request);
   }
 
   /// Disconnects the active WebSocket connection
   Future<ResponseCallback<T>> disconnectWebSocket<T>() async {
     try {
+      stopWsHeartbeat();
       webSocketService.disconnect();
-      FusionLogger.log(tag: LogTag.network, message: "WebSocket Disconnected!!!");
+      FusionLogger.log(
+        tag: LogTag.network,
+        message: "WebSocket Disconnected!!!",
+      );
 
-      return ResponseCallback<T>(success: true, message: "WebSocket Disconnected", statusCode: 200);
+      return ResponseCallback<T>(
+        success: true,
+        message: "WebSocket Disconnected",
+        statusCode: 200,
+      );
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex", logLevel: LogLevel.error);
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex", statusCode: null);
+      FusionLogger.log(
+        tag: LogTag.exceptions,
+        message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex",
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback<T>(
+        success: false,
+        message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex",
+        statusCode: null,
+      );
     }
   }
 
-  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback
+  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback.
   Stream<ResponseCallback<dynamic>> get webSocketMessages async* {
     if (!webSocketService.isConnected) {
-      yield ResponseCallback<dynamic>(success: false, message: 'No active WebSocket connection', statusCode: null);
+      yield ResponseCallback<dynamic>(
+        success: false,
+        message: 'No active WebSocket connection',
+        statusCode: null,
+      );
     }
 
     await for (final dynamic message in webSocketService.stream) {
       try {
+        // print("Webocket raw message: $message");
         // Attempt to decode JSON if applicable, otherwise return raw string
         dynamic decodedData;
         try {
@@ -474,43 +850,173 @@ class FusionNetworkClient {
           decodedData = message; // Fallback to raw message
         }
 
-        yield ResponseCallback<dynamic>(success: true, message: "New WebSocket data received", data: decodedData, statusCode: 200);
+        yield ResponseCallback<dynamic>(
+          success: true,
+          message: "New WebSocket data received",
+          data: decodedData,
+          statusCode: 200,
+        );
       } catch (ex) {
-        yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ', statusCode: null);
+        yield ResponseCallback<dynamic>(
+          success: false,
+          message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ',
+          statusCode: null,
+        );
       }
     }
   }
+
+  Stream<ResponseCallback<wsmodel.WebSocketResponse>> get webSocketResponseMessages async* {
+    await for (final ResponseCallback<dynamic> message in webSocketMessages) {
+      if (!message.success || message.data == null) {
+        yield ResponseCallback<wsmodel.WebSocketResponse>.failure(
+          message.message,
+          statusCode: message.statusCode,
+        );
+        continue;
+      }
+
+      try {
+        final wsmodel.WebSocketResponse decoded = message.data is String
+            ? wsmodel.WebSocketResponse.fromJson(message.data as String)
+            : decodeProtoJson<wsmodel.WebSocketResponse>(
+                message.data,
+                wsmodel.WebSocketResponse.create,
+              );
+
+        yield ResponseCallback<wsmodel.WebSocketResponse>.success(
+          decoded,
+          statusCode: message.statusCode,
+        );
+      } catch (ex) {
+        // WebSocket disconnected — stream error propagated from WebSocketService.
+        FusionLogger.log(tag: LogTag.network, message: '[WS] Stream error (connection dropped): $ex');
+        yield ResponseCallback<wsmodel.WebSocketResponse>.failure(
+          'WebSocket disconnected: $ex',
+          statusCode: null,
+        );
+      }
+    }
+  }
+
+  T decodeProtoJson<T extends $pb.GeneratedMessage>(
+    dynamic json,
+    T Function() create,
+  ) {
+    final T message = create();
+
+    // proto-dart exposes two JSON dialects:
+    //   • mergeFromJson      — legacy *internal* format; keys are tag numbers
+    //                          (e.g. "1": ...). Used by Dart writeToJson.
+    //   • mergeFromProto3Json — canonical proto3 JSON; keys are field names
+    //                          (e.g. "devices": ...). Used by most servers.
+    //
+    // Some Fusion endpoints (e.g. GET /devices) return a top-level JSON array
+    // for what the proto models as a wrapper message with one repeated field.
+    // We detect that case and route through mergeFromProto3Json, wrapping the
+    // list under the field's *name*. Everything else stays on the legacy path
+    // to preserve existing behaviour.
+    final dynamic decoded = json is String ? _tryJsonDecode(json) : json;
+
+    // Top-level array → wrap under the message's first repeated field name and
+    // parse as canonical proto3 JSON.
+    if (decoded is List) {
+      final String? repeatedFieldName = _firstRepeatedFieldName(message);
+      if (repeatedFieldName != null) {
+        message.mergeFromProto3Json(
+          <String, dynamic>{repeatedFieldName: decoded},
+          ignoreUnknownFields: true,
+        );
+        return message;
+      }
+    }
+
+    // Top-level object → choose the dialect by inspecting the keys.
+    // Field-name keys (e.g. "devices") → mergeFromProto3Json.
+    // Tag-number keys (e.g. "1")        → mergeFromJson.
+    if (decoded is Map) {
+      final bool hasFieldNameKeys = decoded.keys.any(
+        (dynamic k) => k is String && int.tryParse(k) == null,
+      );
+      if (hasFieldNameKeys) {
+        message.mergeFromProto3Json(
+          Map<String, dynamic>.from(decoded),
+          ignoreUnknownFields: true,
+        );
+        return message;
+      }
+      message.mergeFromJson(jsonEncode(decoded));
+      return message;
+    }
+
+    if (decoded is String) {
+      message.mergeFromJson(decoded);
+    } else {
+      message.mergeFromJson(jsonEncode(decoded));
+    }
+    return message;
+  }
+
+  dynamic _tryJsonDecode(String s) {
+    try {
+      return jsonDecode(s);
+    } catch (_) {
+      return s;
+    }
+  }
+
+  /// Returns the *name* of the first repeated field on [message], or `null`
+  /// when no such field exists.
+  String? _firstRepeatedFieldName($pb.GeneratedMessage message) {
+    for (final $pb.FieldInfo f in message.info_.byIndex) {
+      if (f.isRepeated) return f.name;
+    }
+    return null;
+  }
+
+  dynamic _normalizeRequestBody(dynamic data) {
+    if (data is $pb.GeneratedMessage) {
+      return jsonDecode(data.writeToJson());
+    }
+    return data;
+  }
 }
 
-enum FusionApiType { fusionServer, droServer, backendServer }
+enum FusionApiType { fusionServer, fusionAdminServer, droServer, backendServer }
 
 enum FusionApiEndpoint {
   //Fusion Backend endpoints
   process('/process', FusionApiType.droServer), //DRO endpoint
-  fusionValue('/value', FusionApiType.fusionServer),
+  fusionState('/state', FusionApiType.fusionAdminServer),
   fusionGetEndPoints('/endpoints', FusionApiType.fusionServer),
-  fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
   getProfile("/users/authorization", FusionApiType.backendServer),
   projects("/projects", FusionApiType.backendServer),
   products('/products', FusionApiType.backendServer),
   devicesCloud('/devices', FusionApiType.backendServer),
-  // final String apiUrl = 'http://$host/softwareUpdate/upload';
   firmwareUpdateCheck('/firmware/updates/check', FusionApiType.backendServer),
   firmwareBundleDownloadUrl('/firmware/bundles', FusionApiType.backendServer),
   firmwareUpdateStatus('/firmware/updates/status', FusionApiType.backendServer),
 
   //fusion server setup apis
+  fusionDeviceConfig('/device', FusionApiType.fusionServer),
   fusionDevice('/devices', FusionApiType.fusionServer),
+  fusionSync('/device', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
+  audioSettings('/settings/audio', FusionApiType.fusionServer),
+  snapshots('/snapshots', FusionApiType.fusionServer),
+  sceneSets('/scene-sets', FusionApiType.fusionServer),
+  scenes('/scenes', FusionApiType.fusionServer),
   sapSessions('/sessions', FusionApiType.fusionServer),
   pavaMessages('/pava/messages', FusionApiType.fusionServer),
+  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer),
   sceneSetsActivate('/scene-sets/activate', FusionApiType.fusionServer),
   snapshotsActivate('/snapshots/activate', FusionApiType.fusionServer),
-  tasks('/tasks', FusionApiType.fusionServer),
   clusterReboot('/cluster/reboot', FusionApiType.fusionServer),
-  softwareUpdateUpload('/softwareUpdate/upload', FusionApiType.fusionServer);
+  wallControllerConfig('/settings/wall_controller_config', FusionApiType.fusionServer),
+  touchUiConfig('/settings/touchui_zone_config', FusionApiType.fusionServer),
+  tasks('/tasks', FusionApiType.fusionServer);
 
   final String path;
   final FusionApiType type;
@@ -520,12 +1026,18 @@ enum FusionApiEndpoint {
 
 extension ApiEndpointTypeCheckExtension on String {
   bool isFusionServerEndpoint() {
-    return contains(FusionApiEndpoint.fusionValue.path) ||
+    return contains(FusionApiEndpoint.fusionState.path) ||
         contains(FusionApiEndpoint.fusionGetEndPoints.path) ||
-        contains(FusionApiEndpoint.fusionDelete.path) ||
+        contains(FusionApiEndpoint.fusionDeviceConfig.path) ||
         contains(FusionApiEndpoint.fusionDevice.path) ||
+        contains(FusionApiEndpoint.fusionSync.path) ||
         contains(FusionApiEndpoint.setVip.path) ||
-        contains(FusionApiEndpoint.sapSessions.path);
+        contains(FusionApiEndpoint.audioSettings.path) ||
+        contains(FusionApiEndpoint.snapshots.path) ||
+        contains(FusionApiEndpoint.sceneSets.path) ||
+        contains(FusionApiEndpoint.sapSessions.path) ||
+        contains(FusionApiEndpoint.softwareUpdateUpload.path) ||
+        contains(FusionApiEndpoint.clusterReboot.path);
   }
 
   bool isDroServerEndpoint() {

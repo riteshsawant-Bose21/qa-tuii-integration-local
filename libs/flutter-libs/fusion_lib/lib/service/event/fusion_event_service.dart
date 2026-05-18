@@ -59,6 +59,10 @@ class FusionEventService {
       );
 
       if (response.success && response.data != null) {
+        if (response.data is Map<String, dynamic> && !response.data.containsKey('tasks')) {
+          return ResponseCallback<List<CreateScheduleTaskDto>>.success([]);
+        }
+
         final List<dynamic> list = response.data is String ? jsonDecode(response.data) : response.data as List<dynamic>;
         final List<CreateScheduleTaskDto> events = list.map((dynamic e) => CreateScheduleTaskDto.fromJson(e as Map<String, dynamic>)).toList();
         return ResponseCallback<List<CreateScheduleTaskDto>>.success(events);

@@ -1,5 +1,6 @@
 **/.DS_Store
 **/.vscode
+**/test.test
 **/xcuserdata
 **/xcuserstate
 build
@@ -10,6 +11,7 @@ fusion/test/dummy
 fusion/test/tasks_test.json
 multipass.env
 data
-
 ignoredFiles/*
 *.test
+fusion/internal/gen/proto/
+fusion/fusion

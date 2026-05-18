@@ -1,0 +1,56 @@
+meta {
+  name: Upsert Scene Set
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{api_url}}/scene-sets/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: scene-set-test-01
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "set_id": "scene-set-test-01",
+    "name": "Scene Set Test 01 Updated",
+    "default_scene": "scene-morning-01",
+    "current_scene_id": "scene-evening-01",
+    "scenes": [
+      {
+        "id": "scene-morning-01",
+        "name": "Morning",
+        "data": {
+          "settings": {
+            "audio": {
+              "GAIN528578446": {
+                "gain": -12.0
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "scene-evening-01",
+        "name": "Evening",
+        "data": {
+          "settings": {
+            "audio": {
+              "GAIN528578446": {
+                "gain": -20.0
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

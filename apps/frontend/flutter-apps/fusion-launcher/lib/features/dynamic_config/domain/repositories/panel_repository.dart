@@ -19,7 +19,7 @@ abstract class PanelRepository {
 
   Stream<Map<String, dynamic>> getMeterStream();
 
-  Future<bool> resetFusion();
+  Future<bool> clearAudioSettings();
 
   Future<PanelEntity> getPanelEntity(ProcessingBlockModel processingBloc);
 }

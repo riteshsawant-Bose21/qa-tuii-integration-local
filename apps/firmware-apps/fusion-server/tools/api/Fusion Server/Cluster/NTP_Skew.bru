@@ -1,0 +1,11 @@
+meta {
+  name: NTP Skew
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{metrics_url}}/cluster/ntp-skew
+  body: none
+  auth: none
+}

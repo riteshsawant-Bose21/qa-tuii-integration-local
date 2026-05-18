@@ -1,0 +1,36 @@
+meta {
+  name: Upsert Snapshot
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{api_url}}/snapshots/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: snapshot-test-01
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "snapshot-test-01",
+    "name": "Snapshot Test 01 Updated",
+    "data": {
+      "settings": {
+        "audio": {
+          "GAIN528578446": {
+            "gain": -10.0,
+            "mute": false
+          }
+        }
+      }
+    }
+  }
+}

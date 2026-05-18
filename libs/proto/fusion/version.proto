@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package fusion;
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message EndpointListResponse {
+  repeated string routes = 1;
+}
+
+message ServerInfoResponse {
+  string name = 1;
+  string version = 2;
+  string commit = 3;
+  string build_time = 4;
+  string node_id = 5;
+  repeated string endpoints = 6;
+  uint32 cluster_size = 7;
+}
+
+message VersionResponse {
+  string name = 1;
+  string version = 2;
+  string commit = 3;
+  string build_time = 4;
+}

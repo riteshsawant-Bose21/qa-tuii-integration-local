@@ -44,7 +44,7 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
   void _syncVolumeText(double gain) {
     final double percentageGain = FusionUtils().dbfsToPercentage(gain);
     final String formatted = percentageGain.toStringAsFixed(1);
-    print("Syncing volume text: gain=$gain, percentageGain=$percentageGain, formatted='$formatted'");
+    // print("Syncing volume text: gain=$gain, percentageGain=$percentageGain, formatted='$formatted'");
     if (volumeController.text != formatted) {
       volumeController.text = formatted;
     }

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	model "fusion/internal/gen/proto/fusion"
 	"sort"
 	"strings"
 
@@ -15,7 +15,7 @@ import (
 )
 
 // SaveAudioMeta saves the audio metadata in the database bucket.
-func (p *Persistence) SaveAudioMeta(meta *api.AudioMetadata) error {
+func (p *Persistence) SaveAudioMeta(meta *model.AudioMetadata) error {
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return err
@@ -43,8 +43,8 @@ func (p *Persistence) SaveAudioMeta(meta *api.AudioMetadata) error {
 }
 
 // GetAudioMetadata fetches metadata by ID.
-func (p *Persistence) GetAudioMetadata(id string) (*api.AudioMetadata, error) {
-	var out *api.AudioMetadata
+func (p *Persistence) GetAudioMetadata(id string) (*model.AudioMetadata, error) {
+	var out *model.AudioMetadata
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
 		if b == nil {
@@ -57,7 +57,7 @@ func (p *Persistence) GetAudioMetadata(id string) (*api.AudioMetadata, error) {
 			return ErrNotFound
 		}
 
-		var m api.AudioMetadata
+		var m model.AudioMetadata
 		if err := json.Unmarshal(v, &m); err != nil {
 			return err
 		}
@@ -68,9 +68,9 @@ func (p *Persistence) GetAudioMetadata(id string) (*api.AudioMetadata, error) {
 }
 
 // ListAudioMetadata returns a list of all audio metadata
-func (p *Persistence) ListAudioMetadata() ([]*api.AudioMetadata, error) {
+func (p *Persistence) ListAudioMetadata() ([]*model.AudioMetadata, error) {
 
-	var results []*api.AudioMetadata
+	var results []*model.AudioMetadata
 
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(bucketAudio))
@@ -79,7 +79,7 @@ func (p *Persistence) ListAudioMetadata() ([]*api.AudioMetadata, error) {
 		}
 
 		return b.ForEach(func(_, v []byte) error {
-			var m api.AudioMetadata
+			var m model.AudioMetadata
 			if err := json.Unmarshal(v, &m); err != nil {
 				return err
 			}
@@ -127,7 +127,7 @@ func (p *Persistence) ListAllTags(ctx context.Context) ([]string, error) {
 			return nil
 		}
 		return b.ForEach(func(_, v []byte) error {
-			var meta api.AudioMetadata
+			var meta model.AudioMetadata
 			if err := json.Unmarshal(v, &meta); err != nil {
 				return err
 			}
@@ -163,8 +163,8 @@ func (p *Persistence) ListAllTags(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func (p *Persistence) GetAudioByDisplayName(name string) (*api.AudioMetadata, error) {
-	var result *api.AudioMetadata
+func (p *Persistence) GetAudioByDisplayName(name string) (*model.AudioMetadata, error) {
+	var result *model.AudioMetadata
 
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte("audio"))
@@ -174,7 +174,7 @@ func (p *Persistence) GetAudioByDisplayName(name string) (*api.AudioMetadata, er
 
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var meta api.AudioMetadata
+			var meta model.AudioMetadata
 			if err := json.Unmarshal(v, &meta); err != nil {
 				return err
 			}

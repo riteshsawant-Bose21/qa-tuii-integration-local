@@ -9,6 +9,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/controllers"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -93,7 +94,7 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
-	persistence.SetMetadataNotifier(func(metadata *api.DatabaseMetadata) {
+	persistence.SetMetadataNotifier(func(metadata *model.DatabaseMetadata) {
 		hub.BroadcastVersionUpdate(config.NodeName, metadata)
 	})
 	sceneActivator := scene_catalog.NewActivator(config, persistence, stateManager, hub)
@@ -286,6 +287,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
 
 	// Device
+	app.registerPublicGET(routes.DeviceEndpoint, app.Server.GetDSPDeploymentPackage)
+	app.registerPublicPUT(routes.DeviceEndpoint, app.Server.PutDSPDeploymentPackage)
 	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPublicGET(routes.DevicesVIPStatusEndpoint, app.VIPMonitor.HandleGetVIPStatus)
@@ -352,6 +355,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.TimeMachineNameEndpoint, app.Server.DeleteTimeMachine)
 
 	// Snapshots
+	app.registerPublicPOST(routes.SnapshotsEndpoint, app.Server.CreateSnapshotDefinition)
+	app.registerPublicPUT(routes.SnapshotsNameEndpoint, app.Server.UpsertSnapshotDefinition)
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshotDefinitions)
 	app.registerPublicDELETE(routes.SnapshotsEndpoint, app.Server.DeleteSnapshotDefinitions)
@@ -362,6 +367,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.ScenesNameEndpoint, app.Server.DeleteScene)
 
 	// Scene Sets
+	app.registerPublicPOST(routes.ScenesSetsEndpoint, app.Server.CreateSceneSet)
+	app.registerPublicPUT(routes.ScenesSetsNameEndpoint, app.Server.UpsertSceneSet)
 	app.registerPublicPOST(routes.SceneSetsActivateEndpoint, app.Server.ActivateSceneSet)
 	app.registerPublicPOST(routes.SceneSetsCurrentEndpoint, app.Server.GetCurrentScene)
 	app.registerPublicGET(routes.ScenesSetsEndpoint, app.Server.ListSceneSets)
@@ -382,11 +389,23 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
 
-	// Values
-	app.registerPublicGET(routes.ValueEndpoint, app.Server.GetValue)
-	app.registerPublicPOST(routes.ValueEndpoint, app.Server.SetValue)
-	app.registerPublicPATCH(routes.ValueEndpoint, app.Server.UpdateValue)
-	app.registerPublicDELETE(routes.ValueEndpoint, app.Server.ClearAllValues)
+	// Settings
+	app.registerPublicGET(routes.SettingsAudioIndexedParamEndpoint, app.Server.GetAudioSetting)
+	app.registerPublicGET(routes.SettingsAudioParamEndpoint, app.Server.GetAudioSetting)
+	app.registerPublicGET(routes.SettingsAudioBlockEndpoint, app.Server.GetAudioSettings)
+	app.registerPublicGET(routes.SettingsAudioEndpoint, app.Server.GetAudioSettings)
+	app.registerPublicPATCH(routes.SettingsAudioIndexedParamEndpoint, app.Server.PatchAudioSetting)
+	app.registerPublicPATCH(routes.SettingsAudioParamEndpoint, app.Server.PatchAudioSetting)
+	app.registerPublicDELETE(routes.SettingsAudioEndpoint, app.Server.ClearAudioSettings)
+	app.registerPublicGET(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.GetTouchUIZoneConfig)
+	app.registerPublicPATCH(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.PatchTouchUIZoneConfig)
+	app.registerPublicDELETE(routes.SettingsTouchUIZoneConfigEndpoint, app.Server.ClearTouchUIZoneConfig)
+	app.registerPublicGET(routes.SettingsWallControllerConfigEndpoint, app.Server.GetWallControllerConfig)
+	app.registerPublicPATCH(routes.SettingsWallControllerConfigEndpoint, app.Server.PatchWallControllerConfig)
+	app.registerPublicDELETE(routes.SettingsWallControllerConfigEndpoint, app.Server.ClearWallControllerConfig)
+
+	// State
+	app.registerPublicDELETE(routes.StateEndpoint, app.Server.ClearState)
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
@@ -432,7 +451,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
 
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
+	app.registerPrivatePATCH(routes.StateEndpoint, app.Server.PatchState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
+	app.registerPrivateDELETE(routes.StateEndpoint, app.Server.ClearState)
 
 	// Manufacturing
 	app.registerPrivatePOST(routes.ManufacturingSetModelNameEndpoint, app.Server.SetModelNameLocal)

@@ -47,7 +47,7 @@ Fusion Server can be run:
 - Full-state restore with deterministic version bumping
 
 ## Scene Catalog (Parameter Recall)
-- Store named **Snapshot Definitions** and **Scene Sets** via `POST /value`
+- Store named **Snapshot Definitions** and **Scene Sets** via `POST /snapshots`, `PUT /snapshots/{id}`, `POST /scene-sets`, and `PUT /scene-sets/{id}`
 - Activate a Snapshot Definition to **patch** its data onto DB State (no epoch bump)
 - Activate a Scene within a Scene Set to patch its data and track `current_scene_id`
 - Query current scene, list all definitions, and retrieve the full catalog
@@ -183,10 +183,9 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 # REST API Overview
 
 ## Configuration
-- `GET /value`
-- `POST /value`
-- `PATCH /value`
-- `DELETE /value`
+- `PATCH /settings/audio/{blockId}/{param}`
+- `PATCH /settings/audio/{blockId}/{param}/{index}`
+- `DELETE /settings/audio`
 - `GET /ws`
 
 ## Time Machine
@@ -197,14 +196,17 @@ ExecStart=/usr/local/bin/fusion-server -verbose
 - `DELETE /time-machine/{name}`
 
 ## Scene Catalog
-- `POST /value` (with `snapshots` and/or `scene_sets` root keys to upsert definitions)
+- `POST /snapshots`
+- `PUT  /snapshots/{id}`
 - `POST /snapshots/activate/{id}`
-- `GET  /snapshots/list`
-- `GET  /scenes/list`
+- `GET  /snapshots`
+- `GET  /scenes`
+- `POST /scene-sets`
+- `PUT  /scene-sets/{id}`
 - `POST /scene-sets/activate`
 - `POST /scene-sets/current-scene`
-- `GET  /scene-sets/list`
-- `GET  /scene-catalog-list`
+- `GET  /scene-sets`
+- `GET  /scene-catalog`
 
 ## Tasks & Scheduler
 - `GET /tasks`

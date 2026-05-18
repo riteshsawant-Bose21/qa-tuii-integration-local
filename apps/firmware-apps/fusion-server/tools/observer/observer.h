@@ -852,7 +852,7 @@ public:
   };
 
   UDPValueMonitor(const std::string &serverIP, int port, bool autostart = true,
-                  TimingConfig timingConfig = {}, int httpPort = 8080)
+                  TimingConfig timingConfig = {}, int httpPort = 9090)
       : serverIP_(serverIP), jsonMonitor_(Json::objectValue),
         timingConfig_(timingConfig), httpPort_(httpPort)
   {
@@ -1418,7 +1418,7 @@ private:
   bool pullFullConfig(long long expectedEpoch, long long expectedVersion)
   {
     std::string body;
-    if (!httpGet("/value", &body))
+    if (!httpGet("/state", &body))
     {
       return false;
     }
@@ -1431,6 +1431,25 @@ private:
     {
       SPDLOG_WARN("Failed to parse HTTP config pull response: {}", errs);
       return false;
+    }
+
+    if (state.isObject() && state.isMember("state") && state["state"].isObject())
+    {
+      Json::Value flattened(Json::objectValue);
+      const Json::Value &entries = state["state"];
+      for (const auto &key : entries.getMemberNames())
+      {
+        const Json::Value &entry = entries[key];
+        if (entry.isObject() && entry.isMember("data"))
+        {
+          flattened[key] = entry["data"];
+        }
+        else
+        {
+          flattened[key] = entry;
+        }
+      }
+      state = std::move(flattened);
     }
 
     handleUpdateMessage(state, false);
@@ -1713,7 +1732,7 @@ private:
   long long lastEpoch_{-1};
   long long lastCounter_{-1};
   TimingConfig timingConfig_{};
-  int httpPort_{8080};
+  int httpPort_{9090};
 
   // Timestamp of the last noop ACK received from the server. Used to detect
   // server prunes: a gap > SERVER_PRUNE_THRESHOLD_S means the server was

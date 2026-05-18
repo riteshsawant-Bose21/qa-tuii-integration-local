@@ -168,12 +168,57 @@ CronEntryID is **not** stored and is rebuilt on startup.
 
 ---
 
+# Typed REST Contract
+
+- `POST /tasks`
+  uses `SnapshotTaskCreateRequest` for snapshot tasks.
+- `PATCH /tasks/:id`
+  uses `SnapshotTaskUpdateRequest` for snapshot tasks.
+- `GET /tasks`
+  returns `TaskListResponse`.
+- `GET /tasks/:id`
+  returns `Task`.
+- `GET /tasks/history`
+  returns `TaskHistoryResponse`.
+
+Example snapshot task create request:
+
+```json
+{
+  "id": "activate-snap-001",
+  "cron_expr": "@every 2s",
+  "description": "Change to analog input",
+  "snapshot_id": "analog"
+}
+```
+
+Example task list response:
+
+```json
+{
+  "tasks": [
+    {
+      "id": "activate-snap-001",
+      "description": "Change to analog input",
+      "type": "TASK_TYPE_SNAPSHOT",
+      "cron_expr": "@every 2s",
+      "enabled": true,
+      "scheduled": true,
+      "snapshot": {
+        "snapshot_id": "analog"
+      }
+    }
+  ]
+}
+```
+
+---
+
 # Task Types
 
 ### Snapshot Task
 ```
-"type": "snapshot",
-"params": { "snapshot_id": "<id>" }
+"snapshot": { "snapshot_id": "<id>" }
 ```
 Activates the specified **Time Machine** entry by name (e.g. `"default"`).  
 This performs a full-state restore with an epoch bump — the same behaviour as `POST /time-machine/activate/<name>`.
@@ -183,8 +228,7 @@ This performs a full-state restore with an epoch bump — the same behaviour as 
 
 ### Message Task
 ```
-"type": "message",
-"params": {
+"message": {
     "message_id": "<id>",
     "priority": 50,
     "zones": ["lobby"]

@@ -1,0 +1,31 @@
+info:
+  name: Update Message Task
+  type: http
+  seq: 12
+
+http:
+  method: PATCH
+  url: "{{api_url}}/tasks/:id"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: message-task-001
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "description": "Play message at lower priority",
+        "priority": 5,
+        "zones": "zone-a"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Updates a message task using the protobuf JSON request shape.

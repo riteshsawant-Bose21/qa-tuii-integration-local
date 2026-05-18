@@ -5,8 +5,9 @@ UDP and tracks nested object paths, array indices, and wildcard patterns.
 
 When a server-side configuration update is too large for a safe UDP datagram,
 the server sends a small `config_pull_required` UDP notification instead. The
-observer then pulls the full current config with a dependency-free POSIX
-HTTP/1.0 `GET /value` request. Normal small updates still stay on UDP.
+observer then pulls the full current config from the admin API with a
+dependency-free POSIX HTTP/1.0 `GET /state` request. Normal small updates still
+stay on UDP.
 
 ## Dependencies
 
@@ -66,7 +67,7 @@ Basic syntax:
 /usr/local/bin/observer <server_ip> <port> <path>
 ```
 The `port` argument is the Fusion UDP port, normally `7947`. The HTTP fallback
-uses port `8080`.
+uses the admin API port `9090`.
 
 The `--verbose` argument enables debug output.
 
@@ -123,7 +124,7 @@ broadcast would exceed the UDP payload limit, it sends a compact notification:
 
 On receipt, `UDPValueMonitor`:
 - validates the Lamport epoch/version ordering
-- performs `GET /value` against the same server IP on HTTP port `8080`
+- performs `GET /state` against the same server IP on admin port `9090`
 - applies the returned config to local watchers
 - ACKs the UDP notification only after the HTTP pull succeeds
 
@@ -167,7 +168,7 @@ make -C tools/observer test
 ```
 
 Run the live oversized-update integration test, which verifies that a real
-fusion-server emits `config_pull_required` and the observer pulls `/value`:
+fusion-server emits `config_pull_required` and the observer pulls `/state`:
 
 ```bash
 FUSION_UDP_INTEGRATION=1 \
@@ -176,8 +177,9 @@ GTEST_FILTER=UDPValueMonitorTest.IntegrationOversizedUpdatePullsConfigFromFusion
 make -C tools/observer test
 ```
 
-Run the live delete integration test, which seeds a value through HTTP,
-calls real `DELETE /value`, and verifies the observer receives the UDP clear:
+Run the live clear integration test, which seeds a value through the admin API,
+clears it with `PATCH /state` using `null`, and verifies the observer receives
+the UDP clear:
 
 ```bash
 FUSION_UDP_INTEGRATION=1 \

@@ -27,7 +27,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
   @override
   void initState() {
     super.initState();
-    serviceLocator<MeterDataViewModel>().registerObserver(this);
+    serviceLocator<MeterDataViewModel>().registerObserver(this, <String>{'system_info'});
   }
 
   @override
@@ -101,8 +101,8 @@ class _DeviceListTabState extends State<DeviceListTab> {
         FusionTableColumn(key: 'ip', header: 'IP', flex: 2),
         FusionTableColumn(key: 'firmware', header: 'F.W.', flex: 1),
         FusionTableColumn(key: 'temp', header: 'TEMP', flex: 1),
-        FusionTableColumn(key: 'disk', header: 'DISK USE', flex: 1),
         FusionTableColumn(key: 'cpu', header: 'CPU USE', flex: 1),
+        FusionTableColumn(key: 'disk', header: 'DISK USE', flex: 1),
         FusionTableColumn(key: 'controls', header: 'CONTROLS', flex: 2, sortable: false),
       ],
       rows:
@@ -159,6 +159,26 @@ class _DeviceListTabState extends State<DeviceListTab> {
                   )
                   : buildDash(color: context.colorScheme.primaryWhite),
         ),
+        'cpu': FusionTableCell(
+          value: 0,
+          child:
+              showCpu
+                  ? LiveDeviceMetric(
+                    deviceId: device.id,
+                    builder: (DeviceSystemInfo? info, bool online) {
+                      if (!online) return buildDash(color: context.colorScheme.primaryWhite);
+                      final double cpu = info?.cpu ?? 0;
+                      return Row(
+                        children: <Widget>[
+                          GaugeWidget(value: cpu, size: const Size(24, 24)),
+                          const SizedBox(width: 6),
+                          FusionAppText(text: "${cpu.toInt()}%", style: context.textTheme.labelMedium),
+                        ],
+                      );
+                    },
+                  )
+                  : buildDash(color: context.colorScheme.primaryWhite),
+        ),
         'disk': FusionTableCell(
           value: 0,
           child:
@@ -170,29 +190,9 @@ class _DeviceListTabState extends State<DeviceListTab> {
                       final double disk = info?.emmc ?? 0;
                       return Row(
                         children: <Widget>[
-                          GaugeWidget(value: disk, size: const Size(24, 24)),
+                          DiskUsageWidget(value: disk, size: const Size(24, 24)),
                           const SizedBox(width: 6),
                           FusionAppText(text: "${disk.toInt()}%", style: context.textTheme.labelMedium),
-                        ],
-                      );
-                    },
-                  )
-                  : buildDash(color: context.colorScheme.primaryWhite),
-        ),
-        'cpu': FusionTableCell(
-          value: 0,
-          child:
-              showCpu
-                  ? LiveDeviceMetric(
-                    deviceId: device.id,
-                    builder: (DeviceSystemInfo? info, bool online) {
-                      if (!online) return buildDash(color: context.colorScheme.primaryWhite);
-                      final double cpu = info?.ram ?? 0;
-                      return Row(
-                        children: <Widget>[
-                          DiskUsageWidget(value: cpu, size: const Size(24, 24)),
-                          const SizedBox(width: 6),
-                          FusionAppText(text: "${cpu.toInt()}%", style: context.textTheme.labelMedium),
                         ],
                       );
                     },

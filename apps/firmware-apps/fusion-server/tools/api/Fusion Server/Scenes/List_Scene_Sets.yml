@@ -1,7 +1,7 @@
 info:
-  name: List Scenes Sets
+  name: List Scene Sets
   type: http
-  seq: 4
+  seq: 7
 
 http:
   method: GET

@@ -1,0 +1,30 @@
+info:
+  name: Patch Audio Indexed Param
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{api_url}}/settings/audio/:blockId/:param/:index"
+  params:
+    - name: blockId
+      value: PEQ4385417
+      type: path
+    - name: param
+      value: frequency
+      type: path
+    - name: index
+      value: "0"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "value": 1000.0
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

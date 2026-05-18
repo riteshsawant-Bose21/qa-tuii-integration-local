@@ -9,6 +9,31 @@ BUILD_DIR=build
 BUILD_FLAGS=-tags netgo,osusergo
 RELEASE_FLAGS=-trimpath
 DEBUG_FLAGS=-gcflags "all=-N -l"
+PROTOC ?= protoc
+PROTO_SRC_DIR=../../../libs/proto
+PROTO_GO_OUT=fusion/internal/gen/proto
+GO_BIN_DIR := $(shell $(GOCMD) env GOPATH)/bin
+PROTOC_GEN_GO := $(GO_BIN_DIR)/protoc-gen-go
+PROTOC_GEN_GO_VERSION ?= v1.36.6
+PROTO_FUSION_DIR=$(PROTO_SRC_DIR)/fusion
+PROTO_FILES=\
+	$(PROTO_FUSION_DIR)/device_config.proto \
+	$(PROTO_FUSION_DIR)/device_config_audio.proto \
+	$(PROTO_FUSION_DIR)/device_config_dro.proto \
+	$(PROTO_FUSION_DIR)/device_config_static.proto \
+	$(PROTO_FUSION_DIR)/tasks.proto \
+	$(PROTO_FUSION_DIR)/time_machine.proto \
+	$(PROTO_FUSION_DIR)/devices.proto \
+	$(PROTO_FUSION_DIR)/websocket.proto \
+	$(PROTO_FUSION_DIR)/controllers.proto \
+	$(PROTO_FUSION_DIR)/pava.proto \
+	$(PROTO_FUSION_DIR)/sessions.proto \
+	$(PROTO_FUSION_DIR)/metadata.proto \
+	$(PROTO_FUSION_DIR)/software_update.proto \
+	$(PROTO_FUSION_DIR)/vip.proto \
+	$(PROTO_FUSION_DIR)/health.proto \
+	$(PROTO_FUSION_DIR)/udp.proto \
+	$(PROTO_FUSION_DIR)/version.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -26,17 +51,17 @@ SHELL := /bin/bash
 
 all: deps build
 
-build:
+build: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME) fusion-server
 
-debug:
+debug: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)-debug -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)-debug fusion-server
 
-release:
+release: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)-release -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)-release fusion-server
@@ -45,7 +70,7 @@ clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_DIR)
 
-run:
+run: proto
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 	./$(BUILD_DIR)/$(BINARY_NAME)
 
@@ -56,38 +81,73 @@ deps:
 tidy:
 	cd fusion && $(GOMOD) tidy
 
+proto: proto-tools
+	@echo "Generating Go protobufs..."
+	@mkdir -p $(PROTO_GO_OUT)
+	@$(PROTOC) \
+		-I $(PROTO_SRC_DIR) \
+		--plugin=protoc-gen-go=$(PROTOC_GEN_GO) \
+		--go_out=$(PROTO_GO_OUT) \
+		--go_opt=paths=source_relative \
+		$(PROTO_FILES)
+
+proto-tools:
+	@if [ ! -x "$(PROTOC_GEN_GO)" ]; then \
+		echo "Installing protoc-gen-go $(PROTOC_GEN_GO_VERSION) to $(GO_BIN_DIR)"; \
+		$(GOCMD) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION); \
+	fi
+
+proto-clean:
+	rm -f $(PROTO_GO_OUT)/fusion/device_config.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_audio.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_dro.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/device_config_static.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/tasks.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/time_machine.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/devices.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/websocket.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/controllers.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/pava.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/sessions.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/metadata.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/software_update.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/vip.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/health.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/udp.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/version.pb.go
+
 # Cross compilation
-build-linux-amd64:
+build-linux-amd64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_amd64 fusion-server
 
-build-linux-arm32:
+build-linux-arm32: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm32 fusion-server
 
-build-linux-arm64:
+build-linux-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm64 fusion-server
 
-build-darwin-arm64:
+build-darwin-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(DEBUG_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_darwin_arm64 fusion-server
 
-release-linux-amd64:
+release-linux-amd64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_amd64 fusion-server
 
-release-linux-arm32:
+release-linux-arm32: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm32 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm32 fusion-server
 
-release-linux-arm64:
+release-linux-arm64: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(BUILD_FLAGS) $(RELEASE_FLAGS) $(RELEASE_LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME)_linux_arm64 fusion-server
@@ -116,6 +176,8 @@ help:
 	@echo " run - Build and run locally"
 	@echo " deps - Download dependencies"
 	@echo " tidy - Tidy go.mod"
+	@echo " proto - Generate Go protobuf types from shared proto definitions"
+	@echo " proto-clean - Remove generated Go protobuf types"
 	@echo " fmt - Format code"
 	@echo " vet - Run go vet"
 	@echo " lint - Run linter"
@@ -128,4 +190,4 @@ help:
 	@echo " release-linux-arm64 - Build optimized release binary for Linux ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build debug release clean run deps tidy fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
+.PHONY: all build debug release clean run deps tidy proto proto-tools proto-clean fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
