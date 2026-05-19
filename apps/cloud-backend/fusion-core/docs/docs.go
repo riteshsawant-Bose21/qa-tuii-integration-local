@@ -4157,11 +4157,11 @@ const docTemplate = `{
                         "$ref": "#/definitions/types.OutputAsset"
                     }
                 },
-                "id": {
-                    "type": "integer"
-                },
                 "name": {
                     "type": "string"
+                },
+                "output_id": {
+                    "type": "integer"
                 },
                 "specifications": {
                     "$ref": "#/definitions/types.OutputSpecifications"
@@ -4728,7 +4728,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "source_id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "specifications": {
                     "$ref": "#/definitions/types.SourceSpecifications"

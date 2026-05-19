@@ -11,7 +11,7 @@ type OutputAsset struct {
 }
 
 type OutputItemResponse struct {
-	OutputID       int                  `json:"id"`
+	OutputID       int                  `json:"output_id"`
 	Name           string               `json:"name"`
 	Type           string               `json:"type"`
 	Assets         []OutputAsset        `json:"assets"`
