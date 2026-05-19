@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"go.uber.org/zap"
@@ -88,7 +87,7 @@ func (s *Service) SelectAll(ctx context.Context, logger *zap.Logger) ([]types.So
 		}
 
 		item := types.SourceItemResponse{
-			SourceID:           strconv.Itoa(sourceID),
+			SourceID:           sourceID,
 			Assets:             []types.SourceAsset{{Black: []string{imagesStr}}},
 			ModelName:          modelName,
 			ModelFamily:        modelFamily,

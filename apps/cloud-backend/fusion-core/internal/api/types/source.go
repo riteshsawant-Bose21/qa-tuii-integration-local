@@ -12,7 +12,7 @@ type SourceAsset struct {
 }
 
 type SourceItemResponse struct {
-	SourceID           string               `json:"source_id"`
+	SourceID           int                  `json:"source_id"`
 	Assets             []SourceAsset        `json:"assets"`
 	ModelName          string               `json:"model_name"`
 	ModelFamily        string               `json:"model_family"`
