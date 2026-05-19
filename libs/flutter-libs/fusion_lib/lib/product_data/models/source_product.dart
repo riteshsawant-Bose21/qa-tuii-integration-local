@@ -3,26 +3,22 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../product_data.dart';
 
 class SourceProduct {
-  final int productId;
-  final String sourceId;
+  final int sourceId;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
   final String? description;
-  final SourceType type;
   final SourceConnectionType primaryConnection;
   final List<SourceConnectionType> supportedConnections;
   final PagingSourceType? pagingType;
   final bool isFusionCompatible;
 
   const SourceProduct({
-    required this.productId,
     required this.sourceId,
     required this.assets,
     required this.modelName,
     required this.modelFamily,
     this.description,
-    required this.type,
     required this.primaryConnection,
     required this.supportedConnections,
     this.pagingType,
@@ -36,28 +32,24 @@ class SourceProduct {
     final pagingType = PagingSourceType.fromString(specs['paging_type']);
 
     return SourceProduct(
-      productId: (json['product_id'] as num?)?.toInt() ?? 0,
-      sourceId: json['source_id'] as String? ?? '',
+      sourceId: int.tryParse(json['source_id']?.toString() ?? '') ?? 0,
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'source'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? 'Professional audio source',
-      type: SourceType.fromString(json['source_type']),
       primaryConnection: SourceConnectionType.fromString(specs['primary_connection']),
       supportedConnections: supportedConnections,
       pagingType: pagingType,
-      isFusionCompatible: true, // Default to TRUE. // json['is_fusion_compatible'] as bool? ?? true,
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? true,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'product_id': productId,
     'source_id': sourceId,
     'assets': assets.toJson(),
     'model_name': modelName,
     'model_family': modelFamily,
     'description': description,
-    'source_type': type.name,
     'specifications': {
       'primary_connection': primaryConnection.name,
       'supported_connections': supportedConnections.map((e) => e.name).toList(),
@@ -67,5 +59,5 @@ class SourceProduct {
   };
 
   @override
-  String toString() => 'SourceProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'SourceProduct(sourceId: $sourceId, modelName: $modelName)';
 }

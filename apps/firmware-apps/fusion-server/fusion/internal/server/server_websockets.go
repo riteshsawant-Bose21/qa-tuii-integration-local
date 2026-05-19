@@ -210,6 +210,7 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 // the master filter sent to all cluster device telemetry cores.
 func (s *FusionServer) SetMeterFilter(conn *websocket.Conn, ids []string) {
 	s.meterFilterManager.SetFilter(conn, ids, s.clusterMemberFilterAddrs())
+	s.telemetrySub.Start(s.clusterMemberZMQIPs())
 }
 
 // RemoveMeterFilter removes the meter ID filter for a WebSocket connection and updates
@@ -478,6 +479,10 @@ func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 
 	// Clean up failed connections
 	if len(failedConnections) > 0 {
+		addrs := s.clusterMemberFilterAddrs()
+		for _, conn := range failedConnections {
+			s.meterFilterManager.RemoveFilter(conn, addrs)
+		}
 		s.wsLock.Lock()
 		for _, conn := range failedConnections {
 			if s.subscriptions[topic] != nil {
@@ -498,7 +503,7 @@ func (s *FusionServer) BroadcastRawToTopic(topic string, data []byte) error {
 // routeMeterData fans out meter data to each subscribed WebSocket connection,
 // sending only the subset of samples that each client has registered a filter for.
 // The sent payload preserves the original telemetry message structure.
-func (s *FusionServer) routeMeterData(msg *api.MeterDataMessage) error {
+func (s *FusionServer) routeMeterData(msg *model.MeterDataMessage) error {
 	s.wsLock.RLock()
 	subscribers := s.subscriptions[api.WSTopicMeterData]
 	conns := make([]*websocket.Conn, 0, len(subscribers))

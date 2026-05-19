@@ -330,7 +330,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(representative.productId) ?? "",
+                    path: serviceLocator<ProductQueryViewModel>().getSpeakerImage(representative.productId) ?? "",
                     height: 24,
                     width: 24,
                     fit: BoxFit.contain,

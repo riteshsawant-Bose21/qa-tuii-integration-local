@@ -7,9 +7,9 @@ extension BomStateMethods on BomState {
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
 
-    String? productImage(String? storedPath, int? productId) {
-      if (productId != null) {
-        final String? catalogPath = pq.getProductImage(productId);
+    String? productImage(String? storedPath, String? Function()? getCatalogPath) {
+      if (getCatalogPath != null) {
+        final String? catalogPath = getCatalogPath.call();
         if (catalogPath != null && catalogPath.isNotEmpty) return catalogPath;
       }
       return (storedPath != null && storedPath.isNotEmpty) ? storedPath : null;
@@ -40,7 +40,7 @@ extension BomStateMethods on BomState {
           model: speaker.speakerSKU,
           unitPrice: productPrice(speaker.price, speaker.productId),
           quantity: 1,
-          imageUrl: productImage(speaker.image, speaker.productId),
+          imageUrl: productImage(speaker.image, () => pq.getSpeakerImage(speaker.productId)),
           type: 'Loud Speaker',
           productId: speaker.productId,
         ),

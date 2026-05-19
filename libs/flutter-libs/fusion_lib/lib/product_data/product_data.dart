@@ -20,16 +20,13 @@
 /// final speakers = await repository.getSpeakers();
 /// ```
 
-library product_data;
-
-// Models
-export 'models/models.dart';
+library;
 
 // Data Sources
 export 'data_sources/data_sources.dart';
-
-// Services
-export 'services/services.dart';
-
+// Models
+export 'models/models.dart';
 // Repository
 export 'repository/repository.dart';
+// Services
+export 'services/services.dart';

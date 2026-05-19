@@ -9,6 +9,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/pubsub"
 
 	"github.com/go-zeromq/zmq4"
@@ -186,7 +187,7 @@ func (t *TelemetrySubscriber) handleMessage(deviceIP string, raw []byte) {
 		return
 	}
 
-	var msg api.MeterDataMessage
+	var msg model.MeterDataMessage
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		logger.Error("TelemetrySubscriber: failed to unmarshal meter_data from %s: %v", deviceIP, err)
 		return

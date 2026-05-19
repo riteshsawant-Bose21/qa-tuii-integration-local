@@ -6,11 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	model "fusion/internal/gen/proto/fusion"
+
 	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 
 	"fusion-services-core/logging"
-	"fusion/internal/api"
 )
 
 // telemetryFilterRequest is the UDP message sent to the telemetry core.
@@ -139,7 +140,7 @@ func (m *MeterFilterManager) RemoveFilter(conn *websocket.Conn, deviceAddressArr
 // FilterMeterDataForConn returns a copy of msg with parameters.value filtered to
 // only the samples whose block_name is in conn's registered filter.
 // If the connection has no filter registered, nil is returned.
-func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *api.MeterDataMessage) *api.MeterDataMessage {
+func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *model.MeterDataMessage) *model.MeterDataMessage {
 	m.mu.RLock()
 	filter := m.connFilters[conn]
 	m.mu.RUnlock()
@@ -148,7 +149,7 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 		return nil
 	}
 
-	filtered := make([]api.MeterDataSample, 0, min(len(msg.Parameters.Value), len(filter)))
+	filtered := make([]*model.MeterData, 0, min(len(msg.Parameters.Value), len(filter)))
 	for _, sample := range msg.Parameters.Value {
 		if filter[sample.BlockName] {
 			filtered = append(filtered, sample)
