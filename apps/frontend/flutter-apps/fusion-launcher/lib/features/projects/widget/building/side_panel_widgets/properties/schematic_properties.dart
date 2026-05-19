@@ -110,7 +110,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
       if (speakers.isEmpty) return const _NoPropertiesWidget();
       selectedDevice = speakers.first;
-      assetImagePath = serviceLocator<ProductQueryViewModel>().getProductImage(speakers.first.productId ?? 0);
+      assetImagePath = serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.first.productId ?? 0);
 
       // is added from building page
       isFromBuildingPage = speakers.first.addedFromBuildingPage;

@@ -6,11 +6,13 @@ import 'product_asset.dart';
 class FrequencyRange {
   final int high;
   final int low;
+  final int? referenceDb;
   final String unit;
 
   const FrequencyRange({
     required this.high,
     required this.low,
+    this.referenceDb,
     this.unit = 'Hz',
   });
 
@@ -18,6 +20,7 @@ class FrequencyRange {
     return FrequencyRange(
       high: (json['high'] as num?)?.toInt() ?? 0,
       low: (json['low'] as num?)?.toInt() ?? 0,
+      referenceDb: (json['reference_db'] as num?)?.toInt(),
       unit: json['unit'] as String? ?? 'Hz',
     );
   }
@@ -25,6 +28,7 @@ class FrequencyRange {
   Map<String, dynamic> toJson() => {
     'high': high,
     'low': low,
+    if (referenceDb != null) 'reference_db': referenceDb,
     'unit': unit,
   };
 }
@@ -109,23 +113,67 @@ class MeasurementValue {
 /// Represents max SPL specification
 class MaxSpl {
   final List<MeasurementValue> at;
+  final MeasurementValue? continuous;
+  final MeasurementValue? peak;
   final String unit;
 
   const MaxSpl({
     required this.at,
+    this.continuous,
+    this.peak,
     this.unit = 'dB',
   });
 
   factory MaxSpl.fromJson(Map<String, dynamic> json) {
+    final dynamic continuousJson = json['continuous'];
+    final dynamic peakJson = json['peak'];
+
+    final MeasurementValue? continuous = continuousJson is Map<String, dynamic>
+        ? MeasurementValue(
+            key: 'continuous',
+            unit: continuousJson['unit'] as String? ?? json['unit'] as String? ?? 'dB SPL',
+            value: (continuousJson['value'] as num?)?.toDouble() ?? 0.0,
+          )
+        : null;
+
+    final MeasurementValue? peak = peakJson is Map<String, dynamic>
+        ? MeasurementValue(
+            key: 'peak',
+            unit: peakJson['unit'] as String? ?? json['unit'] as String? ?? 'dB SPL',
+            value: (peakJson['value'] as num?)?.toDouble() ?? 0.0,
+          )
+        : null;
+
     return MaxSpl(
-      at: (json['at'] as List<dynamic>?)?.map((e) => MeasurementValue.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      unit: json['unit'] as String? ?? 'dB',
+      at:
+          (json['at'] as List<dynamic>?)?.map((e) => MeasurementValue.fromJson(e as Map<String, dynamic>)).toList() ??
+          [
+            if (continuous != null) continuous,
+            if (peak != null) peak,
+          ],
+      continuous: continuous,
+      peak: peak,
+      unit: json['unit'] as String? ?? continuous?.unit ?? peak?.unit ?? 'dB',
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'at': at.map((e) => e.toJson()).toList(),
-    'unit': unit,
+    if (continuous != null || peak != null) ...{
+      if (continuous != null)
+        'continuous': {
+          'unit': continuous!.unit,
+          'value': continuous!.value,
+        },
+      'peak': peak == null
+          ? null
+          : {
+              'unit': peak!.unit,
+              'value': peak!.value,
+            },
+    } else ...{
+      'at': at.map((e) => e.toJson()).toList(),
+      'unit': unit,
+    },
   };
 }
 
@@ -264,21 +312,32 @@ class SpeakerProduct extends Equatable {
   final dynamic acousticTechnology;
   final AvailableTaps? availableTaps;
   final String? boseProfessionalVoicing;
+  @Deprecated('Use bsfFileUrls. New API returns bsf_file_url as a list.')
   final String? bsfFileUrl;
+  final List<String> bsfFileUrls;
   final dynamic certifications;
   final List<Coverage> coverage;
+  final String? dataSheetLink;
   final dynamic dimensions;
+  final List<String> dspEqFileUrls;
   final dynamic driverComponents;
   final String? environment;
+
+  @Deprecated('Use frequencyRanges. New API returns frequency_range as a list.')
   final FrequencyRange? frequencyRange;
+
+  final List<FrequencyRange> frequencyRanges;
   final dynamic frequencyResponse;
+  @Deprecated('No longer present in the new speaker response.')
   final dynamic frequencyResponseCurve;
   final List<double> highImpedanceTaps;
   final ImpedanceSpec? impedance;
+  @Deprecated('No longer present in the new speaker response.')
   final dynamic impedanceCurve;
   final dynamic installation;
   final bool isHighImpedanceRated;
   final bool isSubwoofer;
+  @Deprecated('No longer present in the new speaker response.')
   final bool isWeatherRated;
   final MaxSpl? maxSpl;
   final String? mountType;
@@ -301,12 +360,16 @@ class SpeakerProduct extends Equatable {
     this.availableTaps,
     this.boseProfessionalVoicing,
     this.bsfFileUrl,
+    this.bsfFileUrls = const [],
     this.certifications,
     this.coverage = const [],
+    this.dataSheetLink,
     this.dimensions,
+    this.dspEqFileUrls = const [],
     this.driverComponents,
     this.environment,
     this.frequencyRange,
+    this.frequencyRanges = const [],
     this.frequencyResponse,
     this.frequencyResponseCurve,
     this.highImpedanceTaps = const [],
@@ -339,12 +402,16 @@ class SpeakerProduct extends Equatable {
     availableTaps,
     boseProfessionalVoicing,
     bsfFileUrl,
+    bsfFileUrls,
     certifications,
     coverage,
+    dataSheetLink,
     dimensions,
+    dspEqFileUrls,
     driverComponents,
     environment,
     frequencyRange,
+    frequencyRanges,
     frequencyResponse,
     frequencyResponseCurve,
     highImpedanceTaps,
@@ -368,13 +435,16 @@ class SpeakerProduct extends Equatable {
 
   factory SpeakerProduct.fromJson(Map<String, dynamic> json) {
     final specs = json['specifications'] as Map<String, dynamic>? ?? {};
-    final dynamic availableTapsJson = specs['available_taps'];
+    final dynamic availableTapsJson = specs['voltage_taps'] ?? specs['available_taps'];
     final dynamic frequencyRangeJson = specs['frequency_range'];
     final dynamic impedanceJson = specs['impedance'];
     final dynamic maxSplJson = specs['max_spl'];
     final dynamic nominalImpedanceJson = specs['nominal_impedance'];
     final dynamic powerHandlingJson = specs['power_handling'];
     final dynamic sensitivityJson = specs['sensitivity'];
+    final List<FrequencyRange> frequencyRanges = _parseFrequencyRanges(frequencyRangeJson);
+    final FrequencyRange? primaryFrequencyRange = _pickPrimaryFrequencyRange(frequencyRanges);
+    final List<String> bsfUrls = _parseStringList(specs['bsf_file_url']);
 
     return SpeakerProduct(
       productId: (json['product_id'] as num?)?.toInt() ?? 0,
@@ -385,13 +455,17 @@ class SpeakerProduct extends Equatable {
       acousticTechnology: specs['acoustic_technology'] as String?,
       availableTaps: availableTapsJson is Map<String, dynamic> ? AvailableTaps.fromJson(availableTapsJson) : null,
       boseProfessionalVoicing: specs['bose_professional_voicing'] as String?,
-      bsfFileUrl: specs['bsf_file_url'] as String?,
+      bsfFileUrl: bsfUrls.isNotEmpty ? bsfUrls.first : (specs['bsf_file_url'] as String?),
+      bsfFileUrls: bsfUrls,
       certifications: specs['certifications'],
       coverage: (specs['coverage'] as List<dynamic>?)?.map((e) => Coverage.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      dataSheetLink: specs['data_sheet_link'] as String?,
       dimensions: specs['dimensions'],
+      dspEqFileUrls: _parseStringList(specs['dsp_eq_file_url']),
       driverComponents: specs['driver_components'],
       environment: specs['environment'] as String?,
-      frequencyRange: frequencyRangeJson is Map<String, dynamic> ? FrequencyRange.fromJson(frequencyRangeJson) : null,
+      frequencyRange: primaryFrequencyRange,
+      frequencyRanges: frequencyRanges,
       frequencyResponse: specs['frequency_response'],
       frequencyResponseCurve: specs['frequency_response_curve'],
       highImpedanceTaps: (specs['high_impedance_taps'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList() ?? [],
@@ -422,15 +496,20 @@ class SpeakerProduct extends Equatable {
     'description': description,
     'specifications': {
       if (acousticTechnology != null) 'acoustic_technology': acousticTechnology,
-      if (availableTaps != null) 'available_taps': availableTaps!.toJson(),
+      if (availableTaps != null) 'voltage_taps': availableTaps!.toJson(),
       if (boseProfessionalVoicing != null) 'bose_professional_voicing': boseProfessionalVoicing,
-      if (bsfFileUrl != null) 'bsf_file_url': bsfFileUrl,
+      if (bsfFileUrls.isNotEmpty) 'bsf_file_url': bsfFileUrls else if (bsfFileUrl != null) 'bsf_file_url': bsfFileUrl,
       if (certifications != null) 'certifications': certifications,
       'coverage': coverage.map((e) => e.toJson()).toList(),
+      if (dataSheetLink != null) 'data_sheet_link': dataSheetLink,
       if (dimensions != null) 'dimensions': dimensions,
+      if (dspEqFileUrls.isNotEmpty) 'dsp_eq_file_url': dspEqFileUrls,
       if (driverComponents != null) 'driver_components': driverComponents,
       if (environment != null) 'environment': environment,
-      if (frequencyRange != null) 'frequency_range': frequencyRange!.toJson(),
+      if (frequencyRanges.isNotEmpty)
+        'frequency_range': frequencyRanges.map((e) => e.toJson()).toList()
+      else if (frequencyRange != null)
+        'frequency_range': frequencyRange!.toJson(),
       if (frequencyResponse != null) 'frequency_response': frequencyResponse,
       if (frequencyResponseCurve != null) 'frequency_response_curve': frequencyResponseCurve,
       'high_impedance_taps': highImpedanceTaps,
@@ -452,6 +531,34 @@ class SpeakerProduct extends Equatable {
     },
     'is_fusion_compatible': isFusionCompatible,
   };
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value is List<dynamic>) {
+      return value.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+    }
+    if (value is String && value.isNotEmpty) {
+      return <String>[value];
+    }
+    return const <String>[];
+  }
+
+  static List<FrequencyRange> _parseFrequencyRanges(dynamic value) {
+    if (value is List<dynamic>) {
+      return value.whereType<Map<String, dynamic>>().map(FrequencyRange.fromJson).toList();
+    }
+    if (value is Map<String, dynamic>) {
+      return <FrequencyRange>[FrequencyRange.fromJson(value)];
+    }
+    return const <FrequencyRange>[];
+  }
+
+  static FrequencyRange? _pickPrimaryFrequencyRange(List<FrequencyRange> ranges) {
+    if (ranges.isEmpty) return null;
+    for (final FrequencyRange range in ranges) {
+      if (range.referenceDb == -10) return range;
+    }
+    return ranges.first;
+  }
 
   @override
   String toString() => 'SpeakerProduct(productId: $productId, modelName: $modelName)';

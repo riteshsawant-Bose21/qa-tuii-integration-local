@@ -179,7 +179,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
                 child: GestureDetector(
                   onTap: () {
-                     SpeakerSelectionPopup.show(
+                    SpeakerSelectionPopup.show(
                       context: context,
                       isFromBuildingPage: false,
                       zoneId: widget.zoneId,
@@ -375,7 +375,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                     deviceId: deviceId,
                                     circuitModel: circuitData,
                                     circuitDeviceName: circuitData.name,
-                                    assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                                    assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                                     location: location,
                                     speakers: speakers,
                                     projectViewModel: _projectViewModel,
@@ -405,7 +405,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                       deviceId: deviceId,
                                       circuitModel: circuitData,
                                       circuitDeviceName: circuitData.name,
-                                      assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                                      assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                                       location: location,
                                       speakers: speakers,
                                       projectViewModel: _projectViewModel,
@@ -427,7 +427,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               deviceId: deviceId,
                               circuitModel: circuitData,
                               circuitDeviceName: circuitData.name,
-                              assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                              assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                               location: location,
                               speakers: speakers,
                               projectViewModel: _projectViewModel,

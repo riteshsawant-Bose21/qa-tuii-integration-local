@@ -399,7 +399,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               child: Row(
                 children: <Widget>[
                   FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
+                    path: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speaker.productId),
                     width: 14,
                     height: 14,
                   ),
