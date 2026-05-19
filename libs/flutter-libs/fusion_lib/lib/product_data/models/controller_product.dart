@@ -10,7 +10,11 @@ class ControllerProduct {
   final String modelName;
   final String modelFamily;
   final List<dynamic> additionalSensors;
+  final dynamic applicableRegions;
   final dynamic controlType;
+  final String? dataSheetLink;
+  final dynamic dimensions;
+  final dynamic physicalSize;
   final dynamic zoneControlCount;
   final bool isFusionCompatible;
 
@@ -20,7 +24,11 @@ class ControllerProduct {
     required this.modelName,
     required this.modelFamily,
     this.additionalSensors = const <dynamic>[],
+    this.applicableRegions,
     this.controlType,
+    this.dataSheetLink,
+    this.dimensions,
+    this.physicalSize,
     this.zoneControlCount,
     this.isFusionCompatible = false,
   });
@@ -34,7 +42,11 @@ class ControllerProduct {
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       additionalSensors: (specs['additional_sensors'] as List<dynamic>?) ?? const <dynamic>[],
+      applicableRegions: specs['applicable_regions'],
       controlType: specs['control_type'],
+      dataSheetLink: specs['data_sheet_link'] as String?,
+      dimensions: specs['dimensions'],
+      physicalSize: specs['physical_size'],
       zoneControlCount: specs['zone_control_count'],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
@@ -47,7 +59,11 @@ class ControllerProduct {
     'model_family': modelFamily,
     'specifications': {
       'additional_sensors': additionalSensors,
+      if (applicableRegions != null) 'applicable_regions': applicableRegions,
       if (controlType != null) 'control_type': controlType,
+      if (dataSheetLink != null) 'data_sheet_link': dataSheetLink,
+      if (dimensions != null) 'dimensions': dimensions,
+      if (physicalSize != null) 'physical_size': physicalSize,
       if (zoneControlCount != null) 'zone_control_count': zoneControlCount,
     },
     'is_fusion_compatible': isFusionCompatible,
