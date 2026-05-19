@@ -1,0 +1,18 @@
+meta {
+  name: Import State
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{admin_url}}/state
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "State": {},
+      "Checksum": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  }
+}

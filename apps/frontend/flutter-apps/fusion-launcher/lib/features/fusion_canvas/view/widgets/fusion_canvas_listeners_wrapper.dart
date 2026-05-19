@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.d
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/rectangle_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/fusion_canvas.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
@@ -120,6 +121,12 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                   FusionCanvasPoint(position: start),
                   if (end != null) FusionCanvasPoint(position: end),
                 ],
+              DrawingRectangleToolState(
+                start: final Offset start,
+              ) =>
+                <FusionCanvasPoint>[
+                  FusionCanvasPoint(position: start),
+                ],
               _ => <FusionCanvasPoint>[],
             };
             context.read<FusionSnapViewModel>().setToolPoints(
@@ -188,6 +195,18 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               );
             } else if (state is CancelledPenToolState) {
               toolbarEvents?.penToolEvents?.onPathCancelled?.call(
+                state.points,
+              );
+            } else if (state is DrawnRectangleToolState) {
+              toolbarEvents?.rectangleToolEvents?.onRectangleDrawn?.call(
+                state.points,
+              );
+            } else if (state is DrawingRectangleToolState) {
+              toolbarEvents?.rectangleToolEvents?.onRectangleChanged?.call(
+                state.points,
+              );
+            } else if (state is CancelledRectangleToolState) {
+              toolbarEvents?.rectangleToolEvents?.onRectangleCancelled?.call(
                 state.points,
               );
             }

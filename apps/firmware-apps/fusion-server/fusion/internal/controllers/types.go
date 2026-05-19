@@ -1,27 +1,41 @@
 package controllers
 
 import (
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/pubsub"
 	"net"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
-type ControllerManager struct {
-	// Core components
-	tcpServer *WallControllerTCPServer
-	hub       *pubsub.Hub
-
-	// Controller tracking
-	controllers map[string]*ControllerConnection // key: connectionID
-	mutex       sync.RWMutex
-}
-
+// ControllerConnection tracks a connected controller and its identity state.
 type ControllerConnection struct {
-	Info         *api.ControllerInfo
 	Connection   net.Conn
 	ConnectedAt  time.Time
 	LastActivity time.Time
 	IsIdentified bool
+	Info         *model.ControllerInfo
+}
+
+// ControllerManager manages connected wall controllers over TCP.
+type ControllerManager struct {
+	hub         *pubsub.Hub
+	tcpServer   *WallControllerTCPServer
+	controllers map[string]*ControllerConnection
+	mutex       sync.RWMutex
+}
+
+// TCPMessage is the internal controller TCP protocol envelope.
+type TCPMessage struct {
+	Action  string          `json:"action"`
+	Payload json.RawMessage `json:"payload,omitempty"`
+}
+
+// IdentifyResponse is the controller TCP identify payload.
+type IdentifyResponse struct {
+	ID              string `json:"id"`
+	DeviceType      string `json:"deviceType"`
+	SoftwareVersion string `json:"softwareVersion"`
 }

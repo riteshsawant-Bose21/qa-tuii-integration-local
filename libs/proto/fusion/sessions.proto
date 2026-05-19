@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package fusion.sessions.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message SAPSession {
+  string id = 1;
+  string origin = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  google.protobuf.Struct description = 4;
+}
+
+message SessionListResponse {
+  map<string, SAPSession> sessions = 1;
+}

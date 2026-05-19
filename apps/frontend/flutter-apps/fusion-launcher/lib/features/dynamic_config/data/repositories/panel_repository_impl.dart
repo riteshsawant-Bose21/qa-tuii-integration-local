@@ -31,8 +31,8 @@ class PanelRepositoryImpl implements PanelRepository {
   }
 
   @override
-  Future<bool> resetFusion() async {
-    return panelDataSource.resetFusion();
+  Future<bool> clearAudioSettings() async {
+    return panelDataSource.clearAudioSettings();
   }
 
   @override

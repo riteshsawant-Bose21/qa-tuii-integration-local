@@ -1,0 +1,27 @@
+meta {
+  name: Update Message Task
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{api_url}}/tasks/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: message-task-001
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "description": "Play message at lower priority",
+    "priority": 5,
+    "zones": "zone-a"
+  }
+}

@@ -6,7 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"net/url"
@@ -61,7 +61,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	if err := setMasterPriority(ctx, fc.Env.BaseURL(), primary.Id, false); err != nil {
 		t.Fatalf("set master priority low failed: %v", err)
 	}
-	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []model.DeviceInfo) bool {
 		if len(ds) != len(devices) {
 			return false
 		}
@@ -81,7 +81,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 		if !found {
 			return false
 		}
-		if demoted.IsPrimaryNode {
+		if demoted.IsPrimary {
 			return false
 		}
 
@@ -95,7 +95,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	if !found {
 		t.Fatalf("demoted node %s disappeared from devices payload", primary.Id)
 	}
-	if demoted.IsPrimaryNode {
+	if demoted.IsPrimary {
 		t.Fatalf("demoted node remained primary: %+v", demoted)
 	}
 
@@ -159,7 +159,7 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		}
 	}()
 
-	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []model.DeviceInfo) bool {
 		if len(ds) != len(baseline) {
 			return false
 		}
@@ -171,7 +171,7 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		if !found {
 			return false
 		}
-		if !targetAfter.IsPrimaryNode {
+		if !targetAfter.IsPrimary {
 			return false
 		}
 
@@ -334,8 +334,8 @@ func doPostNoBody(ctx context.Context, endpoint string) (int, string, error) {
 	return resp.StatusCode, string(body), nil
 }
 
-func waitForDevices(ctx context.Context, env Env, predicate func([]api.DeviceInfo) bool) ([]api.DeviceInfo, error) {
-	var latest []api.DeviceInfo
+func waitForDevices(ctx context.Context, env Env, predicate func([]model.DeviceInfo) bool) ([]model.DeviceInfo, error) {
+	var latest []model.DeviceInfo
 	err := PollUntil(ctx, 2*time.Second, func() (bool, error) {
 		ds, err := GetDevicesNodePreferred(ctx, env)
 		if err != nil {
@@ -350,45 +350,45 @@ func waitForDevices(ctx context.Context, env Env, predicate func([]api.DeviceInf
 	return latest, nil
 }
 
-func findPrimary(ds []api.DeviceInfo) (api.DeviceInfo, error) {
+func findPrimary(ds []model.DeviceInfo) (model.DeviceInfo, error) {
 	count := 0
-	var primary api.DeviceInfo
+	var primary model.DeviceInfo
 	for _, d := range ds {
-		if d.IsPrimaryNode {
+		if d.IsPrimary {
 			count++
 			primary = d
 		}
 	}
 	if count != 1 {
-		return api.DeviceInfo{}, fmt.Errorf("expected exactly one primary, got %d", count)
+		return model.DeviceInfo{}, fmt.Errorf("expected exactly one primary, got %d", count)
 	}
 	return primary, nil
 }
 
-func findDeviceByID(ds []api.DeviceInfo, id string) (api.DeviceInfo, bool) {
+func findDeviceByID(ds []model.DeviceInfo, id string) (model.DeviceInfo, bool) {
 	for _, d := range ds {
 		if d.Id == id {
 			return d, true
 		}
 	}
-	return api.DeviceInfo{}, false
+	return model.DeviceInfo{}, false
 }
 
-func pickNonPrimaryTarget(ds []api.DeviceInfo) (api.DeviceInfo, error) {
-	candidates := make([]api.DeviceInfo, 0, len(ds))
+func pickNonPrimaryTarget(ds []model.DeviceInfo) (model.DeviceInfo, error) {
+	candidates := make([]model.DeviceInfo, 0, len(ds))
 	for _, d := range ds {
-		if !d.IsPrimaryNode {
+		if !d.IsPrimary {
 			candidates = append(candidates, d)
 		}
 	}
 	if len(candidates) == 0 {
-		return api.DeviceInfo{}, fmt.Errorf("no non-primary device available")
+		return model.DeviceInfo{}, fmt.Errorf("no non-primary device available")
 	}
 	sort.Slice(candidates, func(i, j int) bool { return candidates[i].Id < candidates[j].Id })
 	return candidates[0], nil
 }
 
-func sortedDeviceIDs(ds []api.DeviceInfo) []string {
+func sortedDeviceIDs(ds []model.DeviceInfo) []string {
 	ids := make([]string, 0, len(ds))
 	for _, d := range ds {
 		ids = append(ids, d.Id)

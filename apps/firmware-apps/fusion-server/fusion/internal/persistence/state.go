@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -17,6 +18,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -39,7 +41,7 @@ type StateSummary struct {
 }
 
 type databaseMetadataEnvelope struct {
-	Metadata *api.DatabaseMetadata `json:"metadata"`
+	Metadata *model.DatabaseMetadata `json:"metadata"`
 }
 
 type dataRepairState struct {
@@ -87,12 +89,13 @@ type PatchResult struct {
 // It supports versioning, and nested key access.
 type StateManager struct {
 	sync.RWMutex
-	state      VersionedState
-	version    api.Version
-	httpClient *http.Client
-	memberlist *memberlist.Memberlist
-	verbose    bool
-	dataRepair dataRepairState
+	state               VersionedState
+	version             api.Version
+	httpClient          *http.Client
+	memberlist          *memberlist.Memberlist
+	verbose             bool
+	dataRepair          dataRepairState
+	stateMismatchStreak map[string]int
 	// checksumDirty tracks whether state.Checksum must be recomputed from the
 	// current full state before it can be treated as authoritative.
 	checksumDirty bool
@@ -103,11 +106,12 @@ type StateManager struct {
 // NewStateManager creates and initializes a new StateManager for the given node.
 func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
-		state:         *NewVersionedState(),
-		version:       api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient:    &http.Client{Timeout: api.HTTPTimeout},
-		verbose:       config.Verbose,
-		checksumDirty: true,
+		state:               *NewVersionedState(),
+		version:             api.Version{Counter: 0, NodeID: config.NodeName},
+		httpClient:          &http.Client{Timeout: api.HTTPTimeout},
+		verbose:             config.Verbose,
+		stateMismatchStreak: make(map[string]int),
+		checksumDirty:       true,
 	}
 }
 
@@ -251,14 +255,14 @@ func (sm *StateManager) Get(key string) (any, bool) {
 		keyPart := firstPart[:strings.Index(firstPart, "[")]
 		entry, exists := sm.state.State[keyPart]
 		if !exists || entry == nil {
-			logger.Warn("%s not found.", keyPart)
+			logger.Debug("%s not found.", keyPart)
 			return nil, false
 		}
 		current = entry.Data
 	} else {
 		entry, exists := sm.state.State[firstPart]
 		if !exists || entry == nil {
-			logger.Warn("%s not found.", firstPart)
+			logger.Debug("%s not found.", firstPart)
 			return nil, false
 		}
 		current = entry.Data
@@ -278,7 +282,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 				value, exists := nestedMap[keyPart]
 				if !exists {
-					logger.Warn("%s not found.", keyPart)
+					logger.Debug("%s not found.", keyPart)
 					return nil, false
 				}
 
@@ -333,7 +337,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 			value, exists := nestedMap[part]
 			if !exists {
-				logger.Warn("%s not found.", part)
+				logger.Debug("%s not found.", part)
 				return nil, false
 			}
 
@@ -376,11 +380,26 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	sm.Lock()
 
 	existing := sm.patchBaseStateUnsafe(update)
-	before := utils.DeepCopy(existing)
+
+	// Snapshot only the keys being patched for diff (avoids a full deep copy).
+	before := make(map[string]any, len(existing))
+	for k, v := range existing {
+		before[k] = utils.DeepCopy(v)
+	}
 
 	if err := utils.ApplyPatch(existing, update); err != nil {
 		sm.Unlock()
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
+	}
+
+	for key, value := range update {
+		if value != nil {
+			continue
+		}
+		if strings.ContainsAny(key, ".[") {
+			continue
+		}
+		existing[key] = nil
 	}
 
 	// Calculate the difference between the original and updated configuration.
@@ -394,9 +413,10 @@ func (sm *StateManager) Patch(update map[string]any) (*PatchResult, error) {
 	localVersion := sm.version
 
 	configUpdate := api.ConfigUpdate{
-		Data:    existing,
-		Version: localVersion,
-		Clear:   false,
+		Data:       existing,
+		PathValues: utils.DeepCopy(update).(map[string]any),
+		Version:    localVersion,
+		Clear:      false,
 	}
 
 	// Apply the update to internal state entries while still holding the lock.
@@ -558,6 +578,19 @@ func (sm *StateManager) applyWhileLocked(
 	for key, rawValue := range update.Data {
 		localEntry, exists := sm.state.State[key]
 
+		scopedValues := filterScopedPathValues(update.PathValues, key)
+		if len(scopedValues) > 0 {
+			applied, err := applyScopedEntryUpdate(localEntry, exists, key, rawValue, scopedValues, incomingVersion, effectiveVersion)
+			if err != nil {
+				return false, err
+			}
+			if applied != nil {
+				sm.state.State[key] = applied
+				dirty = true
+			}
+			continue
+		}
+
 		// Skip if the local entry version is newer or equal to the incoming
 		// update's version for this key.
 		//
@@ -575,6 +608,14 @@ func (sm *StateManager) applyWhileLocked(
 			continue
 		}
 
+		if rawValue == nil {
+			if exists {
+				delete(sm.state.State, key)
+				dirty = true
+			}
+			continue
+		}
+
 		// Determine new data: merge maps or overwrite.
 		var newData any
 		if incomingMap, ok := rawValue.(map[string]any); ok {
@@ -589,8 +630,9 @@ func (sm *StateManager) applyWhileLocked(
 
 		// Store the new entry with the effective local version (the receive event).
 		sm.state.State[key] = &api.StateEntry{
-			Data:    newData,
-			Version: effectiveVersion,
+			Data:           newData,
+			Version:        effectiveVersion,
+			NestedVersions: nil,
 		}
 
 		dirty = true
@@ -623,6 +665,31 @@ func (sm *StateManager) GetFullState() VersionedState {
 		Checksum: checksum,
 		State:    state,
 	}
+}
+
+// MarshalLocalState serializes the state directly under RLock without deep-copying.
+// This is safe because json.Marshal only reads the data. The caller must not retain
+// or mutate the returned byte slice's backing data beyond its immediate use.
+func (sm *StateManager) MarshalLocalState(version api.Version, nodeID string) ([]byte, int) {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	snapshot := struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}{
+		Version: version,
+		NodeID:  nodeID,
+		State:   sm.state.State,
+	}
+
+	data, err := json.Marshal(snapshot)
+	if err != nil {
+		logging.GetLogger().Error("MarshalLocalState: %v", err)
+		return nil, 0
+	}
+	return data, len(sm.state.State)
 }
 
 func (sm *StateManager) patchBaseStateUnsafe(update map[string]any) map[string]any {
@@ -838,14 +905,28 @@ func (sm *StateManager) validateState() {
 		}
 
 		if checksum != remoteState.Checksum {
-			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			sm.Lock()
+			sm.stateMismatchStreak[member.Name]++
+			streak := sm.stateMismatchStreak[member.Name]
+			sm.Unlock()
+
+			if streak >= 2 {
+				logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
+			} else {
+				logger.Debug("[STATE] Transient state mismatch detected with node %s", member.Name)
+			}
 			if sm.verbose {
 				logger.Debug("[STATE] Local checksum:  %s", checksum)
 				logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
 			}
 
 			consistent = false
+			continue
 		}
+
+		sm.Lock()
+		delete(sm.stateMismatchStreak, member.Name)
+		sm.Unlock()
 	}
 
 	if consistent {
@@ -900,21 +981,22 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			continue
 		}
 
-		var metadata api.DatabaseMetadata
-		if err := json.Unmarshal(body, &metadata); err != nil || (metadata == api.DatabaseMetadata{}) {
-			var envelope databaseMetadataEnvelope
-			if envErr := json.Unmarshal(body, &envelope); envErr != nil || envelope.Metadata == nil {
-				if err != nil {
-					logger.Warn("Failed to unmarshal JSON from %s: %v. Raw JSON: %s", member.Name, err, string(body))
-				} else {
-					logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
-				}
-				continue
-			}
+		var metadata model.DatabaseMetadata
+		var envelope model.DatabaseMetadataResponse
+		if err := protojson.Unmarshal(body, &envelope); err == nil && envelope.Metadata != nil {
 			metadata = *envelope.Metadata
+		} else if err := protojson.Unmarshal(body, &metadata); err != nil || (metadata.Version == nil && metadata.ActiveSnapshot == "" && metadata.Hash == "" && !metadata.Valid) {
+			if err != nil {
+				logger.Warn("Failed to decode metadata from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+			} else {
+				logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
+			}
+			continue
 		}
-		if metadata.Version.NodeID == "" {
-			metadata.Version.NodeID = member.Name
+		if metadata.Version == nil {
+			metadata.Version = &model.VersionInfo{NodeId: member.Name}
+		} else if metadata.Version.NodeId == "" {
+			metadata.Version.NodeId = member.Name
 		}
 
 		memberMetadata = append(memberMetadata, api.MemberMetadata{Member: member, Metadata: metadata})
@@ -998,10 +1080,10 @@ func (sm *StateManager) validateData() bool {
 }
 
 func memberMetadataLess(a, b api.MemberMetadata) bool {
-	if a.Metadata.Version.Less(b.Metadata.Version) {
+	if apiVersionFromProto(a.Metadata.Version).Less(apiVersionFromProto(b.Metadata.Version)) {
 		return true
 	}
-	if b.Metadata.Version.Less(a.Metadata.Version) {
+	if apiVersionFromProto(b.Metadata.Version).Less(apiVersionFromProto(a.Metadata.Version)) {
 		return false
 	}
 	if a.Metadata.Hash != b.Metadata.Hash {
@@ -1070,9 +1152,6 @@ func hashIsConsistent(metadata []api.MemberMetadata) bool {
 
 // deepCopyState makes a deep copy of the state map
 func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
-	if src == nil {
-		return nil
-	}
 	dst := make(map[string]*api.StateEntry, len(src))
 	for k, v := range src {
 		if v == nil {
@@ -1082,6 +1161,12 @@ func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
 		// Create a copy of the struct, not the pointer
 		c := *v                         // copy the struct
 		c.Data = utils.DeepCopy(v.Data) // deep-copy the payload
+		if v.NestedVersions != nil {
+			c.NestedVersions = make(map[string]api.Version, len(v.NestedVersions))
+			for nk, nv := range v.NestedVersions {
+				c.NestedVersions[nk] = nv
+			}
+		}
 		dst[k] = &c
 	}
 	return dst
@@ -1095,5 +1180,105 @@ func deepCopyEntry(src *api.StateEntry) *api.StateEntry {
 	// Shallow copy of struct (copies Version by value)
 	dst := *src
 	dst.Data = utils.DeepCopy(src.Data)
+	if src.NestedVersions != nil {
+		dst.NestedVersions = make(map[string]api.Version, len(src.NestedVersions))
+		for k, v := range src.NestedVersions {
+			dst.NestedVersions[k] = v
+		}
+	}
 	return &dst
+}
+
+func filterScopedPathValues(pathValues map[string]any, topKey string) map[string]any {
+	if len(pathValues) == 0 {
+		return nil
+	}
+
+	prefix := topKey + "."
+	scoped := make(map[string]any)
+	for path, value := range pathValues {
+		if path == topKey || strings.HasPrefix(path, prefix) {
+			scoped[path] = utils.DeepCopy(value)
+		}
+	}
+	if len(scoped) == 0 {
+		return nil
+	}
+	return scoped
+}
+
+func applyScopedEntryUpdate(
+	localEntry *api.StateEntry,
+	exists bool,
+	topKey string,
+	rawValue any,
+	scopedValues map[string]any,
+	incomingVersion api.Version,
+	effectiveVersion api.Version,
+) (*api.StateEntry, error) {
+	var (
+		newData        any
+		nestedVersions map[string]api.Version
+	)
+
+	if exists && localEntry != nil {
+		newData = utils.DeepCopy(localEntry.Data)
+		if len(localEntry.NestedVersions) > 0 {
+			nestedVersions = make(map[string]api.Version, len(localEntry.NestedVersions))
+			for k, v := range localEntry.NestedVersions {
+				nestedVersions[k] = v
+			}
+		}
+	} else {
+		newData = utils.DeepCopy(rawValue)
+	}
+
+	if nestedVersions == nil {
+		nestedVersions = make(map[string]api.Version, len(scopedValues))
+	}
+
+	changed := false
+	for path, pathValue := range scopedValues {
+		localVersion := api.Version{}
+		hasLocalVersion := false
+		if exists && localEntry != nil {
+			if nested, ok := localEntry.NestedVersions[path]; ok {
+				localVersion = nested
+				hasLocalVersion = true
+			} else if path == topKey {
+				localVersion = localEntry.Version
+				hasLocalVersion = true
+			}
+		}
+		if hasLocalVersion && !localVersion.Less(incomingVersion) {
+			continue
+		}
+
+		if path == topKey {
+			newData = utils.DeepCopy(pathValue)
+		} else {
+			relPath := strings.TrimPrefix(path, topKey+".")
+			targetMap, ok := newData.(map[string]any)
+			if !ok || targetMap == nil {
+				targetMap = map[string]any{}
+			}
+			if err := utils.ApplyPatch(targetMap, map[string]any{relPath: utils.DeepCopy(pathValue)}); err != nil {
+				return nil, fmt.Errorf("failed to apply scoped patch for %s: %w", path, err)
+			}
+			newData = targetMap
+		}
+
+		nestedVersions[path] = effectiveVersion
+		changed = true
+	}
+
+	if !changed {
+		return nil, nil
+	}
+
+	return &api.StateEntry{
+		Data:           newData,
+		Version:        effectiveVersion,
+		NestedVersions: nestedVersions,
+	}, nil
 }

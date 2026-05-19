@@ -1,0 +1,26 @@
+meta {
+  name: Create Message Task
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{api_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "message-task-001",
+    "description": "Play evacuation message",
+    "cron_expr": "0 */15 * * * *",
+    "message_id": "evacuation-message",
+    "priority": 10,
+    "zones": "zone-a,zone-b"
+  }
+}

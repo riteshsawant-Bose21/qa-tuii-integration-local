@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/models/products_data.dart';
-import '../../configuration/presentation/viewmodel/aes67/aes67_view_model.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 part 'add_source_viewmodel_state.dart';
@@ -182,7 +181,12 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     } else if (state.selectedZone != null) {
       final List<ListeningArea> areasInZone = projectViewModel.getListeningAreasForZone(zoneId: state.selectedZone!);
       final ListeningArea? selectedArea = areasInZone.firstOrNull;
-      if (selectedArea == null) return;
+      if (selectedArea == null) {
+        return FusionToast.error(
+          context,
+          message: "Selected Zone does not have a listening area. Please create a listening area in the selected zone to add source.",
+        );
+      }
 
       final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: selectedArea.id);
       final String? floorId = floorData?.id;

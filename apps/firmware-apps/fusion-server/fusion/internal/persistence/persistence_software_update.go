@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -35,24 +36,24 @@ var (
 //
 //  3. Atomic rename from .part file to final /mnt/ota/<filename>.
 //     Temp file is in the same directory as final path
-func (p *Persistence) SyncSoftwareUpdateFile(update *api.SoftwareUpdateSync) error {
+func (p *Persistence) SyncSoftwareUpdateFile(update *model.SoftwareUpdateBundle) error {
 	logger := logging.GetLogger()
 
 	// Validate required fields
-	if update.SourceIP == "" {
+	if update.GetSourceIp() == "" {
 		return fmt.Errorf("%w: SourceIP cannot be empty", ErrInvalidUpdate)
 	}
-	if update.Filename == "" {
+	if update.GetFilename() == "" {
 		return fmt.Errorf("%w: Filename cannot be empty", ErrInvalidUpdate)
 	}
-	if update.Checksum == "" {
+	if update.GetChecksum() == "" {
 		return fmt.Errorf("%w: Checksum cannot be empty", ErrInvalidUpdate)
 	}
 
 	logger.Info("[SoftwareUpdateSync] Starting sync: filename=%s, sourceIP=%s, checksum=%s",
-		update.Filename, update.SourceIP, update.Checksum)
+		update.GetFilename(), update.GetSourceIp(), update.GetChecksum())
 
-	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, update.Filename)
+	finalPath := filepath.Join(api.SoftwareUpdateOTAPath, update.GetFilename())
 
 	// ------------------------------------------------------------------
 	// Step 1 – stream bundle from VIP into /mnt/ota/<filename>.*.part
@@ -63,8 +64,8 @@ func (p *Persistence) SyncSoftwareUpdateFile(update *api.SoftwareUpdateSync) err
 		return fmt.Errorf("%w: failed to create OTA directory %s: %w", ErrInstallFailed, api.SoftwareUpdateOTAPath, err)
 	}
 
-	downloadPath := strings.Replace(routes.SoftwareUpdateDownloadEndpoint, "{filename}", update.Filename, 1)
-	downloadURL := fmt.Sprintf("http://%s:%s%s", update.SourceIP, api.HTTPPort, downloadPath)
+	downloadPath := strings.Replace(routes.SoftwareUpdateDownloadEndpoint, "{filename}", update.GetFilename(), 1)
+	downloadURL := fmt.Sprintf("http://%s:%s%s", update.GetSourceIp(), api.HTTPPort, downloadPath)
 
 	// Create HTTP client with timeout
 	client := &http.Client{
@@ -84,7 +85,7 @@ func (p *Persistence) SyncSoftwareUpdateFile(update *api.SoftwareUpdateSync) err
 			ErrDownloadFailed, resp.StatusCode, downloadURL, string(body))
 	}
 
-	tmp, err := os.CreateTemp(api.SoftwareUpdateOTAPath, update.Filename+".*.part")
+	tmp, err := os.CreateTemp(api.SoftwareUpdateOTAPath, update.GetFilename()+".*.part")
 	if err != nil {
 		return fmt.Errorf("%w: failed to create temp file: %w", ErrInstallFailed, err)
 	}
@@ -111,10 +112,10 @@ func (p *Persistence) SyncSoftwareUpdateFile(update *api.SoftwareUpdateSync) err
 	// Step 2 – verify SHA-256 checksum
 	// ------------------------------------------------------------------
 	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
-	if !strings.EqualFold(actualChecksum, update.Checksum) {
+	if !strings.EqualFold(actualChecksum, update.GetChecksum()) {
 		os.Remove(tempPath)
 		return fmt.Errorf("%w: file %s checksum mismatch - got %s, want %s",
-			ErrChecksumMismatch, update.Filename, actualChecksum, update.Checksum)
+			ErrChecksumMismatch, update.GetFilename(), actualChecksum, update.GetChecksum())
 	}
 
 	// ------------------------------------------------------------------

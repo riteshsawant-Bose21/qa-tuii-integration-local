@@ -7,6 +7,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 )
 
 // HandleUDPMessage handles and decodes UDP messages
@@ -26,7 +27,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	logger := logging.GetLogger()
 
 	if err := json.Unmarshal(data, &msg); err != nil {
-		logger.Error("HandleUDPMessage error: %v", err)
+		logger.Debug("HandleUDPMessage invalid JSON: %v", err)
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 
@@ -101,7 +102,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 		if len(msg.Payload) == 0 {
 			return udpResponse{FusionOp: msg.Action, Status: "ok"}, nil
 		}
-		var meterData api.MeterDataMessage
+		var meterData model.MeterDataMessage
 		if err := json.Unmarshal(msg.Payload, &meterData); err != nil {
 			logger.Error("HandleUDPMessage meter_data: invalid payload: %v", err)
 			return nil, fmt.Errorf("invalid meter_data payload: %w", err)

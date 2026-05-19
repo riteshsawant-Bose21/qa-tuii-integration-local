@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package fusion.pava.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message AudioMetadata {
+  string id = 1;
+  string orig_name = 2;
+  string display_name = 3;
+  string filename = 4;
+  string mime_type = 5;
+  google.protobuf.Timestamp uploaded = 6;
+  int64 duration = 7;
+  int64 size_bytes = 8;
+  repeated string tags = 9;
+  string checksum = 10;
+}
+
+message AudioMetadataListResponse {
+  repeated AudioMetadata messages = 1;
+}
+
+message AudioTagListResponse {
+  repeated string tags = 1;
+}
+
+message TriggerMessageRequest {
+  int32 priority = 1;
+  repeated string zones = 2;
+}

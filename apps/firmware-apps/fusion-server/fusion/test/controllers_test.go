@@ -3,14 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"fusion/internal/controllers"
+	model "fusion/internal/gen/proto/fusion"
+	"io"
 	"net"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"fusion/internal/api"
 	"fusion/internal/routes"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 const controllersServerAddr = "http://192.168.2.100:8080"
@@ -50,14 +55,14 @@ func TestControllerLifecycle(t *testing.T) {
 			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 		}
 
-		var controllers []api.ControllerInfo
-		if err := json.NewDecoder(resp.Body).Decode(&controllers); err != nil {
+		var controllers model.ControllerListResponse
+		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}
 
 		found := false
-		for _, c := range controllers {
-			if c.ID == "ctrl1" {
+		for _, c := range controllers.Controllers {
+			if c.GetId() == "ctrl1" {
 				found = true
 				break
 			}
@@ -100,16 +105,16 @@ func TestControllerLifecycle(t *testing.T) {
 			t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
 		}
 
-		var apiControllers []api.ControllerInfo
-		if err := json.NewDecoder(resp.Body).Decode(&apiControllers); err != nil {
+		var apiControllers model.ControllerListResponse
+		if err := decodeProtoHTTPBody(resp, &apiControllers); err != nil {
 			t.Fatalf("decode controllers response: %v", err)
 		}
 
 		expectedIDs := []string{"ctrl2", "ctrl3", "ctrl4"}
 		for _, expectedID := range expectedIDs {
 			found := false
-			for _, c := range apiControllers {
-				if c.ID == expectedID {
+			for _, c := range apiControllers.Controllers {
+				if c.GetId() == expectedID {
 					found = true
 					break
 				}
@@ -136,16 +141,18 @@ func TestControllerLifecycle(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		var controllers []api.ControllerInfo
-		json.NewDecoder(resp.Body).Decode(&controllers)
+		var controllers model.ControllerListResponse
+		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
+			t.Fatalf("decode controllers response: %v", err)
+		}
 
 		found := false
-		for _, c := range controllers {
-			if c.ID == "ctrl5" {
+		for _, c := range controllers.Controllers {
+			if c.GetId() == "ctrl5" {
 				found = true
 				break
 			} else {
-				t.Logf("Found controller: %s", c.ID)
+				t.Logf("Found controller: %s", c.GetId())
 			}
 		}
 		if !found {
@@ -165,12 +172,14 @@ func TestControllerLifecycle(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		controllers = nil
-		json.NewDecoder(resp.Body).Decode(&controllers)
+		controllers = model.ControllerListResponse{}
+		if err := decodeProtoHTTPBody(resp, &controllers); err != nil {
+			t.Fatalf("decode controllers response: %v", err)
+		}
 
 		found = false
-		for _, c := range controllers {
-			if c.ID == "ctrl5" {
+		for _, c := range controllers.Controllers {
+			if c.GetId() == "ctrl5" {
 				found = true
 				break
 			}
@@ -180,6 +189,14 @@ func TestControllerLifecycle(t *testing.T) {
 		}
 	})
 
+}
+
+func decodeProtoHTTPBody(resp *http.Response, msg proto.Message) error {
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return protojson.Unmarshal(data, msg)
 }
 
 // NewMockTCPController creates a new mock controller
@@ -226,7 +243,7 @@ func (m *MockTCPController) HandleMessages() error {
 	encoder := json.NewEncoder(m.conn)
 
 	for {
-		var msg api.ControllerTCPMessage
+		var msg controllers.TCPMessage
 		if err := decoder.Decode(&msg); err != nil {
 			return fmt.Errorf("failed to decode message: %v", err)
 		}
@@ -234,10 +251,10 @@ func (m *MockTCPController) HandleMessages() error {
 		switch msg.Action {
 		case "identify":
 
-			identifyResponsePayload := api.ControllerIdentifyResponse{
+			identifyResponsePayload := controllers.IdentifyResponse{
 				ID:              m.ID,
 				DeviceType:      m.DeviceType,
-				FirmwareVersion: m.FirmwareVersion,
+				SoftwareVersion: m.FirmwareVersion,
 			}
 
 			payloadBytes, err := json.Marshal(identifyResponsePayload)
@@ -245,7 +262,7 @@ func (m *MockTCPController) HandleMessages() error {
 				return fmt.Errorf("failed to marshal identity response: %v", err)
 			}
 
-			response := api.ControllerTCPMessage{
+			response := controllers.TCPMessage{
 				Action:  "identity",
 				Payload: payloadBytes,
 			}

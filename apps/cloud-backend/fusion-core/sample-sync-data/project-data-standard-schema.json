@@ -93,7 +93,7 @@
         "bsf_file_url": {
           "type": "string",
           "format": "uri",
-          "description": "URL to BSF (Bose Speaker File) configuration"
+          "description": "URL to BSF (Bose Specification File) configuration"
         },
         "skus": {
           "type": "array",

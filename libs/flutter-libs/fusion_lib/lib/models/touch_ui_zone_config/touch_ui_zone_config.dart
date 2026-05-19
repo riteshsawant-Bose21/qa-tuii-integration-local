@@ -18,7 +18,7 @@ class TouchUIZoneConfig {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'touchui_zone_config': <String, dynamic>{
+    'value': <String, dynamic>{
       'zones': zones.map((z) => z.toJson()).toList(),
     },
   };

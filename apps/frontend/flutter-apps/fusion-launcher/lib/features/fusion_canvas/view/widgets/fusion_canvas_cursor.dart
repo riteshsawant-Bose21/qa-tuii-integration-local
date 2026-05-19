@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.d
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/rectangle_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_hover_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
@@ -17,6 +18,7 @@ import '../../state/tools/connection_tool_state.dart';
 enum _CanvasCursorType {
   basic(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
   precise(image: "assets/icons/canvas_cursor/pencil.png", pointerTip: Alignment.bottomCenter),
+  rectangle(image: "assets/icons/canvas_cursor/rectangle_tool.png", pointerTip: Alignment.center),
   grab(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
   grabbing(image: "assets/icons/canvas_cursor/hand-grab.png", pointerTip: Alignment.center),
   resizeLeftRight(image: "assets/icons/canvas_cursor/move_horizontal.png", pointerTip: Alignment.center),
@@ -50,6 +52,7 @@ class FusionCanvasCursor extends StatelessWidget {
           _ when isHoveringLineCenter => _CanvasCursorType.precise,
           MeasureToolState _ => _CanvasCursorType.precise,
           PenToolState _ => _CanvasCursorType.precise,
+          RectangleToolState _ => _CanvasCursorType.rectangle,
           LayerDraggingState _ => _CanvasCursorType.grab,
           PointsDraggingState _ => _CanvasCursorType.grab,
           ConnectingToolState _ => _CanvasCursorType.grabbing,

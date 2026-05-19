@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:uuid/uuid.dart';
@@ -24,7 +25,10 @@ class DeviceMappingScreen extends StatelessWidget {
     return BlocProvider<FusionNetworkDeviceViewModel>(
       create: (BuildContext context) {
         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-        final FusionNetworkDeviceViewModel viewModel = FusionNetworkDeviceViewModel(serviceLocator<FusionDeviceService>());
+        final FusionNetworkDeviceViewModel viewModel =
+            FusionNetworkDeviceViewModel(
+              serviceLocator<FusionDeviceDiscoveryService>(),
+            );
         if (vip != null) {
           viewModel.getFusionNetworkDevice(vip: vip);
         }
@@ -44,20 +48,27 @@ class DeviceMappingScreenView extends StatefulWidget {
   });
 
   @override
-  State<DeviceMappingScreenView> createState() => _DeviceMappingScreenViewState();
+  State<DeviceMappingScreenView> createState() =>
+      _DeviceMappingScreenViewState();
 }
 
 class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   String? _draggedHardwareId;
   List<FusionNetworkDevice> _networkDevices = <FusionNetworkDevice>[];
 
-  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel => context.read<FusionNetworkDeviceViewModel>();
+  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel =>
+      context.read<FusionNetworkDeviceViewModel>();
 
-  Future<void> _handleAssignHardware(HardwareComponent device, FusionNetworkDevice? hardware) async {
+  Future<void> _handleAssignHardware(
+    HardwareComponent device,
+    FusionNetworkDevice? hardware,
+  ) async {
     if (hardware != null && hardware.id == device.id) return;
 
     try {
-      for (final FusionNetworkDevice hw in _networkDevices.where((FusionNetworkDevice h) => h.id == device.id)) {
+      for (final FusionNetworkDevice hw in _networkDevices.where(
+        (FusionNetworkDevice h) => h.id == device.id,
+      )) {
         final String newId = const Uuid().v4();
         if (!mounted) return;
         await fusionNetworkDeviceViewModel.updateDeviceDetails(
@@ -69,7 +80,11 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
       }
 
       if (hardware != null) {
-        final String equipmentLocation = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id)?.name ?? "";
+        final String equipmentLocation =
+            serviceLocator<ProjectViewModel>()
+                .getEquipLocationForHardware(hardwareId: device.id)
+                ?.name ??
+            "";
 
         if (!mounted) return;
         await fusionNetworkDeviceViewModel.updateDeviceDetails(
@@ -86,15 +101,23 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<FusionNetworkDeviceViewModel, FusionNetworkDeviceViewModelState>(
-      listener: (BuildContext context, FusionNetworkDeviceViewModelState state) {
+    return BlocListener<
+      FusionNetworkDeviceViewModel,
+      FusionNetworkDeviceViewModelState
+    >(
+      listener: (
+        BuildContext context,
+        FusionNetworkDeviceViewModelState state,
+      ) {
         if (state is FusionNetworkDeviceViewModelLoaded) {
           setState(() {
             _networkDevices = List<FusionNetworkDevice>.from(state.devices);
@@ -130,8 +153,11 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                         devices: widget.devices,
                         networkDevices: _networkDevices,
                         draggedHardwareId: _draggedHardwareId,
-                        onDragEnter: (String id) => setState(() => _draggedHardwareId = id),
-                        onDragLeave: () => setState(() => _draggedHardwareId = null),
+                        onDragEnter:
+                            (String id) =>
+                                setState(() => _draggedHardwareId = id),
+                        onDragLeave:
+                            () => setState(() => _draggedHardwareId = null),
                         onAssignHardware: _handleAssignHardware,
                       ),
                     ),
@@ -149,8 +175,11 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                     flex: 3,
                     child: NetworkHardwarePanel(
                       networkDevices: _networkDevices,
-                      onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
-                      onDragEnded: () => setState(() => _draggedHardwareId = null),
+                      onDragStarted:
+                          (String id) =>
+                              setState(() => _draggedHardwareId = id),
+                      onDragEnded:
+                          () => setState(() => _draggedHardwareId = null),
                     ),
                   ),
                 ],

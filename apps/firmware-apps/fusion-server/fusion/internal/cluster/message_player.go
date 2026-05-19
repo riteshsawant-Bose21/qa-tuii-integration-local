@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"io"
 	"net/http"
@@ -52,20 +53,20 @@ func (c *Cluster) initialAudioSyncFromPeer(peer *hashicorpMemberlist.Node) error
 		return fmt.Errorf("metadata list error: %d %s", resp.StatusCode, string(body))
 	}
 
-	var metas []api.AudioMetadata
+	var metas []model.AudioMetadata
 	if err := json.NewDecoder(resp.Body).Decode(&metas); err != nil {
 		return fmt.Errorf("decode metadata: %w", err)
 	}
 
 	peerURL := fmt.Sprintf("http://%s:%s", peer.Addr, api.HTTPPort)
 
-	for _, meta := range metas {
+	for i := range metas {
 		update := api.AudioSyncUpdate{
-			Metadata: meta,
+			Metadata: &metas[i],
 			URL:      peerURL,
 		}
 		if err := c.delegate.persistence.SyncAudioFile(&update); err != nil {
-			logger.Error("initial sync failed for %s: %v", meta.Filename, err)
+			logger.Error("initial sync failed for %s: %v", metas[i].Filename, err)
 		}
 	}
 
@@ -82,7 +83,7 @@ func (c *Cluster) reconcileLocalAudioState() {
 		return
 	}
 
-	metaByFilename := make(map[string]*api.AudioMetadata, len(metas))
+	metaByFilename := make(map[string]*model.AudioMetadata, len(metas))
 	for _, m := range metas {
 		metaByFilename[m.Filename] = m
 	}

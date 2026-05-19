@@ -19,7 +19,7 @@ class WallControllerConfig {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'wall_controller_config': <String, dynamic>{
+    'value': <String, dynamic>{
       'controllers': controllers.map((c) => c.toJson()).toList(),
       'zones': zones.map((z) => z.toJson()).toList(),
     },

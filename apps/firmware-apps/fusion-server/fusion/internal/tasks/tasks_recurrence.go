@@ -78,7 +78,7 @@ func withinRecurringWindow(r *api.RecurringWindow, now time.Time) bool {
 
 	// Day-of-week check
 	if len(r.Days) > 0 {
-		dow := int(now.Weekday()) // 0=Sunday
+		dow := int32(now.Weekday()) // 0=Sunday
 		ok := slices.Contains(r.Days, dow)
 		if !ok {
 			return false

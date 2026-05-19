@@ -3,6 +3,7 @@ package stresstester
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -152,12 +153,24 @@ type httpWriter struct {
 }
 
 func newHTTPWriter(host string) (*httpWriter, error) {
+	adminHost, err := withAdminPort(host)
+	if err != nil {
+		return nil, err
+	}
 	return &httpWriter{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		baseURL: fmt.Sprintf("http://%s", host),
+		baseURL: fmt.Sprintf("http://%s", adminHost),
 	}, nil
+}
+
+func withAdminPort(host string) (string, error) {
+	hostname, _, err := net.SplitHostPort(host)
+	if err != nil {
+		return "", fmt.Errorf("parse writer host %q: %w", host, err)
+	}
+	return net.JoinHostPort(hostname, "9090"), nil
 }
 
 func (w *httpWriter) Reconnects() int { return 0 }
@@ -178,7 +191,7 @@ func (w *httpWriter) Send(gain int) error {
 		return fmt.Errorf("marshal patch body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, w.baseURL+"/value", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPatch, w.baseURL+"/state", bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("create patch request: %w", err)
 	}

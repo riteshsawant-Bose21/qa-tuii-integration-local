@@ -8,6 +8,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/utils"
 
 	json "github.com/goccy/go-json"
@@ -19,7 +20,7 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var info api.SwUpdateInfo
+	var info model.SwUpdateInfo
 	data, err := os.ReadFile(api.SwUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Error("Failed to read %s: %v", api.SwUpdateInfoPath, err)
@@ -27,8 +28,7 @@ func (s *FusionServer) GetLocalSwUpdateInfo(w http.ResponseWriter, r *http.Reque
 		logging.GetLogger().Error("Failed to parse %s: %v", api.SwUpdateInfoPath, err)
 	}
 
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(info); err != nil {
+	if err := writeProtoJSON(w, &info); err != nil {
 		logging.GetLogger().Error("Error encoding sw update info: %v", err)
 	}
 }
@@ -38,16 +38,7 @@ func (s *FusionServer) broadcastSoftwareUpdateProgress(message *api.NotifyMessag
 		return nil
 	}
 
-	broadcastMessage := &api.WebSocketResponse{
-		ID:        nil,
-		Version:   api.WSCurrentVersion,
-		Type:      api.WSMsgTypeUpdateProgress,
-		Code:      api.WSCodeDeviceUpdated,
-		Status:    api.WSStatusEvent,
-		Message:   fmt.Sprintf("System notification: %s", message.Operation),
-		Data:      formatSoftwareUpdateProgress(message),
-		Timestamp: time.Now(),
-	}
+	broadcastMessage := websocketResponse(nil, api.WSMsgTypeUpdateProgress, api.WSCodeDeviceUpdated, api.WSStatusEvent, fmt.Sprintf("System notification: %s", message.Operation), formatSoftwareUpdateProgress(message))
 	return s.broadcastToAllClients(broadcastMessage)
 }
 

@@ -198,6 +198,14 @@ func ReadFromKeepalivedConfig(path string) (string, bool, error) {
 
 // WriteToKeepalivedConfig updates the VIP in keepalived.conf.
 func WriteToKeepalivedConfig(path, newVIP string) error {
+	if err := Validate(newVIP); err != nil {
+		return err
+	}
+	newVIP = Canonicalize(newVIP)
+	if newVIP == "" {
+		return fmt.Errorf("invalid VIP format: %q", newVIP)
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("unable to read config file: %w", err)
@@ -397,20 +405,25 @@ func atomicReplaceConfig(oldPath, newContent, backupSuffix string) error {
 }
 
 type vipParser struct {
-	inBlock bool
-	found   bool
-	indent  string
+	inBlock     bool
+	inlineBlock bool
+	found       bool
+	indent      string
 }
 
 func (p *vipParser) processLine(line, newVIP string) ([]string, bool) {
 	trim := strings.TrimSpace(line)
 
 	if !p.inBlock {
-		if trim == "virtual_ipaddress {" {
+		if startIdx := strings.Index(line, "virtual_ipaddress"); startIdx >= 0 && strings.Contains(line[startIdx:], "{") {
 			p.found, p.inBlock = true, true
-			if idx := strings.Index(line, "virtual_ipaddress"); idx >= 0 {
-				p.indent = line[:idx]
+			p.indent = line[:startIdx]
+			openIdx := strings.Index(line[startIdx:], "{")
+			remainder := ""
+			if openIdx >= 0 {
+				remainder = line[startIdx+openIdx+1:]
 			}
+			p.inlineBlock = strings.Contains(remainder, "}")
 			return []string{
 				p.indent + "virtual_ipaddress {",
 				p.indent + "  " + newVIP,
@@ -421,9 +434,30 @@ func (p *vipParser) processLine(line, newVIP string) ([]string, bool) {
 
 	if trim == "}" {
 		p.inBlock = false
+		p.inlineBlock = false
 		return []string{p.indent + "}"}, false
+	}
+
+	if p.inlineBlock {
+		if isVIPContentLine(trim) {
+			return nil, false
+		}
+		p.inBlock = false
+		p.inlineBlock = false
+		return []string{p.indent + "}", line}, false
 	}
 
 	// Skip old VIP lines inside the block
 	return nil, false
+}
+
+func isVIPContentLine(line string) bool {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return false
+	}
+	if strings.HasPrefix(strings.ToUpper(line), "VIP_NOT_SET") {
+		return true
+	}
+	return Validate(line) == nil
 }

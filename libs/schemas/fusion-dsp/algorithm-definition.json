@@ -1,0 +1,65 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "algorithm-definition.json",
+    "title": "Algorithm Definitions",
+    "description": "Definitions of DSP algorithms and their interfaces.",
+    "type": "object",
+    "properties": {
+        "version": {
+            "title": "Algorithm Definitions Version",
+            "description": "The version of this collection of algorithm definitions.",
+            "$ref": "interface-definition.json#/$defs/version"
+        },
+        "algorithms": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/algorithm"
+            }
+        }
+    },
+    "required": ["version", "algorithms"],
+    "$defs": {
+        "algorithm": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Algorithm Name",
+                    "description": "The name of the algorithm, which must be unique among all algorithms.",
+                    "$ref": "interface-definition.json#/$defs/name"
+                },
+                "properties": {
+                    "title": "Property Definitions",
+                    "description": "An array of definitions for the properties provided by this algorithm.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/property"
+                    }
+                },
+                "terminals": {
+                    "title": "Terminal Definitions",
+                    "description": "An array of definitions for the terminals provided by this algorithm.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/terminal"
+                    }
+                },
+                "parameters": {
+                    "title": "Parameter Definitions",
+                    "description": "An array of definitions for the parameters provided by this algorithm.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/parameter"
+                    }
+                },
+                "telemetry": {
+                    "title": "Telemetry Definitions",
+                    "description": "An array of definitions for the telemetry provided by this algorithm.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "interface-definition.json#/$defs/telemetry"
+                    }
+                }
+            }
+        }
+    }
+}

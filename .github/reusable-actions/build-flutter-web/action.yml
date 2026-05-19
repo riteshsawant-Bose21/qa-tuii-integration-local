@@ -51,106 +51,108 @@ runs:
     #       -Dsonar.exclusions=build/**
     #       -Dsonar.inclusions=lib/**,android/**,ios/**
 
-    - name: Flutter Web App build
-      shell: bash
-      working-directory: apps/frontend/flutter-apps/fusion_web
-      run: |
-        echo "$HOME/.proto/shims" >> $GITHUB_PATH
-        cp ~/flutter-env/.env ./.env
-        flutter pub get
-        moon run flutter-apps:build-web
-        cd build/web
-        zip -r fusion_launcher_web_build.zip .
-        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T fusion_launcher_web_build.zip ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip
-        echo "Web Build uploaded to Nexus successfully!"
-        echo "flutter-web: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip"
+    # - name: Flutter Web App build
+    #   shell: bash
+    #   working-directory: apps/frontend/flutter-apps/fusion_web
+    #   run: |
+      #   echo "$HOME/.proto/shims" >> $GITHUB_PATH
+      #   cp ~/flutter-env/.env ./.env
+      #   flutter pub get
+      #   chmod +x ../fusion-launcher/tool/generate_protos_linux.sh
+      #   ../fusion-launcher/tool/generate_protos_linux.sh
+      #   moon run flutter-apps:build-web
+      #   cd build/web
+      #   zip -r fusion_launcher_web_build.zip .
+      #   VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
+      #   curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T fusion_launcher_web_build.zip ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip
+      #   echo "Web Build uploaded to Nexus successfully!"
+      #   echo "flutter-web: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip"
 
-    - name: Deploy web package to AWS Amplify
-      # if: ${{ github.ref_name == 'develop' }}
-      # if: >-
-      #   ${{
-      #     (
-      #       github.event_name == 'push' &&
-      #       (
-      #         github.ref_name == 'develop' ||
-      #         startsWith(github.ref_name, 'release/')
-      #       )
-      #     )
-      #   }}
-      shell: bash
-      working-directory: apps/frontend/flutter-apps/fusion_web
-      env:
-        AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID_DEV }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY_DEV }}
-        AWS_DEFAULT_REGION: ${{ inputs.AWS_REGION_DEV }}
-        AMPLIFY_APP_ID: ${{ inputs.AMPLIFY_APP_ID }}
-      run: |
-        set -euo pipefail
+    # - name: Deploy web package to AWS Amplify
+    #   # if: ${{ github.ref_name == 'develop' }}
+    #   # if: >-
+    #   #   ${{
+    #   #     (
+    #   #       github.event_name == 'push' &&
+    #   #       (
+    #   #         github.ref_name == 'develop' ||
+    #   #         startsWith(github.ref_name, 'release/')
+    #   #       )
+    #   #     )
+    #   #   }}
+    #   shell: bash
+    #   working-directory: apps/frontend/flutter-apps/fusion_web
+    #   env:
+    #     AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID_DEV }}
+    #     AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY_DEV }}
+    #     AWS_DEFAULT_REGION: ${{ inputs.AWS_REGION_DEV }}
+    #     AMPLIFY_APP_ID: ${{ inputs.AMPLIFY_APP_ID }}
+    #   run: |
+    #     set -euo pipefail
 
-        : "${AMPLIFY_APP_ID:?AMPLIFY_APP_ID must be set in GitHub Actions secrets}"
-        : "${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION must be set in GitHub Actions env}"
+    #     : "${AMPLIFY_APP_ID:?AMPLIFY_APP_ID must be set in GitHub Actions secrets}"
+    #     : "${AWS_DEFAULT_REGION:?AWS_DEFAULT_REGION must be set in GitHub Actions env}"
 
-        ZIP_PATH="build/web/fusion_launcher_web_build.zip"
-        if [[ ! -f "$ZIP_PATH" ]]; then
-          echo "Missing artifact: $ZIP_PATH"
-          exit 1
-        fi
+    #     ZIP_PATH="build/web/fusion_launcher_web_build.zip"
+    #     if [[ ! -f "$ZIP_PATH" ]]; then
+    #       echo "Missing artifact: $ZIP_PATH"
+    #       exit 1
+    #     fi
 
-        read -r JOB_ID ZIP_UPLOAD_URL <<< "$(aws amplify create-deployment \
-          --app-id "$AMPLIFY_APP_ID" \
-          --branch-name develop \
-          --region "$AWS_DEFAULT_REGION" \
-          --query '[jobId, zipUploadUrl]' \
-          --output text)"
+    #     read -r JOB_ID ZIP_UPLOAD_URL <<< "$(aws amplify create-deployment \
+    #       --app-id "$AMPLIFY_APP_ID" \
+    #       --branch-name develop \
+    #       --region "$AWS_DEFAULT_REGION" \
+    #       --query '[jobId, zipUploadUrl]' \
+    #       --output text)"
 
-        if [[ -z "${JOB_ID:-}" || "$JOB_ID" == "None" || ! "$JOB_ID" =~ ^[0-9]+$ ]]; then
-          echo "Invalid Amplify job id returned from create-deployment: '${JOB_ID:-<empty>}'"
-          exit 1
-        fi
+    #     if [[ -z "${JOB_ID:-}" || "$JOB_ID" == "None" || ! "$JOB_ID" =~ ^[0-9]+$ ]]; then
+    #       echo "Invalid Amplify job id returned from create-deployment: '${JOB_ID:-<empty>}'"
+    #       exit 1
+    #     fi
 
-        if [[ -z "${ZIP_UPLOAD_URL:-}" || "$ZIP_UPLOAD_URL" == "None" ]]; then
-          echo "Invalid zip upload URL returned from create-deployment."
-          exit 1
-        fi
+    #     if [[ -z "${ZIP_UPLOAD_URL:-}" || "$ZIP_UPLOAD_URL" == "None" ]]; then
+    #       echo "Invalid zip upload URL returned from create-deployment."
+    #       exit 1
+    #     fi
 
-        curl --fail -T "$ZIP_PATH" "$ZIP_UPLOAD_URL"
+    #     curl --fail -T "$ZIP_PATH" "$ZIP_UPLOAD_URL"
 
-        aws amplify start-deployment \
-          --app-id "$AMPLIFY_APP_ID" \
-          --branch-name develop \
-          --job-id "$JOB_ID" \
-          --region "$AWS_DEFAULT_REGION"
+    #     aws amplify start-deployment \
+    #       --app-id "$AMPLIFY_APP_ID" \
+    #       --branch-name develop \
+    #       --job-id "$JOB_ID" \
+    #       --region "$AWS_DEFAULT_REGION"
 
-        echo "Amplify deployment started for branch develop (job: $JOB_ID)"
+    #     echo "Amplify deployment started for branch develop (job: $JOB_ID)"
 
-        MAX_ATTEMPTS=3
-        SLEEP_SECONDS=15
+    #     MAX_ATTEMPTS=3
+    #     SLEEP_SECONDS=15
 
-        for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
-          JOB_STATUS="$(aws amplify get-job \
-            --app-id "$AMPLIFY_APP_ID" \
-            --branch-name develop \
-            --job-id "$JOB_ID" \
-            --region "$AWS_DEFAULT_REGION" \
-            --query 'job.summary.status' \
-            --output text)"
+    #     for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+    #       JOB_STATUS="$(aws amplify get-job \
+    #         --app-id "$AMPLIFY_APP_ID" \
+    #         --branch-name develop \
+    #         --job-id "$JOB_ID" \
+    #         --region "$AWS_DEFAULT_REGION" \
+    #         --query 'job.summary.status' \
+    #         --output text)"
 
-          echo "[attempt $attempt/$MAX_ATTEMPTS] Amplify status: $JOB_STATUS"
+    #       echo "[attempt $attempt/$MAX_ATTEMPTS] Amplify status: $JOB_STATUS"
 
-          case "$JOB_STATUS" in
-            SUCCEED)
-              echo "Amplify deployment finished successfully."
-              exit 0
-              ;;
-            FAILED|CANCELLED)
-              echo "Amplify deployment finished with status: $JOB_STATUS"
-              exit 1
-              ;;
-          esac
+    #       case "$JOB_STATUS" in
+    #         SUCCEED)
+    #           echo "Amplify deployment finished successfully."
+    #           exit 0
+    #           ;;
+    #         FAILED|CANCELLED)
+    #           echo "Amplify deployment finished with status: $JOB_STATUS"
+    #           exit 1
+    #           ;;
+    #       esac
 
-          sleep "$SLEEP_SECONDS"
-        done
+    #       sleep "$SLEEP_SECONDS"
+    #     done
 
-        echo "Timed out waiting for Amplify deployment to finish."
-        exit 1
+    #     echo "Timed out waiting for Amplify deployment to finish."
+    #     exit 1

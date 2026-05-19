@@ -3,6 +3,8 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
+	model "fusion/internal/gen/proto/fusion"
+	"io"
 	"os/exec"
 
 	"fusion-services-core/logging"
@@ -283,38 +285,35 @@ func (c *Cluster) softwareUpdateSystem() error {
 
 // monitorState continuously monitors the cluster membership state
 func (c *Cluster) startStateMonitor() {
-	go func() {
-		for {
-			members := c.memberlist.Members()
-			logger := logging.GetLogger()
+	for {
+		members := c.memberlist.Members()
+		logger := logging.GetLogger()
 
-			logger.Debug("[CLUSTER] Current cluster state:")
-			logger.Debug("[CLUSTER] Total members: %d", len(members))
+		logger.Debug("[CLUSTER] Current cluster state:")
+		logger.Debug("[CLUSTER] Total members: %d", len(members))
 
-			for _, member := range members {
-				status := "ALIVE"
-				switch member.State {
-				case hashicorpMemberlist.StateAlive:
-					status = "ALIVE"
-				case hashicorpMemberlist.StateSuspect:
-					status = "SUSPECT"
-				case hashicorpMemberlist.StateDead:
-					status = "DEAD"
-				default:
-					status = "UNKNOWN"
-				}
-
-				logger.Debug("[CLUSTER] Node: %s, Address: %s:%d, Status: %s",
-					member.Name,
-					member.Addr.String(),
-					member.Port,
-					status,
-				)
+		for _, member := range members {
+			status := "ALIVE"
+			switch member.State {
+			case hashicorpMemberlist.StateAlive:
+				status = "ALIVE"
+			case hashicorpMemberlist.StateSuspect:
+				status = "SUSPECT"
+			case hashicorpMemberlist.StateDead:
+				status = "DEAD"
+			default:
+				status = "UNKNOWN"
 			}
 
-			time.Sleep(monitorInterval)
+			logger.Debug("[CLUSTER] Node: %s, Address: %s:%d, Status: %s",
+				member.Name,
+				member.Addr.String(),
+				member.Port,
+				status,
+			)
 		}
-	}()
+		time.Sleep(monitorInterval)
+	}
 }
 
 // GetStateString converts memberlist state to human-readable string
@@ -461,7 +460,7 @@ func (c *Cluster) FetchGenericWithTargetDevice(
 
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *api.DeviceInfo
+	var targetDevice *model.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -492,7 +491,7 @@ func (c *Cluster) DoGenericToTargetDevice(
 ) error {
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *api.DeviceInfo
+	var targetDevice *model.DeviceInfo
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -534,7 +533,7 @@ func postGenericToAdminLast(
 
 		// POST to the remote node’s admin endpoint
 		urlStr := utils.GetLocalURL(addr, endpoint)
-		resp, err := http.Post(urlStr, "", nil)
+		resp, err := c.httpClient.Post(urlStr, "", nil)
 		if err != nil {
 			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
 			return err
@@ -566,6 +565,7 @@ func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
@@ -598,14 +598,14 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	return false
 }
 
-func (c *Cluster) getKeepalivedPriority() int {
+func (c *Cluster) getKeepalivedPriority() int32 {
 	if c.vipMonitor != nil {
-		 priority, err := c.vipMonitor.GetKeepalivedPriority()
-		 if err != nil {
-			 logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
-			 return 0
-		 }
-		 return priority
+		priority, err := c.vipMonitor.GetKeepalivedPriority()
+		if err != nil {
+			logging.GetLogger().Error("Failed to get keepalived priority: %v", err)
+			return 0
+		}
+		return int32(priority)
 	}
 	logging.GetLogger().Warn("VIP Monitor not set, cannot get keepalived priority")
 	return 0
