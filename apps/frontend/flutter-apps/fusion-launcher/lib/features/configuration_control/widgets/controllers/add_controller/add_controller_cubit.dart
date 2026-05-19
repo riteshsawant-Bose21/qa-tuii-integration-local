@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
@@ -9,7 +10,10 @@ import 'add_controller_state.dart';
 class AddControllerCubit extends Cubit<AddControllerState> {
   final ProjectViewModel projectViewModel;
 
-  AddControllerCubit({required this.projectViewModel}) : super(const AddControllerAddState());
+  AddControllerCubit({required this.projectViewModel}) : super(const AddControllerAddState()) {
+    // Set a unique default name on initialization
+    emit(state.copyWith(name: _generateDefaultName()));
+  }
 
   /// Update controller name
   void updateName(String name) {
@@ -207,9 +211,23 @@ class AddControllerCubit extends Cubit<AddControllerState> {
 
     emit(state.copyWith(isLoading: true, clearErrorMessage: true));
 
+    // Resolve the effective name (generate default if empty)
+    final String effectiveName = state.name.trim().isEmpty ? _generateDefaultName() : state.name.trim();
+
+    // Check for duplicate controller name
+    final bool nameExists = Helper.isNameExists<FusionController>(
+      items: projectViewModel.fusionControllers,
+      newName: effectiveName,
+      getName: (FusionController c) => c.name,
+    );
+    if (nameExists) {
+      emit(state.copyWith(isLoading: false, errorMessage: 'Controller name already exists'));
+      return null;
+    }
+
     try {
       // Create the controller based on type
-      final FusionController controller = _createController();
+      final FusionController controller = _createController(effectiveName: effectiveName);
 
       // Add controller to project
       projectViewModel.addHardware(hardware: controller);
@@ -244,8 +262,17 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     }
   }
 
+  /// Generate a unique default name like "Untitled Controller 1", "Untitled Controller 2", etc.
+  String _generateDefaultName() {
+    final Set<String> existingNames = projectViewModel.fusionControllers.map((FusionController c) => c.name).toSet();
+    return Helper.generateUniqueName(
+      baseName: 'Untitled Controller',
+      existingNames: existingNames,
+    );
+  }
+
   /// Create a FusionController based on current state
-  FusionController _createController() {
+  FusionController _createController({String? effectiveName}) {
     final String assetImagePath = _getAssetImagePath();
     final double price = _getPrice();
 
@@ -275,7 +302,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
     }
 
     return FusionController(
-      name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
+      name: effectiveName ?? (state.name.trim().isEmpty ? _generateDefaultName() : state.name.trim()),
       image: assetImagePath,
       locationEntity: locationEntity,
       price: price,
@@ -313,7 +340,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
 
   /// Reset the form to initial add-mode state
   void reset() {
-    emit(const AddControllerAddState());
+    emit(AddControllerAddState(name: _generateDefaultName()));
   }
 
   /// Pre-populate the form state from an existing [FusionController] for editing.
@@ -388,6 +415,19 @@ class AddControllerCubit extends Cubit<AddControllerState> {
 
     emit(state.copyWith(isLoading: true, clearErrorMessage: true));
 
+    // Check for duplicate controller name (exclude current controller)
+    final bool nameExists = Helper.isNameExists<FusionController>(
+      items: projectViewModel.fusionControllers,
+      newName: state.name,
+      getName: (FusionController c) => c.name,
+      excludeId: controllerId,
+      getId: (FusionController c) => c.id,
+    );
+    if (nameExists) {
+      emit(state.copyWith(isLoading: false, errorMessage: 'Controller name already exists'));
+      return null;
+    }
+
     try {
       final FusionController? existing = projectViewModel.getControllerById(controllerId);
       if (existing == null) {
@@ -415,7 +455,7 @@ class AddControllerCubit extends Cubit<AddControllerState> {
       }
 
       final FusionController updated = existing.copyWith(
-        name: state.name.trim().isEmpty ? 'Untitled Controller' : state.name.trim(),
+        name: state.name.trim().isEmpty ? _generateDefaultName() : state.name.trim(),
         image: assetImagePath,
         locationEntity: locationEntity,
         price: price,

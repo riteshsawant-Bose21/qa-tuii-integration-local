@@ -1260,7 +1260,7 @@ class _DrawerContentState extends State<_DrawerContent> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(
-      text: widget.initialName ?? 'Untitled Controller',
+      text: widget.initialName ?? context.read<AddControllerCubit>().state.name,
     );
     widget.buttonEnabledNotifier.value = false;
     _nameController.addListener(() {

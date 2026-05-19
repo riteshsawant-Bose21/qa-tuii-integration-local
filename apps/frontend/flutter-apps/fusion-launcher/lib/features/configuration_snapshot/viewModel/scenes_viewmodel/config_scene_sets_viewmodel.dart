@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -78,8 +79,13 @@ class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
 
   /// Add a new scene set
   void addSceneSet() {
+    final Set<String> existingNames = state.sceneSets.map((SceneSetModel s) => s.name).toSet();
+    final String uniqueName = Helper.generateUniqueName(
+      baseName: 'New Scene Set',
+      existingNames: existingNames,
+    );
     final SceneSetModel newSceneSet = SceneSetModel(
-      name: "New Scene Set ${state.sceneSets.length + 1}",
+      name: uniqueName,
     );
     _projectViewModel.addNewSceneSet(sceneSet: newSceneSet);
     syncWithProjectViewModel();
@@ -112,8 +118,13 @@ class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
   /// Add new snapshot to a scene set
   void addSnapshotToSceneSet(String sceneSetId) {
     final List<SnapshotsModel> existingSnapshots = getSnapshotsInSceneSet(sceneSetId);
+    final Set<String> existingNames = existingSnapshots.map((SnapshotsModel s) => s.name).toSet();
+    final String uniqueName = Helper.generateUniqueName(
+      baseName: 'New Snapshot',
+      existingNames: existingNames,
+    );
     final SnapshotsModel newSnapshot = SnapshotsModel(
-      name: "New Snapshot ${existingSnapshots.length + 1}",
+      name: uniqueName,
     );
     _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: sceneSetId, scene: newSnapshot);
     final SceneActionModel action = SceneActionModel();
