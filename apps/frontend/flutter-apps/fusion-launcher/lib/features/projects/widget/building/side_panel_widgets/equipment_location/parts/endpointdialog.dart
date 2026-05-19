@@ -525,23 +525,74 @@ class _EndpointFormState extends State<_EndpointForm> {
                   value: _selectedProduct,
                   items: products,
                   itemLabelBuilder: (EQLProduct p) => p.name,
-                  selectedItemBuilder:
-                      (BuildContext ctx, EQLProduct p) => Row(
+                  selectedItemBuilder: (BuildContext ctx, EQLProduct p) {
+                    String? imagePath;
+
+                    if (p.deviceType == EQLDeviceType.processor) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getDspImage(p.productId);
+                    } else if (p.deviceType == EQLDeviceType.amplifier) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getAmplifierImage(p.productId);
+                    } else if (p.deviceType == EQLDeviceType.endpoint) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getIoEndpointImage(p.productId);
+                    }
+
+                    return Row(
+                      children: <Widget>[
+                        Container(
+                          width: 24,
+                          height: 24,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: FusionImageAuto(
+                            path: imagePath,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FusionAppText(
+                            text: p.name,
+                            maxLine: 1,
+                            style: ctx.textTheme.b3Regular.copyWith(
+                              color: ctx.colorScheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  itemWidgetBuilder: (BuildContext ctx, EQLProduct p, bool isSelected) {
+                    String? imagePath;
+
+                    if (p.deviceType == EQLDeviceType.processor) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getDspImage(p.productId);
+                    } else if (p.deviceType == EQLDeviceType.amplifier) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getAmplifierImage(p.productId);
+                    } else if (p.deviceType == EQLDeviceType.endpoint) {
+                      imagePath = serviceLocator<ProductQueryViewModel>().getIoEndpointImage(p.productId);
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
                         children: <Widget>[
                           Container(
-                            width: 24,
-                            height: 24,
-                            padding: const EdgeInsets.all(2),
+                            width: 28,
+                            height: 28,
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: FusionImageAuto(
-                              path: serviceLocator<ProductQueryViewModel>().getProductImage(p.productId),
+                              path: imagePath,
                               fit: BoxFit.contain,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: FusionAppText(
                               text: p.name,
@@ -551,45 +602,16 @@ class _EndpointFormState extends State<_EndpointForm> {
                               ),
                             ),
                           ),
+                          if (isSelected)
+                            FusionIcon.icon(
+                              Icons.check,
+                              size: 14,
+                              color: ctx.colorScheme.iconWhite,
+                            ),
                         ],
                       ),
-                  itemWidgetBuilder:
-                      (BuildContext ctx, EQLProduct p, bool isSelected) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          children: <Widget>[
-                            Container(
-                              width: 28,
-                              height: 28,
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: FusionImageAuto(
-                                path: serviceLocator<ProductQueryViewModel>().getProductImage(p.productId),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: FusionAppText(
-                                text: p.name,
-                                maxLine: 1,
-                                style: ctx.textTheme.b3Regular.copyWith(
-                                  color: ctx.colorScheme.textPrimary,
-                                ),
-                              ),
-                            ),
-                            if (isSelected)
-                              FusionIcon.icon(
-                                Icons.check,
-                                size: 14,
-                                color: ctx.colorScheme.iconWhite,
-                              ),
-                          ],
-                        ),
-                      ),
+                    );
+                  },
                   onChanged: (EQLProduct v) {
                     setState(() {
                       _selectedProduct = v;

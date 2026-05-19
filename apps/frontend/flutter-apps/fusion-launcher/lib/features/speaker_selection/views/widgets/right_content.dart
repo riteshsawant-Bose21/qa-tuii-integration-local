@@ -393,7 +393,7 @@ class _SpeakerCard extends StatelessWidget {
 
   String? _imageForSelectedColor({required SpeakerProduct product, required SpeakerColorOption selectedColor, required ProductQueryViewModel productsVm}) {
     final String selectedKey = selectedColor.name.toLowerCase();
-    return productsVm.getProductImage(product.productId, color: selectedKey);
+    return productsVm.getSpeakerImage(product.productId, color: selectedKey);
   }
 
   @override

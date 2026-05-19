@@ -930,7 +930,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         // Circuit icon - show actual speaker image if circuit has speakers
                         if (circuitSpeakers.isNotEmpty)
                           FusionImageAuto(
-                            path: serviceLocator<ProductQueryViewModel>().getProductImage(circuitSpeakers.first.productId),
+                            path: serviceLocator<ProductQueryViewModel>().getSpeakerImage(circuitSpeakers.first.productId),
                             width: 16,
                             height: 16,
                           )

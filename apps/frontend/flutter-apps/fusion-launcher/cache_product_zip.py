@@ -1,14 +1,20 @@
 """
 generate_product_cache_zip.py
 ─────────────────────────────
-Builds product_cache.zip preserving ORIGINAL image filenames.
+Builds product_cache.zip with images organized into category subfolders.
 
 ZIP layout produced:
     products.json
     assets/
-      DM8S_Right-Facing_1200x1022.jpeg   ← original name, NOT base64
-      DM8C_Flush_Group_1200x1022.jpeg
-      …
+      speakers/
+        DM8S_Right-Facing_1200x1022.jpeg
+      amplifiers/
+      controllers/
+      dsps/
+      accessories/
+      io_endpoints/
+      sources/
+      outputs/
 
 Usage (from Flutter project root):
     python generate_product_cache_zip.py --dry-run
@@ -17,7 +23,6 @@ Usage (from Flutter project root):
 
 import argparse
 import json
-import os
 import sys
 import urllib.parse
 import urllib.request
@@ -25,39 +30,31 @@ import zipfile
 from pathlib import Path
 
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
 def filename_from_url(url: str) -> str:
     path = urllib.parse.urlparse(url).path
     name = path.rstrip("/").rsplit("/", 1)[-1]
     return urllib.parse.unquote(name)
 
 
-def collect_image_urls(products_json: dict) -> list:
-    urls = []
-    seen = set()
-    for products in products_json.values():
-        if not isinstance(products, list):
-            continue
-        for product in products:
-            if not isinstance(product, dict):
-                continue
-            assets = product.get("assets") or product.get("images")
-            if not isinstance(assets, list):
-                continue
-            for group in assets:
-                if not isinstance(group, dict):
-                    continue
-                for url_list in group.values():
-                    if not isinstance(url_list, list):
-                        continue
-                    for url in url_list:
-                        url = url.strip() if isinstance(url, str) else ""
-                        if url.startswith("http") and url not in seen:
-                            seen.add(url)
-                            urls.append(url)
-    return urls
+def get_category_folder(category_key: str) -> str:
+    """Map API key to folder name — must match Dart's ProductCategory.folderName."""
+    mapping = {
+        "speaker": "speakers",
+        "amplifier": "amplifiers",
+        "controller": "controllers",
+        "dsp": "dsps",
+        "accessory": "accessories",
+        "io_endpoint": "io_endpoints",
+        "source": "sources",
+        "output": "outputs",
+    }
+    return mapping.get(category_key, category_key + "s")
 
 
 def build_filename_index(images_dir: Path) -> dict:
+    """Build a lowercase-name → Path index from a flat images directory."""
     index = {}
     if not images_dir.is_dir():
         return index
@@ -78,6 +75,8 @@ def download_file(url: str, dest: Path) -> bool:
         print(f"    download failed: {e}")
         return False
 
+
+# ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser()
@@ -101,34 +100,59 @@ def main():
     with open(json_path, encoding="utf-8") as f:
         products_json = json.load(f)
 
-    urls = collect_image_urls(products_json)
-    print(f"Image URLs in products.json: {len(urls)}")
-
+    # Build a flat filename index from the local images directory
     filename_index = build_filename_index(images_dir)
     print(f"Files in images/: {len(filename_index)}")
 
-    # Plan: url → (source_file, zip_entry_name)
-    # zip_entry_name = assets/<original_filename>  ← no hashing
+    # Plan: url → {zip_name, source, orig_name, status}
+    # zip_name = assets/<category_folder>/<original_filename>
     plan = []
     matched = missing = 0
+    seen_urls: set = set()
 
-    for url in urls:
-        orig_name = filename_from_url(url)
-        zip_name  = f"assets/{orig_name}"          # original name in ZIP
-        source    = filename_index.get(orig_name.lower())
+    for category_key, products in products_json.items():
+        folder = get_category_folder(category_key)
+        if not isinstance(products, list):
+            continue
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+            assets = product.get("assets") or product.get("images")
+            if not isinstance(assets, list):
+                continue
+            for group in assets:
+                if not isinstance(group, dict):
+                    continue
+                for url_list in group.values():
+                    if not isinstance(url_list, list):
+                        continue
+                    for url in url_list:
+                        url = url.strip() if isinstance(url, str) else ""
+                        if not url.startswith("http") or url in seen_urls:
+                            continue
+                        seen_urls.add(url)
+                        orig_name = filename_from_url(url)
+                        zip_name = f"assets/{folder}/{orig_name}"
+                        source = filename_index.get(orig_name.lower())
+                        if source:
+                            matched += 1
+                            status = "matched"
+                        else:
+                            missing += 1
+                            status = "MISSING"
+                        plan.append({
+                            "zip_name": zip_name,
+                            "source": source,
+                            "url": url,
+                            "orig_name": orig_name,
+                            "status": status,
+                        })
 
-        if source:
-            matched += 1
-            status = "matched"
-        else:
-            missing += 1
-            status = "MISSING"
+    print(f"Image URLs found : {len(plan)}")
+    print(f"Matched          : {matched}")
+    print(f"Missing          : {missing}")
 
-        plan.append({"zip_name": zip_name, "source": source,
-                     "url": url, "orig_name": orig_name, "status": status})
-
-    print(f"\nMatched : {matched}")
-    print(f"Missing : {missing}")
+    # ── dry run ────────────────────────────────────────────────────────────────
 
     if args.dry_run:
         print("\n─── Dry run ───────────────────────────────────────────")
@@ -138,7 +162,8 @@ def main():
         print("\nNothing written.")
         return
 
-    # Download missing
+    # ── download missing ───────────────────────────────────────────────────────
+
     tmp_downloads = []
     if missing > 0 and not args.no_download:
         print(f"\nDownloading {missing} missing image(s)…")
@@ -152,7 +177,8 @@ def main():
                     entry["status"] = "downloaded"
                     tmp_downloads.append(dest)
 
-    # Write ZIP
+    # ── write ZIP ──────────────────────────────────────────────────────────────
+
     output_path = Path(args.output).expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -173,12 +199,15 @@ def main():
             else:
                 print(f"  - SKIPPED {entry['orig_name']}")
 
+    # Cleanup temp downloads
     for f in tmp_downloads:
         f.unlink(missing_ok=True)
     tmp_dir = cache_dir / "_tmp_downloads"
     if tmp_dir.exists():
-        try: tmp_dir.rmdir()
-        except: pass
+        try:
+            tmp_dir.rmdir()
+        except Exception:
+            pass
 
     size_mb = output_path.stat().st_size / (1024 * 1024)
     print(f"\nDone! {output_path.name}  ({size_mb:.1f} MB)")

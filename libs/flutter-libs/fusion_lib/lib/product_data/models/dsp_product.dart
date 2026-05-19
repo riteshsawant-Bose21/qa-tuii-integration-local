@@ -15,14 +15,17 @@ class DspProduct {
   final dynamic certifications;
   final dynamic configurationSoftware;
   final dynamic currentDraw;
+  final String? dataSheetLink;
   final dynamic dimensions;
   final dynamic dspArchitecture;
   final dynamic firmware;
+  final String? frontPanelImage;
   final int? maxFusionControllers;
   final dynamic netWeight;
   final ProductPortData? numberOfInputsAndOutputs;
   final dynamic powerOutput;
   final dynamic productCodes;
+  final String? rearPanelImage;
   final dynamic safeOperatingTemperature;
   final dynamic supportedBoseProfessionalDanteEndpoints;
   final dynamic thermalOutput;
@@ -37,14 +40,17 @@ class DspProduct {
     this.certifications,
     this.configurationSoftware,
     this.currentDraw,
+    this.dataSheetLink,
     this.dimensions,
     this.dspArchitecture,
     this.firmware,
+    this.frontPanelImage,
     this.maxFusionControllers,
     this.netWeight,
     this.numberOfInputsAndOutputs,
     this.powerOutput,
     this.productCodes,
+    this.rearPanelImage,
     this.safeOperatingTemperature,
     this.supportedBoseProfessionalDanteEndpoints,
     this.thermalOutput,
@@ -64,14 +70,17 @@ class DspProduct {
       certifications: specs['certifications'],
       configurationSoftware: specs['configuration_software'],
       currentDraw: specs['current_draw'],
+      dataSheetLink: specs['data_sheet_link'] as String?,
       dimensions: specs['dimensions'],
       dspArchitecture: specs['dsp_architecture'],
       firmware: specs['firmware'],
+      frontPanelImage: specs['front_panel_image'] as String?,
       maxFusionControllers: (specs['max_fusion_controllers'] as num?)?.toInt(),
       netWeight: specs['net_weight'],
       numberOfInputsAndOutputs: portDataJson is Map<String, dynamic> ? ProductPortData.fromMap(portDataJson) : null,
       powerOutput: specs['power_output'],
       productCodes: specs['product_codes'],
+      rearPanelImage: specs['rear_panel_image'] as String?,
       safeOperatingTemperature: specs['safe_operating_temperature'],
       supportedBoseProfessionalDanteEndpoints: specs['supported_bose_professional_dante_endpoints'],
       thermalOutput: specs['thermal_output'],
@@ -89,14 +98,17 @@ class DspProduct {
       if (certifications != null) 'certifications': certifications,
       if (configurationSoftware != null) 'configuration_software': configurationSoftware,
       if (currentDraw != null) 'current_draw': currentDraw,
+      if (dataSheetLink != null) 'data_sheet_link': dataSheetLink,
       if (dimensions != null) 'dimensions': dimensions,
       if (dspArchitecture != null) 'dsp_architecture': dspArchitecture,
       if (firmware != null) 'firmware': firmware,
+      if (frontPanelImage != null) 'front_panel_image': frontPanelImage,
       if (maxFusionControllers != null) 'max_fusion_controllers': maxFusionControllers,
       if (netWeight != null) 'net_weight': netWeight,
       if (numberOfInputsAndOutputs != null) 'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toMap(),
       if (powerOutput != null) 'power_output': powerOutput,
       if (productCodes != null) 'product_codes': productCodes,
+      if (rearPanelImage != null) 'rear_panel_image': rearPanelImage,
       if (safeOperatingTemperature != null) 'safe_operating_temperature': safeOperatingTemperature,
       if (supportedBoseProfessionalDanteEndpoints != null) 'supported_bose_professional_dante_endpoints': supportedBoseProfessionalDanteEndpoints,
       if (thermalOutput != null) 'thermal_output': thermalOutput,
