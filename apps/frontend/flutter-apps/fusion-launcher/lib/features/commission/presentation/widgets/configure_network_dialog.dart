@@ -293,13 +293,22 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   // ---------------------------------------------------------------------------
 
   void _startMDNSSearch(BuildContext context) {
-    context.read<MdnsScanViewModel>().startScan();
+    final MdnsScanViewModel vm = context.read<MdnsScanViewModel>();
+    // Guard against double-tap / rebuild-driven re-entry. If a scan is already
+    // in flight (Searching or actively streaming devices), don't restart it —
+    // restarting tears down the in-flight stream and races the singleton
+    // service, which manifests as the "instant retry screen" bug.
+    final DeviceScanState current = vm.state;
+    if (current is DeviceScanSearching) return;
+    if (current is DeviceScanFound && current.isScanning) return;
+    vm.startScan();
   }
 
   void _goBackToMDNS(BuildContext context) {
-    context.read<MdnsScanViewModel>().stopScan();
+    final MdnsScanViewModel vm = context.read<MdnsScanViewModel>();
+    vm.stopScan();
     setState(() => _state = NetworkConfigState.mdnsSearching);
-    context.read<MdnsScanViewModel>().startScan();
+    vm.startScan();
   }
 
   // ---------------------------------------------------------------------------
