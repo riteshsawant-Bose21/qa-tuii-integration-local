@@ -39,9 +39,9 @@ class ProductCatalog {
       amplifiers: (json['amplifier'] as List<dynamic>?)?.map((e) => AmplifierProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       controllers: (json['controller'] as List<dynamic>?)?.map((e) => ControllerProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       dsps: (json['dsp'] as List<dynamic>?)?.map((e) => DspProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      accessories: (json['accessory'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       ioEndpoints: (json['io_endpoint'] as List<dynamic>?)?.map((e) => IoEndpointProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      accessories: (json['additional_accessories'] as List<dynamic>?)?.map((e) => AccessoryProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      sources: (json['source'] as List<dynamic>?)?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      sources: ((json['source'] as List<dynamic>?))?.map((e) => SourceProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       outputs: (json['output'] as List<dynamic>?)?.map((e) => OutputProduct.fromJson(e as Map<String, dynamic>)).toList() ?? [],
     );
   }
@@ -52,9 +52,12 @@ class ProductCatalog {
     'amplifier': amplifiers.map((e) => e.toJson()).toList(),
     'controller': controllers.map((e) => e.toJson()).toList(),
     'dsp': dsps.map((e) => e.toJson()).toList(),
+    'accessory': accessories.map((e) => e.toJson()).toList(),
     'io_endpoint': ioEndpoints.map((e) => e.toJson()).toList(),
-    'additional_accessories': accessories.map((e) => e.toJson()).toList(),
     'source': sources.map((e) => e.toJson()).toList(),
     'output': outputs.map((e) => e.toJson()).toList(),
   };
+
+  @override
+  String toString() => 'ProductCatalog(version: $version)';
 }

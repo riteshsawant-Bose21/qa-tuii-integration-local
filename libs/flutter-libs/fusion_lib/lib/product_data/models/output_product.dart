@@ -4,7 +4,7 @@ import '../product_data.dart';
 
 enum OutputConnectionType {
   analogOutput("Analog Output"),
-  aes67output("AES67 Output"),
+  aes67Output("AES67 Output"),
   usbOutput("USB Output"),
   hdmi("HDMI");
 
@@ -12,28 +12,41 @@ enum OutputConnectionType {
 
   final String displayName;
 
+  String get apiName {
+    switch (this) {
+      case OutputConnectionType.usbOutput:
+        return 'usb';
+      default:
+        return name;
+    }
+  }
+
   static OutputConnectionType fromString(String? value) {
     if (value == null || value.isEmpty) return OutputConnectionType.analogOutput;
-    return OutputConnectionType.values.firstWhereOrNull((OutputConnectionType e) => e.name.toLowerCase() == value.toLowerCase()) ??
-        OutputConnectionType.analogOutput;
+    final normalized = switch (value.toLowerCase()) {
+      'usb' => 'usboutput',
+      'aes67output' => 'aes67output',
+      _ => value.toLowerCase(),
+    };
+    return OutputConnectionType.values.firstWhereOrNull((OutputConnectionType e) => e.name.toLowerCase() == normalized) ?? OutputConnectionType.analogOutput;
   }
 }
 
 class OutputProduct {
-  final int id;
+  final int outputId;
   final String name;
   final ProductAsset assets;
   final OutputConnectionType primaryConnection;
   final List<OutputConnectionType> supportedConnections;
-  final bool isFusionCompatible;
+  final dynamic pagingType;
 
   const OutputProduct({
-    required this.id,
+    required this.outputId,
     required this.name,
     required this.assets,
     required this.primaryConnection,
     required this.supportedConnections,
-    this.isFusionCompatible = true, // Mark it default to TRUE.
+    this.pagingType,
   });
 
   factory OutputProduct.fromJson(Map<String, dynamic> json) {
@@ -42,23 +55,22 @@ class OutputProduct {
     final supportedConnections = (specs['supported_connections'] as List<dynamic>?)?.map((e) => OutputConnectionType.fromString(e as String?)).toList() ?? [];
 
     return OutputProduct(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      outputId: (json['output_id'] as num?)?.toInt() ?? 0,
       name: json['name'] as String? ?? '',
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'output'),
       primaryConnection: OutputConnectionType.fromString(specs['primary_connection'] as String?),
       supportedConnections: supportedConnections,
-      isFusionCompatible: true, // Default to TRUE.
+      pagingType: specs['paging_type'],
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    'output_id': outputId,
     'name': name,
     'assets': assets.toAssetList(),
     'specifications': {
-      'primary_connection': primaryConnection.name,
-      'supported_connections': supportedConnections.map((e) => e.name).toList(),
+      'supported_connections': supportedConnections.map((e) => e.apiName).toList(),
+      'paging_type': pagingType,
     },
-    'is_fusion_compatible': isFusionCompatible,
   };
 }

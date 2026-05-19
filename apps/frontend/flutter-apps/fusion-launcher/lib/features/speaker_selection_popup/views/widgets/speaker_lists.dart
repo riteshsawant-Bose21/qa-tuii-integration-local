@@ -856,7 +856,7 @@ class SpeakerImageContainer extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: FusionImageAuto(
-        path: context.read<ProductQueryViewModel>().getProductImage(productId),
+        path: context.read<ProductQueryViewModel>().getSpeakerImage(productId),
         fit: BoxFit.contain,
         errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
           return Icon(
@@ -914,7 +914,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String? cachedImagePath = context.read<ProductQueryViewModel>().getProductImage(widget.product.productId);
+          final String? cachedImagePath = context.read<ProductQueryViewModel>().getSpeakerImage(widget.product.productId);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColor == speakerColor) {

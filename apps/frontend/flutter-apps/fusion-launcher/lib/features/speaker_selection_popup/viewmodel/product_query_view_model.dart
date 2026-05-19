@@ -128,8 +128,17 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
-  String? getProductImage(int? productId, {String? color}) {
-    final ProductImageCache? productCache = productId != null ? _productsApi.imageFor(productId: productId) : null;
+  String? getSpeakerImage(int? productId, {String? color}) => _getProductImage(ProductCategory.speaker, productId?.toString(), color: color);
+  String? getAmplifierImage(int? productId, {String? color}) => _getProductImage(ProductCategory.amplifier, productId?.toString(), color: color);
+  String? getIoEndpointImage(int? productId, {String? color}) => _getProductImage(ProductCategory.ioEndpoint, productId?.toString(), color: color);
+  String? getDspImage(int? productId, {String? color}) => _getProductImage(ProductCategory.dsp, productId?.toString(), color: color);
+  String? getControllerImage(int? productId, {String? color}) => _getProductImage(ProductCategory.controller, productId?.toString(), color: color);
+  String? getAccessoryImage(int? productId, {String? color}) => _getProductImage(ProductCategory.accessory, productId?.toString(), color: color);
+  String? getSourceImage(String? sourceId, {String? color}) => _getProductImage(ProductCategory.source, sourceId, color: color);
+  String? getOutputImage(int? productId, {String? color}) => _getProductImage(ProductCategory.output, productId?.toString(), color: color);
+
+  String? _getProductImage(ProductCategory category, String? entityId, {String? color}) {
+    final ProductImageCache? productCache = entityId != null ? _productsApi.imageForEntity(category: category, entityId: entityId) : null;
     if (color == null) return productCache?.firstPath;
     if (color == 'black') return productCache?.black.firstOrNull;
     if (color == 'white') return productCache?.white.firstOrNull;

@@ -26,9 +26,12 @@ class Aes67PortData {
   }
 
   factory Aes67PortData.fromMap(Map<String, dynamic> map) {
+    final maxInputs = DeserializationUtil.intDeserializer.deserialize(map['max_inputs']);
+    final maxOutputs = DeserializationUtil.intDeserializer.deserialize(map['max_outputs']);
+
     return Aes67PortData(
-      maxInputs: DeserializationUtil.intDeserializer.deserialize(map['max_inputs']),
-      maxOutputs: DeserializationUtil.intDeserializer.deserialize(map['max_outputs']),
+      maxInputs: maxInputs ?? DeserializationUtil.intDeserializer.deserialize(map['inputs']),
+      maxOutputs: maxOutputs ?? DeserializationUtil.intDeserializer.deserialize(map['outputs']),
     );
   }
 

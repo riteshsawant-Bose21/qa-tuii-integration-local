@@ -241,7 +241,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
   /// Build individual circuit card to avoid recursion
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
-    final String image = serviceLocator<ProductQueryViewModel>().getProductImage(speakersList.firstOrNull?.productId) ?? "";
+    final String image = serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakersList.firstOrNull?.productId) ?? "";
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
