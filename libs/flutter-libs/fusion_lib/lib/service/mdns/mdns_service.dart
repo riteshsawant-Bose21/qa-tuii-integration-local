@@ -1,5 +1,6 @@
 // mdns_service.dart
 import 'dart:async';
+import 'dart:io' show InternetAddress, InternetAddressType, NetworkInterface, Platform, RawDatagramSocket;
 import 'package:multicast_dns/multicast_dns.dart';
 
 import '../../fusion_lib.dart';
@@ -24,13 +25,34 @@ class MdnsService {
     if (_running) return;
     _running = true;
 
-    final client = MDnsClient();
+    final client = MDnsClient(
+      rawDatagramSocketFactory:
+          (
+            dynamic host,
+            int port, {
+            bool reuseAddress = true,
+            bool reusePort = true,
+            int ttl = 1,
+          }) {
+            // Windows does not support SO_REUSEPORT; force it off there.
+            return RawDatagramSocket.bind(
+              host,
+              port,
+              reuseAddress: reuseAddress,
+              reusePort: Platform.isWindows ? false : reusePort,
+              ttl: ttl,
+            );
+          },
+    );
     _client = client;
 
     final seen = <String, MdnsDevice>{};
 
     try {
-      await client.start();
+      await client.start(
+        listenAddress: InternetAddress.anyIPv4,
+        interfacesFactory: _interfacesFactory,
+      );
 
       final ptrQuery = ResourceRecordQuery.serverPointer(serviceType);
 
@@ -144,5 +166,36 @@ class MdnsService {
     }
 
     return result;
+  }
+
+  /// Returns network interfaces suitable for IPv4 multicast.
+  ///
+  /// On Windows, [NetworkInterface.list] returns many virtual adapters
+  /// (Hyper-V, WSL, VPN, Loopback Pseudo-Interface, vEthernet, Bluetooth PAN,
+  /// etc.) that don't support `IP_ADD_MEMBERSHIP`; trying to `joinMulticast`
+  /// on them throws `WSAENOPROTOOPT (errno 10042)` and aborts the whole
+  /// `MDnsClient.start()`. We filter those out here.
+  static Future<Iterable<NetworkInterface>> _interfacesFactory(
+    InternetAddressType type,
+  ) async {
+    final interfaces = await NetworkInterface.list(
+      includeLoopback: false,
+      includeLinkLocal: false,
+      type: type,
+    );
+
+    if (!Platform.isWindows) return interfaces;
+
+    final blocked = RegExp(
+      r'(vethernet|hyper-?v|vmware|virtualbox|vbox|wsl|loopback|bluetooth|tap|tunnel|isatap|teredo|wan miniport)',
+      caseSensitive: false,
+    );
+
+    return interfaces.where((i) {
+      if (blocked.hasMatch(i.name)) return false;
+      return i.addresses.any(
+        (a) => a.type == InternetAddressType.IPv4 && !a.isLinkLocal,
+      );
+    });
   }
 }
