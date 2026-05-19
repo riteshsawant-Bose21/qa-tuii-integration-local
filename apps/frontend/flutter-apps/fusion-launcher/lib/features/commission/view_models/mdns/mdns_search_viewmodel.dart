@@ -23,6 +23,7 @@ class MdnsScanViewModel extends Cubit<DeviceScanState> {
   final List<MdnsDevice> _discoveredDevices = <MdnsDevice>[];
   StreamSubscription<MdnsDevice>? _scanSubscription;
   Timer? _scanTimer;
+  int _scanGeneration = 0;
 
   MdnsScanViewModel(
     this._mdnsService, {
@@ -37,18 +38,19 @@ class MdnsScanViewModel extends Cubit<DeviceScanState> {
   void startScan() {
     _cancelScan();
     _discoveredDevices.clear();
+    final int generation = ++_scanGeneration;
     _safeEmit(const DeviceScanSearching());
 
     try {
       _scanSubscription = _mdnsService.startDiscovery().listen(
         _onDeviceFound,
-        onDone: _onStreamDone,
-        onError: _onStreamError,
+        onDone: () => _onStreamDone(generation),
+        onError: (Object error, StackTrace stackTrace) => _onStreamError(generation, error, stackTrace),
         cancelOnError: false,
       );
 
       // Hard-stop after scanDuration regardless of stream state.
-      _scanTimer = Timer(scanDuration, _onScanDurationElapsed);
+      _scanTimer = Timer(scanDuration, () => _onScanDurationElapsed(generation));
     } catch (e, stackTrace) {
       debugPrint('MdnsScanViewModel: Failed to start scan — $e\n$stackTrace');
       _safeEmit(DeviceScanError(e.toString()));
@@ -88,14 +90,38 @@ class MdnsScanViewModel extends Cubit<DeviceScanState> {
     );
   }
 
-  void _onStreamDone() {
-    // The mDNS stream completed on its own (before the 30-s timer).
-    _scanTimer?.cancel();
-    _scanTimer = null;
-    _emitFinalState();
+  void _onStreamDone(int generation) {
+    // Ignore callbacks from a stream that was superseded by a newer scan.
+    if (generation != _scanGeneration) return;
+
+    // If the underlying mDNS stream completes BEFORE the scan-duration timer
+    // fires it usually means one of:
+    //   • The service rejected the start (e.g. shared singleton was still
+    //     tearing down).
+    //   • A platform / permission issue prevented discovery.
+    //   • Discovery genuinely finished with whatever devices it found.
+    //
+    // If we already have devices, treat the stream-done as a successful early
+    // completion. Otherwise keep the UI in `DeviceScanSearching` and let the
+    // hard-stop timer drive the final transition — this prevents the
+    // "instant retry screen" bug where an early empty completion flipped the
+    // UI before the user got a chance to discover anything.
+    if (_discoveredDevices.isNotEmpty) {
+      _scanTimer?.cancel();
+      _scanTimer = null;
+      _safeEmit(
+        DeviceScanFound(
+          List<MdnsDevice>.from(_discoveredDevices),
+          isScanning: false,
+        ),
+      );
+    }
+    // else: do nothing — the timer will fire DeviceScanTimeout when the
+    // configured scanDuration elapses.
   }
 
-  void _onStreamError(dynamic error, StackTrace stackTrace) {
+  void _onStreamError(int generation, dynamic error, StackTrace stackTrace) {
+    if (generation != _scanGeneration) return;
     debugPrint('MdnsScanViewModel: Discovery error — $error\n$stackTrace');
     // Surface partial results if we have any; otherwise emit error.
     if (_discoveredDevices.isNotEmpty) {
@@ -116,7 +142,8 @@ class MdnsScanViewModel extends Cubit<DeviceScanState> {
   // Timer callback
   // ---------------------------------------------------------------------------
 
-  void _onScanDurationElapsed() {
+  void _onScanDurationElapsed(int generation) {
+    if (generation != _scanGeneration) return;
     _scanSubscription?.cancel();
     _scanSubscription = null;
     _mdnsService.stopDiscovery();
@@ -142,6 +169,8 @@ class MdnsScanViewModel extends Cubit<DeviceScanState> {
   }
 
   void _cancelScan() {
+    // Bump generation so any late callbacks from the previous run are ignored.
+    _scanGeneration++;
     _scanTimer?.cancel();
     _scanTimer = null;
     _scanSubscription?.cancel();
