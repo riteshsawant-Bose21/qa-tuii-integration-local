@@ -52,6 +52,10 @@ class _SourceSetSectionState extends State<SourceSetSection> {
               menuPadding: EdgeInsets.zero,
 
               itemBuilder: (BuildContext context) {
+                /// Pre-fill with a unique default name
+                if (_sourceSetNameController.text.isEmpty) {
+                  _sourceSetNameController.text = _sourceSetsViewmodel.generateUniqueSourceSetName();
+                }
                 return <PopupMenuItem<dynamic>>[
                   PopupMenuItem<dynamic>(
                     enabled: false,
@@ -67,6 +71,7 @@ class _SourceSetSectionState extends State<SourceSetSection> {
                               sourceSetNameController: _sourceSetNameController,
                               availableSources: sourcesWithoutSourceSet,
                               selectedSources: _selectedSources,
+                              isNameExists: (String name) => _sourceSetsViewmodel.isSourceSetNameExists(name: name),
                               onAddSourceSet: () {
                                 /// Pass popup context so only the menu closes.
                                 _addSourceSet(context);
@@ -274,6 +279,7 @@ class _SourceSetCreationWidget extends StatefulWidget {
   final VoidCallback onAddSourceSet;
   final VoidCallback onCancel;
   final Function(Source, bool) onSourceChanged;
+  final bool Function(String name) isNameExists;
 
   const _SourceSetCreationWidget({
     required this.sourceSetNameController,
@@ -282,6 +288,7 @@ class _SourceSetCreationWidget extends StatefulWidget {
     required this.onAddSourceSet,
     required this.onCancel,
     required this.onSourceChanged,
+    required this.isNameExists,
   });
 
   @override
@@ -341,6 +348,17 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 setState(() {});
               },
             ),
+            if (widget.sourceSetNameController.text.trim().isNotEmpty && widget.isNameExists(widget.sourceSetNameController.text.trim()))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: FusionAppText(
+                  text: 'Source set name already exists',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
 
             /// Source Selection Label
@@ -613,18 +631,26 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: FusionButton(
-                    width: double.infinity,
-                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontSize: 10,
-                    ),
-
-                    label: "Create",
-                    isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
-                    onTap: () {
-                      widget.onAddSourceSet.call();
+                  child: Builder(
+                    builder: (BuildContext context) {
+                      final bool isButtonActive =
+                          widget.sourceSetNameController.text.trim().isNotEmpty &&
+                          widget.selectedSources.length >= 2 &&
+                          !widget.isNameExists(widget.sourceSetNameController.text.trim());
+                      return FusionButton(
+                        width: double.infinity,
+                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 10,
+                          color: isButtonActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
+                        ),
+                        label: "Create",
+                        isActive: isButtonActive,
+                        onTap: () {
+                          widget.onAddSourceSet.call();
+                        },
+                        accessLabel: 'create',
+                      );
                     },
-                    accessLabel: 'create',
                   ),
                 ),
               ],

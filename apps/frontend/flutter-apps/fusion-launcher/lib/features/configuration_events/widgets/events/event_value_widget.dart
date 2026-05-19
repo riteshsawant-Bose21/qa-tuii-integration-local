@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -360,6 +361,9 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                       initialValue: duration,
                       // enabled: isEnabled,
                       keyboardType: TextInputType.number,
+                      inputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
                       decoration: InputDecoration(
                         hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
                         counterText: '',

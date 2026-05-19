@@ -49,6 +49,14 @@ extension SourceSetService on ProjectService {
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
     if (sourcesInSet.isEmpty || sourceSetId.length == 1) {
       removeSourceSet(sourceSetId);
+    } else {
+      // Validate if source set should remain in linked state after updating sources
+      final sourceSet = getSourceSetById(sourceSetId);
+      if (sourceSet != null && sourceSet.isLinked) {
+        if (!canLinkSourceSet(sourceSetId)) {
+          sourceSets.add(sourceSetId, sourceSet.copyWith(isLinked: false));
+        }
+      }
     }
   }
 
@@ -210,13 +218,13 @@ extension SourceSetService on ProjectService {
 
     List<Source> sourcesInSet = getSourcesInSourceSet(sourceSetId);
     if (sourcesInSet.length >= 2) {
-      final processingBlocks = getProcessingBlockFor(parentId: sourcesInSet.first.id);
+      final referenceBlocks = getProcessingBlockFor(parentId: sourcesInSet.first.id);
       for (var source in sourcesInSet) {
         if (source.id == sourcesInSet.first.id) continue;
-        //copy processing block properties form first source
-        final sourceBlocks = getProcessingBlockFor(parentId: sourcesInSet.first.id);
+        //copy processing block properties from first source to other sources
+        final sourceBlocks = getProcessingBlockFor(parentId: source.id);
         for (var i = 0; i < sourceBlocks.length; i++) {
-          final updatedBlock = sourceBlocks[i].copyProperties(model: processingBlocks[i]);
+          final updatedBlock = sourceBlocks[i].copyProperties(model: referenceBlocks[i]);
           updateProcessingBlock(updatedBlock);
         }
       }

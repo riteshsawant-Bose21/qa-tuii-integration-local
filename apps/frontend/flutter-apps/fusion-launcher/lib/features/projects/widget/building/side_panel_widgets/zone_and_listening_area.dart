@@ -584,6 +584,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   save: (String value) {
                     final Zone updated = zone.copyWith(name: value.trim());
                     serviceLocator<ProjectViewModel>().updateZone(zone: updated);
+                    return true;
                   },
                   style: context.textTheme.l1Regular,
                   value: zone.name,
@@ -642,8 +643,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               serviceLocator<ProjectViewModel>().updateSubZone(subZone: updated);
             } else if (trimmedValue.isEmpty) {
               FusionToast.error(context, message: 'Subzone name cannot be empty');
-              return;
+              return false;
             }
+            return true;
           },
           hintText: 'Subzone Name',
         ),
@@ -768,6 +770,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             );
                           }
                         }
+                        return true;
                       },
                       hintText: 'Enter source name',
                     ),
