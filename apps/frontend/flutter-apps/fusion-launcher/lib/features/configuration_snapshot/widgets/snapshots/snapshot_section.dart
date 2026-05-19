@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
@@ -188,7 +189,19 @@ class _SnapshotSetState extends State<SnapshotSet> {
         }
       },
       onRenameSave: (String value, SnapshotsModel newSnapshot) {
+        final bool isDuplicate = Helper.isNameExists<SnapshotsModel>(
+          items: snapShotList,
+          newName: value,
+          getName: (SnapshotsModel s) => s.name,
+          excludeId: newSnapshot.id,
+          getId: (SnapshotsModel s) => s.id,
+        );
+        if (isDuplicate) {
+          FusionToast.error(context, message: "Snapshot name already exists");
+          return false;
+        }
         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
+        return true;
       },
     );
   }

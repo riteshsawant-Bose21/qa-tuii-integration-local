@@ -24,7 +24,7 @@ class SettingsViewModel extends Cubit<SettingsState> {
   // ─── Data Loading ──────────────────────────────────────────────────────────
 
   /// Loads settings data for the specified controller.
-  void loadData(String controllerId, {bool isProController = false}) {
+  void loadData(String controllerId, {bool isProController = false, bool isVirtualController = false}) {
     emit(const SettingsLoading());
 
     try {
@@ -39,6 +39,7 @@ class SettingsViewModel extends Cubit<SettingsState> {
           controllerId: controllerId,
           zones: zones,
           isPro: isProController,
+          isVirtual: isVirtualController,
         ),
       );
     } catch (e) {

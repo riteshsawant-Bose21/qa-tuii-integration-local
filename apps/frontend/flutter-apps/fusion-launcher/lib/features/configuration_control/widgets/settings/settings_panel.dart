@@ -39,14 +39,15 @@ class SettingsPanel extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  /// Controller Settings section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _buildCard(
-                      context,
-                      child: const ControllerSettingsSection(),
+                  /// Controller Settings section — hidden for Virtual Control Pal Pro / LT
+                  if (!state.isVirtual)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildCard(
+                        context,
+                        child: const ControllerSettingsSection(),
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 24),
                 ],

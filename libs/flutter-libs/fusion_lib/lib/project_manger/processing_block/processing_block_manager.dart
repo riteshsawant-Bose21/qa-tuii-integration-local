@@ -79,4 +79,12 @@ extension ProcessingBlockManager on ProjectManager {
     final ProcessingBlockModel? processingBlock = projectService!.getUserFacingGainBlockForParent(zoneId);
     return processingBlock;
   }
+
+  /// Get the parent ID of a processing block
+  String? getProcessingBlockParentId(String processingBlockId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.relationships.getParent(RelationshipType.processingBlock, processingBlockId);
+  }
 }
