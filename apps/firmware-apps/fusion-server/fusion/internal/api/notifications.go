@@ -79,7 +79,7 @@ type NotifyMessage struct {
 	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
-	MeterData                 *MeterDataMessage
+	MeterData                 *model.MeterDataMessage
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {

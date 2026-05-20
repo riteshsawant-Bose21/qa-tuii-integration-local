@@ -82,6 +82,15 @@ class ConfigControlLoaded extends ConfigurationControlState {
     return sku.contains('pro') || name.contains('pro');
   }();
 
+  /// Whether the selected controller is a Virtual type (SKU or name contains "virtual").
+  late final bool isVirtualController = () {
+    final FusionController? c = selectedController;
+    if (c == null) return false;
+    final String sku = c.sku.toLowerCase();
+    final String name = c.name.toLowerCase();
+    return sku.contains('virtual') || name.contains('virtual');
+  }();
+
   ConfigControlLoaded copyWith({
     List<FusionController>? controllers,
     Object? selectedControllerId = _kClear,

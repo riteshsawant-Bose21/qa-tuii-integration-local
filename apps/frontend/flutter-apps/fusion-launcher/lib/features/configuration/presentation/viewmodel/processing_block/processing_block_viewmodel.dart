@@ -87,7 +87,24 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateProcessingBlock(processingBlock);
+
+      // Check if this processing block belongs to a source in a linked source set
+      final String? parentId = projectManager.getProcessingBlockParentId(processingBlock.id);
+
+      if (parentId != null) {
+        final SourceSet? sourceSet = projectManager.getSourceSetForSource(parentId);
+        if (sourceSet != null && sourceSet.isLinked) {
+          projectManager.updateProcessingBlockInSource(
+            sourceId: parentId,
+            processingBlock: processingBlock,
+          );
+        } else {
+          projectManager.updateProcessingBlock(processingBlock);
+        }
+      } else {
+        projectManager.updateProcessingBlock(processingBlock);
+      }
+
       if (autoSave) {
         saveProject();
       }
@@ -110,7 +127,23 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
         throwError("Processing block with id $blockId not found");
       } else {
         final ProcessingBlockModel updatedBlock = processingBlock.updateProperty(property);
-        projectManager.updateProcessingBlock(updatedBlock);
+
+        // Check if this processing block belongs to a source in a linked source set
+        final String? parentId = projectManager.getProcessingBlockParentId(blockId);
+
+        if (parentId != null) {
+          final SourceSet? sourceSet = projectManager.getSourceSetForSource(parentId);
+          if (sourceSet != null && sourceSet.isLinked) {
+            projectManager.updateProcessingBlockInSource(
+              sourceId: parentId,
+              processingBlock: updatedBlock,
+            );
+          } else {
+            projectManager.updateProcessingBlock(updatedBlock);
+          }
+        } else {
+          projectManager.updateProcessingBlock(updatedBlock);
+        }
       }
       if (autoSave) {
         saveProject();

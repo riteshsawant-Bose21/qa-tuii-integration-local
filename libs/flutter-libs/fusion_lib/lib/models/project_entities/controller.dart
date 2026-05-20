@@ -38,7 +38,7 @@ class FusionController extends HardwareComponent {
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
     ControllerDisplayConfig? displayConfig,
-    bool showUpcoming = false,
+    bool showUpcoming = true,
     String scheduleDisplayMode = 'all',
   }) : sku = sku ?? name,
        displayConfig = displayConfig ?? const ControllerDisplayConfig(),

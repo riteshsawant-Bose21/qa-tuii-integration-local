@@ -37,25 +37,29 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
 
       // Compute snapshots per page and used IDs
       final Map<String, List<SnapshotsModel>> snapshotsPerPage = _computeSnapshotsPerPage(snapshotsInSceneSets);
-      final Set<String> usedSnapshotIds = _computeUsedSnapshotIds(snapshotsPerPage);
-
       // Load persisted pages from relationships
       final List<ControllerPageModel> controllerPages = _projectViewModel.getControllerPages(controllerId);
       final Set<String> validSceneSetIds = sceneSets.map((SceneSetModel s) => s.id).toSet();
 
       final Set<String> selectedSceneSetIds = <String>{};
       final List<SnapshotPageModel> snapshotPages = <SnapshotPageModel>[];
+      final List<ControllerPageModel> orderedPageEntries = <ControllerPageModel>[];
 
       for (final ControllerPageModel page in controllerPages) {
         if (page.type == ControllerPageType.sceneSet && validSceneSetIds.contains(page.id)) {
           selectedSceneSetIds.add(page.id);
+          orderedPageEntries.add(page);
         } else if (page.type == ControllerPageType.snapshotPage) {
           final List<String> snapshotIds = _projectViewModel.getSnapshotIdsForPage(page.id).toList();
           snapshotPages.add(SnapshotPageModel(id: page.id, name: page.name, snapshotIds: snapshotIds));
+          orderedPageEntries.add(page);
         }
       }
 
       final String? selectedSceneSetId = sceneSets.isNotEmpty ? sceneSets.first.id : null;
+
+      // Compute used IDs including user-created snapshot pages
+      final Set<String> finalUsedIds = _computeUsedSnapshotIdsFromPages(snapshotPages, snapshotsPerPage);
 
       emit(
         SnapshotLoaded(
@@ -63,10 +67,11 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
           snapshotsInSceneSets: snapshotsInSceneSets,
           allSnapshots: allSnapshots,
           snapshotsPerPage: snapshotsPerPage,
-          usedSnapshotIds: usedSnapshotIds,
+          usedSnapshotIds: finalUsedIds,
           selectedSceneSetIds: selectedSceneSetIds,
           selectedSceneSetId: selectedSceneSetId,
           snapshotPages: snapshotPages,
+          orderedPageEntries: orderedPageEntries,
           controllerId: controllerId,
         ),
       );
@@ -100,12 +105,21 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       updated.add(sceneSetId);
     }
 
+    // Update ordered page entries
+    final List<ControllerPageModel> updatedOrder = List<ControllerPageModel>.from(loaded.orderedPageEntries);
+    if (wasChecked) {
+      updatedOrder.removeWhere((ControllerPageModel p) => p.id == sceneSetId);
+    } else {
+      final String sceneSetName =
+          loaded.sceneSets.firstWhere((SceneSetModel s) => s.id == sceneSetId, orElse: () => SceneSetModel(id: sceneSetId, name: sceneSetId)).name;
+      updatedOrder.add(ControllerPageModel(id: sceneSetId, type: ControllerPageType.sceneSet, name: sceneSetName));
+    }
+
     // Persist
     if (loaded.controllerId != null) {
       _persistControllerPages(
         controllerId: loaded.controllerId!,
-        selectedSceneSetIds: updated,
-        snapshotPages: loaded.snapshotPages,
+        orderedPageEntries: updatedOrder,
       );
     }
 
@@ -114,6 +128,7 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       emit(
         loaded.copyWith(
           selectedSceneSetIds: updated,
+          orderedPageEntries: updatedOrder,
           selectedSceneSetId: sceneSetId,
           selectedSnapshotPageId: null,
         ),
@@ -124,6 +139,7 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
       emit(
         loaded.copyWith(
           selectedSceneSetIds: updated,
+          orderedPageEntries: updatedOrder,
           selectedSceneSetId: wasActive ? null : loaded.selectedSceneSetId,
         ),
       );
@@ -169,19 +185,28 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
     );
 
     final List<SnapshotPageModel> updatedPages = <SnapshotPageModel>[...loaded.snapshotPages, newPage];
+    final List<ControllerPageModel> updatedOrder = <ControllerPageModel>[
+      ...loaded.orderedPageEntries,
+      ControllerPageModel(id: newPage.id, type: ControllerPageType.snapshotPage, name: pageName),
+    ];
 
     // Persist
     if (loaded.controllerId != null) {
       _persistControllerPages(
         controllerId: loaded.controllerId!,
-        selectedSceneSetIds: loaded.selectedSceneSetIds,
-        snapshotPages: updatedPages,
+        orderedPageEntries: updatedOrder,
+        snapshotPagesOverride: updatedPages,
       );
     }
+
+    // Recompute used snapshot IDs including new page
+    final Set<String> updatedUsedIds = _computeUsedSnapshotIdsFromPages(updatedPages, loaded.snapshotsPerPage);
 
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
+        usedSnapshotIds: updatedUsedIds,
+        orderedPageEntries: updatedOrder,
         selectedSnapshotPageId: newPage.id,
         selectedSceneSetId: null,
       ),
@@ -194,19 +219,25 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
     if (loaded == null) return;
 
     final List<SnapshotPageModel> updatedPages = loaded.snapshotPages.where((SnapshotPageModel p) => p.id != pageId).toList();
+    final List<ControllerPageModel> updatedOrder = loaded.orderedPageEntries.where((ControllerPageModel p) => p.id != pageId).toList();
 
     // Persist
     if (loaded.controllerId != null) {
       _persistControllerPages(
         controllerId: loaded.controllerId!,
-        selectedSceneSetIds: loaded.selectedSceneSetIds,
-        snapshotPages: updatedPages,
+        orderedPageEntries: updatedOrder,
+        snapshotPagesOverride: updatedPages,
       );
     }
+
+    // Recompute used snapshot IDs after deletion
+    final Set<String> updatedUsedIds = _computeUsedSnapshotIdsFromPages(updatedPages, loaded.snapshotsPerPage);
 
     emit(
       loaded.copyWith(
         snapshotPages: updatedPages,
+        usedSnapshotIds: updatedUsedIds,
+        orderedPageEntries: updatedOrder,
         selectedSnapshotPageId: loaded.selectedSnapshotPageId == pageId ? null : loaded.selectedSnapshotPageId,
       ),
     );
@@ -217,6 +248,31 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
     final SnapshotLoaded? loaded = _loaded;
     if (loaded == null) return;
     emit(loaded.copyWith(selectedSnapshotPageId: pageId, selectedSceneSetId: null));
+  }
+
+  /// Reorder pages in the PAGES panel.
+  void reorderPages(int oldIndex, int newIndex) {
+    final SnapshotLoaded? loaded = _loaded;
+    if (loaded == null) return;
+
+    final List<ControllerPageModel> updatedOrder = List<ControllerPageModel>.from(loaded.orderedPageEntries);
+    if (newIndex > oldIndex) newIndex--;
+    final ControllerPageModel item = updatedOrder.removeAt(oldIndex);
+    updatedOrder.insert(newIndex, item);
+
+    if (loaded.controllerId != null) {
+      _persistControllerPages(
+        controllerId: loaded.controllerId!,
+        orderedPageEntries: updatedOrder,
+      );
+    }
+
+    // Select the moved item
+    if (item.type == ControllerPageType.sceneSet) {
+      emit(loaded.copyWith(orderedPageEntries: updatedOrder, selectedSceneSetId: item.id, selectedSnapshotPageId: null));
+    } else {
+      emit(loaded.copyWith(orderedPageEntries: updatedOrder, selectedSnapshotPageId: item.id, selectedSceneSetId: null));
+    }
   }
 
   // ─── Computed Helpers ──────────────────────────────────────────────────────
@@ -253,43 +309,37 @@ class SnapshotViewModel extends Cubit<SnapshotState> {
     return usedIds;
   }
 
+  /// Compute used snapshot IDs from both scene-set pages and user-created snapshot pages.
+  Set<String> _computeUsedSnapshotIdsFromPages(
+    List<SnapshotPageModel> snapshotPages,
+    Map<String, List<SnapshotsModel>> snapshotsPerPage,
+  ) {
+    final Set<String> usedIds = _computeUsedSnapshotIds(snapshotsPerPage);
+    for (final SnapshotPageModel page in snapshotPages) {
+      usedIds.addAll(page.snapshotIds);
+    }
+    return usedIds;
+  }
+
   // ─── Persistence ───────────────────────────────────────────────────────────
 
-  /// Persists scene-set and snapshot pages.
+  /// Persists scene-set and snapshot pages in order.
   void _persistControllerPages({
     required String controllerId,
-    required Set<String> selectedSceneSetIds,
-    required List<SnapshotPageModel> snapshotPages,
+    required List<ControllerPageModel> orderedPageEntries,
+    List<SnapshotPageModel>? snapshotPagesOverride,
   }) {
-    final List<SceneSetModel> allSceneSets = _loaded?.sceneSets ?? <SceneSetModel>[];
-
-    // Build scene-set and snapshot pages
-    final List<ControllerPageModel> newPages = <ControllerPageModel>[
-      for (final String id in selectedSceneSetIds)
-        ControllerPageModel(
-          id: id,
-          type: ControllerPageType.sceneSet,
-          name:
-              allSceneSets
-                  .firstWhere(
-                    (SceneSetModel s) => s.id == id,
-                    orElse: () => SceneSetModel(id: id, name: id),
-                  )
-                  .name,
-        ),
-      for (final SnapshotPageModel p in snapshotPages) ControllerPageModel(id: p.id, type: ControllerPageType.snapshotPage, name: p.name),
-    ];
-
     // Preserve existing message pages
     final List<ControllerPageModel> existingMessagePages =
         _projectViewModel.getControllerPages(controllerId).where((ControllerPageModel p) => p.type == ControllerPageType.message).toList();
 
     _projectViewModel.setControllerPages(
       controllerId: controllerId,
-      pages: <ControllerPageModel>[...newPages, ...existingMessagePages],
+      pages: <ControllerPageModel>[...orderedPageEntries, ...existingMessagePages],
     );
 
     // Update snapshot ID relationships for each snapshot page
+    final List<SnapshotPageModel> snapshotPages = snapshotPagesOverride ?? _loaded?.snapshotPages ?? <SnapshotPageModel>[];
     for (final SnapshotPageModel p in snapshotPages) {
       _projectViewModel.setSnapshotIdsForPage(pageId: p.id, snapshotIds: p.snapshotIds.toSet());
     }

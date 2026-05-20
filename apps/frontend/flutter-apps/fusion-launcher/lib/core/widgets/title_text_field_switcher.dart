@@ -13,7 +13,9 @@ class TitleTextFieldSwitcher extends StatefulWidget {
   });
   final String value;
   final String hintText;
-  final ValueChanged<String> save;
+
+  /// Return `true` if the save was successful, `false` to revert to previous value.
+  final bool Function(String value) save;
   final TextStyle style;
   final String? semanticsId;
   @override
@@ -77,11 +79,16 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
         _cancelEditing();
         return;
       }
+      final String newValue = controller.text;
+      final bool success = widget.save(newValue);
       setState(() {
-        currentValue = controller.text;
         isEditing = false;
+        if (success) {
+          currentValue = newValue;
+        } else {
+          controller.text = currentValue;
+        }
       });
-      widget.save(controller.text);
     }
   }
 

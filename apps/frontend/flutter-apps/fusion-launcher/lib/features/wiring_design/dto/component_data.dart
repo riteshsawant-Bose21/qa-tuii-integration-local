@@ -402,7 +402,7 @@ class SpeakerComponentData extends ComponentData {
 
   static SpeakerComponentData from(Speaker speaker) {
     return SpeakerComponentData(
-      image: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId) ?? "",
+      image: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speaker.productId) ?? "",
       label: speaker.name,
       comPorts: <ComponentPort>[],
       inputPorts:

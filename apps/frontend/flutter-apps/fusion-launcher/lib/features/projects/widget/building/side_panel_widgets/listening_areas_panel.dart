@@ -108,7 +108,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
     final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
 
-
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_card_$index"),
       child: Column(
@@ -192,6 +191,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                                           final ListeningArea updatedLA = area.copyWith(name: value.trim());
                                           _projectViewModel.updateListeningArea(area: updatedLA);
                                         }
+                                        return true;
                                       },
                                     ),
                                   ),
@@ -391,7 +391,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           child: GestureDetector(
             onTap: () {
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(speaker.id);
-
             },
             // borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -399,7 +398,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               child: Row(
                 children: <Widget>[
                   FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
+                    path: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speaker.productId),
                     width: 14,
                     height: 14,
                   ),
@@ -429,6 +428,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                           final HardwareComponent updated = speaker.copyWith(name: value);
                           _projectViewModel.updateHardware(hardware: updated);
                         }
+                        return true;
                       },
                     ),
                   ),

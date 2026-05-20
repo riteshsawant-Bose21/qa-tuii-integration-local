@@ -113,14 +113,14 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             // ),
                             GestureDetector(
                               onTap: () {
-                                 SpeakerSelectionPopup.show(
+                                SpeakerSelectionPopup.show(
                                   context: context,
                                   isFromBuildingPage: false,
                                   zoneId: widget.zoneId,
                                   subZoneId: widget.subZoneId,
                                 );
                               },
-                               child: Row(
+                              child: Row(
                                 children: <Widget>[
                                   Icon(
                                     Icons.add,
@@ -278,7 +278,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                            assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {
                               final Speaker speaker = speakers.last;
@@ -326,7 +326,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                            assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {},
                             onIncrementHardwareInCircuit: () {},
@@ -347,7 +347,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       speakers: speakers,
                       circuitModel: circuitData,
                       circuitDeviceName: circuitData.name,
-                      assetImagePath: serviceLocator<ProductQueryViewModel>().getProductImage(speakers.firstOrNull?.productId) ?? "",
+                      assetImagePath: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakers.firstOrNull?.productId) ?? "",
                       circuitDeviceCount: speakers.length,
                       onDecrementHardwareInCircuit: () {
                         final Speaker speaker = speakers.last;

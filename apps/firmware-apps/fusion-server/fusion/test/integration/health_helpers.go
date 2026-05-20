@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"sort"
@@ -118,7 +118,7 @@ func nodeBaseURLs(ctx context.Context, env Env) []string {
 	return urls
 }
 
-func GetDevicesNodePreferred(ctx context.Context, env Env) ([]api.DeviceRuntimeInfo, error) {
+func GetDevicesNodePreferred(ctx context.Context, env Env) ([]model.DeviceInfo, error) {
 	var firstErr error
 	for _, baseURL := range nodeBaseURLs(ctx, env) {
 		ds, err := GetDevices(ctx, baseURL)
@@ -179,7 +179,7 @@ func checkClusterStatus(ctx context.Context, baseURL string) error {
 	return nil
 }
 
-func hasSinglePrimary(ds []api.DeviceRuntimeInfo) bool {
+func hasSinglePrimary(ds []model.DeviceInfo) bool {
 	count := 0
 	for _, d := range ds {
 		if d.IsPrimary {
@@ -201,7 +201,7 @@ func combineErrors(errs []error) error {
 }
 
 // GetDevices fetches devices from the VIP.
-func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceRuntimeInfo, error) {
+func GetDevices(ctx context.Context, baseURL string) ([]model.DeviceInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/devices", nil)
 	if err != nil {
 		return nil, err
@@ -227,23 +227,23 @@ func GetDevices(ctx context.Context, baseURL string) ([]api.DeviceRuntimeInfo, e
 	return ds, nil
 }
 
-func decodeDevicesResponse(body []byte) ([]api.DeviceRuntimeInfo, error) {
-	var devices []api.DeviceRuntimeInfo
+func decodeDevicesResponse(body []byte) ([]model.DeviceInfo, error) {
+	var devices []model.DeviceInfo
 	if err := json.Unmarshal(body, &devices); err == nil {
 		return devices, nil
 	}
 
 	var wrapped struct {
-		Devices []api.DeviceRuntimeInfo `json:"devices"`
+		Devices []model.DeviceInfo `json:"devices"`
 	}
 	if err := json.Unmarshal(body, &wrapped); err == nil && wrapped.Devices != nil {
 		return wrapped.Devices, nil
 	}
 
-	var single api.DeviceRuntimeInfo
+	var single model.DeviceInfo
 	if err := json.Unmarshal(body, &single); err == nil {
 		if single.Address != "" || single.Id != "" || single.Name != "" {
-			return []api.DeviceRuntimeInfo{single}, nil
+			return []model.DeviceInfo{single}, nil
 		}
 	}
 

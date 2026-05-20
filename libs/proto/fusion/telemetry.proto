@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package fusion.telemetry.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+// MeterData represents a single meter measurement from the telemetry core.
+message MeterData {
+  string block_name = 1;
+  string meter_name = 2;
+  string value_type = 3;
+  string dimensions = 4;
+  google.protobuf.Value value = 5;
+}
+
+// MeterDataParameters holds the parameters section of a meter_data message.
+message MeterDataParameters {
+  string name = 1;
+  string type = 2;
+  int32 length = 3;
+  repeated MeterData value = 4;
+}
+
+// MeterDataMessage is the JSON envelope published by the telemetry core over ZMQ.
+message MeterDataMessage {
+  string message_name = 1;
+  string device_id = 2;
+  uint64 packet_id = 3;
+  MeterDataParameters parameters = 4;
+}
