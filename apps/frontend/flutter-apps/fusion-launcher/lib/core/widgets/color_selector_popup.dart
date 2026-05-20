@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/properties/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class ColorSelector extends StatefulWidget {
-  final Color selectedColor;
-  final List<Color> availableColors;
-  final Function(Color) onColorChanged;
+  final String? selectedColor;
+  final List<String> availableColors;
+  final Function(String) onColorChanged;
   final double? width;
   final double? height;
   final double? borderRadius;
@@ -71,12 +72,13 @@ class _ColorSelectorState extends State<ColorSelector> {
                     child: Material(
                       elevation: 12.0,
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
+                      child: FusionFlatContainer(
+                        semanticsId: "zone_color_selector_popup",
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.elevation2,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        color: context.colorScheme.elevation2,
+                        // decoration: BoxDecoration(
+                        //   borderRadius: BorderRadius.circular(8),
+                        // ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,21 +99,27 @@ class _ColorSelectorState extends State<ColorSelector> {
                               ),
                               itemCount: widget.availableColors.length,
                               itemBuilder: (BuildContext context, int index) {
-                                final Color color = widget.availableColors[index];
-                                final bool isSelected = color == widget.selectedColor;
+                                final String hexCode = widget.availableColors[index];
+                                final bool isSelected = hexCode == widget.selectedColor;
 
                                 return GestureDetector(
                                   onTap: () {
-                                    widget.onColorChanged(color);
+                                    widget.onColorChanged(hexCode);
                                     _hideColorPicker();
                                   },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.8),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: isSelected ? Border.all(color: context.colorScheme.textPrimary) : null,
+                                  child: SemanticHelper.container(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "create_zone_color_option_$index"),
+                                    isChecked: isSelected,
+                                    isSelected: isSelected,
+                                    value: hexCode,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: hexToColor(hexCode),
+                                        borderRadius: BorderRadius.circular(3),
+                                        border: isSelected ? Border.all(color: context.colorScheme.primaryWhite, width: 2) : null,
+                                      ),
+                                      child: isSelected ? FusionIcon.icon(Icons.check, color: Colors.white, size: 10) : null,
                                     ),
-                                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
                                   ),
                                 );
                               },
@@ -145,13 +153,17 @@ class _ColorSelectorState extends State<ColorSelector> {
                   }
                 }
                 : null,
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: widget.selectedColor.withValues(alpha: widget.alpha!),
-            border: Border.all(color: context.colorScheme.textPrimary),
-            borderRadius: BorderRadius.circular(widget.borderRadius!),
+        child: SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "active_color"),
+          value: widget.selectedColor,
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: hexToColor(widget.selectedColor!), //.withAlpha(widget.alpha!.toInt()),
+              border: Border.all(color: context.colorScheme.textPrimary),
+              borderRadius: BorderRadius.circular(widget.borderRadius!),
+            ),
           ),
         ),
       ),

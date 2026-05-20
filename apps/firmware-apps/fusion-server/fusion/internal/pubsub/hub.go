@@ -7,12 +7,18 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
 
-const configUpdateReliableDebounce = 250 * time.Millisecond
+const (
+	configUpdateReliableDebounce = 250 * time.Millisecond
+	versionUpdateReliableDebounce = 250 * time.Millisecond // coalesces version updates that trail config updates
+)
 
 type Broadcaster interface {
 	BroadcastMessage(msg *api.NotifyMessage) error
@@ -40,7 +46,8 @@ type Hub struct {
 	persistence  *persistence.Persistence
 	transport    transport.ClusterInterface
 
-	configUpdates configUpdateDebounceState
+	configUpdates  configUpdateDebounceState
+	versionUpdates configUpdateDebounceState
 
 	// SWUpdate progress monitoring
 	swUpdateMutex    sync.RWMutex
@@ -55,6 +62,9 @@ func NewHub(stateManager *persistence.StateManager, persistence *persistence.Per
 		persistence:  persistence,
 		configUpdates: configUpdateDebounceState{
 			window: configUpdateReliableDebounce,
+		},
+		versionUpdates: configUpdateDebounceState{
+			window: versionUpdateReliableDebounce,
 		},
 		swUpdateProgress: make(map[string]*api.SoftwareUpdateProgress),
 	}
@@ -291,6 +301,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			}
 		}
 
+	case api.NotifyOpTaskCreate, api.NotifyOpTaskUpdate, api.NotifyOpTaskDelete:
+		if message.Task == nil {
+			return fmt.Errorf("Task required for operation")
+		}
+
 	case api.NotifyOpDeviceUpdate:
 		if message.DeviceInfo == nil {
 			return fmt.Errorf("DeviceInfo required for operation")
@@ -328,7 +343,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("SoftwareUpdate required for SoftwareUpdate available operation")
 		}
 		logger.Info("[Hub] Broadcasting SoftwareUpdate availability: %s (%d bytes) from %s",
-			message.SoftwareUpdate.Filename, message.SoftwareUpdate.SizeBytes, message.SoftwareUpdate.SourceIP)
+			message.SoftwareUpdate.GetFilename(), message.SoftwareUpdate.GetSizeBytes(), message.SoftwareUpdate.GetSourceIp())
 
 	case api.NotifyOpSoftwareUpdateSyncAck:
 		if message.SoftwareUpdateAck == nil {
@@ -382,10 +397,9 @@ func (h *Hub) queueConfigUpdate(message *api.NotifyMessage) {
 
 	h.configUpdates.mu.Lock()
 	h.configUpdates.pending = cloneNotifyMessageForBroadcast(message)
-	if h.configUpdates.timer != nil {
-		h.configUpdates.timer.Stop()
+	if h.configUpdates.timer == nil {
+		h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	}
-	h.configUpdates.timer = time.AfterFunc(h.configUpdates.window, h.flushConfigUpdate)
 	h.configUpdates.mu.Unlock()
 }
 
@@ -423,13 +437,12 @@ func cloneNotifyMessageForBroadcast(message *api.NotifyMessage) *api.NotifyMessa
 		cloned.ConfigValue = &cfg
 	}
 	if message.DeviceInfo != nil {
-		info := *message.DeviceInfo
-		cloned.DeviceInfo = &info
+		cloned.DeviceInfo = proto.Clone(message.DeviceInfo).(*model.DeviceInfo)
 	}
 	return &cloned
 }
 
-func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata) {
+func (h *Hub) BroadcastVersionUpdate(node string, metadata *model.DatabaseMetadata) {
 	if metadata == nil || h.transport == nil || h.transport.LocalNode() == nil {
 		return
 	}
@@ -438,13 +451,45 @@ func (h *Hub) BroadcastVersionUpdate(node string, metadata *api.DatabaseMetadata
 		api.NotifyOpVersionUpdate,
 		node,
 		api.WithVersionUpdate(&api.VersionUpdate{
-			Version: metadata.Version,
-			Hash:    metadata.Hash,
-			NodeID:  node,
+			Version: api.Version{
+				Epoch:   metadata.GetVersion().GetEpoch(),
+				Counter: metadata.GetVersion().GetCounter(),
+				NodeID:  metadata.GetVersion().GetNodeId(),
+			},
+			Hash:   metadata.Hash,
+			NodeID: node,
 		}),
 	)
 
-	if err := h.BroadcastToNodes(msg); err != nil {
+	h.queueVersionUpdate(msg)
+}
+
+func (h *Hub) queueVersionUpdate(message *api.NotifyMessage) {
+	if message == nil {
+		return
+	}
+
+	h.versionUpdates.mu.Lock()
+	h.versionUpdates.pending = cloneNotifyMessageForBroadcast(message)
+	if h.versionUpdates.timer != nil {
+		h.versionUpdates.timer.Stop()
+	}
+	h.versionUpdates.timer = time.AfterFunc(h.versionUpdates.window, h.flushVersionUpdate)
+	h.versionUpdates.mu.Unlock()
+}
+
+func (h *Hub) flushVersionUpdate() {
+	h.versionUpdates.mu.Lock()
+	message := h.versionUpdates.pending
+	h.versionUpdates.pending = nil
+	h.versionUpdates.timer = nil
+	h.versionUpdates.mu.Unlock()
+
+	if message == nil {
+		return
+	}
+
+	if err := h.BroadcastToNodes(message); err != nil {
 		logging.GetLogger().Error("failed to broadcast version update: %v", err)
 	}
 }

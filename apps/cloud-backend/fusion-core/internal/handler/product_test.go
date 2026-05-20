@@ -164,6 +164,38 @@ func TestGetAllProducts(t *testing.T) {
 			setupMock: func(m *MockProductService) {
 				expectedResponse := &types.ProductResponse{
 					Version: "1.0",
+					Source: []types.SourceItemResponse{
+						{
+							SourceID:    1,
+							ModelName:   "Media Player",
+							ModelFamily: "Source",
+							Assets: []types.SourceAsset{
+								{
+									Black: []string{"assets/images/products/dvdplayer.png"},
+								},
+							},
+							Specifications: types.SourceSpecifications{
+								PrimaryConnection:    "analogInput",
+								SupportedConnections: []string{"analogInput", "usbInput"},
+							},
+							IsFusionCompatible: true,
+						},
+					},
+					Output: []types.OutputItemResponse{
+						{
+							OutputID: 1,
+							Name:     "Media Recorder",
+							Type:     "media",
+							Assets: []types.OutputAsset{
+								{
+									Black: []string{"assets/images/outputs/media_recorder.png"},
+								},
+							},
+							Specifications: types.OutputSpecifications{
+								SupportedConnections: []string{"analogOutput", "usbOutput"},
+							},
+						},
+					},
 					Speaker: []types.ProductItemResponse{
 						{
 							ProductID:          1,
@@ -186,6 +218,16 @@ func TestGetAllProducts(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
 				assert.Equal(t, "1.0", resp.Version)
+				assert.Len(t, resp.Source, 1)
+				assert.Equal(t, "Media Player", resp.Source[0].ModelName)
+				assert.Equal(t, "analogInput", resp.Source[0].Specifications.PrimaryConnection)
+				assert.ElementsMatch(t, []string{"analogInput", "usbInput"}, resp.Source[0].Specifications.SupportedConnections)
+				assert.Len(t, resp.Output, 1)
+				assert.Equal(t, "Media Recorder", resp.Output[0].Name)
+				assert.Equal(t, "media", resp.Output[0].Type)
+				assert.Len(t, resp.Output[0].Assets, 1)
+				assert.ElementsMatch(t, []string{"assets/images/outputs/media_recorder.png"}, resp.Output[0].Assets[0].Black)
+				assert.ElementsMatch(t, []string{"analogOutput", "usbOutput"}, resp.Output[0].Specifications.SupportedConnections)
 				assert.Len(t, resp.Speaker, 1)
 				assert.Equal(t, "Test Speaker", resp.Speaker[0].ModelName)
 				assert.Len(t, resp.Amplifier, 1)
@@ -203,6 +245,8 @@ func TestGetAllProducts(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
 				assert.Equal(t, "1.0", resp.Version)
+				assert.Empty(t, resp.Source)
+				assert.Empty(t, resp.Output)
 				assert.Empty(t, resp.Speaker)
 				assert.Empty(t, resp.Amplifier)
 				assert.Empty(t, resp.Controller)

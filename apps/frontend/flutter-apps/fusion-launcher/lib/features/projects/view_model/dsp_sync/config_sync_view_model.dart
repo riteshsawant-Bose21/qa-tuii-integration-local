@@ -96,23 +96,39 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
     final TouchUIZoneConfig touchUIZoneConfig = serviceLocator<ProjectViewModel>().getTouchUIZoneConfig();
 
     final Map<String, dynamic> config = <String, dynamic>{
-      "devices": droResponseData.result!.devices,
-      "audio_streams": droResponseData.result!.audioStreams,
-      "settings": <String, Map<String, dynamic>>{
-        "audio": blocksData,
+      "dro_conditioned_output": <String, dynamic>{
+        "devices": droResponseData.result!.devices,
+      },
+      "fusion_connect_additions": <String, dynamic>{
+        "audio_streams": droResponseData.result!.audioStreams,
+        "settings": <String, Map<String, dynamic>>{
+          "audio": blocksData,
+        },
       },
     };
-
-    //add wall controller config to settings if not null
-    config.addAll(wallControllerConfig.toJson());
-
-    config.addAll(touchUIZoneConfig.toJson());
 
     final ResponseCallback<bool> response = await fusionConfigSyncService.syncConfigToDsp(
       config: config,
       vip: vip,
     );
     if (response.success) {
+      final ResponseCallback<bool> wallControllerSyncResponse = await fusionConfigSyncService.syncWallControllerConfig(
+        controllerConfig: wallControllerConfig.toJson(),
+        vip: vip,
+      );
+
+      FusionLogger.log(
+        tag: LogTag.dspConfig,
+        message: "Config sync response for wall controller: ${wallControllerSyncResponse.success}, ${wallControllerSyncResponse.message}",
+      );
+
+      final ResponseCallback<bool> touchUiSyncResponse = await fusionConfigSyncService.syncTouchUiConfig(
+        touchUiConfig: touchUIZoneConfig.toJson(),
+        vip: vip,
+      );
+
+      FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for touch UI: ${touchUiSyncResponse.success}, ${touchUiSyncResponse.message}");
+
       final ResponseCallback<bool> response = await serviceLocator<AudioMessageSyncViewModel>().syncPendingAudioMessages();
       FusionLogger.log(tag: LogTag.dspConfig, message: "Config sync response for audio messages: ${response.success}, ${response.message}");
 
@@ -130,6 +146,7 @@ class ConfigSyncViewModel extends Cubit<ConfigSyncState> {
       } else {
         emit(ConfigSyncFailure(message: "Config synced but failed to sync all config}: ${response.message}"));
       }
+      // emit(ConfigSyncedWithDsp());
       // initializeTelemetryData();
     } else {
       emit(DroProcessingFailed(message: response.message));

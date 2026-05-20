@@ -1,0 +1,2 @@
+ALTER SEQUENCE source_id_seq RESTART WITH 1;
+ALTER SEQUENCE output_id_seq RESTART WITH 1;

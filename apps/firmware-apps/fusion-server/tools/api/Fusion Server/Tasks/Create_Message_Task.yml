@@ -1,0 +1,30 @@
+info:
+  name: Create Message Task
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{api_url}}/tasks"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "id": "message-task-001",
+        "description": "Play evacuation message",
+        "cron_expr": "0 */15 * * * *",
+        "message_id": "evacuation-message",
+        "priority": 10,
+        "zones": "zone-a,zone-b"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a message task using the protobuf JSON request shape.

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	model "fusion/internal/gen/proto/fusion"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -10,6 +11,8 @@ import (
 // NotifyOp is a custom type representing notification message operations.
 type NotifyOp string
 
+// Maintain this list in alphabetical order. Define notifications using a naming
+// scheme that will maintain functional sub-ordering.
 const (
 	NotifyOpAck                       NotifyOp = "ack"
 	NotifyOpAudioRemove               NotifyOp = "audio_remove"
@@ -18,38 +21,38 @@ const (
 	NotifyOpConfigUpdate              NotifyOp = "config_update"
 	NotifyOpDeviceUpdate              NotifyOp = "device_update"
 	NotifyOpGetLocalDeviceInformation NotifyOp = "get_local_device_information"
+	NotifyOpMeterData                 NotifyOp = "meter_data"
 	NotifyOpNoop                      NotifyOp = "no_op"
 	NotifyOpSceneActivate             NotifyOp = "scene_activate"
 	NotifyOpSceneDelete               NotifyOp = "scene_delete"
 	NotifyOpSceneSetDelete            NotifyOp = "scene_set_delete"
 	NotifyOpSceneSetsDeleteAll        NotifyOp = "scene_sets_delete_all"
 	NotifyOpSceneSetsUpsert           NotifyOp = "scene_sets_upsert"
-	NotifyOpSnapshotDefDelete         NotifyOp = "snapshot_def_delete"
-	NotifyOpSnapshotDefsDeleteAll     NotifyOp = "snapshot_defs_delete_all"
-	NotifyOpSnapshotDefsUpsert        NotifyOp = "snapshot_defs_upsert"
-	NotifyOpSnapshotV2Activate        NotifyOp = "snapshot_v2_activate"
-	NotifyOpTimeMachineActivate       NotifyOp = "time_machine_activate"
-	NotifyOpTimeMachineCreate         NotifyOp = "time_machine_create"
-	NotifyOpTimeMachineDelete         NotifyOp = "time_machine_delete"
-	NotifyOpTimeMachineSave           NotifyOp = "time_machine_save"
 	NotifyOpSnapActivate              NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate                NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete                NotifyOp = "snapshot_delete"
 	NotifyOpSnapSave                  NotifyOp = "snapshot_save"
+	NotifyOpSnapshotDefDelete         NotifyOp = "snapshot_def_delete"
+	NotifyOpSnapshotDefsDeleteAll     NotifyOp = "snapshot_defs_delete_all"
+	NotifyOpSnapshotDefsUpsert        NotifyOp = "snapshot_defs_upsert"
+	NotifyOpSnapshotV2Activate        NotifyOp = "snapshot_v2_activate"
+	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
+	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
+	NotifyOpSoftwareUpdateProgress    NotifyOp = "software_update_progress"
+	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
 	NotifyOpTaskCreate                NotifyOp = "task_create"
 	NotifyOpTaskDelete                NotifyOp = "task_delete"
 	NotifyOpTaskUpdate                NotifyOp = "task_update"
-	NotifyOpVIPStatus                 NotifyOp = "vip_status"
+	NotifyOpTimeMachineActivate       NotifyOp = "time_machine_activate"
+	NotifyOpTimeMachineCreate         NotifyOp = "time_machine_create"
+	NotifyOpTimeMachineDelete         NotifyOp = "time_machine_delete"
+	NotifyOpTimeMachineSave           NotifyOp = "time_machine_save"
 	NotifyOpValueGet                  NotifyOp = "get"
-	NotifyOpValuePut                  NotifyOp = "put"
 	NotifyOpValuePatch                NotifyOp = "patch"
+	NotifyOpValuePut                  NotifyOp = "put"
 	NotifyOpValueSet                  NotifyOp = "set"
 	NotifyOpVersionUpdate             NotifyOp = "version_update"
-	NotifyOpSoftwareUpdateAvailable   NotifyOp = "software_update_available"
-	NotifyOpSoftwareUpdateSyncAck     NotifyOp = "software_update_sync_ack"
-	NotifyOpSoftwareUpdate            NotifyOp = "software_update"
-	NotifyOpSoftwareUpdateProgress    NotifyOp = "software_update_progress"
-	NotifyOpMeterData                 NotifyOp = "meter_data"
+	NotifyOpVIPStatus                 NotifyOp = "vip_status"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -62,21 +65,21 @@ type NotifyMessage struct {
 	AudioSync                 *AudioSyncUpdate
 	ConfigUpdate              *ConfigUpdate
 	ConfigValue               *ConfigValue
-	DeviceInfo                *DeviceInfo
-	SoftwareUpdate            *SoftwareUpdateSync
-	SoftwareUpdateAck         *SoftwareUpdateSyncAck
-	SoftwareUpdateProgress    *SoftwareUpdateProgress
-	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
+	DeviceInfo                *model.DeviceInfo
 	SceneActivation           *ActivateSceneSetRequest
 	SceneOperation            *SceneOperation
 	SceneSetOperation         *SceneSetOperation
-	SceneSets                 []SceneSet
+	SceneSets                 []*model.SceneSet
 	SnapshotActivation        *ActivateSnapshotRequest
-	SnapshotDefinitions       []SnapshotDefinition
+	SnapshotDefinitions       []*model.SnapshotDefinition
 	SnapshotOperation         *SnapshotOperation
+	SoftwareUpdate            *model.SoftwareUpdateBundle
+	SoftwareUpdateAck         *SoftwareUpdateSyncAck
+	SoftwareUpdateProgress    *SoftwareUpdateProgress
+	SoftwareUpdateProgressAll map[string]*SoftwareUpdateProgress // aggregated progress from all nodes
 	Task                      *Task
 	VersionUpdate             *VersionUpdate
-	MeterData                 *MeterDataMessage
+	MeterData                 *model.MeterDataMessage
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -243,13 +246,13 @@ func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 	}
 }
 
-func WithSnapshotDefinitions(definitions []SnapshotDefinition) func(*NotifyMessage) {
+func WithSnapshotDefinitions(definitions []*model.SnapshotDefinition) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SnapshotDefinitions = definitions
 	}
 }
 
-func WithSceneSets(sceneSets []SceneSet) func(*NotifyMessage) {
+func WithSceneSets(sceneSets []*model.SceneSet) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SceneSets = sceneSets
 	}
@@ -285,7 +288,7 @@ func WithTask(task *Task) func(*NotifyMessage) {
 	}
 }
 
-func WithSoftwareUpdate(update *SoftwareUpdateSync) func(*NotifyMessage) {
+func WithSoftwareUpdate(update *model.SoftwareUpdateBundle) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.SoftwareUpdate = update
 	}
@@ -303,7 +306,7 @@ func WithVersionUpdate(update *VersionUpdate) func(*NotifyMessage) {
 	}
 }
 
-func WithDeviceInfo(info *DeviceInfo) func(*NotifyMessage) {
+func WithDeviceInfo(info *model.DeviceInfo) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
 		m.DeviceInfo = info
 	}

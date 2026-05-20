@@ -137,6 +137,7 @@ class _WiringPageState extends State<WiringPage> {
             tools: <FusionCanvasTool<FusionToolState>>[
               FusionCanvasTool.measureTool,
               FusionCanvasTool.penTool,
+              FusionCanvasTool.rectangleTool,
               FusionCanvasTool.dragTool,
               FusionCanvasTool.connectionTool(
                 connectionParams: ConnectionToolParams(

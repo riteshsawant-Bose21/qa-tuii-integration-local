@@ -79,6 +79,7 @@ class _FusionBorderedTextFieldState extends State<FusionBorderedTextField> {
                   controller: widget.controller,
                   hintText: widget.hintText,
                   inputFormatters: widget.inputFormatters,
+                  style: context.textTheme.b3Regular.withColor(context.colorScheme.textPrimary),
                   decoration: InputDecoration(
                     hintText: widget.hintText,
                     hintStyle: context.textTheme.b3Regular.withColor(context.colorScheme.textPlaceholder),

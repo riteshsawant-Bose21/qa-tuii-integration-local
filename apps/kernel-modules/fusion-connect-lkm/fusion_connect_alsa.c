@@ -1,4 +1,6 @@
 #include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/slab.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -88,8 +90,6 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     printk(KERN_DEBUG "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
            runtime->buffer_size, runtime->period_size, runtime->periods, stream->stream_name);
 
-    stream->pcm_indirect.hw_buffer_size = buffer_bytes;
-    stream->pcm_indirect.sw_buffer_size = buffer_bytes;
     atomic_set(&stream->dma_offset, 0);
 
     spin_unlock_irq(&stream->lock);
@@ -146,20 +146,24 @@ void fusion_cn_alsa_fill_silence(struct fusion_cn_substream *stream, u32 frame_o
 void fusion_cn_alsa_reset_stream_timing(struct fusion_cn_substream *stream, bool clear_buffer)
 {
     unsigned long flags;
+    struct snd_pcm_substream *ss = NULL;
+    struct snd_pcm_runtime *rt = NULL;
 
     if (!stream)
         return;
 
     spin_lock_irqsave(&stream->lock, flags);
-    stream->buffer_pos = 0;
-    stream->interrupt_idx = 0;
-    stream->pcm_indirect.hw_data = 0;
-    stream->pcm_indirect.sw_data = 0;
-    atomic_set(&stream->dma_offset, 0);
-    if (clear_buffer && stream->substream && stream->substream->runtime && stream->substream->runtime->dma_area)
-        memset(stream->substream->runtime->dma_area, 0,
-               snd_pcm_lib_buffer_bytes(stream->substream));
+    ss = stream->substream;
+    if (ss)
+        rt = ss->runtime;
     spin_unlock_irqrestore(&stream->lock, flags);
+
+    if (clear_buffer && ss && rt) {
+        snd_pcm_stream_lock_irq(ss);
+        if (rt->dma_area)
+            memset(rt->dma_area, 0, snd_pcm_lib_buffer_bytes(ss));
+        snd_pcm_stream_unlock_irq(ss);
+    }
 
     printk(KERN_DEBUG "fusion_cn_alsa: reset_stream_timing stream %s clear_buffer=%u\n",
            stream->stream_name, clear_buffer ? 1 : 0);
@@ -329,7 +333,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     spin_unlock_irqrestore(&stream->lock, flags);
 
     hw.info = SNDRV_PCM_INFO_INTERLEAVED |
-              SNDRV_PCM_INFO_BLOCK_TRANSFER;
+              SNDRV_PCM_INFO_BLOCK_TRANSFER |
+              SNDRV_PCM_INFO_MMAP |
+              SNDRV_PCM_INFO_MMAP_VALID;
     switch (stream->format) {
     case SNDRV_PCM_FORMAT_S16_BE:
         hw.formats = SNDRV_PCM_FMTBIT_S16_BE;
@@ -404,12 +410,12 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     if (substream->dma_buffer.dev.type == SNDRV_DMA_TYPE_UNKNOWN) {
         err = snd_pcm_set_managed_buffer(substream,
-                                        SNDRV_DMA_TYPE_VMALLOC, 
-                                        NULL,
+                                        SNDRV_DMA_TYPE_DEV,
+                                        &g_pdev->dev,
                                         0, 0);
-        if (err < 0)
-        {
-            pr_err("fusion_cn_alsa: set_managed_buffer failed (%d)\n", err);
+        if (err < 0) {
+            pr_err("fusion_cn_alsa: set_managed_buffer failed for stream %s (%d), reserved OCRAM pool may be exhausted\n",
+                   stream_name, err);
             return err;
         }
     }
@@ -425,11 +431,6 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
 
     spin_lock_irqsave(&stream->lock, flags);
     if (stream->substream) {
-        snd_pcm_stream_lock_irq(stream->substream);
-        stream->substream->runtime->status->hw_ptr = 0;
-        stream->substream->runtime->control->appl_ptr = 0;
-        stream->substream->runtime->boundary = 0;
-        snd_pcm_stream_unlock_irq(stream->substream);
         stream->substream = NULL;
     }
     spin_unlock_irqrestore(&stream->lock, flags);
@@ -453,15 +454,11 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     if (stream->interrupts_per_period == 0) stream->interrupts_per_period = 1;
     stream->interrupt_idx = 0;
     stream->buffer_pos = 0;
-    stream->pcm_indirect.hw_data = 0;
-    stream->pcm_indirect.sw_data = 0;
-    stream->pcm_indirect.hw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
-    stream->pcm_indirect.sw_buffer_size = snd_pcm_lib_buffer_bytes(substream);
     atomic_set(&stream->dma_offset, 0);
     memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
 
-    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u\n", stream->stream_name, stream->interrupts_per_period);
 
     return 0;
 }
@@ -539,6 +536,7 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .pointer = fusion_cn_pcm_pointer,
     .copy = fusion_cn_pcm_copy,
     .fill_silence = fusion_cn_pcm_fill_silence,
+    .mmap = snd_pcm_lib_default_mmap,
 };
 
 inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
@@ -852,6 +850,7 @@ static struct platform_driver fusion_cn_driver = {
 int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_ops *callbacks)
 {
     struct fusion_cn_chip *chip;
+    struct device_node *np;
     int err;
 
     err = platform_driver_register(&fusion_cn_driver);
@@ -869,9 +868,21 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
 
     g_pdev->dev.platform_data = fusion_cn_mgr;
 
+    np = of_find_compatible_node(NULL, NULL, "bosepro,fusion-connect-mem");
+    if (!np) {
+        printk(KERN_ERR "fusion_cn_alsa: Failed to find DT node for FusionConnect reserved memory\n");
+        platform_device_put(g_pdev);
+        g_pdev = NULL;
+        platform_driver_unregister(&fusion_cn_driver);
+        return -ENODEV;
+    }
+    g_pdev->dev.of_node = np;
+
     err = platform_device_add(g_pdev);
     if (err < 0) {
         printk(KERN_ERR "fusion_cn_alsa: platform_device_add failed: %d\n", err);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_put(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
@@ -881,15 +892,32 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
     chip = platform_get_drvdata(g_pdev);
     if (!chip) {
         printk(KERN_ERR "fusion_cn_alsa: Failed to get chip from platform data\n");
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
         return -ENODEV;
     }
 
+    err = of_reserved_mem_device_init(&g_pdev->dev);
+    if (err) {
+        printk(KERN_ERR "fusion_cn_alsa: of_reserved_mem_device_init failed: %d\n", err);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
+        platform_device_unregister(g_pdev);
+        g_pdev = NULL;
+        platform_driver_unregister(&fusion_cn_driver);
+        return err;
+    }
+    printk(KERN_DEBUG "fusion_cn_alsa: FusionConnect reserved memory attached\n");
+
     err = callbacks->register_alsa_driver(fusion_cn_mgr, chip);
     if (err < 0) {
         printk(KERN_ERR "fusion_cn_alsa: register_alsa_driver failed: %d\n", err);
+        of_reserved_mem_device_release(&g_pdev->dev);
+        of_node_put(g_pdev->dev.of_node);
+        g_pdev->dev.of_node = NULL;
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
         platform_driver_unregister(&fusion_cn_driver);
@@ -903,6 +931,11 @@ int fusion_cn_alsa_driver_init(void *fusion_cn_mgr, const struct fusion_cn_alsa_
 void fusion_cn_alsa_destroy(void)
 {
     if (g_pdev) {
+        of_reserved_mem_device_release(&g_pdev->dev);
+        if (g_pdev->dev.of_node) {
+            of_node_put(g_pdev->dev.of_node);
+            g_pdev->dev.of_node = NULL;
+        }
         platform_device_unregister(g_pdev);
         g_pdev = NULL;
     }

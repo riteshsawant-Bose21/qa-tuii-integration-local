@@ -15,9 +15,11 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
 
+	canonicaljson "github.com/gibson042/canonicaljson-go"
 	json "github.com/goccy/go-json"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
@@ -147,8 +149,8 @@ func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
 	require.NoError(t, err)
 
 	original := map[string]*api.Task{
-		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
-		"two": {ID: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot},
+		"one": {Task: model.Task{Id: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot}},
+		"two": {Task: model.Task{Id: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot}},
 	}
 	require.NoError(t, p.SaveTasks(original))
 
@@ -228,7 +230,7 @@ func TestSyncAudioFileRepairsMissingMetadataWhenFinalFileAlreadyExists(t *testin
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Test Audio",
 		Filename:    "sync-audio-existing.bin",
@@ -388,7 +390,7 @@ func TestSaveAudioMetaUpdatesDatabaseHash(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Close()
 
-	meta := &api.AudioMetadata{
+	meta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -483,7 +485,7 @@ func TestImportDataRejectsSnapshotTaskWithMissingSnapshot(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestDeleteSnapshotRejectsMissingSnapshot(t *testing.T) {
+func TestDeleteSnapshotMissingSnapshotIsNoOp(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "delete_missing_snapshot.db")
 
@@ -493,7 +495,7 @@ func TestDeleteSnapshotRejectsMissingSnapshot(t *testing.T) {
 	defer p.Close()
 
 	err = p.DeleteSnapshot("does-not-exist")
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestImportDataRejectsSnapshotsThatWouldOrphanExistingSnapshotTasks(t *testing.T) {
@@ -509,13 +511,15 @@ func TestImportDataRejectsSnapshotsThatWouldOrphanExistingSnapshotTasks(t *testi
 	require.NoError(t, p.CreateSnapshot("other"))
 	require.NoError(t, p.SaveTasks(map[string]*api.Task{
 		"task-1": {
-			ID:          "task-1",
-			Description: "apply other snapshot",
-			Type:        api.TaskTypeSnapshot,
-			CronExpr:    "* * * * *",
-			Enabled:     true,
-			Params: map[string]any{
-				api.SnapshotIDKey: "other",
+			Task: model.Task{
+				Id:          "task-1",
+				Description: "apply other snapshot",
+				Type:        api.TaskTypeSnapshot,
+				CronExpr:    "* * * * *",
+				Enabled:     true,
+				Details: &model.Task_Snapshot{
+					Snapshot: &model.SnapshotTaskDetails{SnapshotId: "other"},
+				},
 			},
 		},
 	}))
@@ -582,7 +586,9 @@ func TestImportDataAcceptsSelfContainedSnapshotsAndTasksBundle(t *testing.T) {
 
 	task, err := p.GetTask("task-1")
 	require.NoError(t, err)
-	require.Equal(t, "other", task.Params[api.SnapshotIDKey])
+	value, ok := task.GetParam(api.SnapshotIDKey)
+	require.True(t, ok)
+	require.Equal(t, "other", value)
 }
 
 func TestImportDataIsAtomicWhenLaterSectionFails(t *testing.T) {
@@ -752,7 +758,7 @@ func TestExportImportRoundTripPreservesAudioButExcludesDeviceData(t *testing.T) 
 	require.NoError(t, err)
 	defer p1.Close()
 
-	audioMeta := &api.AudioMetadata{
+	audioMeta := &model.AudioMetadata{
 		Id:          "audio-1",
 		DisplayName: "Audio One",
 		Filename:    "audio-one.mp3",
@@ -760,7 +766,7 @@ func TestExportImportRoundTripPreservesAudioButExcludesDeviceData(t *testing.T) 
 	}
 	require.NoError(t, p1.SaveAudioMeta(audioMeta))
 
-	deviceInfo := &api.DevicePatch{
+	deviceInfo := &model.DevicePatch{
 		Id:   stringPtr("dev-1"),
 		Name: stringPtr("Kitchen"),
 	}
@@ -877,7 +883,7 @@ func TestSetDeviceInfoReturnsErrNotFoundWhenDeviceBucketMissing(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = p.SetDeviceInfo(&api.DevicePatch{Name: stringPtr("Kitchen")})
+	err = p.SetDeviceInfo(&model.DevicePatch{Name: stringPtr("Kitchen")})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, persistence.ErrNotFound))
 }
@@ -1036,7 +1042,7 @@ func TestTaskExistsReturnsFalseWithoutErrorWhenTasksBucketMissing(t *testing.T) 
 	})
 	require.NoError(t, err)
 
-	exists, err := p.TaskExists(&api.Task{ID: "does-not-exist"})
+	exists, err := p.TaskExists(&api.Task{Task: model.Task{Id: "does-not-exist"}})
 	require.NoError(t, err)
 	require.False(t, exists)
 }
@@ -1133,7 +1139,7 @@ func TestSetDeviceInfoDoesNotChangeMetadataHash(t *testing.T) {
 	hashBefore, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, p))
 	require.NoError(t, err)
 
-	require.NoError(t, p.SetDeviceInfo(&api.DevicePatch{
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
 		Id:   stringPtr("dev-1"),
 		Name: stringPtr("Kitchen"),
 	}))
@@ -1154,7 +1160,7 @@ func TestExportDataExcludesDeviceBucket(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Close()
 
-	require.NoError(t, p.SetDeviceInfo(&api.DevicePatch{
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
 		Id:   stringPtr("dev-1"),
 		Name: stringPtr("Living Room"),
 	}))
@@ -1179,7 +1185,7 @@ func TestImportDoesNotOverwriteExistingDeviceIdentity(t *testing.T) {
 	defer p.Close()
 
 	// Set local device identity.
-	require.NoError(t, p.SetDeviceInfo(&api.DevicePatch{
+	require.NoError(t, p.SetDeviceInfo(&model.DevicePatch{
 		Id:   stringPtr("local-id"),
 		Name: stringPtr("Local Node"),
 	}))
@@ -1243,7 +1249,7 @@ func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
 	require.NoError(t, err)
 	defer pA.Close()
 
-	require.NoError(t, pA.SetDeviceInfo(&api.DevicePatch{
+	require.NoError(t, pA.SetDeviceInfo(&model.DevicePatch{
 		Id:   stringPtr("id-a"),
 		Name: stringPtr("Node A"),
 	}))
@@ -1254,7 +1260,7 @@ func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
 	require.NoError(t, err)
 	defer pB.Close()
 
-	require.NoError(t, pB.SetDeviceInfo(&api.DevicePatch{
+	require.NoError(t, pB.SetDeviceInfo(&model.DevicePatch{
 		Id:   stringPtr("id-b"),
 		Name: stringPtr("Node B"),
 	}))
@@ -1285,14 +1291,66 @@ func TestTwoNodesPersistDistinctIdentitiesAfterExportImport(t *testing.T) {
 	require.Equal(t, "Node A", *storedA.Name)
 }
 
-func readDatabaseMetadata(dbPath string) (*api.DatabaseMetadata, error) {
+func TestExportImportConvergesHashDespiteDifferentMetadataVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPathA := filepath.Join(tmpDir, "node_a.db")
+	dbPathB := filepath.Join(tmpDir, "node_b.db")
+
+	smA := persistence.NewStateManager(&api.AppConfig{NodeName: "node-a"})
+	pA, err := persistence.NewPersistence(dbPathA, smA)
+	require.NoError(t, err)
+	defer pA.Close()
+
+	smB := persistence.NewStateManager(&api.AppConfig{NodeName: "node-b"})
+	pB, err := persistence.NewPersistence(dbPathB, smB)
+	require.NoError(t, err)
+	defer pB.Close()
+
+	require.NoError(t, smA.Set("volume", 11))
+	require.NoError(t, pA.SaveState())
+
+	require.NoError(t, smB.Set("volume", 3))
+	require.NoError(t, pB.SaveState())
+
+	metaBeforeA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaBeforeB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.NotEqual(t, metaBeforeA.Version, metaBeforeB.Version)
+
+	exported, err := pA.ExportData()
+	require.NoError(t, err)
+
+	exportMap, ok := exported.(map[string]map[string]any)
+	require.True(t, ok)
+
+	importPayload := make(map[string]any, len(exportMap))
+	for key, value := range exportMap {
+		importPayload[key] = value
+	}
+	require.NoError(t, pB.ImportData(importPayload))
+
+	hashA, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	hashB, err := computeDatabaseHashFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, hashA, hashB)
+
+	metaAfterA, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pA))
+	require.NoError(t, err)
+	metaAfterB, err := readDatabaseMetadataFromDB(rawBoltDBForTest(t, pB))
+	require.NoError(t, err)
+	require.Equal(t, metaAfterA.Hash, metaAfterB.Hash)
+}
+
+func readDatabaseMetadata(dbPath string) (*model.DatabaseMetadata, error) {
 	db, err := bbolt.Open(dbPath, 0600, &bbolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var metadata api.DatabaseMetadata
+	var metadata model.DatabaseMetadata
 	err = db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1311,8 +1369,8 @@ func readDatabaseMetadata(dbPath string) (*api.DatabaseMetadata, error) {
 	return &metadata, nil
 }
 
-func readDatabaseMetadataFromDB(db *bbolt.DB) (*api.DatabaseMetadata, error) {
-	var metadata api.DatabaseMetadata
+func readDatabaseMetadataFromDB(db *bbolt.DB) (*model.DatabaseMetadata, error) {
+	var metadata model.DatabaseMetadata
 	err := db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte("fusion"))
 		if bucket == nil {
@@ -1329,6 +1387,16 @@ func readDatabaseMetadataFromDB(db *bbolt.DB) (*api.DatabaseMetadata, error) {
 	}
 
 	return &metadata, nil
+}
+
+// antiEntropyBucketsForTest mirrors the production antiEntropyBuckets order.
+var antiEntropyBucketsForTest = []string{
+	"snapshots",
+	"tasks",
+	"snapshot_definitions",
+	"scene_sets",
+	"audio",
+	"device",
 }
 
 func computeDatabaseHashForTest(dbPath string) (string, error) {
@@ -1340,22 +1408,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 
 	hash := sha256.New()
 	err = db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			if string(name) == "device" {
-				return nil
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
 			}
-			hash.Write(name)
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1367,22 +1439,26 @@ func computeDatabaseHashForTest(dbPath string) (string, error) {
 func computeDatabaseHashFromDB(db *bbolt.DB) (string, error) {
 	hash := sha256.New()
 	err := db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
-			if string(name) == "device" {
-				return nil
+		for _, bucketName := range antiEntropyBucketsForTest {
+			if bucketName == "device" {
+				continue
 			}
-			hash.Write(name)
+			b := tx.Bucket([]byte(bucketName))
+			if b == nil {
+				continue
+			}
+			hash.Write([]byte(bucketName))
 			cursor := b.Cursor()
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				hash.Write(k)
-				normalized, err := normalizeHashValueForTest(string(name), string(k), v)
+				normalized, err := normalizeHashValueForTest(bucketName, string(k), v)
 				if err != nil {
 					return err
 				}
 				hash.Write(normalized)
 			}
-			return nil
-		})
+		}
+		return nil
 	})
 	if err != nil {
 		return "", err
@@ -1398,20 +1474,29 @@ func normalizeHashValueForTest(bucketName, key string, value []byte) ([]byte, er
 			return value, nil
 		}
 
-		var metadata api.DatabaseMetadata
+		var metadata model.DatabaseMetadata
 		if err := json.Unmarshal(value, &metadata); err != nil {
 			return nil, err
 		}
 		metadata.Hash = ""
-		return json.Marshal(metadata)
+		metadata.Version = nil
+		return canonicaljson.Marshal(&metadata)
 
 	case "snapshots", "active":
 		var state persistence.PersistentState
 		if err := json.Unmarshal(value, &state); err != nil {
 			return nil, err
 		}
+		state.Version = api.Version{}
 		state.Timestamp = time.Time{}
-		return json.Marshal(state)
+		return canonicaljson.Marshal(&state)
+
+	case "tasks", "snapshot_definitions", "scene_sets", "audio", "device":
+		var decoded any
+		if err := json.Unmarshal(value, &decoded); err != nil {
+			return nil, err
+		}
+		return canonicaljson.Marshal(decoded)
 
 	default:
 		return value, nil
@@ -1429,4 +1514,104 @@ func rawBoltDBForTest(t *testing.T, p *persistence.Persistence) *bbolt.DB {
 
 func stringPtr(value string) *string {
 	return &value
+}
+
+// TestPatchAfterSetStateNilDoesNotPanic is a regression test for the panic
+// "assignment to entry in nil map" that occurred when:
+//  1. ClearState called SetState(nil)
+//  2. SetState(nil) propagated nil into sm.state.State via deepCopyState(nil)
+//  3. A subsequent Patch (e.g. PUT /device) tried to write into the nil map
+//
+// The fix ensures deepCopyState always returns an initialised (possibly empty)
+// map, so sm.state.State is never nil after a clear.
+func TestPatchAfterSetStateNilDoesNotPanic(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+
+	// Seed some initial state so there is something to clear.
+	if err := sm.Set("foo", map[string]any{"bar": 1}); err != nil {
+		t.Fatalf("Set failed: %v", err)
+	}
+
+	// Simulate what ClearState does: SetState(nil).
+	// Before the fix this left sm.state.State == nil.
+	sm.SetState(nil)
+
+	// A Patch immediately after must not panic.
+	result, err := sm.Patch(map[string]any{"foo": map[string]any{"bar": 42}})
+	if err != nil {
+		t.Fatalf("Patch returned unexpected error after SetState(nil): %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected a non-nil PatchResult after patching into cleared state")
+	}
+
+	got, ok := sm.Get("foo.bar")
+	if !ok {
+		t.Fatal("Get(foo.bar) returned not found after Patch")
+	}
+	var gotInt int
+	switch v := got.(type) {
+	case float64:
+		gotInt = int(v)
+	case int:
+		gotInt = v
+	default:
+		t.Fatalf("unexpected type for foo.bar: %T (%v)", got, got)
+	}
+	if gotInt != 42 {
+		t.Errorf("expected foo.bar=42 after Patch, got %v", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MarshalLocalState tests
+// ---------------------------------------------------------------------------
+
+func TestMarshalLocalStateReturnsValidJSON(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("volume", float64(75)))
+	require.NoError(t, sm.Set("mute", false))
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "test-node")
+	require.NotNil(t, data)
+	require.Equal(t, 2, count)
+
+	var result struct {
+		Version api.Version                `json:"version"`
+		NodeID  string                     `json:"node_id"`
+		State   map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &result))
+	require.Equal(t, "test-node", result.NodeID)
+	require.Len(t, result.State, 2)
+	require.Equal(t, version, result.Version)
+}
+
+func TestMarshalLocalStateEmptyState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+
+	version := sm.GetVersion()
+	data, count := sm.MarshalLocalState(version, "empty-node")
+	require.NotNil(t, data, "expected non-nil data even for empty state")
+	require.Equal(t, 0, count)
+}
+
+func TestMarshalLocalStateConsistentWithGetFullState(t *testing.T) {
+	sm := persistence.NewStateManager(&persistConfig)
+	require.NoError(t, sm.Set("settings", map[string]any{"audio": map[string]any{"gain": float64(50)}}))
+
+	version := sm.GetVersion()
+	data, _ := sm.MarshalLocalState(version, "node-x")
+
+	fullState := sm.GetFullState()
+
+	var marshaled struct {
+		State map[string]*api.StateEntry `json:"state"`
+	}
+	require.NoError(t, json.Unmarshal(data, &marshaled))
+	require.Equal(t, len(fullState.State), len(marshaled.State))
+	for k := range fullState.State {
+		require.Contains(t, marshaled.State, k)
+	}
 }

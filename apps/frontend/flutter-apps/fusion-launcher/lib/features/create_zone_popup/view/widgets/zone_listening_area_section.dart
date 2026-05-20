@@ -18,7 +18,6 @@ class _ZoneListeningAreaSection extends StatefulWidget {
 class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
   final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
 
-  bool _isDropdownOpen = false;
   bool _isAddingArea = false;
   FloorModel? _selectedFloor;
   bool _isAddingNewFloor = false;
@@ -192,23 +191,76 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
               ),
               const SizedBox(height: 12),
 
-              // ── Selectable areas exist and not in add-form mode: show dropdown ──
               if (selectableAreas.isNotEmpty && !_isAddingArea) ...<Widget>[
-                TapRegion(
-                  onTapOutside: (_) => setState(() => _isDropdownOpen = false),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _buildDropdownTrigger(context, selectedCount),
-                      if (_isDropdownOpen) ...<Widget>[
-                        const SizedBox(height: 4),
-                        _buildAreaList(context, vm, selectableAreas),
-                      ],
-                    ],
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionOutlinedDropdown<ListeningArea>(
+                      semanticId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        'listening_area_dropdown_${widget.subzoneIndex ?? 'zone'}',
+                      ),
+                      hint: 'Select Listening Area',
+                      value: selectableAreas.firstWhereOrNull(
+                        (ListeningArea a) => _isSelectedHere(vm, a.id),
+                      ),
+                      items: selectableAreas,
+                      itemLabelBuilder: (ListeningArea area) {
+                        final FloorModel? floor = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+                        return '${floor?.name ?? ''}/${area.name.isNotEmpty ? area.name : 'Unnamed'}';
+                      },
+                      itemWidgetBuilder: (
+                        BuildContext context,
+                        ListeningArea area,
+                        bool _,
+                      ) {
+                        final FloorModel? floor = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+
+                        final bool isSelected = _isSelectedHere(vm, area.id);
+
+                        final int index = selectableAreas.indexOf(area);
+                        return SemanticHelper.container(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.container,
+                            'listening_area_item_$index',
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              FusionCheckbox(
+                                semanticId: '_area_$index',
+                                value: isSelected,
+                                enabled: true,
+                                onChanged: () => _toggleArea(vm, area),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: FusionAppText(
+                                  text: '${floor?.name ?? ''}/${area.name.isNotEmpty ? area.name : 'Unnamed'}',
+                                  style: context.textTheme.b3Regular.copyWith(
+                                    color: context.colorScheme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      selectedItemBuilder: (BuildContext context, ListeningArea _) {
+                        return FusionAppText(
+                          semanticId: 'Listening_Area_Selected',
+                          text: '$selectedCount Listening Area${selectedCount == 1 ? '' : 's'} Selected',
+                          maxLine: 1,
+                          style: context.textTheme.b3Regular.copyWith(
+                            color: context.colorScheme.textPrimary,
+                          ),
+                        );
+                      },
+                      onChanged: (ListeningArea area) => _toggleArea(vm, area),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildAddAreaButton(context),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _buildAddAreaButton(context),
               ],
 
               // ── No selectable areas OR explicitly adding: show create form ──
@@ -273,105 +325,6 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
 
   // ── Dropdown trigger ──────────────────────────────────────────
 
-  Widget _buildDropdownTrigger(BuildContext context, int selectedCount) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
-        'listening_area_dropdown_${widget.subzoneIndex ?? 'zone'}',
-      ),
-      child: GestureDetector(
-        onTap: () => setState(() => _isDropdownOpen = !_isDropdownOpen),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-          ),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: FusionAppText(
-                  text: selectedCount == 0 ? 'Select Listening Area' : '$selectedCount Listening Area${selectedCount == 1 ? '' : 's'} Selected',
-                  style: context.textTheme.b3Medium.copyWith(
-                    color: selectedCount == 0 ? context.colorScheme.onSurface.withAlpha(155) : context.colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              Icon(
-                _isDropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                size: 16,
-                color: context.colorScheme.iconDefault,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Area list (only available areas) ─────────────────────────
-
-  Widget _buildAreaList(
-    BuildContext context,
-    CreateZoneViewModel vm,
-    List<ListeningArea> selectableAreas, // only available + currently selected
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-        color: context.colorScheme.elevation2,
-      ),
-      child: Column(
-        children:
-            selectableAreas.map((ListeningArea area) {
-              final FloorModel? floor = _projectViewModel.getFloorForListeningArea(areaId: area.id);
-              final bool isSelected = _isSelectedHere(vm, area.id);
-
-              return GestureDetector(
-                onTap: () => _toggleArea(vm, area),
-                child: SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(
-                    SemanticTypes.container,
-                    'listening_area_item_${area.id}',
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    color: Colors.transparent,
-                    child: Row(
-                      children: <Widget>[
-                        SemanticHelper.toggle(
-                          testId: SemanticHelper.createTestId(
-                            SemanticTypes.toggle,
-                            'listening_area_checkbox_${area.id}',
-                          ),
-                          value: isSelected,
-                          child: FusionCheckbox(
-                            semanticId: '_area_${area.id}',
-                            value: isSelected,
-                            enabled: true,
-                            onChanged: () => _toggleArea(vm, area),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FusionAppText(
-                            text: '${floor?.name ?? ''}/${area.name.isNotEmpty ? area.name : 'Unnamed'}',
-                            style: context.textTheme.b3Regular.copyWith(
-                              color: context.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-      ),
-    );
-  }
-
   // ── "+ Add New Listening Area" button ─────────────────────────
 
   Widget _buildAddAreaButton(BuildContext context) {
@@ -383,7 +336,6 @@ class _ZoneListeningAreaSectionState extends State<_ZoneListeningAreaSection> {
       onTap: () {
         setState(() {
           _isAddingArea = true;
-          _isDropdownOpen = false;
         });
         widget.onAddingAreaChanged?.call(true);
       },

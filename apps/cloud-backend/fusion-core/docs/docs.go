@@ -74,6 +74,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/bsf/generate": {
+            "post": {
+                "description": "Generates a BSF (Bose Specification File) from the provided product metadata and SPM file, uploads it to S3, and returns the download URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BSF"
+                ],
+                "summary": "Generate BSF File",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product name (e.g. DM3SE)",
+                        "name": "product_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product family (e.g. DesignMax)",
+                        "name": "family",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product SKU (default: -)",
+                        "name": "sku",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Whether the product is a subwoofer (default: false)",
+                        "name": "is_subwoofer",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Component category (default: speaker)",
+                        "name": "category",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "SPM measurement file",
+                        "name": "spm_file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "BSF file generated and uploaded",
+                        "schema": {
+                            "$ref": "#/definitions/types.BSFGenerateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/devices": {
             "post": {
                 "security": [
@@ -3078,6 +3161,14 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BSFGenerateResponse": {
+            "type": "object",
+            "properties": {
+                "bsf_url": {
+                    "type": "string"
+                }
+            }
+        },
         "types.Budget": {
             "type": "object",
             "required": [
@@ -4040,6 +4131,60 @@ const docTemplate = `{
                 }
             }
         },
+        "types.OutputAsset": {
+            "type": "object",
+            "properties": {
+                "black": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "white": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.OutputItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputAsset"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "output_id": {
+                    "type": "integer"
+                },
+                "specifications": {
+                    "$ref": "#/definitions/types.OutputSpecifications"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.OutputSpecifications": {
+            "type": "object",
+            "properties": {
+                "paging_type": {
+                    "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "types.PermissionUpdateRequest": {
             "type": "object",
             "required": [
@@ -4153,10 +4298,16 @@ const docTemplate = `{
                         "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
+                "output": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.OutputItemResponse"
+                    }
+                },
                 "source": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.SourceItem"
+                        "$ref": "#/definitions/types.SourceItemResponse"
                     }
                 },
                 "speaker": {
@@ -4538,26 +4689,66 @@ const docTemplate = `{
                 }
             }
         },
-        "types.SourceItem": {
+        "types.SourceAsset": {
             "type": "object",
             "properties": {
-                "asset_path": {
+                "black": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "white": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "types.SourceItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.SourceAsset"
+                    }
+                },
+                "description": {
                     "type": "string"
                 },
-                "connection_type": {
+                "is_fusion_compatible": {
+                    "type": "boolean"
+                },
+                "model_family": {
                     "type": "string"
                 },
-                "name": {
+                "model_name": {
                     "type": "string"
                 },
-                "price": {
-                    "type": "number"
+                "source_id": {
+                    "type": "integer"
                 },
-                "product_id": {
+                "specifications": {
+                    "$ref": "#/definitions/types.SourceSpecifications"
+                }
+            }
+        },
+        "types.SourceSpecifications": {
+            "type": "object",
+            "properties": {
+                "paging_type": {
                     "type": "string"
                 },
-                "type": {
+                "primary_connection": {
                     "type": "string"
+                },
+                "supported_connections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

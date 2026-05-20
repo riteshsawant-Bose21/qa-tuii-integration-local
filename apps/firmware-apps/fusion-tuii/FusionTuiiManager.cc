@@ -33,9 +33,9 @@
 
 static bool g_bSuccess = false;
 static std::unique_ptr<UDPValueMonitor> g_udpObserver;
-static std::shared_ptr<std::map<std::string, int>> g_objectTracker =
-    std::make_shared<std::map<std::string, int>>();
 
+static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = NULL;
+#if 0
 static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = R"({
     "touchui_zone_config": {
         "zones": [
@@ -113,6 +113,7 @@ static const char *TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV = R"({
         ]
     }
 })";
+#endif
 
 static const char *TUII_DEVICE_CONFIG_JSON_STRING_FOR_DEV = R"({
     "touchui_device_config": {
@@ -129,6 +130,7 @@ static const char *TUII_DEVICE_CONFIG_JSON_STRING_FOR_DEV = R"({
 
 bool InitializeFusionTUIIBridge(const std::string &serverIP,
                                 unsigned int serverPort,
+                                const std::map<std::string, int> &objectTracker,
                                 const std::vector<TuiiZoneConfig> &zoneConfigs,
                                 const Json::Value &deviceConfig);
 void HandleTUIIConfigurationUpdate(const Json::Value &newConfig);
@@ -171,8 +173,6 @@ Json::Value             g_latestDeviceConfig(Json::objectValue);
 bool                    g_hasLatestDeviceConfig = false;
 bool                    g_pendingDeviceConfig   = false;
 
-std::vector<TuiiZoneConfig> g_latestZoneConfigs;
-bool                        g_hasLatestZoneConfigs = false;
 bool                        g_pendingZoneConfig    = false;
 
 Json::Value             g_latestAudioSettings(Json::objectValue);
@@ -186,7 +186,7 @@ void ProtocolWorkerLoop();
 void StartProtocolWorker();
 void StopProtocolWorker();
 void QueueDeviceConfigForProtocol(const Json::Value &deviceConfig);
-void QueueZoneConfigForProtocol(const std::vector<TuiiZoneConfig> &zoneConfigs);
+void QueueZoneConfigForProtocol();
 void QueueAudioSettingsForProtocol(const Json::Value &newSettings);
 void HandleSerialProtocolMessage(const char *buf, std::size_t len);
 bool WaitForReadyAck();
@@ -250,6 +250,7 @@ int main(int argc, const char *argv[])
 
     Json::Value deviceConfig(Json::objectValue);
     std::vector<TuiiZoneConfig> zoneConfigs;
+    std::map<std::string, int> objectTracker;
 
     const bool hasZoneDevConfig =
         (TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV != nullptr) && (TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV[0] != '\0');
@@ -266,7 +267,7 @@ int main(int argc, const char *argv[])
             return -1;
         }
 
-        if (!BuildZoneConfigsFromConfig(zoneConfigJson, *g_objectTracker, zoneConfigs))
+        if (!BuildZoneConfigsFromConfig(zoneConfigJson, objectTracker, zoneConfigs))
         {
             spdlog::error("Failed to build zone configuration from hardcoded zone JSON");
             return -1;
@@ -274,7 +275,6 @@ int main(int argc, const char *argv[])
     }
     else
     {
-        g_objectTracker->clear();
         spdlog::warn("TUII_ZONE_CONFIG_JSON_STRING_FOR_DEV is null/empty; skipping startup zone config parsing");
     }
 
@@ -306,7 +306,7 @@ int main(int argc, const char *argv[])
         spdlog::warn("TUII_DEVICE_CONFIG_JSON_STRING_FOR_DEV is null/empty; skipping startup device config parsing");
     }
 
-    g_bSuccess = InitializeFusionTUIIBridge(serverIP, serverPort, zoneConfigs, deviceConfig);
+    g_bSuccess = InitializeFusionTUIIBridge(serverIP, serverPort, objectTracker, zoneConfigs, deviceConfig);
     if (!g_bSuccess)
     {
         spdlog::error("FusionTUIIBridge initialization failed");
@@ -336,7 +336,7 @@ int main(int argc, const char *argv[])
         }
         if (!zoneConfigs.empty())
         {
-            QueueZoneConfigForProtocol(zoneConfigs);
+            QueueZoneConfigForProtocol();
         }
     }
 
@@ -361,6 +361,7 @@ void ShutdownSerial()
 
 bool InitializeFusionTUIIBridge(const std::string &serverIP,
                                 unsigned int serverPort,
+                                const std::map<std::string, int> &objectTracker,
                                 const std::vector<TuiiZoneConfig> &zoneConfigs,
                                 const Json::Value &deviceConfig)
 {
@@ -368,7 +369,7 @@ bool InitializeFusionTUIIBridge(const std::string &serverIP,
     {
         FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
 
-        bool success = bridge.initialize(serverIP, serverPort, g_objectTracker, zoneConfigs, deviceConfig);
+        bool success = bridge.initialize(serverIP, serverPort, objectTracker, zoneConfigs, deviceConfig);
         if (!success)
         {
             spdlog::error("Failed to initialize FusionTUIIBridge");
@@ -501,17 +502,17 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
     }
     const int zoneIndex = payload["zone"].asInt();
 
-    // Take a snapshot of shared state under lock before calling bridge methods
-    std::map<std::string, int> trackerSnapshot;
-    std::vector<TuiiZoneConfig> zoneSnapshot;
+    FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
+    if (!bridge.isInitialized())
     {
-        std::lock_guard<std::mutex> lock(g_protocolMutex);
-        if (g_objectTracker)
-        {
-            trackerSnapshot = *g_objectTracker;
-        }
-        zoneSnapshot = g_latestZoneConfigs;
+        spdlog::warn("[Protocol] {} bridge not initialized", action);
+        SendNackWithRetry(action, zoneIndex);
+        return;
     }
+
+    // Take a snapshot from the central store in the bridge
+    std::map<std::string, int> trackerSnapshot = bridge.getObjectTrackerSnapshot();
+    std::vector<TuiiZoneConfig> zoneSnapshot = bridge.getZoneConfigsSnapshot();
 
     if (zoneIndex < 0 || static_cast<std::size_t>(zoneIndex) >= zoneSnapshot.size())
     {
@@ -521,14 +522,6 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
     }
 
     const TuiiZoneConfig &zone = zoneSnapshot[static_cast<std::size_t>(zoneIndex)];
-
-    FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
-    if (!bridge.isInitialized())
-    {
-        spdlog::warn("[Protocol] {} bridge not initialized", action);
-        SendNackWithRetry(action, zoneIndex);
-        return;
-    }
 
     if (action == "setGain")
     {
@@ -554,7 +547,9 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
         const double dBValue = static_cast<double>(zone.gain.minValue)
                                + (norm/100.0) * (static_cast<double>(zone.gain.maxValue)
                                          - static_cast<double>(zone.gain.minValue));
+
         bridge.sendGainToFusion(zone.gain.gainID, dBValue);
+        bridge.handleFusionGainUpdate(zone.gain.gainID, dBValue);
     }
     else if (action == "setMute")
     {
@@ -570,7 +565,10 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
-        bridge.sendMuteToFusion(zone.gain.gainID, payload["state"].asBool());
+
+        const bool muteState = payload["state"].asBool();
+        bridge.sendMuteToFusion(zone.gain.gainID, muteState);
+        bridge.handleFusionMuteUpdate(zone.gain.gainID, muteState);
     }
     else
     {
@@ -595,7 +593,9 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
             SendNackWithRetry(action, zoneIndex);
             return;
         }
-        bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex));
+
+        bridge.sendSourceToFusion(zone.zoneId, static_cast<uint16_t>(sourceIndex+1));
+        bridge.handleFusionSourceUpdate(zone.zoneId, static_cast<uint16_t>(sourceIndex+1));
     }
 }
 
@@ -730,12 +730,10 @@ void QueueDeviceConfigForProtocol(const Json::Value &deviceConfig)
     g_protocolCv.notify_all();
 }
 
-void QueueZoneConfigForProtocol(const std::vector<TuiiZoneConfig> &zoneConfigs)
+void QueueZoneConfigForProtocol()
 {
     {
         std::lock_guard<std::mutex> lock(g_protocolMutex);
-        g_latestZoneConfigs  = zoneConfigs;
-        g_hasLatestZoneConfigs = true;
         g_pendingZoneConfig    = true;
     }
     g_protocolCv.notify_all();
@@ -862,18 +860,71 @@ bool PerformInitializationCycle(Json::Value &deviceSnapshot,
         if (zoneEndResult == ZoneEndWaitResult::ack)
         {
             spdlog::info("[Protocol] zoneEnd acknowledged");
-            return true;
+            //return true;
         }
-
-        if (zoneEndResult == ZoneEndWaitResult::nack)
+        else if (zoneEndResult == ZoneEndWaitResult::nack)
         {
             spdlog::warn("[Protocol] zoneEndNack received; restarting initialization");
+            return false;
         }
         else
         {
             spdlog::warn("[Protocol] zoneEnd timeout; restarting initialization");
+            return false;
         }
-        return false;
+
+        int updZoneIdx = 0;
+        for (const auto &zoneConfig : zoneSnapshot)
+        {
+            if (zoneConfig.gain.defaultGainValue != zoneConfig.gain.gainValue)
+            {
+                double norm = 0.0;
+                const double denom = static_cast<double>(zoneConfig.gain.maxValue) - static_cast<double>(zoneConfig.gain.minValue);
+
+                spdlog::info("Starting Gain update");
+
+                if (std::abs(denom) > 1e-9)
+                {
+                    norm = (zoneConfig.gain.gainValue - static_cast<double>(zoneConfig.gain.minValue)) * 100.0 / denom;
+                }
+                Json::Value payload(Json::objectValue);
+                payload["db"] = zoneConfig.gain.gainValue;
+                payload["norm"] = norm;
+
+                if (!SendRealtimeCommand("setGain", payload, updZoneIdx))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (zoneConfig.gain.defaultMuteValue != zoneConfig.gain.muteState)
+            {
+                Json::Value payload(Json::objectValue);
+
+                spdlog::info("Starting Mute update");
+
+                payload["state"] = zoneConfig.gain.muteState;
+
+                if (!SendRealtimeCommand("setMute", payload, updZoneIdx))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (zoneConfig.sourceIndex != 0)
+            {
+                Json::Value payload(Json::objectValue);
+                payload["index"] = zoneConfig.sourceIndex;
+
+                if (!SendRealtimeCommand("setSource", payload, zoneIndex))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+
+            updZoneIdx++;
+        }
     }
 
     return true;
@@ -951,8 +1002,6 @@ bool ProcessPendingNacks()
 bool ApplyQueuedAudioCommands()
 {
     Json::Value audioSnapshot(Json::objectValue);
-    std::map<std::string, int> objectTrackerSnapshot;
-    std::vector<TuiiZoneConfig> zoneSnapshot;
 
     {
         std::lock_guard<std::mutex> lock(g_protocolMutex);
@@ -962,12 +1011,11 @@ bool ApplyQueuedAudioCommands()
         }
         audioSnapshot = g_latestAudioSettings;
         g_pendingAudioSettings = false;
-        zoneSnapshot = g_latestZoneConfigs;
-        if (g_objectTracker)
-        {
-            objectTrackerSnapshot = *g_objectTracker;
-        }
     }
+
+    FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
+    std::map<std::string, int> objectTrackerSnapshot = bridge.getObjectTrackerSnapshot();
+    std::vector<TuiiZoneConfig> zoneSnapshot = bridge.getZoneConfigsSnapshot();
 
     for (const auto &settingID : audioSnapshot.getMemberNames())
     {
@@ -1030,7 +1078,7 @@ bool ApplyQueuedAudioCommands()
         if (settings.isMember("input") && settings["input"].isInt())
         {
             Json::Value payload(Json::objectValue);
-            payload["index"] = settings["input"].asInt();
+            payload["index"] = settings["input"].asInt()-1;
 
             if (!SendRealtimeCommand("setSource", payload, zoneIndex))
             {
@@ -1084,7 +1132,6 @@ void ProtocolWorkerLoop()
         while (true)
         {
             Json::Value deviceSnapshot(Json::objectValue);
-            std::vector<TuiiZoneConfig> zoneSnapshot;
 
             {
                 std::lock_guard<std::mutex> lock(g_protocolMutex);
@@ -1096,11 +1143,10 @@ void ProtocolWorkerLoop()
                 {
                     deviceSnapshot = g_latestDeviceConfig;
                 }
-                if (g_hasLatestZoneConfigs)
-                {
-                    zoneSnapshot = g_latestZoneConfigs;
-                }
             }
+
+            FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
+            std::vector<TuiiZoneConfig> zoneSnapshot = bridge.getZoneConfigsSnapshot();
 
             Json::Value readyPacket(Json::objectValue);
             readyPacket["action"] = "ready";
@@ -1120,6 +1166,7 @@ void ProtocolWorkerLoop()
                 spdlog::warn("[Protocol] readyAck timeout; retrying ready");
                 continue;
             }
+            g_readyAckReceived = false;  // Reset readyAck flag.
 
             if (!PerformInitializationCycle(deviceSnapshot, zoneSnapshot))
             {
@@ -1145,6 +1192,14 @@ void ProtocolWorkerLoop()
                     {
                         break;
                     }
+
+                    // Check if display device was reset.
+                    if (g_readyAckReceived)
+                    {
+                        g_readyAckReceived = false;  // Reset readyAck flag.
+                        break;
+                    }
+
                     if (g_pendingDeviceConfig || g_pendingZoneConfig || g_pendingAudioSettings)
                     {
                         if (g_pendingDeviceConfig || g_pendingZoneConfig)
@@ -1433,7 +1488,7 @@ void HandleTUIIConfigurationUpdate(const Json::Value &newConfig)
         return;
     }
 
-    auto newTrackerPtr = std::make_shared<std::map<std::string, int>>(std::move(rebuiltTracker));
+    auto newTrackerPtr = rebuiltTracker;
 
     if (!bridge.updateZoneConfiguration(newTrackerPtr, rebuiltZoneConfigs))
     {
@@ -1441,15 +1496,10 @@ void HandleTUIIConfigurationUpdate(const Json::Value &newConfig)
         return;
     }
 
-    {
-        std::lock_guard<std::mutex> lock(g_protocolMutex);
-        g_objectTracker = newTrackerPtr;
-    }
-
-    QueueZoneConfigForProtocol(rebuiltZoneConfigs);
+    QueueZoneConfigForProtocol();
 
     spdlog::info("TUII zone configuration update applied: {} zones, {} keys",
-                 rebuiltZoneConfigs.size(), g_objectTracker->size());
+                 rebuiltZoneConfigs.size(), newTrackerPtr.size());
     spdlog::info("TUII zone update queued for protocol sync");
 }
 

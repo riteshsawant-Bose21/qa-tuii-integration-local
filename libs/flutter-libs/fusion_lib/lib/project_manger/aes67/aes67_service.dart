@@ -241,6 +241,35 @@ extension Aes67Service on ProjectService {
     return streamToSourceChannels;
   }
 
+  // ==================== OutputDevice ↔ Stream+Channel Mapping ====================
+
+  /// Assigns multiple stream-channel mappings to [outputDeviceId].
+  void assignStreamChannelsToOutputDevice({required String outputDeviceId, required List<AssignedStreamChannel> channels}) {
+    // Clear any existing mapping for this output device first.
+    final Set<String> existing = relationships.getChildren(RelationshipType.outputDeviceStreamMapping, outputDeviceId);
+    for (final String old in List<String>.from(existing)) {
+      relationships.unlink(RelationshipType.outputDeviceStreamMapping, outputDeviceId, old);
+    }
+
+    // Link each channel mapping.
+    for (final AssignedStreamChannel ch in channels) {
+      final String entry = '${ch.streamId}:${ch.channelNumber}:${ch.channelName}';
+      relationships.link(RelationshipType.outputDeviceStreamMapping, outputDeviceId, entry);
+    }
+  }
+
+  /// Returns the assigned stream-channel mappings for a given [outputDeviceId].
+  List<AssignedStreamChannel> getStreamChannelsForOutputDevice(String outputDeviceId) {
+    final Set<String> entries = relationships.getChildren(RelationshipType.outputDeviceStreamMapping, outputDeviceId);
+    return entries.map((String entry) {
+      final List<String> parts = entry.split(':');
+      final int channelNumber = int.tryParse(parts[parts.length - 2]) ?? 1;
+      final String channelName = parts.last;
+      final String streamId = parts.sublist(0, parts.length - 2).join(':');
+      return AssignedStreamChannel(streamId: streamId, channelNumber: channelNumber, channelName: channelName);
+    }).toList();
+  }
+
   // ==================== Output Stream → Circuit Assignment ====================
 
   /// Returns all output streams that have at least one channel assigned to a circuit.

@@ -6,7 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"sort"
 	"strings"
 	"testing"
@@ -23,7 +23,7 @@ type FusionCluster struct {
 type FusionNode struct {
 	MultipassName string
 	MultipassIPs  []string
-	Device        api.DeviceInfo
+	Device        model.DeviceInfo
 }
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
@@ -198,10 +198,10 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 		})
 	}
 	sort.Slice(mappings, func(i, j int) bool {
-		if mappings[i].Device.IsPrimaryNode && !mappings[j].Device.IsPrimaryNode {
+		if mappings[i].Device.IsPrimary && !mappings[j].Device.IsPrimary {
 			return true
 		}
-		if mappings[j].Device.IsPrimaryNode && !mappings[i].Device.IsPrimaryNode {
+		if mappings[j].Device.IsPrimary && !mappings[i].Device.IsPrimary {
 			return false
 		}
 		return mappings[i].Device.Address < mappings[j].Device.Address
@@ -242,9 +242,9 @@ func (fc FusionCluster) Primary() (FusionNode, error) {
 		return FusionNode{}, fmt.Errorf("get devices: %w", err)
 	}
 
-	var primary *api.DeviceInfo
+	var primary *model.DeviceInfo
 	for i := range devices {
-		if devices[i].IsPrimaryNode {
+		if devices[i].IsPrimary {
 			if primary != nil {
 				return FusionNode{}, fmt.Errorf("expected exactly one primary, found multiple")
 			}

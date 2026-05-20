@@ -6,11 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	model "fusion/internal/gen/proto/fusion"
+
 	json "github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 
 	"fusion-services-core/logging"
-	"fusion/internal/api"
 )
 
 // telemetryFilterRequest is the UDP message sent to the telemetry core.
@@ -48,18 +49,17 @@ func (p *udpConnPool) send(addr string, data []byte) error {
 			continue
 		}
 
-		conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		_ = conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		_, err = conn.Write(data)
 		if err == nil {
 			return nil
 		}
 
-		// Connection is stale; close and remove so next attempt re-dials.
 		lastErr = err
 		p.mu.Lock()
 		delete(p.conns, addr)
 		p.mu.Unlock()
-		conn.Close()
+		_ = conn.Close()
 	}
 	return lastErr
 }
@@ -71,8 +71,7 @@ func (p *udpConnPool) getOrDial(addr string) (net.Conn, error) {
 		p.mu.Unlock()
 		return conn, nil
 	}
-	// Hold the lock while dialing to prevent multiple goroutines from
-	// creating duplicate connections to the same address.
+
 	newConn, err := net.Dial("udp", addr)
 	if err != nil {
 		p.mu.Unlock()
@@ -86,18 +85,14 @@ func (p *udpConnPool) getOrDial(addr string) (net.Conn, error) {
 // MeterFilterManager tracks a per-connection list of meter IDs and maintains a
 // union master list. Whenever the master list changes it sends update_filter_req
 // to the telemetry core via UDP so only the relevant meter IDs are forwarded.
-//
-// Concurrency: all public methods are safe to call from multiple goroutines.
 type MeterFilterManager struct {
 	mu          sync.RWMutex
-	connFilters map[*websocket.Conn]map[string]bool // conn → set of requested IDs
-	masterList  map[string]bool                     // union across all connections
+	connFilters map[*websocket.Conn]map[string]bool
+	masterList  map[string]bool
 	packetID    atomic.Uint64
 
-	// Persistent UDP connection pool (avoids per-send socket churn).
 	pool *udpConnPool
 
-	// Debounce: coalesce rapid filter changes into a single UDP send.
 	debounceMu      sync.Mutex
 	debouncePending bool
 	debounceTimer   *time.Timer
@@ -107,8 +102,6 @@ type MeterFilterManager struct {
 
 const filterDebounceInterval = 50 * time.Millisecond
 
-// NewMeterFilterManager creates a manager that will send filter updates to
-// the telemetry core on each cluster device via UDP.
 func NewMeterFilterManager() *MeterFilterManager {
 	return &MeterFilterManager{
 		connFilters: make(map[*websocket.Conn]map[string]bool),
@@ -132,20 +125,13 @@ func (m *MeterFilterManager) SetFilter(conn *websocket.Conn, ids []string, devic
 	m.recomputeAndSend(deviceAddressArray)
 }
 
-// RemoveFilter removes the filter for conn and recomputes the master list.
-// If conn has no filter registered it still recomputes, because the telemetry
-// core must be notified if the master list becomes empty (e.g. after a fusion
-// server restart where masterList is {} but the telemetry core has stale state).
 func (m *MeterFilterManager) RemoveFilter(conn *websocket.Conn, deviceAddressArray []string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	_, existed := m.connFilters[conn]
-	delete(m.connFilters, conn) // no-op if conn was not in the map
+	delete(m.connFilters, conn)
 
-	// Only recompute if removing this connection could actually change what the
-	// telemetry core needs to know: either the conn had a filter, or the current
-	// master is non-empty and might now need to shrink.
 	if existed || len(m.masterList) > 0 {
 		m.recomputeAndSend(deviceAddressArray)
 	}
@@ -153,9 +139,8 @@ func (m *MeterFilterManager) RemoveFilter(conn *websocket.Conn, deviceAddressArr
 
 // FilterMeterDataForConn returns a copy of msg with parameters.value filtered to
 // only the samples whose block_name is in conn's registered filter.
-// If the connection has no filter registered, nil is returned (no data until a filter is set).
-// Returns nil if the filter is set but matches no samples.
-func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *api.MeterDataMessage) *api.MeterDataMessage {
+// If the connection has no filter registered, nil is returned.
+func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *model.MeterDataMessage) *model.MeterDataMessage {
 	m.mu.RLock()
 	filter := m.connFilters[conn]
 	m.mu.RUnlock()
@@ -164,7 +149,7 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 		return nil
 	}
 
-	filtered := make([]api.MeterDataSample, 0, min(len(msg.Parameters.Value), len(filter)))
+	filtered := make([]*model.MeterData, 0, min(len(msg.Parameters.Value), len(filter)))
 	for _, sample := range msg.Parameters.Value {
 		if filter[sample.BlockName] {
 			filtered = append(filtered, sample)
@@ -175,7 +160,6 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 		return nil
 	}
 
-	// Shallow-copy the message, replacing only the value slice.
 	result := *msg
 	params := msg.Parameters
 	params.Value = filtered
@@ -185,8 +169,6 @@ func (m *MeterFilterManager) FilterMeterDataForConn(conn *websocket.Conn, msg *a
 
 // ResetAndClear drops all per-connection filters, resets the master list to
 // empty, and immediately sends {"value":[]} to every telemetry core address.
-// Call this on VIP gain / fusion-server start to ensure the telemetry core
-// has a clean slate before any WebSocket client sets a new filter.
 func (m *MeterFilterManager) ResetAndClear(deviceAddressArray []string) {
 	m.mu.Lock()
 	m.connFilters = make(map[*websocket.Conn]map[string]bool)
@@ -194,7 +176,6 @@ func (m *MeterFilterManager) ResetAndClear(deviceAddressArray []string) {
 	packetID := m.packetID.Add(1)
 	m.mu.Unlock()
 
-	// Cancel any pending debounced send — we're sending immediately.
 	m.debounceMu.Lock()
 	m.debouncePending = false
 	if m.debounceTimer != nil {
@@ -205,17 +186,10 @@ func (m *MeterFilterManager) ResetAndClear(deviceAddressArray []string) {
 	m.pendingAddrs = nil
 	m.debounceMu.Unlock()
 
-	// Send synchronously — reset must be immediate.
 	m.sendFilterRequest(nil, packetID, deviceAddressArray)
 	logging.GetLogger().Debug("MeterFilterManager: reset all filters and sent empty filter to telemetry cores")
 }
 
-// recomputeAndSend rebuilds the master list and dispatches update_filter_req
-// to the telemetry core asynchronously whenever the list changes.
-// When the new master is empty we always send, even if the previous master was
-// also empty — this clears stale state on the telemetry core after a restart
-// or VIP failover.
-// Must be called with m.mu held (write lock).
 func (m *MeterFilterManager) recomputeAndSend(deviceAddressArray []string) {
 	newMaster := make(map[string]bool)
 	for _, filter := range m.connFilters {
@@ -224,8 +198,6 @@ func (m *MeterFilterManager) recomputeAndSend(deviceAddressArray []string) {
 		}
 	}
 
-	// Skip only when the non-empty master hasn't changed. When the master
-	// is empty we always send so the telemetry core clears its filter.
 	if len(newMaster) > 0 && mapsEqual(m.masterList, newMaster) {
 		return
 	}
@@ -238,9 +210,6 @@ func (m *MeterFilterManager) recomputeAndSend(deviceAddressArray []string) {
 	m.enqueueFilterUpdate(ids, deviceAddressArray)
 }
 
-// enqueueFilterUpdate stages a filter update for debounced sending.
-// Mirrors the enqueueConfigUpdate pattern: set pending state, merge data,
-// and start the timer only if one is not already running.
 func (m *MeterFilterManager) enqueueFilterUpdate(ids []string, addrs []string) {
 	m.debounceMu.Lock()
 	m.debouncePending = true
@@ -252,8 +221,6 @@ func (m *MeterFilterManager) enqueueFilterUpdate(ids []string, addrs []string) {
 	m.debounceMu.Unlock()
 }
 
-// flushFilterUpdate sends the pending filter to the telemetry core(s).
-// If new updates arrived while sending, it re-arms the timer for another round.
 func (m *MeterFilterManager) flushFilterUpdate() {
 	m.debounceMu.Lock()
 	pending := m.debouncePending
@@ -298,7 +265,6 @@ func mapsEqual(a, b map[string]bool) bool {
 func (m *MeterFilterManager) sendFilterRequest(ids []string, packetID uint64, deviceAddressArray []string) {
 	logger := logging.GetLogger()
 
-	// Ensure an empty (not nil) slice so the JSON encodes as [] not null.
 	if ids == nil {
 		ids = []string{}
 	}

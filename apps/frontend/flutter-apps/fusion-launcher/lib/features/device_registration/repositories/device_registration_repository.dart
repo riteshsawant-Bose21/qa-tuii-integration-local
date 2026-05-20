@@ -3,9 +3,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-// CUSTOM EXCEPTIONS based on error responses from the API,
-// to allow more granular error handling in the ViewModel.
-// For example, DeviceAlreadyRegisteredException can be caught separately to trigger a CSR update flow.
+import '../../devices/services/fusion_device_discovery_service.dart';
+
 class DeviceAlreadyRegisteredException implements Exception {
   final String certificate;
   final String fusionDeviceId;
@@ -23,24 +22,36 @@ class NoInternetException implements Exception {
 class DeviceRegistrationRepository {
   final String vip;
   final FusionDeviceService fusionDeviceService;
-  DeviceRegistrationRepository({required this.vip, required this.fusionDeviceService});
+  final FusionDeviceDiscoveryService fusionDeviceDiscoveryService;
+
+  DeviceRegistrationRepository({
+    required this.vip,
+    required this.fusionDeviceService,
+    required this.fusionDeviceDiscoveryService,
+  });
 
   Never _throwNoInternetException() => throw const NoInternetException();
 
   void _throwNoInternetIfSocketError(DioException exception) {
-    if (exception.error is SocketException || exception.type == DioExceptionType.connectionError) {
+    if (exception.error is SocketException ||
+        exception.type == DioExceptionType.connectionError) {
       _throwNoInternetException();
     }
   }
 
-  String _extractErrorMessage({required dynamic responseData, required String? responseMessage}) {
-    // Some APIs return plain text bodies instead of JSON objects.
+  String _extractErrorMessage({
+    required dynamic responseData,
+    required String? responseMessage,
+  }) {
     if (responseData is String) {
       final String message = responseData.trim();
       if (message.isNotEmpty) return message;
     }
 
-    final Map<String, dynamic> errorObject = responseData is Map<String, dynamic> ? responseData : <String, dynamic>{};
+    final Map<String, dynamic> errorObject =
+        responseData is Map<String, dynamic>
+            ? responseData
+            : <String, dynamic>{};
 
     String clean(dynamic value) => value is String ? value.trim() : '';
 
@@ -59,16 +70,30 @@ class DeviceRegistrationRepository {
     return 'Unknown error';
   }
 
-  Future<List<FusionNetworkDevice>> getFusionNetworkUnRegisteredDevices() async {
+  Future<List<FusionNetworkDevice>>
+  getFusionNetworkUnRegisteredDevices() async {
     try {
-      final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceService.getAvailableDevicesOnNetwork(ip: vip);
+      final ResponseCallback<List<FusionNetworkDevice>> response =
+          await fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(
+            ip: vip,
+          );
+
       if (response.success) {
-        final List<FusionNetworkDevice> devices = response.data ?? <FusionNetworkDevice>[];
-        return devices.where((FusionNetworkDevice element) => !element.isDeviceCertificateValid).toList();
-      } else {
-        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
-        throw Exception(errorMessage);
+        final List<FusionNetworkDevice> devices =
+            response.data ?? <FusionNetworkDevice>[];
+        return devices
+            .where(
+              (FusionNetworkDevice element) =>
+                  !element.isDeviceCertificateValid,
+            )
+            .toList();
       }
+
+      final String errorMessage = _extractErrorMessage(
+        responseData: response.data,
+        responseMessage: response.message,
+      );
+      throw Exception(errorMessage);
     } on SocketException {
       _throwNoInternetException();
     } on DioException catch (exception) {
@@ -85,23 +110,27 @@ class DeviceRegistrationRepository {
     required FusionNetworkDevice device,
   }) async {
     try {
-      final ResponseCallback<CloudDeviceRegisterResult> response = await fusionDeviceService.registerSingleDevice(
-        device: device,
-        vip: vip,
-        projectId: projectId,
-        csrCertificate: csrCertificate,
-      );
+      final ResponseCallback<CloudDeviceRegisterResult> response =
+          await fusionDeviceService.registerSingleDevice(
+            device: device,
+            vip: vip,
+            projectId: projectId,
+            csrCertificate: csrCertificate,
+          );
 
       if (response.success && response.data != null) {
         return response.data!;
-      } else {
-        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
-
-        if (response.statusCode == 400) {
-          throw DeviceAlreadyRegisteredException(csrCertificate, device.id);
-        }
-        throw Exception(errorMessage);
       }
+
+      final String errorMessage = _extractErrorMessage(
+        responseData: response.data,
+        responseMessage: response.message,
+      );
+
+      if (response.statusCode == 400) {
+        throw DeviceAlreadyRegisteredException(csrCertificate, device.id);
+      }
+      throw Exception(errorMessage);
     } on SocketException {
       _throwNoInternetException();
     } on DioException catch (exception) {
@@ -114,14 +143,18 @@ class DeviceRegistrationRepository {
 
   Future<String> getCSRCertificate(String deviceId) async {
     try {
-      final ResponseCallback<String> response = await fusionDeviceService.getCsrCertificate(vip: vip, deviceId: deviceId);
+      final ResponseCallback<String> response = await fusionDeviceService
+          .getCsrCertificate(vip: vip, deviceId: deviceId);
 
       if (response.success && response.data != null) {
         return response.data!;
-      } else {
-        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
-        throw Exception(errorMessage);
       }
+
+      final String errorMessage = _extractErrorMessage(
+        responseData: response.data,
+        responseMessage: response.message,
+      );
+      throw Exception(errorMessage);
     } on SocketException {
       _throwNoInternetException();
     } on DioException catch (exception) {
@@ -132,20 +165,27 @@ class DeviceRegistrationRepository {
     }
   }
 
-  Future<bool> updateCsrInFusionDevice({required String fusionDeviceId, required String certificate}) async {
+  Future<bool> updateCsrInFusionDevice({
+    required String fusionDeviceId,
+    required String certificate,
+  }) async {
     try {
-      final ResponseCallback<dynamic> response = await fusionDeviceService.updateCsrInFusionDevice(
-        vip: vip,
-        fusionDeviceId: fusionDeviceId,
-        certificate: certificate,
-      );
+      final ResponseCallback<dynamic> response = await fusionDeviceService
+          .updateCsrInFusionDevice(
+            vip: vip,
+            fusionDeviceId: fusionDeviceId,
+            certificate: certificate,
+          );
 
       if (response.success) {
         return true;
-      } else {
-        final String errorMessage = _extractErrorMessage(responseData: response.data, responseMessage: response.message);
-        throw Exception(errorMessage);
       }
+
+      final String errorMessage = _extractErrorMessage(
+        responseData: response.data,
+        responseMessage: response.message,
+      );
+      throw Exception(errorMessage);
     } on SocketException {
       _throwNoInternetException();
     } on DioException catch (exception) {
@@ -156,13 +196,15 @@ class DeviceRegistrationRepository {
     }
   }
 
-  // resetDeviceCertificate
-  Future<bool> resetDeviceCertificate({required String fusionDeviceSerialNumber}) async {
+  Future<bool> resetDeviceCertificate({
+    required String fusionDeviceSerialNumber,
+  }) async {
     try {
-      final ResponseCallback<dynamic> response = await fusionDeviceService.resetDeviceCertificate(
-        vip: vip,
-        fusionDeviceSerialNumber: fusionDeviceSerialNumber,
-      );
+      final ResponseCallback<dynamic> response = await fusionDeviceService
+          .resetDeviceCertificate(
+            vip: vip,
+            fusionDeviceSerialNumber: fusionDeviceSerialNumber,
+          );
 
       if (response.success) return true;
       return false;

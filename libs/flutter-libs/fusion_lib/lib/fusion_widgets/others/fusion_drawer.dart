@@ -79,7 +79,7 @@ class FusionDrawer extends StatelessWidget {
             Expanded(
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, '${semanticId}_drawer_content'),
-                child: scrollable ? SingleChildScrollView(child: content) : content,
+                child: scrollable ? SingleChildScrollView(physics: ClampingScrollPhysics(), child: content) : content,
               ),
             ),
             if (buttonLabel != null) ...<Widget>[

@@ -29,8 +29,7 @@ class Helper {
     }
 
     final List<int> zipData = ZipEncoder().encode(archive);
-    final File zipFile = File('${folder.path}.zip')
-      ..createSync(recursive: true);
+    final File zipFile = File('${folder.path}.zip')..createSync(recursive: true);
     await zipFile.writeAsBytes(zipData);
     return zipFile;
   }
@@ -58,6 +57,31 @@ class Helper {
     Colors.primaries[Random().nextInt(Colors.primaries.length)],
   ];
 
+  /// Checks if a name already exists in a list of items (case-insensitive, trimmed).
+  ///
+  /// Usage:
+  /// ```dart
+  /// final exists = Helper.isNameExists<ZoneModel>(
+  ///   items: zones,
+  ///   newName: zoneName,
+  ///   getName: (zone) => zone.name,
+  /// );
+  /// ```
+  static bool isNameExists<T>({
+    required List<T> items,
+    required String newName,
+    required String Function(T item) getName,
+    String? excludeId,
+    String Function(T item)? getId,
+  }) {
+    return items.any((T item) {
+      if (excludeId != null && getId != null && getId(item) == excludeId) {
+        return false;
+      }
+      return getName(item).trim().toLowerCase() == newName.trim().toLowerCase();
+    });
+  }
+
   static String formatTimeAgoSimple(DateTime dateTime) {
     final DateTime now = DateTime.now();
     final Duration difference = now.difference(dateTime);
@@ -71,5 +95,29 @@ class Helper {
     } else {
       return 'Edited just now';
     }
+  }
+
+  /// Generates a unique default name with an incrementing index.
+  ///
+  /// Example: "Untitled Controller 1", "Untitled Controller 2", etc.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final name = Helper.generateUniqueName(
+  ///   baseName: 'Untitled Controller',
+  ///   existingNames: controllers.map((c) => c.name).toSet(),
+  /// );
+  /// ```
+  static String generateUniqueName({
+    required String baseName,
+    required Set<String> existingNames,
+  }) {
+    int index = 1;
+    String candidate = '$baseName $index';
+    while (existingNames.contains(candidate)) {
+      index++;
+      candidate = '$baseName $index';
+    }
+    return candidate;
   }
 }

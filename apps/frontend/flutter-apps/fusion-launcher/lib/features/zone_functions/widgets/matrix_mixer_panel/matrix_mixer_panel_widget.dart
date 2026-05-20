@@ -55,7 +55,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
     _meterDataViewModel = serviceLocator<MeterDataViewModel>();
 
     // Register as meter observer so telemetry stays alive while this widget is mounted.
-    _meterDataViewModel.registerObserver(this);
+    _meterDataViewModel.registerObserver(this, <String>{widget.zoneFunctions.id});
 
     // Fetch the latest server values on load.
     _matrixMixerViewModel.updateParamsAsPerServer(function: widget.zoneFunctions);
@@ -191,7 +191,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
         Expanded(
           child: SemanticHelper.container(
-            testId: SemanticHelper.createTestId(SemanticTypes.container, 'source_matrix_out_column'),
+            testId: SemanticHelper.createTestId(SemanticTypes.container, 'out_column'),
             child: Column(
               children: <Widget>[
                 Padding(

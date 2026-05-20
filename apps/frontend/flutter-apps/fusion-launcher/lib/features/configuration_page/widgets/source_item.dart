@@ -62,13 +62,14 @@ class _SourceItemState extends State<SourceItem> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(
             children: <Widget>[
-              if (widget.sourceSet != null)
+              if (widget.sourceSet != null && widget.sourceSet!.isLinked)
                 Opacity(
-                  opacity: 0.4,
+                  opacity: 0.6,
                   child: FusionImageAuto(
-                    path: widget.sourceSet!.isLinked ? Assets.linkIcon : null,
+                    path: Assets.linkIcon,
                     width: 18,
                     height: 18,
+                    color: context.colorScheme.iconWhite,
                     fit: BoxFit.contain,
                   ),
                 ),

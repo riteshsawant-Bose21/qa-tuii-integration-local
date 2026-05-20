@@ -1,0 +1,222 @@
+meta {
+  name: Fusion Server
+}
+
+headers {
+  X-Fusion-Gateway-Auth: {{fusionAuth}}
+}
+
+auth {
+  mode: none
+}
+
+docs {
+  # Fusion Server API Documentation
+  
+  ## Overview
+  
+  - **Dev Base URL:** `http://192.168.64.100:8080`
+  - **Local Base URL:** `http://localhost:8080`
+  - **Auth:** None required
+  
+  ---
+  
+  ## 🌱 Root
+  
+  ### `GET /`
+  Returns basic server info. Used to check server status.
+  
+  ---
+  
+  ## 👥 Members
+  
+  ### `GET /members`
+  Retrieves the list of active cluster members.
+  
+  ---
+  
+  ## 📦 Binaries
+  
+  ### `POST /rollbackVersion?index=-1`
+  Rollback the server binary to a previous version.
+  
+  **Query Parameters:**
+  - `index`: integer (e.g. `-1` for latest rollback)
+  
+  ---
+  
+  ### `POST /updateVersion`
+  Uploads a new server binary.
+  
+  **Multipart Form Data:**
+  - `binary` (file): Required
+  - `checksum` (text): SHA256 checksum of the file
+  
+  ---
+  
+  ### `POST /uploadAudio`
+  Uploads an audio file.
+  
+  **Multipart Form Data:**
+  - `binary` (file): Required audio file
+  
+  ---
+  
+  ## ⏱️ Timers
+  
+  ### `GET /tasks`
+  List all scheduled tasks.
+  
+  ---
+  
+  ### `POST /tasks`
+  Add a new scheduled task.
+  
+  Use one of the typed protobuf JSON bodies:
+  - `snapshot_id` for snapshot tasks
+  - `message_id` with `priority` and `zones` for message tasks
+  - `snapshot_definition_id` for scene snapshot tasks
+  - `set_id` and `scene_id` for scene activate tasks
+  
+  **JSON Body:**
+  ```json
+  {
+    "id": "task_id",
+    "cron_expr": "*/5 * * * *",
+    "description": "Task description",
+    "snapshot_id": "default"
+  }
+  ```
+
+  ### `PATCH /tasks/{id}`
+  Update one scheduled task using the matching typed protobuf JSON body for that task kind.
+
+  ### `GET /tasks/history`
+  Returns typed execution history for scheduled tasks.
+
+  ---
+
+  ## 🕰️ Time Machine
+
+  ### `GET /time-machine`
+  Lists stored time-machine snapshots.
+
+  ### `GET /time-machine/meta/active`
+  Returns the active time-machine snapshot name.
+
+  ### `GET /time-machine/{name}`
+  Returns a typed protobuf snapshot payload:
+  ```json
+  {
+    "state": {
+      "some.key": 123
+    }
+  }
+  ```
+
+  ### `POST /time-machine/{name}`
+  Creates a time-machine snapshot from the current active state.
+
+  ### `POST /time-machine/activate/{name}`
+  Activates a stored time-machine snapshot.
+
+  ### `POST /time-machine/update/{name}`
+  Overwrites a stored time-machine snapshot with the current active state.
+
+  ### `DELETE /time-machine/{name}`
+  Deletes a stored time-machine snapshot.
+
+  ---
+
+  ## 🎛️ Settings
+
+  ### `GET /device`
+  Returns the current typed device deployment package.
+
+  ### `PUT /device`
+  Replaces the typed device deployment package. Use this when migrating old `/value`
+  payloads that used to push `audio_streams` and `devices`.
+
+  Required top-level fields:
+  - `dro_conditioned_output`
+  - `fusion_connect_additions`
+  - `fusion_connect_additions.settings`
+
+  ### `GET /settings/audio`
+  Returns the full runtime audio settings subtree.
+
+  ### `GET /settings/audio/{blockId}`
+  Returns the runtime settings object for one audio block.
+
+  ### `GET /settings/audio/{blockId}/{param}`
+  Returns one runtime setting value as:
+  ```json
+  { "value": ... }
+  ```
+
+  ### `GET /settings/audio/{blockId}/{param}/{index}`
+  Returns one indexed runtime setting value as:
+  ```json
+  { "value": ... }
+  ```
+
+  ### `PATCH /settings/audio/{blockId}/{param}`
+  Updates one scalar runtime setting.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": -12.0
+  }
+  ```
+
+  ### `PATCH /settings/audio/{blockId}/{param}/{index}`
+  Updates one indexed runtime setting.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": 1000.0
+  }
+  ```
+
+  ### `DELETE /settings/audio`
+  Clears the entire runtime audio settings subtree.
+
+  ### `GET /settings/touchui_zone_config`
+  Returns the full TouchUI zone config subtree.
+
+  ### `PATCH /settings/touchui_zone_config`
+  Replaces the full TouchUI zone config subtree.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": {
+      "zones": []
+    }
+  }
+  ```
+
+  ### `DELETE /settings/touchui_zone_config`
+  Clears the full TouchUI zone config subtree.
+
+  ### `GET /settings/wall_controller_config`
+  Returns the full wall controller config subtree.
+
+  ### `PATCH /settings/wall_controller_config`
+  Replaces the full wall controller config subtree.
+
+  **JSON Body:**
+  ```json
+  {
+    "value": {
+      "zones": []
+    }
+  }
+  ```
+
+  ### `DELETE /settings/wall_controller_config`
+  Clears the full wall controller config subtree.
+  
+}

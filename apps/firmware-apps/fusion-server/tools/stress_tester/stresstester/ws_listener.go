@@ -138,9 +138,7 @@ func (l *WSListener) loop() {
 			Type string `json:"type"`
 			Data any    `json:"data"`
 		}
-		// Use json.Number to get precise int values
 		dec := json.NewDecoder(bytesReader(raw))
-		dec.UseNumber()
 		if err := dec.Decode(&msg); err != nil {
 			continue
 		}

@@ -986,7 +986,7 @@ func (o *BundleUpdateStatus) Upsert(ctx context.Context, exec boil.ContextExecut
 
 	value := reflect.Indirect(reflect.ValueOf(o))
 	vals := queries.ValuesFromMapping(value, cache.valueMapping)
-	var returns []interface{}
+	var returns []any
 	if len(cache.retMapping) != 0 {
 		returns = queries.PtrsFromMapping(value, cache.retMapping)
 	}

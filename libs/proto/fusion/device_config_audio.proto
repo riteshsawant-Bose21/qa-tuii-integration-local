@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package fusion.deviceconfig.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "fusion/internal/gen/proto/fusion;fusionpb";
+
+message FusionConnectAudioStream {
+  string source_device_uid = 1;
+  string dest_device_uid = 2;
+  FusionConnectAudioStreamProperties properties = 3;
+}
+
+message FusionConnectAudioStreamProperties {
+  string stream_name = 1;
+  string dest_ip = 2;
+  uint32 channels = 3;
+  uint32 source_port = 4;
+  optional bool is_source = 5;
+  optional bool is_fusion_connect = 6;
+}
+
+message FusionConnectAudioSettings {
+  map<string, AudioBlockSettings> audio = 1;
+}
+
+message AudioBlockSettings {
+  // Examples: "gain", "peq", "compressor", "selector".
+  // This makes each entry self-describing without requiring a lookup against
+  // dsp_static_config.
+  string algorithm = 1;
+
+  oneof kind {
+    GainBlockSettings gain = 2;
+    PeqBlockSettings peq = 3;
+    CompressorBlockSettings compressor = 4;
+    SelectorBlockSettings selector = 5;
+    GenericBlockSettings generic = 100;
+  }
+}
+
+// Matches entries like:
+// "GAIN528578446": { "gain": -32.639999, "mute": true }
+message GainBlockSettings {
+  optional double gain = 1;
+  optional bool mute = 2;
+}
+
+// Matches entries like:
+// "PEQ4385417": {
+//   "band_enable": [false, false, false],
+//   "frequency": [1000, 1000, 1000],
+//   "gain": [0, 0, 0],
+//   "q": [1, 1, 1],
+//   "type": ["peq", "peq", "peq"]
+// }
+message PeqBlockSettings {
+  repeated bool band_enable = 1;
+  repeated double frequency = 2;
+  repeated double gain = 3;
+  repeated double q = 4;
+  repeated string type = 5;
+}
+
+// Placeholder for likely dynamic settings on compressor-style blocks.
+message CompressorBlockSettings {
+  optional double threshold = 1;
+  optional double ratio = 2;
+  optional double attack = 3;
+  optional double release = 4;
+  optional double makeup_gain = 5;
+  optional bool bypass = 6;
+}
+
+// For source/zone selector-style control blocks.
+message SelectorBlockSettings {
+  optional int32 selected_index = 1;
+}
+
+// Escape hatch for algorithms we do not model yet.
+message GenericBlockSettings {
+  map<string, google.protobuf.Value> parameters = 1;
+}

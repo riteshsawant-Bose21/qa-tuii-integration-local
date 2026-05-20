@@ -9,11 +9,15 @@ class TitleTextFieldSwitcher extends StatefulWidget {
     required this.style,
     required this.value,
     required this.hintText,
+    this.semanticsId,
   });
   final String value;
   final String hintText;
-  final ValueChanged<String> save;
+
+  /// Return `true` if the save was successful, `false` to revert to previous value.
+  final bool Function(String value) save;
   final TextStyle style;
+  final String? semanticsId;
   @override
   State<TitleTextFieldSwitcher> createState() => _TitleTextFieldSwitcherState();
 }
@@ -75,11 +79,16 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
         _cancelEditing();
         return;
       }
+      final String newValue = controller.text;
+      final bool success = widget.save(newValue);
       setState(() {
-        currentValue = controller.text;
         isEditing = false;
+        if (success) {
+          currentValue = newValue;
+        } else {
+          controller.text = currentValue;
+        }
       });
-      widget.save(controller.text);
     }
   }
 
@@ -92,60 +101,63 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      excludeSemantics: isEditing,
-      child:
-          isEditing
-              ? Focus(
-                onKeyEvent: (FocusNode node, KeyEvent event) {
-                  if (event.logicalKey == LogicalKeyboardKey.escape) {
-                    _cancelEditing();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: SemanticHelper.formControl(
-                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "title_text_field_switcher"),
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    style: widget.style,
-                    maxLength: 24,
-                    maxLines: 1,
-                    decoration: InputDecoration(
-                      hint: Text(
-                        widget.hintText,
-                        style: widget.style.copyWith(color: context.colorScheme.textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+    return SemanticHelper.staticText(
+      testId: widget.semanticsId ?? SemanticHelper.createTestId(SemanticTypes.text, "title_text_field_switcher"),
+      child: Semantics(
+        excludeSemantics: isEditing,
+        child:
+            isEditing
+                ? Focus(
+                  onKeyEvent: (FocusNode node, KeyEvent event) {
+                    if (event.logicalKey == LogicalKeyboardKey.escape) {
+                      _cancelEditing();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: SemanticHelper.formControl(
+                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, "title_text_field_switcher"),
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      style: widget.style,
+                      maxLength: 24,
+                      maxLines: 1,
+                      decoration: InputDecoration(
+                        hint: Text(
+                          widget.hintText,
+                          style: widget.style.copyWith(color: context.colorScheme.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        counter: const SizedBox.shrink(),
+                        border: InputBorder.none,
+                        filled: false,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
                       ),
-                      counter: const SizedBox.shrink(),
-                      border: InputBorder.none,
-                      filled: false,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
+                      onSubmitted: (_) => _saveValue(),
+                      onTapOutside: (_) => _saveValue(),
                     ),
-                    onSubmitted: (_) => _saveValue(),
-                    onTapOutside: (_) => _saveValue(),
+                  ),
+                )
+                : SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "title_text_field_switcher_display"),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onDoubleTap: _startEditing,
+                    child: FusionAppText(
+                      text: currentValue,
+                      maxLine: 1,
+                      textOverflow: TextOverflow.ellipsis,
+                      style: widget.style,
+                    ),
                   ),
                 ),
-              )
-              : SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "title_text_field_switcher_display"),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onDoubleTap: _startEditing,
-                  child: FusionAppText(
-                    text: currentValue,
-                    maxLine: 1,
-                    textOverflow: TextOverflow.ellipsis,
-                    style: widget.style,
-                  ),
-                ),
-              ),
+      ),
     );
   }
 }

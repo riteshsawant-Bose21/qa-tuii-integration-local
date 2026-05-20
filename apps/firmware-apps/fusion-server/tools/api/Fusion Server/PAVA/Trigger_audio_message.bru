@@ -1,0 +1,22 @@
+meta {
+  name: Trigger audio message
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{api_url}}/pava/messages/:id/trigger
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 01KAVZ68Q2QRBDC2135YCJZ4FH
+}
+
+body:json {
+  {
+    "zones": "all",
+    "priority": 100
+  }
+}

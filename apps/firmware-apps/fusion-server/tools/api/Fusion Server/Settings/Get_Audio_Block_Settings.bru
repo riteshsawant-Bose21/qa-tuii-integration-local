@@ -1,0 +1,15 @@
+meta {
+  name: Get Audio Block Settings
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{api_url}}/settings/audio/:blockId
+  body: none
+  auth: none
+}
+
+params:path {
+  blockId: PEQ4385417
+}

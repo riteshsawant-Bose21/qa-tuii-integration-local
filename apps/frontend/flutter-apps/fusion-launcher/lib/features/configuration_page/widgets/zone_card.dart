@@ -1287,7 +1287,7 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
-    final String assetImagePath = serviceLocator<ProductQueryViewModel>().getProductImage(speakersList.firstOrNull?.productId) ?? "";
+    final String assetImagePath = serviceLocator<ProductQueryViewModel>().getSpeakerImage(speakersList.firstOrNull?.productId) ?? "";
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(

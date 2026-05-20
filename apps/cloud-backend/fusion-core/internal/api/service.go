@@ -27,6 +27,7 @@ type API struct {
 	authMiddleware middleware.AuthMiddleware
 	appLog         *zap.Logger
 	device         fusion.Device
+	bsf            fusion.BSF
 }
 
 // Config holds the API server configuration settings.
@@ -46,6 +47,7 @@ func New(cfg *Config,
 	firmwareSvc fusion.Firmware,
 	authMiddleware middleware.AuthMiddleware,
 	deviceSvc fusion.Device,
+	bsfSvc fusion.BSF,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -94,6 +96,10 @@ func New(cfg *Config,
 		return nil, fmt.Errorf("missing device service")
 	}
 
+	if bsfSvc == nil {
+		return nil, fmt.Errorf("missing bsf service")
+	}
+
 	api := &API{
 		engine:         engine,
 		product:        productSvc,
@@ -105,6 +111,7 @@ func New(cfg *Config,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
 		device:         deviceSvc,
+		bsf:            bsfSvc,
 	}
 
 	api.registerRoutes()

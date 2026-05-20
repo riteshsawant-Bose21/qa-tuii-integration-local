@@ -44,8 +44,18 @@ class _ProductTile extends StatelessWidget {
                     ),
                     child: Builder(
                       builder: (BuildContext context) {
+                        String? imagePath;
+
+                        if (product.deviceType == EQLDeviceType.processor) {
+                          imagePath = serviceLocator<ProductQueryViewModel>().getDspImage(product.productId);
+                        } else if (product.deviceType == EQLDeviceType.amplifier) {
+                          imagePath = serviceLocator<ProductQueryViewModel>().getAmplifierImage(product.productId);
+                        } else if (product.deviceType == EQLDeviceType.endpoint) {
+                          imagePath = serviceLocator<ProductQueryViewModel>().getIoEndpointImage(product.productId);
+                        }
+
                         return FusionImageAuto(
-                          path: serviceLocator<ProductQueryViewModel>().getProductImage(product.productId),
+                          path: imagePath,
                           fit: BoxFit.contain,
                         );
                       },

@@ -1,0 +1,24 @@
+meta {
+  name: Create Scene Snapshot Task
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{api_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "scene-snapshot-task-001",
+    "description": "Activate scene snapshot definition",
+    "cron_expr": "0 0 8 * * *",
+    "snapshot_definition_id": "snapshot-test-01"
+  }
+}

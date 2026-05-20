@@ -1230,7 +1230,7 @@ func (o *DeviceCommandHistory) Upsert(ctx context.Context, exec boil.ContextExec
 
 	value := reflect.Indirect(reflect.ValueOf(o))
 	vals := queries.ValuesFromMapping(value, cache.valueMapping)
-	var returns []interface{}
+	var returns []any
 	if len(cache.retMapping) != 0 {
 		returns = queries.PtrsFromMapping(value, cache.retMapping)
 	}

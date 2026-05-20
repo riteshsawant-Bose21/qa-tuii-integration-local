@@ -104,7 +104,7 @@ The UDP control channel listens on port `7947` and supports the following action
 
 - `get` - retrieve the full state, or a keyed value
 - `put` - replace state using full-replacement semantics
-- `patch` - apply partial update semantics matching HTTP `PATCH /value`
+- `patch` - apply partial update semantics matching the server's generic config patch behavior
 
 Examples:
 

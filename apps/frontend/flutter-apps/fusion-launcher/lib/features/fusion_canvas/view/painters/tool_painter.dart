@@ -7,10 +7,12 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/tools/measure_tool_state.dart';
 import '../../state/tools/pen_tool_state.dart';
+import '../../state/tools/rectangle_tool_state.dart';
 import 'fusion_canvas_painter.dart';
 import 'tool/connection_tool_painter.dart';
 import 'tool/measure_tool_painter.dart';
 import 'tool/pen_tool_painter.dart';
+import 'tool/rectangle_tool_painter.dart';
 
 class ToolPainter extends FusionBasePainter {
   final FusionToolState state;
@@ -20,6 +22,8 @@ class ToolPainter extends FusionBasePainter {
       _toolPainter = MeasureToolPainter(state: state as MeasureToolState, cursor: cursor);
     } else if (state is PenToolState) {
       _toolPainter = PenToolPainter(state: state as PenToolState, cursor: cursor);
+    } else if (state is RectangleToolState) {
+      _toolPainter = RectangleToolPainter(state: state as RectangleToolState);
     } else if (state is ConnectingToolState) {
       _toolPainter = ConnectionToolPainter(state: state as ConnectingToolState);
     }

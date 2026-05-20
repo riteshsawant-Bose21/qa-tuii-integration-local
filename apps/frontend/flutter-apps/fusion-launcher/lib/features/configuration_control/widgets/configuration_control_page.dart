@@ -73,10 +73,11 @@ class _ConfigurationControlBody extends StatelessWidget {
 
         final String controllerId = state.selectedControllerId!;
         final bool isPro = state.isProController;
+        final bool isVirtual = state.isVirtualController;
 
         // Always reload zone and settings — needed for both LT and Pro controllers.
         context.read<ZoneControlViewModel>().loadData(controllerId, isProController: isPro);
-        context.read<SettingsViewModel>().loadData(controllerId, isProController: isPro);
+        context.read<SettingsViewModel>().loadData(controllerId, isProController: isPro, isVirtualController: isVirtual);
 
         // Pro-only tabs.
         if (isPro) {

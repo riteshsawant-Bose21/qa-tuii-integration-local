@@ -70,7 +70,7 @@ class GpioPage extends StatelessWidget {
                                   child: Row(
                                     children: <Widget>[
                                       FusionAppText(
-                                        semanticId: 'gpio_header_${state.availableGPIOPorts < 0 ? "Need" : "Available"}',
+                                        semanticId: 'gpio_header_port_availability',
                                         text: state.availableGPIOPorts < 0 ? "Need" : "Available",
                                         style: context.textTheme.bodySmall,
                                       ),
@@ -201,38 +201,47 @@ class GpioPage extends StatelessWidget {
                                     final GpioConfig gpio = state.gpios[index];
                                     return <Widget>[
                                       TitleTextFieldSwitcher(
+                                        semanticsId: "gpio_name_textfield_$index",
                                         value: gpio.name,
                                         hintText: "Enter Name",
                                         style: context.textTheme.bodyMedium!,
                                         save: (String value) {
                                           context.read<GpioViewmodel>().updateGpio(gpio.copyWith(name: value));
+                                          return true;
                                         },
                                       ),
-                                      RadioGroup<GpioDirection>(
-                                        groupValue: gpio.direction,
-                                        onChanged: (GpioDirection? value) {
-                                          context.read<GpioViewmodel>().updateGpio(gpio.copyWith(direction: value));
-                                        },
-                                        child: Row(
-                                          spacing: 20,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: <Widget>[
-                                            ...GpioDirection.values.map((GpioDirection direction) {
-                                              return Row(
-                                                children: <Widget>[
-                                                  Radio<GpioDirection>(
-                                                    value: direction,
-                                                    activeColor: context.colorScheme.iconDefault,
+                                      SemanticHelper.radioGroup(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_direction_radiogroup_$index"),
+                                        child: RadioGroup<GpioDirection>(
+                                          groupValue: gpio.direction,
+                                          onChanged: (GpioDirection? value) {
+                                            context.read<GpioViewmodel>().updateGpio(gpio.copyWith(direction: value));
+                                          },
+                                          child: Row(
+                                            spacing: 20,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: <Widget>[
+                                              ...GpioDirection.values.map((GpioDirection direction) {
+                                                return SemanticHelper.radio(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_${direction.name.toLowerCase()}_$index"),
+                                                  value: direction == gpio.direction,
+                                                  child: Row(
+                                                    children: <Widget>[
+                                                      Radio<GpioDirection>(
+                                                        value: direction,
+                                                        activeColor: context.colorScheme.iconDefault,
+                                                      ),
+                                                      FusionAppText(
+                                                        text: direction.name.toUpperCase(),
+                                                        semanticId: 'gpio_direction_text',
+                                                        style: context.textTheme.bodySmall!,
+                                                      ),
+                                                    ],
                                                   ),
-                                                  FusionAppText(
-                                                    text: direction.name.toUpperCase(),
-                                                    semanticId: 'gpio_direction_text',
-                                                    style: context.textTheme.bodySmall!,
-                                                  ),
-                                                ],
-                                              );
-                                            }),
-                                          ],
+                                                );
+                                              }),
+                                            ],
+                                          ),
                                         ),
                                       ),
 
@@ -300,41 +309,43 @@ class GpioPage extends StatelessWidget {
                                       if (gpio.direction == GpioDirection.output)
                                         const SizedBox()
                                       else
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: gpio.status ? Colors.blue : Colors.grey,
-                                            shape: BoxShape.circle,
+                                        SemanticHelper.toggle(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.toggle, "gpio_status_$index"),
+                                          value: gpio.status,
+                                          child: Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              color: gpio.status ? Colors.blue : Colors.grey,
+                                              shape: BoxShape.circle,
+                                            ),
                                           ),
                                         ),
 
                                       if (gpio.direction == GpioDirection.output)
-                                        SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_output_status_switch_$index"),
-                                          child: FusionSwitch(
-                                            value: gpio.isEnabled ?? false,
-                                            height: 30,
-                                            width: 50,
-                                            onChanged: (_) {
-                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(isEnabled: !(gpio.isEnabled ?? false)));
-                                            },
-                                            // activeThumbColor: Colors.black,
-                                            // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                            // thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                            //   if (states.contains(WidgetState.selected)) {
-                                            //     return Theme.of(context).colorScheme.primaryWhite;
-                                            //   }
-                                            //   return context.colorScheme.primaryBlack;
-                                            // }),
-                                            // trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                            //   if (states.contains(WidgetState.selected)) {
-                                            //     return Theme.of(context).colorScheme.primaryBlack;
-                                            //   }
-                                            //   return context.colorScheme.primaryBlack;
-                                            // }),
-                                            // trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-                                          ),
+                                        FusionSwitch(
+                                          semanticId: "gpio_output_status_switch_$index",
+                                          value: gpio.isEnabled ?? false,
+                                          height: 30,
+                                          width: 50,
+                                          onChanged: (_) {
+                                            context.read<GpioViewmodel>().updateGpio(gpio.copyWith(isEnabled: !(gpio.isEnabled ?? false)));
+                                          },
+                                          // activeThumbColor: Colors.black,
+                                          // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          // thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                          //   if (states.contains(WidgetState.selected)) {
+                                          //     return Theme.of(context).colorScheme.primaryWhite;
+                                          //   }
+                                          //   return context.colorScheme.primaryBlack;
+                                          // }),
+                                          // trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                          //   if (states.contains(WidgetState.selected)) {
+                                          //     return Theme.of(context).colorScheme.primaryBlack;
+                                          //   }
+                                          //   return context.colorScheme.primaryBlack;
+                                          // }),
+                                          // trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                                         )
                                       else
                                         FusionButton(label: "Test", accessLabel: 'gpio_page_test_button', onTap: () {}),

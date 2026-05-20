@@ -85,6 +85,9 @@ class SettingsLoaded extends SettingsState {
   /// Whether the controller is a Pro controller.
   final bool isPro;
 
+  /// Whether the controller is a Virtual controller (Virtual Control Pal Pro or LT).
+  final bool isVirtual;
+
   const SettingsLoaded({
     this.screenMode = ScreenMode.dark,
     this.screenSaver = ScreenSaverOption.qrCode,
@@ -94,6 +97,7 @@ class SettingsLoaded extends SettingsState {
     this.wakeZoneId,
     this.zones = const <Zone>[],
     this.isPro = false,
+    this.isVirtual = false,
   });
 
   SettingsLoaded copyWith({
@@ -105,6 +109,7 @@ class SettingsLoaded extends SettingsState {
     String? wakeZoneId,
     List<Zone>? zones,
     bool? isPro,
+    bool? isVirtual,
   }) {
     return SettingsLoaded(
       screenMode: screenMode ?? this.screenMode,
@@ -115,11 +120,12 @@ class SettingsLoaded extends SettingsState {
       wakeZoneId: wakeZoneId ?? this.wakeZoneId,
       zones: zones ?? this.zones,
       isPro: isPro ?? this.isPro,
+      isVirtual: isVirtual ?? this.isVirtual,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId, wakeFunction, wakeZoneId, zones, isPro];
+  List<Object?> get props => <Object?>[screenMode, screenSaver, sleepTime, controllerId, wakeFunction, wakeZoneId, zones, isPro, isVirtual];
 }
 
 /// Error state - failed to load data.

@@ -21,10 +21,28 @@ class MessageSyncService {
 
       if (response.success) {
         if (response.data == null) {
-          return ResponseCallback<List<PavaMessageModel>>.success([]);
+          return ResponseCallback<List<PavaMessageModel>>.success(<PavaMessageModel>[]);
         }
 
-        final List<dynamic> list = response.data is String ? jsonDecode(response.data) : response.data as List<dynamic>;
+        // Decode if response.data is a raw JSON string.
+        final dynamic decoded = response.data is String ? jsonDecode(response.data as String) : response.data;
+
+        // Server may return:
+        //  - null
+        //  - an empty map {} when there are no messages
+        //  - a map of the form { "messages": [ ... ] } when there are messages
+        //  - (legacy) a bare list [ ... ]
+        List<dynamic> list;
+        if (decoded == null) {
+          list = <dynamic>[];
+        } else if (decoded is Map<String, dynamic>) {
+          final dynamic raw = decoded['messages'];
+          list = raw is List<dynamic> ? raw : <dynamic>[];
+        } else if (decoded is List<dynamic>) {
+          list = decoded;
+        } else {
+          list = <dynamic>[];
+        }
 
         final List<PavaMessageModel> messages = list.map((dynamic e) => PavaMessageModel.fromJson(e as Map<String, dynamic>)).toList();
         return ResponseCallback<List<PavaMessageModel>>.success(messages);

@@ -1,4 +1,6 @@
 info:
   name: Manufacturing
   type: folder
-  seq: 20
+  seq: 8
+
+request: {}

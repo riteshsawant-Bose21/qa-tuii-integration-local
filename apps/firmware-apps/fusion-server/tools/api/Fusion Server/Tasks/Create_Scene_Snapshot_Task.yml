@@ -1,0 +1,28 @@
+info:
+  name: Create Scene Snapshot Task
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{api_url}}/tasks"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "id": "scene-snapshot-task-001",
+        "description": "Activate scene snapshot definition",
+        "cron_expr": "0 0 8 * * *",
+        "snapshot_definition_id": "snapshot-test-01"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a scene snapshot task using the protobuf JSON request shape.

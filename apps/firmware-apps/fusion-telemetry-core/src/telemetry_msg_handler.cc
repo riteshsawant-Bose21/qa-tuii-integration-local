@@ -306,36 +306,45 @@ int process_meter_data(bosepro::telemetryManager& telm_mgr,
             telm_mgr.get_filter(current_filter);
             if (current_filter && !current_filter->empty())
             {
-                try
+                // Check for "all" filter - skip filtering and send all data
+                if (current_filter->count("all"))
                 {
-                    std::stringstream filter_in;
-                    filter_in << "[" << meter_data << "]";
-                    boost::property_tree::ptree arr;
-                    boost::property_tree::read_json(filter_in, arr);
-
-                    std::string filtered;
-                    bool first = true;
-                    for (const auto &item : arr)
-                    {
-                        const std::string &block = item.second.get<std::string>("block_name", "");
-                        if (current_filter->count(block))
-                        {
-                            std::ostringstream entry;
-                            boost::property_tree::write_json(entry, item.second, false);
-                            std::string entry_str = entry.str();
-                            if (!entry_str.empty() && entry_str.back() == '\n')
-                                entry_str.pop_back();
-                            if (!first) filtered += ",";
-                            filtered += entry_str;
-                            first = false;
-                        }
-                    }
-                    meter_data = filtered;
-                    size = meter_data.size();
+                    SPDLOG_DEBUG("Filter contains 'all', skipping filtering and sending all data");
+                    // meter_data remains unchanged
                 }
-                catch (const std::exception &e)
+                else
                 {
-                    SPDLOG_WARN("Filter: failed to parse meter data ({})", e.what());
+                    try
+                    {
+                        std::stringstream filter_in;
+                        filter_in << "[" << meter_data << "]";
+                        boost::property_tree::ptree arr;
+                        boost::property_tree::read_json(filter_in, arr);
+
+                        std::string filtered;
+                        bool first = true;
+                        for (const auto &item : arr)
+                        {
+                            const std::string &block = item.second.get<std::string>("block_name", "");
+                            if (current_filter->count(block))
+                            {
+                                std::ostringstream entry;
+                                boost::property_tree::write_json(entry, item.second, false);
+                                std::string entry_str = entry.str();
+                                if (!entry_str.empty() && entry_str.back() == '\n')
+                                    entry_str.pop_back();
+                                if (!first) filtered += ",";
+                                filtered += entry_str;
+                                first = false;
+                            }
+                        }
+                        meter_data = filtered;
+                        size = meter_data.size();
+                    }
+                    catch (const std::exception &e)
+                    {
+                        SPDLOG_WARN("Filter: failed to parse meter data ({})", e.what());
+                    }
                 }
             } 
             else {

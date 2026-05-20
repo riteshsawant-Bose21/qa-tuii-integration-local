@@ -1,0 +1,31 @@
+info:
+  name: Update Snapshot Task
+  type: http
+  seq: 11
+
+http:
+  method: PATCH
+  url: "{{api_url}}/tasks/:id"
+  headers:
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: id
+      value: activate-snap-001
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "cron_expr": "*/10 * * * *",
+        "description": "Activate snapshot every ten minutes",
+        "snapshot_id": "analog"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Updates a snapshot task using the protobuf JSON request shape.

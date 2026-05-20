@@ -1,0 +1,24 @@
+meta {
+  name: Create Snapshot Task
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{api_url}}/tasks
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "activate-snap-001",
+    "description": "Activate snapshot every five minutes",
+    "cron_expr": "*/5 * * * *",
+    "snapshot_id": "default"
+  }
+}

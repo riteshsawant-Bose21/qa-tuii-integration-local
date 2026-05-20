@@ -495,7 +495,7 @@
                             },
                             {
                                 "name": "period_size",
-                                "value": 32
+                                "value": 256
                             },
                             {
                                 "name": "use_asrc",
@@ -580,7 +580,7 @@
                             },
                             {
                                 "name": "period_size",
-                                "value": 32
+                                "value": 256
                             },
                             {
                                 "name": "use_asrc",

@@ -33,13 +33,16 @@ public:
 
     bool initialize(const std::string &serverIP,
                     unsigned int serverPort,
-                    std::shared_ptr<std::map<std::string, int>> objectTracker,
+                    const std::map<std::string, int> &objectTracker,
                     const std::vector<TuiiZoneConfig> &zoneConfigs,
                     const Json::Value &deviceConfig);
-    bool updateZoneConfiguration(std::shared_ptr<std::map<std::string, int>> objectTracker,
+    bool updateZoneConfiguration(const std::map<std::string, int> &objectTracker,
                                  const std::vector<TuiiZoneConfig> &zoneConfigs);
     bool updateDeviceConfiguration(const Json::Value &deviceConfig);
     Json::Value getDeviceConfig() const;
+
+    std::vector<TuiiZoneConfig> getZoneConfigsSnapshot() const;
+    std::map<std::string, int> getObjectTrackerSnapshot() const;
 
     void sendGainToFusion(const std::string &gainID, double value);
     void handleFusionGainUpdate(const std::string &gainID, double value);
@@ -61,7 +64,6 @@ private:
     bool processMuteUpdate(const std::string &gainID, bool muteState);
     bool processSourceUpdate(const std::string &zoneID, uint16_t sourceIndex);
 
-    std::shared_ptr<const std::map<std::string, int>> getObjectTrackerSnapshot() const;
     bool checkInitialized() const;
     bool sendMessageToFusion(const std::string &jsonMessage);
 
@@ -78,7 +80,7 @@ private:
     static constexpr const char *JSON_FIELD_MUTE  = "mute";
     static constexpr const char *JSON_FIELD_INPUT = "input";
 
-    std::shared_ptr<const std::map<std::string, int>> m_objectTrackerPtr;
+    std::map<std::string, int> m_objectTracker;
     std::vector<TuiiZoneConfig> m_zoneConfigs;
     Json::Value m_deviceConfig;
     std::atomic<bool> m_initialized;

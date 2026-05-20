@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A highly customizable stepped horizontal slider with haptic feedback at each stop.
 ///
@@ -277,14 +278,7 @@ class _SteppedHapticSliderState extends State<SteppedHapticSlider> {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle effectiveLabelStyle =
-        widget.labelStyle ??
-        TextStyle(
-          color: Colors.white.withOpacity(0.6),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.4,
-        );
+    final TextStyle effectiveLabelStyle = widget.labelStyle ?? context.textTheme.l2Medium.withColor(context.colorScheme.textBody);
 
     final TextStyle effectiveIndicatorTextStyle =
         widget.valueIndicatorTextStyle ??
@@ -567,7 +561,10 @@ class _LabelsRow extends StatelessWidget {
                     top: 0,
                     child: FractionalTranslation(
                       translation: const Offset(-0.5, 0),
-                      child: Text(labelFormatter(stop), style: labelStyle),
+                      child: FusionAppText(
+                        text: "${labelFormatter(stop)} Hz",
+                        style: labelStyle,
+                      ),
                     ),
                   );
                 }).toList(),

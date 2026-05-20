@@ -1,0 +1,408 @@
+{
+    "$id": "interface-definition.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Interface Definitions",
+    "description": "Definitions of properties, terminals, parameters, and telemetry common to DSP algorithms and firmware modules.",
+    "$defs": {
+        "property": {
+            "allOf": [
+                {
+                    "title": "Property",
+                    "description": "A static configuration property that specifies an aspect of an object that doesn't change while it is running.",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "title": "Property Name",
+                            "description": "The name of the property, which must be unique among all properties, terminals, parameters, and telemetry in the same interface.",
+                            "$ref": "#/$defs/name"
+                        }
+                    },
+                    "required": ["name"]
+                },
+                { "$ref": "#/$defs/value_spec" }
+            ]
+        },
+        "property_setting": {
+            "title": "Property Setting",
+            "description": "A specification for a property setting in a static configuration.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Property Name",
+                    "description": "The name of the property whose value is configured by this setting.",
+                    "$ref": "#/$defs/name"
+                },
+                "value": {
+                    "title": "Property Value",
+                    "description": "The value to set for the property in this configuration."
+                }
+            },
+            "required": ["name", "value"]
+        },
+        "terminal": {
+            "title": "Terminal",
+            "description": "A set of input or output channels through which an algorithm sends or receives signals.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Terminal Name",
+                    "description": "The name of the terminal, which must be unique among all properties, terminals, parameters, and telemetry for the same algorithm.",
+                    "$ref": "#/$defs/name"
+                },
+                "signal_type": {
+                    "title": "Terminal Signal Type",
+                    "description": "The name of the type of signal used by this terminal.",
+                    "type": "string",
+                    "enum": ["audio"]
+                },
+                "direction": {
+                    "title": "Terminal Direction",
+                    "description": "Specifies whether this is an input (\"in\") or output (\"out\") terminal.",
+                    "type": "string",
+                    "enum": ["input", "output"]
+                },
+                "channels": {
+                    "title": "Number of Channels in Terminal",
+                    "description": "Specifies the number of channels in the terminal, either as a constant integer value, or a property whose value determines the number of channels.",
+                    "oneOf": [
+                        { "type": "integer" },
+                        { "type": "string" }
+                    ]
+                },
+                "minimum_channels": {
+                    "title": "Minimum Channels in Terminal",
+                    "description": "Specifies the minimum number of channels in the terminal that can be specified in the static configuration.",
+                    "type": "integer"
+                },
+                "maximum_channels": {
+                    "title": "Maximum Channels in Terminal",
+                    "description": "Specifies the maximum number of channels in the terminal that can be specified in the static configuration.",
+                    "type": "integer"
+                },
+                "bypass_source": {
+                    "title": "Source Terminal for Bypass",
+                    "description": "The name of the input terminal from this algorithm to be copied to this output terminal when bypass is enabled.",
+                    "$ref": "#/$defs/name"
+                }
+            },
+            "required": ["name", "signal_type", "direction"],
+            "oneOf": [
+                { "required": ["channels"] },
+                { "required": ["minimum_channels", "maximum_channels"] }
+            ]
+        },
+        "terminal_channels": {
+            "title": "Terminal Channels",
+            "description": "A specification for the number of channels in a terminal in a static configuration.",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Terminal Name",
+                    "description": "The name of the terminal whose number of channels is configured by this setting.",
+                    "$ref": "#/$defs/name"
+                },
+                "channels": {
+                    "title": "Number of Channels",
+                    "description": "The number of channels to set for the terminal in this configuration.",
+                    "type": "integer"
+                }
+            },
+            "required": ["name", "channels"]
+        },
+        "block_connection": {
+            "title": "Block Connection",
+            "description": "A specification for a signal connection between two blocks in the same task in a static configuration.",
+            "type": "object",
+            "properties": {
+                "source_block": {
+                    "title": "Source Block Name",
+                    "description": "The name of the block within this task that is generating the signal to connect.",
+                    "$ref": "#/$defs/name"
+                },
+                "output_terminal": {
+                    "title": "Output Terminal Name",
+                    "description": "The name of the terminal in the source block that is generating the signal to connect.",
+                    "$ref": "#/$defs/name"
+                },
+                "output_channel": {
+                    "title": "Output Channel Index",
+                    "description": "The index (1-based) of the channel in the output terminal to connect.",
+                    "type": "integer"
+                },
+                "destination_block": {
+                    "title": "Destination Block Name",
+                    "description": "The name of the block within this task that is receiving the signal.",
+                    "$ref": "#/$defs/name"
+                },
+                "input_terminal": {
+                    "title": "Input Terminal Name",
+                    "description": "The name of the terminal in the destination block that is receiving the signal.",
+                    "$ref": "#/$defs/name"
+                },
+                "input_channel": {
+                    "title": "Input Channel Index",
+                    "description": "The index (1-based) of the channel in the input terminal to connect.",
+                    "type": "integer"
+                }
+            },
+            "required": ["source_block", "output_terminal", "output_channel", "destination_block", "input_terminal", "input_channel"]
+        },
+        "parameter": {
+            "allOf": [
+                {
+                    "title": "Parameter",
+                    "description": "A dynamic user paramater that can be modified at any time while the algorithm is running.",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "title": "Parameter Name",
+                            "description": "The name of the parameter, which must be unique among all properties, terminals, parameters, and telemetry for the same algorithm.",
+                            "$ref": "#/$defs/name"
+                        },
+                        "dimensions": {
+                            "$ref": "#/$defs/dimensions"
+                        }
+                    },
+                    "required": ["name"]
+                },
+                { "$ref": "#/$defs/value_spec" }
+            ]
+        },
+        "parameter_setting": {
+            "title": "Parameter Setting",
+            "description": "A setting for the value of a dynamic parameter.",
+            "type": "object",
+            "properties": {
+                "target": {
+                    "title": "Parameter Target",
+                    "description": "The name of the block or module that owns the parameter to change.",
+                    "$ref": "#/$defs/name"
+                },
+                "name": {
+                    "title": "Parameter Name",
+                    "description": "The name of the parameter to update.",
+                    "$ref": "#/$defs/name"
+                },
+                "index": {
+                    "title": "Parameter Index",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                },
+                "value": {
+                    "title": "Parameter Value",
+                    "description": "The value to set for the parameter."
+                }
+            },
+            "required": ["target", "name", "value"]
+        },
+        "telemetry": {
+            "allOf": [
+                {
+                    "title": "Telemetry",
+                    "description": "A dynamic meter that reports some aspect of the algorithm's state while it is running.",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "title": "Telemetry Name",
+                            "description": "The name of the telemetry, which must be unique among all properties, terminals, parameters, and telemetry for the same algorithm.",
+                            "$ref": "#/$defs/name"
+                        },
+                        "dimensions": {
+                            "$ref": "#/$defs/dimensions"
+                        },
+                        "telemetry_type": {
+                            "title": "Telemetry Type",
+                            "description": "The type of telemetry generated (periodic meters, or asynchronous events).",
+                            "type": "string",
+                            "enum": ["meter", "event"]
+                        },
+                        "period_type": {
+                            "title": "Telemetry Period Type",
+                            "description": "For periodic meters, specifies whether the frequency and priority of the telemetry.",
+                            "type": "string",
+                            "enum": ["HI", "MED", "LO"]
+                        }
+                    },
+                    "required": ["name", "telemetry_type", "period_type"]
+                },
+                { "$ref": "#/$defs/value_spec" }
+            ]
+        },
+        "task_connection": {
+            "title": "Task Connection",
+            "description": "A specification for a signal connection between two tasks in the same device in a static configuration.",
+            "type": "object",
+            "properties": {
+                "source_task": {
+                    "title": "Source Task Name",
+                    "description": "The name of the task within this device that is generating the signal to connect.",
+                    "$ref": "#/$defs/name"
+                },
+                "output_block": {
+                    "title": "Output Block Name",
+                    "description": "The name of the block in the source task that is generating the signal to connect.",
+                    "$ref": "#/$defs/name"
+                },
+                "output_channel": {
+                    "title": "Output Channel Index",
+                    "description": "The index (1-based) of the channel in the output block to connect.",
+                    "type": "integer"
+                },
+                "destination_task": {
+                    "title": "Destination Task Name",
+                    "description": "The name of the task within this device that is receiving the signal.",
+                    "$ref": "#/$defs/name"
+                },
+                "input_block": {
+                    "title": "Input Block Name",
+                    "description": "The name of the block in the destination task that is receiving the signal.",
+                    "$ref": "#/$defs/name"
+                },
+                "input_channel": {
+                    "title": "Input Channel Index",
+                    "description": "The index (1-based) of the channel in the input block to connect.",
+                    "type": "integer"
+                }
+            },
+            "required": ["source_task", "output_block", "output_channel", "destination_task", "input_block", "input_channel"]
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+        },
+        "version": {
+            "title": "Version String",
+            "description": "A version string, compliant with semantic versioning (https://semver.org).",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+        },
+        "dimensions": {
+            "title": "Dimensions of a Parameter or Telemetry",
+            "description": "The dimensions of a parameter or telemetry, specified either by an integer or the name of a property or terminal whose value or channel count determines the dimensions.",
+            "type": "array",
+            "items": {
+                "anyOf": [
+                    { "type": "integer" },
+                    { "type": "string" }
+                ]
+            },
+            "minItems": 1,
+            "maxItems": 2
+        },
+        "value_spec": {
+            "title": "Value Specification",
+            "description": "A specification of the type and constraints on a value for a property, parameter, or telemetry.",
+            "type": "object",
+            "properties": {
+                "value_type": {
+                    "title": "The Type of Data Stored in the Value",
+                    "type": "string",
+                    "enum": ["float", "integer", "bool", "string", "null"]
+                },
+                "default_value": {
+                    "title": "Default Value"
+                },
+                "minimum_value": {
+                    "title": "Minimum Value for Numerical Types"
+                },
+                "maximum_value": {
+                    "title": "Maximum Value for Numerical Types"
+                },
+                "maximum_length": {
+                    "title": "Maximum Length for a String Property Value",
+                    "type": "integer"
+                },
+                "allowed_values": {
+                    "title": "List of Allowed Values for String or Numerical Types",
+                    "type": "array"
+                }
+            },
+            "required": ["value_type"],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "value_type": { "const": "float" }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "default_value": { "type": "number" },
+                            "minimum_value": { "type": "number" },
+                            "maximum_value": {
+                                "oneOf": [
+                                    { "type": "number" },
+                                    { "type": "string" }
+                                ]
+                            },
+                            "allowed_values": { "items": { "type": "number" } }
+                        },
+                        "oneOf": [
+                            { "required": ["default_value", "minimum_value", "maximum_value"] },
+                            { "required": ["default_value", "allowed_values"] }
+                        ]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "value_type": { "const": "int" }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "default_value": { "type": "integer" },
+                            "minimum_value": { "type": "integer" },
+                            "maximum_value": {
+                                "oneOf": [
+                                    { "type": "integer" },
+                                    { "type": "string" }
+                                ]
+                            },
+                            "allowed_values": { "items": { "type": "integer" } }
+                        },
+                        "oneOf": [
+                            { "required": ["default_value", "minimum_value", "maximum_value"] },
+                            { "required": ["default_value", "allowed_values"] }
+                        ]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "value_type": { "const": "string" }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "default_value": { "type": "string" },
+                            "allowed_values": { "items": { "type": "string" } }
+                        },
+                        "oneOf": [
+                            { "required": ["default_value", "maximum_length"] },
+                            { "required": ["default_value", "allowed_values"] }
+                        ]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "value_type": { "const": "bool" }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "default_value": { "type": "boolean" }
+                        },
+                        "required": ["default_value"]
+                    }
+                }
+            ]
+        }
+    }
+}

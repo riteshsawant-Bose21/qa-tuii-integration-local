@@ -47,6 +47,8 @@ runs:
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
+        chmod +x tool/generate_protos.sh
+        ./tool/generate_protos.sh
         cp /Users/devops/Documents/flutter-env/.env ./.env
         moon run flutter-apps:build-mac-ios-android
         if [ $? -ne 0 ]; then

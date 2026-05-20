@@ -54,7 +54,7 @@ runs:
       with:
         path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
         sparse-checkout: |
-          apps/frontend/flutter-apps/fusion-launcher
+          apps/frontend/flutter-apps
           libs/
         fetch-depth: 0 
 
@@ -81,6 +81,7 @@ runs:
         }
         $global:LASTEXITCODE = 0
         flutter pub get --suppress-analytics *> $null
+        powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\generate_protos.ps1
         moon run flutter-apps:win-automation-build
 
         if ($LASTEXITCODE -ne 0) {

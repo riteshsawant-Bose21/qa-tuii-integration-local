@@ -40,7 +40,7 @@ class FusionController extends HardwareComponent {
     super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
     ControllerDisplayConfig? displayConfig,
-    bool showUpcoming = false,
+    bool showUpcoming = true,
     String scheduleDisplayMode = 'all',
     this.assignedNetworkDeviceId,
   }) : sku = sku ?? name,

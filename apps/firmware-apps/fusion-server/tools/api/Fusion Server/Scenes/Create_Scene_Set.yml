@@ -1,0 +1,56 @@
+info:
+  name: Create Scene Set
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{api_url}}/scene-sets"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "set_id": "scene-set-test-01",
+        "name": "Scene Set Test 01",
+        "default_scene": "scene-morning-01",
+        "current_scene_id": "scene-morning-01",
+        "scenes": [
+          {
+            "id": "scene-morning-01",
+            "name": "Morning",
+            "data": {
+              "settings": {
+                "audio": {
+                  "GAIN528578446": {
+                    "gain": -12.0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "scene-evening-01",
+            "name": "Evening",
+            "data": {
+              "settings": {
+                "audio": {
+                  "GAIN528578446": {
+                    "gain": -20.0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Creates a new scene set. Body must include set_id.

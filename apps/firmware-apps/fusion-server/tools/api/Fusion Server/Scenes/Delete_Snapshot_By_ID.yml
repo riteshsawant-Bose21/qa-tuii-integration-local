@@ -1,7 +1,7 @@
 info:
-  name: Delete Snapshot By ID 
+  name: Delete Snapshot By ID
   type: http
-  seq: 16
+  seq: 12
 
 http:
   method: DELETE
