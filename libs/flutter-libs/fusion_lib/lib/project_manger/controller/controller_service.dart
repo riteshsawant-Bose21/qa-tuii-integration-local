@@ -136,7 +136,7 @@ extension ControllerService on ProjectService {
     final FusionController? c = getControllerById(controllerId);
     return ControllerSchedulePageConfig(
       displayMode: c?.scheduleDisplayMode ?? 'all',
-      showUpcoming: c?.showUpcoming ?? false,
+      showUpcoming: c?.showUpcoming ?? true,
     );
   }
 

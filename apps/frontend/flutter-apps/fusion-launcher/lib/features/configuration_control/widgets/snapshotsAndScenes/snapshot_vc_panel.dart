@@ -59,10 +59,7 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           PanelSectionHeader(
-            semanticId:
-                FusionTestKeys
-                    .instance
-                    .snapshotAndScenesTabVirtualControllerHeader,
+            semanticId: FusionTestKeys.instance.snapshotAndScenesTabVirtualControllerHeader,
             title: 'VIRTUAL CONTROLLER',
           ),
           Expanded(child: _buildContent(context)),
@@ -74,7 +71,7 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
   List<SnapshotsModel> getWallPages() {
     final WallControllerConfig config = widget.config;
 
-    controller = config.controllers.firstWhere(
+    controller = config.controllers.firstWhereOrNull(
       (WallController ctrl) => ctrl.id == widget.controllerID,
     );
 
@@ -83,31 +80,33 @@ class _SnapshotVcPanelState extends State<SnapshotVcPanel> {
     if (controller != null) {
       final List<WallPages> pages = controller!.pages;
       final String filterId = widget.selectedSnapShotId ?? widget.selectedSceneSetId ?? "";
-      final WallPages filteredPages = pages.firstWhere(
+      final WallPages? filteredPages = pages.firstWhereOrNull(
         (WallPages page) => page.pageId == filterId,
       );
 
+      if (filteredPages != null) {
         wallPages = filteredPages;
         filteredSnapshots.addAll(
           filteredPages.snapshotsList
               .map(
-                (WallPageSnapshot snap) =>
-                SnapshotsModel(
+                (WallPageSnapshot snap) => SnapshotsModel(
                   id: snap.id,
                   name: snap.name,
-                )
-          ).toList(),
+                ),
+              )
+              .toList(),
         );
-      selectedIndex = null ;
+      } else {
+        wallPages = null;
+      }
+      selectedIndex = null;
     }
 
     return filteredSnapshots;
   }
 
   Widget _buildContent(BuildContext context) {
-
-      final List<SnapshotsModel> snapshots = getWallPages();
-
+    final List<SnapshotsModel> snapshots = getWallPages();
 
     return Padding(
       padding: const EdgeInsets.all(20),

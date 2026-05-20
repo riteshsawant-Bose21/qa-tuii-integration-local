@@ -192,57 +192,56 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               ),
                             ),
 
-                            Visibility(
-                              visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
-                              child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
-                                builder: (BuildContext context, ConfigSourceSetsState state) {
-                                  return Tooltip(
-                                    message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        showDialog(
-                                          context: context,
+                            BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+                              builder: (BuildContext context, ConfigSourceSetsState state) {
+                                final bool canLink = _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                if (!canLink) return const SizedBox.shrink();
+                                return Tooltip(
+                                  message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
 
-                                          builder:
-                                              (_) => FusionDialog(
-                                                title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
-                                                description:
-                                                    'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
-                                                primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
-                                                secondaryButtonLabel: 'Cancel',
-                                                onPrimaryPressed: () {
-                                                  if (widget.sourceSet.isLinked) {
-                                                    _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                    FusionToast.success(
-                                                      context,
-                                                      message: "Source set unlinked successfully",
-                                                    );
-                                                  } else {
-                                                    _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                    FusionToast.success(
-                                                      context,
-                                                      message: "Source set linked successfully",
-                                                    );
-                                                  }
-                                                  Navigator.pop(context);
-                                                },
-                                                onSecondaryPressed: () => Navigator.pop(context),
-                                              ),
-                                        );
-                                      },
-                                      child: FusionImageAuto(
-                                        path: widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
-                                        semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
-                                        semanticLabel: widget.sourceSet.isLinked ? 'unlink_source_set' : 'link_source_set',
-                                        width: 22,
-                                        height: 22,
-                                        color: context.colorScheme.primaryWhite,
-                                        fit: BoxFit.contain,
-                                      ),
+                                        builder:
+                                            (BuildContext dialogContext) => FusionDialog(
+                                              title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                              description:
+                                                  'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                              primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                              secondaryButtonLabel: 'Cancel',
+                                              onPrimaryPressed: () {
+                                                Navigator.pop(dialogContext);
+                                                if (widget.sourceSet.isLinked) {
+                                                  _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                  FusionToast.success(
+                                                    context,
+                                                    message: "Source set unlinked successfully",
+                                                  );
+                                                } else {
+                                                  _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                  FusionToast.success(
+                                                    context,
+                                                    message: "Source set linked successfully",
+                                                  );
+                                                }
+                                              },
+                                              onSecondaryPressed: () => Navigator.pop(dialogContext),
+                                            ),
+                                      );
+                                    },
+                                    child: FusionImageAuto(
+                                      path: widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
+                                      semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
+                                      semanticLabel: widget.sourceSet.isLinked ? 'unlink_source_set' : 'link_source_set',
+                                      width: 22,
+                                      height: 22,
+                                      color: context.colorScheme.primaryWhite,
+                                      fit: BoxFit.contain,
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              },
                             ),
 
                             const SizedBox(width: 8),
@@ -353,6 +352,12 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     sourceSetNameController: _sourceSetNameController,
                     availableSources: _sourceSetsViewmodel.getAllSources(),
                     selectedSources: _selectedSources,
+                    isNameExists:
+                        (String name) => _sourceSetsViewmodel.isSourceSetNameExists(
+                          name: name,
+                          excludeId: widget.sourceSet.id,
+                        ),
+                    excludeId: widget.sourceSet.id,
                     onAddSourceSet: () {
                       _editSourceSet();
                     },
@@ -559,6 +564,8 @@ class _SourceSetCreationWidget extends StatefulWidget {
   final VoidCallback onAddSourceSet;
   final VoidCallback onCancel;
   final Function(Source, bool) onSourceChanged;
+  final bool Function(String name)? isNameExists;
+  final String? excludeId;
 
   const _SourceSetCreationWidget({
     required this.sourceSetNameController,
@@ -567,6 +574,8 @@ class _SourceSetCreationWidget extends StatefulWidget {
     required this.onAddSourceSet,
     required this.onCancel,
     required this.onSourceChanged,
+    this.isNameExists,
+    this.excludeId,
   });
 
   @override
@@ -624,6 +633,19 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               setState(() {});
             },
           ),
+          if (widget.isNameExists != null &&
+              widget.sourceSetNameController.text.trim().isNotEmpty &&
+              widget.isNameExists!(widget.sourceSetNameController.text.trim()))
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: FusionAppText(
+                text: 'Source set name already exists',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: Colors.red,
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
 
           /// Source Selection Label
@@ -934,18 +956,26 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               ),
               const SizedBox(width: 8),
               Flexible(
-                child: FusionButton(
-                  width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontSize: 10 /*color: context.colorScheme.primaryBlack*/,
-                  ),
-
-                  label: "Edit",
-                  isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
-                  onTap: () {
-                    widget.onAddSourceSet.call();
+                child: Builder(
+                  builder: (BuildContext context) {
+                    final bool isButtonActive =
+                        widget.sourceSetNameController.text.trim().isNotEmpty &&
+                        widget.selectedSources.length >= 2 &&
+                        !(widget.isNameExists != null && widget.isNameExists!(widget.sourceSetNameController.text.trim()));
+                    return FusionButton(
+                      width: double.infinity,
+                      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontSize: 10,
+                        color: isButtonActive ? context.colorScheme.primaryWhite : context.colorScheme.textSecondary,
+                      ),
+                      label: "Edit",
+                      isActive: isButtonActive,
+                      onTap: () {
+                        widget.onAddSourceSet.call();
+                      },
+                      accessLabel: 'source_set_edit',
+                    );
                   },
-                  accessLabel: 'source_set_edit',
                 ),
               ),
             ],

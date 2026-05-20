@@ -47,7 +47,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     Tab(text: 'Building'),
     Tab(text: 'Devices'),
     Tab(text: 'Connections'),
-    Tab(text: 'Budget'),
+    Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     // Tab(text: 'Cloud'),
   ];

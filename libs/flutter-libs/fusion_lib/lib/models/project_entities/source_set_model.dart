@@ -1,7 +1,3 @@
-import 'dart:math';
-
-import 'package:fusion_lib/models/fusion_models.dart';
-
 import '../../fusion_utils/fusion_utilities.dart';
 
 class SourceSet {
@@ -26,6 +22,15 @@ class SourceSet {
       isLinked: isLinked ?? this.isLinked,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SourceSet && other.id == id && other.name == name && other.isLinked == isLinked;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode ^ isLinked.hashCode;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,

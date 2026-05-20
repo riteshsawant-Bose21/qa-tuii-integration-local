@@ -166,7 +166,7 @@ func TestGetAllProducts(t *testing.T) {
 					Version: "1.0",
 					Source: []types.SourceItemResponse{
 						{
-							SourceID:    "media_player",
+							SourceID:    1,
 							ModelName:   "Media Player",
 							ModelFamily: "Source",
 							Assets: []types.SourceAsset{

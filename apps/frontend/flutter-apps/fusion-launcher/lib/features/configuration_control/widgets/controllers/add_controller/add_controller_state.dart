@@ -65,7 +65,6 @@ sealed class AddControllerState extends Equatable {
   // ── Shared validation & helpers ──────────────────────────────────────────
 
   bool get isValid {
-    if (name.trim().isEmpty) return false;
     if (controllerType == null) return false;
     if (locationType == null) return false;
     if (locationType == LocationType.zone && selectedZoneId == null) return false;
