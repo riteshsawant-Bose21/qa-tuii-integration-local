@@ -17,7 +17,7 @@ message DeviceInfo {
   bool is_device_certificate_valid = 10;
   string fusion_monorepo_branch = 11;
   string fusion_monorepo_commit_hash = 12;
-  string jenkins_build_number = 13;
+  string build_number = 13;
   string pre_release_tag = 14;
   int32 vrrp_priority = 15;
   string lan1_mac_address = 16;

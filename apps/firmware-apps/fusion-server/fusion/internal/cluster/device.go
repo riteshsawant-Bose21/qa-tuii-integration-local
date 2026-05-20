@@ -120,7 +120,7 @@ func (c *Cluster) getDeviceInfoLocal() model.DeviceInfo {
 		IsDeviceCertificateValid: utils.IsCertificateValid(),
 		FusionMonorepoBranch:     utils.GetBranchName(),
 		FusionMonorepoCommitHash: utils.GetCommitHash(),
-		JenkinsBuildNumber:       utils.GetJenkinsBuildNumber(),
+		BuildNumber:              utils.GetBuildNumber(),
 		PreReleaseTag:            utils.GetPreReleaseTag(),
 		VrrpPriority:             c.getKeepalivedPriority(),
 		Lan1MacAddress:           utils.GetLan1MacAddress(),

@@ -79,7 +79,7 @@ func GetCommitHash() string {
 	return fw.BuildConfiguration.FusionMonorepoCommitHash
 }
 
-func GetJenkinsBuildNumber() string {
+func GetBuildNumber() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
@@ -93,7 +93,7 @@ func GetJenkinsBuildNumber() string {
 		return api.Unknown
 	}
 
-	return fw.BuildConfiguration.JenkinsBuildNumber
+	return fw.BuildConfiguration.BuildNumber
 }
 
 func GetPreReleaseTag() string {

@@ -90,7 +90,7 @@ type SoftwareUpdateInfo struct {
 		SoftwareUpdateBundleVersion string `json:"FIRMWARE_BUNDLE_VERSION"`
 		FusionMonorepoBranch        string `json:"FUSION_MONOREPO_BRANCH"`
 		FusionMonorepoCommitHash    string `json:"FUSION_MONOREPO_COMMIT_HASH"`
-		JenkinsBuildNumber          string `json:"JENKINS_BUILD_NUMBER"`
+		BuildNumber                 string `json:"JENKINS_BUILD_NUMBER"`
 		PreReleaseTag               string `json:"PRE_RELEASE_TAG"`
 	} `json:"build_configuration"`
 }
