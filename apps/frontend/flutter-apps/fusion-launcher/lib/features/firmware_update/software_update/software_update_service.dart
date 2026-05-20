@@ -423,6 +423,47 @@ class UpdateState {
   }
 }
 
+extension on List<FusionNetworkDevice> {
+  String? get softwareUpdateCheckDeviceVersion {
+    final FusionNetworkDevice? primarydevice = firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    final String? primaryPreReleaseTag = primarydevice?.preReleaseTag;
+    final String? primaryJenkinsBuildNumber = primarydevice?.jenkinsBuildNumber;
+
+    String? preReleaseTag, jenkinsBuildNumber;
+
+    if (primaryPreReleaseTag != null && primaryPreReleaseTag.isNotEmpty && primaryPreReleaseTag.toLowerCase() != 'unknown') {
+      preReleaseTag = primaryPreReleaseTag;
+    }
+
+    if (primaryJenkinsBuildNumber != null && primaryJenkinsBuildNumber.isNotEmpty && primaryJenkinsBuildNumber.toLowerCase() != 'unknown') {
+      jenkinsBuildNumber = primaryJenkinsBuildNumber;
+    }
+
+    if (preReleaseTag == null || jenkinsBuildNumber == null) {
+      // take any non-empty, non-unknown preReleaseTag and jenkinsBuildNumber from any device as a fallback, since some older devices might not have these fields but could still be valid for update checks
+      for (final FusionNetworkDevice? device in this) {
+        if (preReleaseTag == null) {
+          final String? devicePreReleaseTag = device?.preReleaseTag;
+          if (devicePreReleaseTag != null && devicePreReleaseTag.isNotEmpty && devicePreReleaseTag.toLowerCase() != 'unknown') {
+            preReleaseTag = devicePreReleaseTag;
+          }
+        }
+        if (jenkinsBuildNumber == null) {
+          final String? deviceJenkinsBuildNumber = device?.jenkinsBuildNumber;
+          if (deviceJenkinsBuildNumber != null && deviceJenkinsBuildNumber.isNotEmpty && deviceJenkinsBuildNumber.toLowerCase() != 'unknown') {
+            jenkinsBuildNumber = deviceJenkinsBuildNumber;
+          }
+        }
+        if (preReleaseTag != null && jenkinsBuildNumber != null) {
+          break;
+        }
+      }
+    }
+
+    return "${primarydevice?.softwareUpdateVersion}-$preReleaseTag.$jenkinsBuildNumber";
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. INTERNAL EXCEPTION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -873,10 +914,15 @@ class SoftwareUpdateService {
       final FusionNetworkDevice? primaryDevice = fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
       await _assertFleetMatchesPrimaryVersion(fusionNetworkDevices: fusionNetworkDevices, primaryDevice: primaryDevice);
 
+      dev.log(
+        "EEE ${fusionNetworkDevices.map((FusionNetworkDevice d) => '${d.name}:${d.softwareUpdateVersion} - ${d.preReleaseTag ?? 'unknown'} - ${d.jenkinsBuildNumber ?? 'unknown'}').join(', ')}",
+      );
+
+      dev.log("SWU : ${fusionNetworkDevices.softwareUpdateCheckDeviceVersion}");
       response = await _networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': primaryDevice?.primaryDeviceVersion,
+          'current_firmware_version': fusionNetworkDevices.softwareUpdateCheckDeviceVersion ?? '',
           'current_desktop_app_version': currentDesktopAppVersion,
         },
         fromJson: (dynamic json) {
@@ -1011,8 +1057,7 @@ class SoftwareUpdateService {
 
     late ResponseCallback<BundleDownloadUrlResult> requestDownloadUrlResponse;
 
-    final String requestedVersion = '${_state.availableVersion ?? ''}-dev.123';
-    // final String requestedVersion = '${_state.availableVersion ?? ''}-dev.89+66febbe';
+    final String requestedVersion = _state.availableVersion ?? '';
 
     try {
       if (requestedVersion.isEmpty) throw Exception("Version is required to get software bundle");
