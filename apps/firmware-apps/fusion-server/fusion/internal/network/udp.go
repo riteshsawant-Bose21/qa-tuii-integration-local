@@ -215,15 +215,20 @@ func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
 	now := time.Now().UnixNano()
 	key := addr.String()
 
-	var msg api.NotifyMessage
-	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
+	var ack api.NotifyMessage
+	if err := json.Unmarshal(data, &ack); err == nil && ack.Operation == api.NotifyOpAck {
 		if s.diagnosticsEnabled {
 			s.ackPackets.Add(1)
 		}
 		s.touchClientIfKnown(key, now)
-		s.handleAck(msg.ID, addr)
+		s.handleAck(ack.ID, addr)
 		return
 	}
+
+	var request struct {
+		Action api.NotifyOp `json:"action"`
+	}
+	_ = json.Unmarshal(data, &request)
 
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
@@ -231,11 +236,15 @@ func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
 		s.sendResponse(addr, server.UDPResponse{
 			Status:  "error",
 			Message: err.Error(),
-		})
+		}, "", api.Version{})
 		return
 	}
 	s.upsertClient(key, addr, now)
-	s.sendResponse(addr, resp)
+	var responseVersion api.Version
+	if request.Action == api.NotifyOpValueGet {
+		responseVersion = s.handler.StateManager.GetVersion()
+	}
+	s.sendResponse(addr, resp, request.Action, responseVersion)
 }
 
 func (s *UDPServer) touchClientIfKnown(key string, now int64) {
@@ -264,11 +273,24 @@ func (s *UDPServer) upsertClient(key string, addr *net.UDPAddr, now int64) {
 	s.clientsMu.Unlock()
 }
 
-func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
+func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any, op api.NotifyOp, version api.Version) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		logging.GetLogger().Error("marshal error: %v", err)
 		return
+	}
+	if op == api.NotifyOpValueGet && len(b) > maxUDPPayloadSize {
+		pullRequiredPayload, err := s.buildConfigPullRequiredPayload(version, "")
+		if err != nil {
+			logging.GetLogger().Error("udp config pull notification build failed: %v", err)
+			return
+		}
+		logging.GetLogger().Warn(
+			"udp get response size %d exceeds max %d; replying with config_pull_required",
+			len(b),
+			maxUDPPayloadSize,
+		)
+		b = pullRequiredPayload
 	}
 	if _, err := s.conn.WriteToUDP(b, addr); err != nil {
 		logging.GetLogger().Error("write error to %s: %v", addr, err)
