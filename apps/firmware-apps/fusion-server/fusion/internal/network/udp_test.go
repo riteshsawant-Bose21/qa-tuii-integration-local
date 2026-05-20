@@ -1,10 +1,15 @@
 package network
 
 import (
+	"net"
+	"strings"
 	"testing"
+	"time"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+
+	json "github.com/goccy/go-json"
 )
 
 func init() {
@@ -99,5 +104,59 @@ func TestConfigBroadcastDoesNotDropWhenCachedVersionIsAhead(t *testing.T) {
 	}
 	if got := srv.lastBroadcastVersion.Load(); got != 1 {
 		t.Fatalf("expected last broadcast version to update to 1, got %d", got)
+	}
+}
+
+func TestSendResponseOversizedGetRequiresConfigPull(t *testing.T) {
+	serverConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	if err != nil {
+		t.Fatalf("ListenUDP server failed: %v", err)
+	}
+	defer serverConn.Close()
+
+	clientConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	if err != nil {
+		t.Fatalf("ListenUDP client failed: %v", err)
+	}
+	defer clientConn.Close()
+
+	srv := &UDPServer{
+		Listener: &Listener{conn: serverConn},
+		clients:  make(map[string]*clientState),
+		pending:  make(map[string]*pendingBroadcast),
+	}
+
+	response := map[string]any{
+		"_fusion_op": "get",
+		"status":     "success",
+		"payload": map[string]any{
+			"settings": map[string]any{
+				"oversized": strings.Repeat("x", 70*1024),
+			},
+		},
+	}
+
+	version := api.Version{Counter: 42, Epoch: 7, NodeID: "node-a"}
+	srv.sendResponse(clientConn.LocalAddr().(*net.UDPAddr), response, api.NotifyOpValueGet, version)
+
+	buf := make([]byte, 4096)
+	_ = clientConn.SetReadDeadline(time.Now().Add(time.Second))
+	n, _, err := clientConn.ReadFromUDP(buf)
+	if err != nil {
+		t.Fatalf("ReadFromUDP failed: %v", err)
+	}
+
+	var msg map[string]any
+	if err := json.Unmarshal(buf[:n], &msg); err != nil {
+		t.Fatalf("parse response: %v", err)
+	}
+	if msg[api.FusionOperation] != string(api.NotifyOpConfigPullRequired) {
+		t.Fatalf("expected config_pull_required, got %#v", msg)
+	}
+	if msg[api.FusionVersion] != float64(version.Counter) {
+		t.Fatalf("expected version %d, got %#v", version.Counter, msg[api.FusionVersion])
+	}
+	if msg[api.FusionEpoch] != float64(version.Epoch) {
+		t.Fatalf("expected epoch %d, got %#v", version.Epoch, msg[api.FusionEpoch])
 	}
 }
