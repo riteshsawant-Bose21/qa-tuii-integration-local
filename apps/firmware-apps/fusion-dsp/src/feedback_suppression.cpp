@@ -228,7 +228,7 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     // Initialize FFT objects
     curr_fft = std::make_unique<fft::Fft>(fft_size);
     fft_data = std::make_unique<float[]>(fft_size);
-    // default 4096
+    // default 4096+1
     fft_data_len = fft_size/2 + 1;
     db_fft_data = std::make_unique<int[]>(fft_data_len);
     pre_db_fft_data = std::make_unique<int[]>(fft_data_len);
@@ -663,7 +663,7 @@ void FeedbackSuppression::analysis_process()
     // DC
     db_fft_data[0] = 20*log10(fft_data[0]);
     // Nyquist
-    db_fft_data[fft_data_len] = 20*log10(fft_data[1]);
+    db_fft_data[fft_data_len-1] = 20*log10(fft_data[1]);
     // the rest
     int_fast32_t band_n = 1;
     for (int_fast32_t i{2}; i < fft_size; i += 2)
