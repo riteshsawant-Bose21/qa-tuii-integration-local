@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../software_update/software_update_service.dart';
@@ -19,9 +18,7 @@ class FirmwareUpdatesTab extends StatefulWidget {
 }
 
 class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
-  final SoftwareUpdateCubit _cubit = SoftwareUpdateCubit(
-    networkClient: serviceLocator<FusionNetworkClient>(),
-  );
+  final SoftwareUpdateCubit _cubit = SoftwareUpdateCubit();
 
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
   bool _showedSuccessDialog = false;

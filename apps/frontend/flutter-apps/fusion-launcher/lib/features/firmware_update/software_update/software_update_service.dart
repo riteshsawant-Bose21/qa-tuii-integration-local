@@ -4,9 +4,12 @@ import 'dart:developer' as dev;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
+
+import '../../../core/service_locator.dart';
 
 String _normalizeSerialKey(String raw) => raw.trim().toLowerCase();
 
@@ -527,7 +530,7 @@ class SoftwareUpdateConfig {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class SoftwareUpdateService {
-  SoftwareUpdateService._(this._config, this._networkClient) {
+  SoftwareUpdateService._(this._config) {
     dev.log('[SoftwareUpdateService] Instance created', name: 'SoftwareUpdateService');
   }
 
@@ -538,15 +541,17 @@ class SoftwareUpdateService {
     return _instance!;
   }
 
-  static void init(SoftwareUpdateConfig config, FusionNetworkClient networkClient) {
-    _instance ??= SoftwareUpdateService._(config, networkClient);
+  static void init(SoftwareUpdateConfig config) {
+    _instance ??= SoftwareUpdateService._(config);
     unawaited(_instance!._initCacheDir());
     dev.log('[SoftwareUpdateService] Initialized', name: 'SoftwareUpdateService');
   }
 
   AppCacheService? _softwareUpdateCacheDir;
   final SoftwareUpdateConfig _config;
-  final FusionNetworkClient _networkClient;
+
+  final FusionNetworkClient _networkClient = serviceLocator<FusionNetworkClient>();
+  final FusionDeviceDiscoveryService _fusionDeviceDiscoveryService = serviceLocator<FusionDeviceDiscoveryService>();
 
   UpdateState _state = const UpdateState();
   final StreamController<UpdateState> _ctrl = StreamController<UpdateState>.broadcast();
@@ -719,14 +724,7 @@ class SoftwareUpdateService {
   Future<void> _reloadFusionDevices() async {
     dev.log('[SoftwareUpdateService] Reloading Fusion devices from ${_config.virtualIp}', name: 'SoftwareUpdateService');
     try {
-      final ResponseCallback<List<FusionNetworkDevice>> response = await _networkClient.get(
-        api: FusionApiEndpoint.fusionDevice,
-        baseUrlToOverride: _config.virtualIp,
-        isSecure: false,
-        fromJson: (dynamic json) {
-          return List<FusionNetworkDevice>.from((json as List<dynamic>).map((dynamic e) => FusionNetworkDevice.fromJson(e as Map<String, dynamic>)));
-        },
-      );
+      final ResponseCallback<List<FusionNetworkDevice>> response = await _fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(ip: _config.virtualIp);
 
       if (response.success) {
         _emit(_state.copyWith(fusionNetworkDevices: response.data ?? <FusionNetworkDevice>[]));
@@ -1897,76 +1895,3 @@ class SoftwareUpdateService {
     // _networkClient is injected (from service locator) — do NOT close it here.
   }
 }
-
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-// 7. SCREEN BUILDER EXAMPLE
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-// BlocBuilder<SoftwareUpdateCubit, UpdateState>(
-//   builder: (context, state) {
-//     final cubit = context.read<SoftwareUpdateCubit>();
-//     return Column(children: [
-//
-//       // ── Main status area ──────────────────────────────────────────────────
-//       switch (state.phase) {
-//         UpdatePhase.idle         => Text('Up to date'),
-//         UpdatePhase.checking     => CircularProgressIndicator(),
-//         UpdatePhase.awaitDownload=> Text('v${state.availableVersion} available'),
-//         UpdatePhase.downloading  => LinearProgressIndicator(value: state.downloadProgress),
-//         UpdatePhase.awaitInstall => Text('Download complete. Ready to install.'),
-//         UpdatePhase.discovering  => Text('Finding devices…'),
-//         UpdatePhase.uploading    => LinearProgressIndicator(value: state.uploadProgress),
-//         UpdatePhase.installing   => DeviceProgressList(devices: state.deviceProgress),
-//         UpdatePhase.rebooting    => Text('Devices rebooting…'),
-//         UpdatePhase.completed    => Text('Update complete ✓'),
-//         UpdatePhase.failed       => Text(state.error?.message ?? 'Unknown error'),
-//         UpdatePhase.cancelled    => Text('Cancelled'),
-//         UpdatePhase.rollingBack  => CircularProgressIndicator(),
-//         UpdatePhase.rolledBack   => Text('Rolled back'),
-//       },
-//
-//       // ── Action buttons ────────────────────────────────────────────────────
-//       Row(children: [
-//         // Check / re-check
-//         if (!state.isActive && !state.updateAvailable)
-//           ElevatedButton(onPressed: cubit.checkForUpdates, child: Text('Check for Updates')),
-//
-//         // Download (shown only at awaitDownload gate)
-//         if (state.showDownloadButton)
-//           ElevatedButton(onPressed: cubit.confirmDownload, child: Text('Download')),
-//
-//         // Pause / Resume download
-//         if (state.showPauseButton)
-//           ElevatedButton(onPressed: cubit.pauseDownload, child: Text('Pause')),
-//
-//         // Install (shown only at awaitInstall gate)
-//         if (state.showInstallButton)
-//           ElevatedButton(onPressed: cubit.confirmInstall, child: Text('Install')),
-//
-//         // Retry (only when failed + retryable)
-//         if (state.canRetry)
-//           ElevatedButton(
-//             onPressed: cubit.retryPhase,
-//             child: Text(state.error?.retryLabel ?? 'Retry'),
-//           ),
-//
-//         // Cancel
-//         if (state.showCancelButton)
-//           TextButton(onPressed: cubit.cancel, child: Text('Cancel')),
-//
-//         // Rollback (only when file is on device)
-//         if (state.showRollbackButton)
-//           OutlinedButton(
-//             style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-//             onPressed: cubit.rollback,
-//             child: Text('Rollback'),
-//           ),
-//       ]),
-//
-//       // No retry available → contact support message
-//       if (state.phase == UpdatePhase.failed && !state.canRetry)
-//         Text('Please contact support.', style: TextStyle(color: Colors.red)),
-//     ]);
-//   },
-// )
