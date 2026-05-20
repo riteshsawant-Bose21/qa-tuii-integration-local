@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
+
+import '../../../core/service_locator.dart';
 
 String _normalizeSerialKey(String raw) => raw.trim().toLowerCase();
 
@@ -308,9 +312,155 @@ class UpdateState {
     failedPhase: clearFailedPhase ? null : (failedPhase ?? this.failedPhase),
   );
 
+  /// Canonical state transitions for each phase.
+  ///
+  /// This keeps phase-specific flag/reset logic in one place instead of
+  /// scattering large copyWith blocks across the service.
+  UpdateState transitionTo(UpdatePhase nextPhase) {
+    switch (nextPhase) {
+      case UpdatePhase.idle:
+        return copyWith(
+          phase: nextPhase,
+          downloadProgress: 0,
+          uploadProgress: 0,
+          deviceSerialNumbers: const <String>[],
+          deviceProgress: const <String, DeviceUpdateProgressEvent>{},
+          devicesRebooted: const <String>{},
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.checking:
+      case UpdatePhase.awaitDownload:
+      case UpdatePhase.awaitInstall:
+      case UpdatePhase.discovering:
+        return copyWith(
+          phase: nextPhase,
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.downloading:
+        return copyWith(
+          phase: nextPhase,
+          downloadProgress: 0,
+          downloadResult: null,
+          uploadProgress: 0,
+          deviceSerialNumbers: const <String>[],
+          deviceProgress: const <String, DeviceUpdateProgressEvent>{},
+          devicesRebooted: const <String>{},
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.uploading:
+        return copyWith(
+          phase: nextPhase,
+          uploadProgress: 0,
+          isUploadInProgress: true,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.installing:
+        return copyWith(
+          phase: nextPhase,
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: true,
+          isWaitingForSocketResponse: true,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.rebooting:
+        return copyWith(
+          phase: nextPhase,
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: true,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.completed:
+      case UpdatePhase.cancelled:
+      case UpdatePhase.rollingBack:
+      case UpdatePhase.rolledBack:
+        return copyWith(
+          phase: nextPhase,
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+          clearError: true,
+          clearFailedPhase: true,
+        );
+      case UpdatePhase.failed:
+        return copyWith(
+          phase: nextPhase,
+          isUploadInProgress: false,
+          isSocketTrackingInProgress: false,
+          isWaitingForSocketResponse: false,
+          isRebootTrackingInProgress: false,
+        );
+    }
+  }
+
   @override
   String toString() {
     return 'UpdateState($phase, dl=${(downloadProgress * 100).toStringAsFixed(0)}%, ul=${(uploadProgress * 100).toStringAsFixed(0)}%, devices=${deviceSerialNumbers.length}, err=${error?.code.name})';
+  }
+}
+
+extension ListFusionNetworkDeviceExt on List<FusionNetworkDevice> {
+  String? get inUseVersion {
+    final FusionNetworkDevice? primarydevice = firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
+    final String? primaryPreReleaseTag = primarydevice?.preReleaseTag;
+    final String? primaryJenkinsBuildNumber = primarydevice?.jenkinsBuildNumber;
+
+    String? preReleaseTag, jenkinsBuildNumber;
+
+    if (primaryPreReleaseTag != null && primaryPreReleaseTag.isNotEmpty && primaryPreReleaseTag.toLowerCase() != 'unknown') {
+      preReleaseTag = primaryPreReleaseTag;
+    }
+
+    if (primaryJenkinsBuildNumber != null && primaryJenkinsBuildNumber.isNotEmpty && primaryJenkinsBuildNumber.toLowerCase() != 'unknown') {
+      jenkinsBuildNumber = primaryJenkinsBuildNumber;
+    }
+
+    if (preReleaseTag == null || jenkinsBuildNumber == null) {
+      // take any non-empty, non-unknown preReleaseTag and jenkinsBuildNumber from any device as a fallback, since some older devices might not have these fields but could still be valid for update checks
+      for (final FusionNetworkDevice? device in this) {
+        if (preReleaseTag == null) {
+          final String? devicePreReleaseTag = device?.preReleaseTag;
+          if (devicePreReleaseTag != null && devicePreReleaseTag.isNotEmpty && devicePreReleaseTag.toLowerCase() != 'unknown') {
+            preReleaseTag = devicePreReleaseTag;
+          }
+        }
+        if (jenkinsBuildNumber == null) {
+          final String? deviceJenkinsBuildNumber = device?.jenkinsBuildNumber;
+          if (deviceJenkinsBuildNumber != null && deviceJenkinsBuildNumber.isNotEmpty && deviceJenkinsBuildNumber.toLowerCase() != 'unknown') {
+            jenkinsBuildNumber = deviceJenkinsBuildNumber;
+          }
+        }
+        if (preReleaseTag != null && jenkinsBuildNumber != null) {
+          break;
+        }
+      }
+    }
+
+    return "${primarydevice?.softwareUpdateVersion}-$preReleaseTag.$jenkinsBuildNumber";
   }
 }
 
@@ -421,7 +571,7 @@ class SoftwareUpdateConfig {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class SoftwareUpdateService {
-  SoftwareUpdateService._(this._config, this._networkClient) {
+  SoftwareUpdateService._(this._config) {
     dev.log('[SoftwareUpdateService] Instance created', name: 'SoftwareUpdateService');
   }
 
@@ -432,15 +582,17 @@ class SoftwareUpdateService {
     return _instance!;
   }
 
-  static void init(SoftwareUpdateConfig config, FusionNetworkClient networkClient) {
-    _instance ??= SoftwareUpdateService._(config, networkClient);
+  static void init(SoftwareUpdateConfig config) {
+    _instance ??= SoftwareUpdateService._(config);
     unawaited(_instance!._initCacheDir());
     dev.log('[SoftwareUpdateService] Initialized', name: 'SoftwareUpdateService');
   }
 
   AppCacheService? _softwareUpdateCacheDir;
   final SoftwareUpdateConfig _config;
-  final FusionNetworkClient _networkClient;
+
+  final FusionNetworkClient _networkClient = serviceLocator<FusionNetworkClient>();
+  final FusionDeviceDiscoveryService _fusionDeviceDiscoveryService = serviceLocator<FusionDeviceDiscoveryService>();
 
   UpdateState _state = const UpdateState();
   final StreamController<UpdateState> _ctrl = StreamController<UpdateState>.broadcast();
@@ -522,7 +674,7 @@ class SoftwareUpdateService {
     _downloadGate?.complete();
     _installGate?.complete();
     await _cleanup();
-    _emit(_state.copyWith(phase: UpdatePhase.cancelled));
+    _emit(_state.transitionTo(UpdatePhase.cancelled));
     dev.log('[SoftwareUpdateService] Cancelled', name: 'SoftwareUpdateService');
   }
 
@@ -568,6 +720,8 @@ class SoftwareUpdateService {
       await _refreshRollbackVersionFromSocketInfo();
       rollbackVersion = (_rollbackBundleVersion ?? '').trim();
     }
+    dev.log("Rollback to version ::::::::::::::::::::: $rollbackVersion");
+
     if (rollbackVersion.isEmpty) {
       _emit(
         _state.copyWith(
@@ -592,7 +746,7 @@ class SoftwareUpdateService {
     _emit(
       _state.copyWith(
         phase: UpdatePhase.rollingBack,
-        availableVersion: rollbackVersion,
+        availableVersion: "$rollbackVersion-dev.162+70d5904",
         downloadResult: null,
         downloadProgress: 0,
         uploadProgress: 0,
@@ -611,14 +765,7 @@ class SoftwareUpdateService {
   Future<void> _reloadFusionDevices() async {
     dev.log('[SoftwareUpdateService] Reloading Fusion devices from ${_config.virtualIp}', name: 'SoftwareUpdateService');
     try {
-      final ResponseCallback<List<FusionNetworkDevice>> response = await _networkClient.get(
-        api: FusionApiEndpoint.fusionDevice,
-        baseUrlToOverride: _config.virtualIp,
-        isSecure: false,
-        fromJson: (dynamic json) {
-          return List<FusionNetworkDevice>.from((json as List<dynamic>).map((dynamic e) => FusionNetworkDevice.fromJson(e as Map<String, dynamic>)));
-        },
-      );
+      final ResponseCallback<List<FusionNetworkDevice>> response = await _fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(ip: _config.virtualIp);
 
       if (response.success) {
         _emit(_state.copyWith(fusionNetworkDevices: response.data ?? <FusionNetworkDevice>[]));
@@ -707,7 +854,7 @@ class SoftwareUpdateService {
         if (_cancelled) return;
       }
 
-      _emit(_state.copyWith(phase: UpdatePhase.completed));
+      _emit(_state.transitionTo(UpdatePhase.completed));
       dev.log('[SoftwareUpdateService] Update completed ✓', name: 'SoftwareUpdateService');
     } on _UpdateException catch (e) {
       if (_cancelled) return;
@@ -736,7 +883,7 @@ class SoftwareUpdateService {
 
   Future<void> _gateAwaitDownload() async {
     _downloadGate = Completer<void>();
-    _emit(_state.copyWith(phase: UpdatePhase.awaitDownload));
+    _emit(_state.transitionTo(UpdatePhase.awaitDownload));
     dev.log('[SoftwareUpdateService] Waiting for Download confirmation...', name: 'SoftwareUpdateService');
     await _downloadGate!.future;
     _downloadGate = null;
@@ -745,7 +892,7 @@ class SoftwareUpdateService {
 
   Future<void> _gateAwaitInstall() async {
     _installGate = Completer<void>();
-    _emit(_state.copyWith(phase: UpdatePhase.awaitInstall));
+    _emit(_state.transitionTo(UpdatePhase.awaitInstall));
     dev.log('[SoftwareUpdateService] Waiting for Install confirmation...', name: 'SoftwareUpdateService');
     await _installGate!.future;
     _installGate = null;
@@ -756,7 +903,7 @@ class SoftwareUpdateService {
 
   Future<void> _phase1Check() async {
     dev.log('[SoftwareUpdateService] Checking for updates...', name: 'SoftwareUpdateService');
-    _emit(_state.copyWith(phase: UpdatePhase.checking));
+    _emit(_state.transitionTo(UpdatePhase.checking));
 
     late ResponseCallback<FirmwareUpdateCheckResult> response;
     try {
@@ -767,12 +914,15 @@ class SoftwareUpdateService {
       final FusionNetworkDevice? primaryDevice = fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
       await _assertFleetMatchesPrimaryVersion(fusionNetworkDevices: fusionNetworkDevices, primaryDevice: primaryDevice);
 
-      dev.log("primaryDevice?.primaryDeviceVersion.  ${primaryDevice?.primaryDeviceVersion}.   ===. ${primaryDevice?.softwareUpdateVersion}");
+      dev.log(
+        "EEE ${fusionNetworkDevices.map((FusionNetworkDevice d) => '${d.name}:${d.softwareUpdateVersion} - ${d.preReleaseTag ?? 'unknown'} - ${d.jenkinsBuildNumber ?? 'unknown'}').join(', ')}",
+      );
 
+      dev.log("SWU : ${fusionNetworkDevices.inUseVersion}");
       response = await _networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': primaryDevice?.primaryDeviceVersion,
+          'current_firmware_version': fusionNetworkDevices.inUseVersion ?? '',
           'current_desktop_app_version': currentDesktopAppVersion,
         },
         fromJson: (dynamic json) {
@@ -892,7 +1042,7 @@ class SoftwareUpdateService {
       UpdateError(
         code: UpdateErrorCode.versionMismatch,
         message:
-            'Device versions are mismatching. Primary device $primarySerial is on $primaryVersionText. All devices: ${allDevices.join(', ')}. Mismatched devices: ${mismatchedDevices.join(', ')}.',
+            'Device versions are mismatching.\n\nPrimary device $primarySerial is on $primaryVersionText.\nAll devices: ${allDevices.join(', ')}.\nMismatched devices: ${mismatchedDevices.join(', ')}.',
         isRetryable: false,
       ),
     );
@@ -903,16 +1053,18 @@ class SoftwareUpdateService {
   Future<void> _phase2Download() async {
     _downloadPaused = false;
     _downloadResumeGate = null;
-    _emit(_state.copyWith(phase: UpdatePhase.downloading, downloadProgress: 0));
+    _emit(_state.transitionTo(UpdatePhase.downloading));
 
     late ResponseCallback<BundleDownloadUrlResult> requestDownloadUrlResponse;
 
+    final String requestedVersion = _state.availableVersion ?? '';
+
     try {
-      if (_state.availableVersion?.isEmpty ?? true) throw Exception("Version is required to get software bundle");
+      if (requestedVersion.isEmpty) throw Exception("Version is required to get software bundle");
 
       requestDownloadUrlResponse = await _networkClient.get<BundleDownloadUrlResult>(
         api: FusionApiEndpoint.firmwareBundleDownloadUrl,
-        additionalPath: '${_state.availableVersion}/request-download-url',
+        additionalPath: '$requestedVersion/request-download-url',
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) throw Exception('Unexpected firmware bundle download response format.');
           return BundleDownloadUrlResult.fromJson(json);
@@ -937,10 +1089,11 @@ class SoftwareUpdateService {
 
     final String downloadUrl = requestDownloadUrlResponse.data?.downloadUrl ?? '';
     if (downloadUrl.isEmpty) {
-      throw const _UpdateException(
+      throw _UpdateException(
         UpdateError(
           code: UpdateErrorCode.downloadFailed,
-          message: 'Bundle download URL is missing.',
+          message:
+              'Bundle download URL is unavailable. The requested version ($requestedVersion) may be invalid, or the bundle may not yet be ready on the server.',
           isRetryable: true,
           retryLabel: 'Retry download',
         ),
@@ -1002,7 +1155,7 @@ class SoftwareUpdateService {
   // ── Phase 3: Discover ────────────────────────────────────────────────────────
 
   Future<void> _phase3Discover() async {
-    _emit(_state.copyWith(phase: UpdatePhase.discovering));
+    _emit(_state.transitionTo(UpdatePhase.discovering));
 
     try {
       await _reloadFusionDevices(); // ensure freshest device data for discovery
@@ -1046,7 +1199,7 @@ class SoftwareUpdateService {
   // HTTP 409 (already_exists) = file already on device = soft success, continue.
 
   Future<void> _phase4Upload() async {
-    _emit(_state.copyWith(phase: UpdatePhase.uploading, uploadProgress: 0, isUploadInProgress: true));
+    _emit(_state.transitionTo(UpdatePhase.uploading));
 
     // throw error if checksum is missing, since upload will likely fail and there's no point in proceeding without it
     if (_state.downloadResult == null || _state.downloadResult!.checksum.isEmpty) {
@@ -1138,13 +1291,7 @@ class SoftwareUpdateService {
   // ── Phase 5: Install via WebSocket ───────────────────────────────────────────
 
   Future<void> _phase5Install() async {
-    _emit(
-      _state.copyWith(
-        phase: UpdatePhase.installing,
-        isSocketTrackingInProgress: true,
-        isWaitingForSocketResponse: true,
-      ),
-    );
+    _emit(_state.transitionTo(UpdatePhase.installing));
 
     final ResponseCallback<void> connect = await _connectInstallWebSocketWithRetry();
     if (!connect.success) {
@@ -1179,22 +1326,23 @@ class SoftwareUpdateService {
 
     final Completer<void> completer = Completer<void>();
     await _wsSub?.cancel();
+    bool gotProgress = false;
+    Timer? wsTimeout;
 
     _wsSub = _networkClient.webSocketMessages.listen(
       (ResponseCallback<dynamic> message) {
+        dev.log('[WS message received: ${jsonEncode(message.data)}');
         if (_cancelled) {
           if (!completer.isCompleted) completer.complete();
           return;
         }
-
         if (!message.success || message.data == null) return;
-
         final dynamic payload = message.data;
         if (payload is! Map<String, dynamic>) return;
-
         final FirmwareUpdateProgressEvent event = FirmwareUpdateProgressEvent.fromJson(payload);
         if (!event.isUpdateProgress) return;
-
+        gotProgress = true;
+        wsTimeout?.cancel();
         _emit(_state.copyWith(isWaitingForSocketResponse: false));
         _handleWsProgressEvent(event, completer);
       },
@@ -1237,8 +1385,48 @@ class SoftwareUpdateService {
       cancelOnError: false,
     );
 
-    await completer.future;
+    wsTimeout = Timer(const Duration(minutes: 1), () async {
+      if (!gotProgress && !completer.isCompleted) {
+        try {
+          final String requestId = _nextSwUpdateInfoRequestId();
+          final ResponseCallback<void> request = await _networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+            'id': requestId,
+            'version': 1,
+            'type': 'sw_update_info',
+          });
+          if (!request.success) {
+            completer.completeError(
+              _UpdateException(
+                UpdateError(
+                  code: UpdateErrorCode.wsConnectionFailed,
+                  message: request.message,
+                  isRetryable: true,
+                  retryLabel: 'Retry install',
+                ),
+              ),
+            );
+            return;
+          }
+          final List<_SwUpdateInfoDevice> devices = await _awaitSwUpdateInfoPayload(timeout: const Duration(minutes: 1), requestId: requestId);
+          _throwIfDeviceFailed(devices: devices, phaseName: 'update');
+          completer.completeError(
+            const _UpdateException(
+              UpdateError(
+                code: UpdateErrorCode.syncTimeout,
+                message: 'No update progress received from device(s) after 1 minute.',
+                isRetryable: true,
+                retryLabel: 'Retry install',
+              ),
+            ),
+          );
+        } catch (e) {
+          completer.completeError(e);
+        }
+      }
+    });
 
+    await completer.future;
+    wsTimeout.cancel();
     await _wsSub?.cancel();
     _wsSub = null;
 
@@ -1259,12 +1447,7 @@ class SoftwareUpdateService {
     await _trackRebootUntilOnline();
 
     _emit(
-      _state.copyWith(
-        isSocketTrackingInProgress: false,
-        isWaitingForSocketResponse: false,
-        isRebootTrackingInProgress: false,
-        phase: UpdatePhase.completed,
-      ),
+      _state.transitionTo(UpdatePhase.completed),
     );
   }
 
@@ -1322,7 +1505,7 @@ class SoftwareUpdateService {
   }
 
   Future<void> _trackRebootUntilOnline() async {
-    _emit(_state.copyWith(phase: UpdatePhase.rebooting, isRebootTrackingInProgress: true));
+    _emit(_state.transitionTo(UpdatePhase.rebooting));
 
     // Mark all devices as rebooting to start, so the UI can reflect that immediately while we wait for the first WS update with real progress.
     final Map<String, DeviceUpdateProgressEvent> rebootingDevices = <String, DeviceUpdateProgressEvent>{
@@ -1341,8 +1524,10 @@ class SoftwareUpdateService {
     }
 
     final DateTime deadline = DateTime.now().add(_config.rebootTimeout);
+    final DateTime noProgressDeadline = DateTime.now().add(const Duration(minutes: 1));
     bool delayedFirstTry = false;
     bool sawUpdateProcessing = false;
+    bool gotProgress = false;
 
     while (!_cancelled && DateTime.now().isBefore(deadline)) {
       final Duration remaining = deadline.difference(DateTime.now());
@@ -1356,10 +1541,36 @@ class SoftwareUpdateService {
 
       if (_cancelled || !DateTime.now().isBefore(deadline)) break;
 
+      if (!gotProgress && DateTime.now().isAfter(noProgressDeadline)) {
+        final String requestId = _nextSwUpdateInfoRequestId();
+        final ResponseCallback<void> request = await _networkClient.sendWebSocketMessage<void>(<String, dynamic>{
+          'id': requestId,
+          'version': 1,
+          'type': 'sw_update_info',
+        });
+        if (!request.success) {
+          throw _UpdateException(
+            UpdateError(
+              code: UpdateErrorCode.wsConnectionFailed,
+              message: request.message,
+              isRetryable: true,
+              retryLabel: 'Retry install',
+            ),
+          );
+        }
+        final List<_SwUpdateInfoDevice> devices = await _awaitSwUpdateInfoPayload(timeout: const Duration(minutes: 1), requestId: requestId);
+        _throwIfDeviceFailed(devices: devices, phaseName: 'reboot');
+        throw const _UpdateException(
+          UpdateError(
+            code: UpdateErrorCode.syncTimeout,
+            message: 'No device progress received after reboot for 1 minute.',
+            isRetryable: true,
+            retryLabel: 'Retry install',
+          ),
+        );
+      }
+
       try {
-        // Try to send on the existing connection first. Only disconnect+reconnect
-        // if the socket is no longer alive — avoids unnecessary churn when the
-        // connection from the install phase is still open.
         final String requestId = _nextSwUpdateInfoRequestId();
         ResponseCallback<void> request = await _networkClient.sendWebSocketMessage<void>(<String, dynamic>{
           'id': requestId,
@@ -1368,27 +1579,22 @@ class SoftwareUpdateService {
         });
 
         if (!request.success) {
-          // Connection dropped — attempt a fresh connect.
           dev.log('[SoftwareUpdateService] WS not connected during reboot check, reconnecting...', name: 'SoftwareUpdateService');
-
           try {
             await _networkClient.disconnectWebSocket<void>();
           } catch (e) {
             dev.log('[SoftwareUpdateService] WS disconnect before reboot reconnect failed: $e', name: 'SoftwareUpdateService');
           }
-
           final ResponseCallback<void> connect = await _networkClient.connectWebSocket<void>(url: wsHost);
           if (!connect.success) {
             dev.log('[SoftwareUpdateService] WS reconnect failed during reboot check: ${connect.message}', name: 'SoftwareUpdateService');
             continue;
           }
-
           request = await _networkClient.sendWebSocketMessage<void>(<String, dynamic>{
             'id': requestId,
             'version': 1,
             'type': 'sw_update_info',
           });
-
           if (!request.success) {
             continue;
           }
@@ -1398,6 +1604,9 @@ class SoftwareUpdateService {
           timeout: _config.rebootPollInterval,
           requestId: requestId,
         );
+
+        gotProgress = true;
+        _throwIfDeviceFailed(devices: deviceInfo, phaseName: 'reboot');
 
         final _RebootCheckResult rebootCheckResult = _evaluateRebootInfo(deviceInfo: deviceInfo, expectedSerials: expectedSerials);
 
@@ -1411,8 +1620,12 @@ class SoftwareUpdateService {
         if (rebootCheckResult.allSucceeded) {
           return;
         }
-      } catch (_) {
-        // Keep retrying until timeout.
+      } catch (e) {
+        // If it's a device error, rethrow to break loop and surface error.
+        if (e is _UpdateException) {
+          rethrow;
+        }
+        // Otherwise, keep retrying until timeout.
       }
     }
 
@@ -1427,6 +1640,23 @@ class SoftwareUpdateService {
         retryLabel: 'Retry install',
       ),
     );
+  }
+
+  void _throwIfDeviceFailed({required List<_SwUpdateInfoDevice> devices, required String phaseName}) {
+    for (final _SwUpdateInfoDevice device in devices) {
+      final bool isFailed = device.status.toUpperCase() == 'ERROR' || device.currentState.toUpperCase() == 'FAILED';
+      if (!isFailed) continue;
+
+      final String detail = device.error.isNotEmpty ? device.error : 'Device ${device.serialNumber} failed during $phaseName.';
+      throw _UpdateException(
+        UpdateError(
+          code: UpdateErrorCode.wsDeviceFailed,
+          message: 'Device $phaseName failed: $detail',
+          isRetryable: true,
+          retryLabel: 'Retry install',
+        ),
+      );
+    }
   }
 
   Future<List<_SwUpdateInfoDevice>> _awaitSwUpdateInfoPayload({required Duration timeout, required String requestId}) async {
@@ -1710,76 +1940,3 @@ class SoftwareUpdateService {
     // _networkClient is injected (from service locator) — do NOT close it here.
   }
 }
-
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-// 7. SCREEN BUILDER EXAMPLE
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-// BlocBuilder<SoftwareUpdateCubit, UpdateState>(
-//   builder: (context, state) {
-//     final cubit = context.read<SoftwareUpdateCubit>();
-//     return Column(children: [
-//
-//       // ── Main status area ──────────────────────────────────────────────────
-//       switch (state.phase) {
-//         UpdatePhase.idle         => Text('Up to date'),
-//         UpdatePhase.checking     => CircularProgressIndicator(),
-//         UpdatePhase.awaitDownload=> Text('v${state.availableVersion} available'),
-//         UpdatePhase.downloading  => LinearProgressIndicator(value: state.downloadProgress),
-//         UpdatePhase.awaitInstall => Text('Download complete. Ready to install.'),
-//         UpdatePhase.discovering  => Text('Finding devices…'),
-//         UpdatePhase.uploading    => LinearProgressIndicator(value: state.uploadProgress),
-//         UpdatePhase.installing   => DeviceProgressList(devices: state.deviceProgress),
-//         UpdatePhase.rebooting    => Text('Devices rebooting…'),
-//         UpdatePhase.completed    => Text('Update complete ✓'),
-//         UpdatePhase.failed       => Text(state.error?.message ?? 'Unknown error'),
-//         UpdatePhase.cancelled    => Text('Cancelled'),
-//         UpdatePhase.rollingBack  => CircularProgressIndicator(),
-//         UpdatePhase.rolledBack   => Text('Rolled back'),
-//       },
-//
-//       // ── Action buttons ────────────────────────────────────────────────────
-//       Row(children: [
-//         // Check / re-check
-//         if (!state.isActive && !state.updateAvailable)
-//           ElevatedButton(onPressed: cubit.checkForUpdates, child: Text('Check for Updates')),
-//
-//         // Download (shown only at awaitDownload gate)
-//         if (state.showDownloadButton)
-//           ElevatedButton(onPressed: cubit.confirmDownload, child: Text('Download')),
-//
-//         // Pause / Resume download
-//         if (state.showPauseButton)
-//           ElevatedButton(onPressed: cubit.pauseDownload, child: Text('Pause')),
-//
-//         // Install (shown only at awaitInstall gate)
-//         if (state.showInstallButton)
-//           ElevatedButton(onPressed: cubit.confirmInstall, child: Text('Install')),
-//
-//         // Retry (only when failed + retryable)
-//         if (state.canRetry)
-//           ElevatedButton(
-//             onPressed: cubit.retryPhase,
-//             child: Text(state.error?.retryLabel ?? 'Retry'),
-//           ),
-//
-//         // Cancel
-//         if (state.showCancelButton)
-//           TextButton(onPressed: cubit.cancel, child: Text('Cancel')),
-//
-//         // Rollback (only when file is on device)
-//         if (state.showRollbackButton)
-//           OutlinedButton(
-//             style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-//             onPressed: cubit.rollback,
-//             child: Text('Rollback'),
-//           ),
-//       ]),
-//
-//       // No retry available → contact support message
-//       if (state.phase == UpdatePhase.failed && !state.canRetry)
-//         Text('Please contact support.', style: TextStyle(color: Colors.red)),
-//     ]);
-//   },
-// )

@@ -11,6 +11,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../configuration_aes67/view/widgets/inputStreams/input_stream_dialog.dart';
+import '../../../configuration_aes67/view/widgets/outputStreams/output_stream_dialog.dart';
 import 'common_widgets/add_sources_dropdown.dart';
 
 typedef StreamSelector<T> = Aes67Config? Function(T state);
@@ -20,16 +21,20 @@ typedef ChannelSelector<T> = int? Function(T state);
 typedef StreamChanged = void Function(Aes67Config stream);
 typedef ChannelChanged = void Function(int channel);
 
+enum Aes67StreamMode { input, output }
+
 class Aes67StreamSection<T> extends StatefulWidget {
   final T state;
   final StreamSelector<T> selectedStreamSelector;
   final StreamChanged onStreamSelected;
+  final Aes67StreamMode streamMode;
 
   const Aes67StreamSection({
     super.key,
     required this.state,
     required this.selectedStreamSelector,
     required this.onStreamSelected,
+    this.streamMode = Aes67StreamMode.input,
   });
 
   @override
@@ -42,7 +47,40 @@ class _Aes67StreamSectionState<T> extends State<Aes67StreamSection<T>> {
   @override
   Widget build(BuildContext context) {
     final Aes67Config? selectedStream = widget.selectedStreamSelector(widget.state);
-    final List<Aes67Config> streams = context.read<ProjectViewModel>().getAllAes67InputStreams();
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    final List<Aes67Config> streams =
+        widget.streamMode == Aes67StreamMode.output ? projectViewModel.getAllAes67OutputStreams() : projectViewModel.getAllAes67InputStreams();
+
+    void showAddStreamDialog() {
+      if (widget.streamMode == Aes67StreamMode.output) {
+        OutputStreamDialog.show(
+          context,
+          onSave: (Aes67Config stream) {
+            projectViewModel.addAes67OutputStream(stream: stream);
+            final List<Aes67Config> updatedStreams = projectViewModel.getAllAes67OutputStreams();
+            final Aes67Config matchedStream = updatedStreams.firstWhere(
+              (Aes67Config s) => s.id == stream.id,
+              orElse: () => stream,
+            );
+            widget.onStreamSelected(matchedStream);
+          },
+        );
+        return;
+      }
+
+      InputStreamDialog.show(
+        context,
+        onSave: (Aes67Config stream) {
+          projectViewModel.addAes67InputStream(stream: stream);
+          final List<Aes67Config> updatedStreams = projectViewModel.getAllAes67InputStreams();
+          final Aes67Config matchedStream = updatedStreams.firstWhere(
+            (Aes67Config s) => s.id == stream.id,
+            orElse: () => stream,
+          );
+          widget.onStreamSelected(matchedStream);
+        },
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,18 +101,7 @@ class _Aes67StreamSectionState<T> extends State<Aes67StreamSection<T>> {
           matchChildWidth: true,
           onSelected: (dynamic option) {
             if (option is AddStreamAction) {
-              InputStreamDialog.show(
-                context,
-                onSave: (Aes67Config stream) {
-                  context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
-                  final List<Aes67Config> updatedStreams = context.read<ProjectViewModel>().getAllAes67InputStreams();
-                  final Aes67Config matchedStream = updatedStreams.firstWhere(
-                    (Aes67Config s) => s.id == stream.id,
-                    orElse: () => stream,
-                  );
-                  widget.onStreamSelected(matchedStream);
-                },
-              );
+              showAddStreamDialog();
               return;
             }
 
@@ -93,20 +120,7 @@ class _Aes67StreamSectionState<T> extends State<Aes67StreamSection<T>> {
                       semanticId: 'add_stream_button',
                       text: 'ADD STREAM',
                       height: 42,
-                      onPressed: () {
-                        InputStreamDialog.show(
-                          context,
-                          onSave: (Aes67Config stream) {
-                            context.read<ProjectViewModel>().addAes67InputStream(stream: stream);
-                            final List<Aes67Config> updatedStreams = context.read<ProjectViewModel>().getAllAes67InputStreams();
-                            final Aes67Config matchedStream = updatedStreams.firstWhere(
-                              (Aes67Config s) => s.id == stream.id,
-                              orElse: () => stream,
-                            );
-                            widget.onStreamSelected(matchedStream);
-                          },
-                        );
-                      },
+                      onPressed: showAddStreamDialog,
                     ),
                   ),
                 ],

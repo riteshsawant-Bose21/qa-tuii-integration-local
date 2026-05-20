@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/generated/proto/fusion/websocket.pb.dart' as wsmodel;
-import 'package:fusion_lib/generated/proto/google/protobuf/struct.pb.dart'
-    as structpb;
+import 'package:fusion_lib/generated/proto/google/protobuf/struct.pb.dart' as structpb;
 
 /// Model class representing a Fusion network device discovered on the network.
 class FusionNetworkDevice {
@@ -63,17 +62,17 @@ class FusionNetworkDevice {
     this.preReleaseTag,
   });
 
-  String? get primaryDeviceVersion {
-    if (!isPrimary) return null;
+  // String? get primaryDeviceVersion {
+  //   if (!isPrimary) return null;
 
-    if (preReleaseTag != null &&
-        preReleaseTag!.isNotEmpty &&
-        preReleaseTag!.toLowerCase() != 'unknown') {
-      return "$softwareUpdateVersion-$preReleaseTag.$jenkinsBuildNumber";
-    }
+  //   if (preReleaseTag != null &&
+  //       preReleaseTag!.isNotEmpty &&
+  //       preReleaseTag!.toLowerCase() != 'unknown') {
+  //     return "$softwareUpdateVersion-$preReleaseTag.$jenkinsBuildNumber";
+  //   }
 
-    return softwareUpdateVersion;
-  }
+  //   return softwareUpdateVersion;
+  // }
 
   factory FusionNetworkDevice.fromJson(Map<String, dynamic> json) {
     return FusionNetworkDevice(
@@ -81,18 +80,14 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: json['serial_number'] == "07323a09dabc1d39"
-          ? "XLRPAL"
-          : 'FM8Y', //json['model_name'] as String? ?? ''
+      modelName: json['serial_number'] == "07323a09dabc1d39" ? "XLRPAL" : 'FM8Y', //json['model_name'] as String? ?? ''
       serialNumber: json['serial_number'] as String? ?? '',
       isPrimary: json['is_primary'] as bool? ?? false,
       macAddress: json['mac_address'] as String? ?? '',
       softwareUpdateVersion: json['software_update_version'] as String? ?? '',
-      isDeviceCertificateValid:
-          json['is_device_certificate_valid'] as bool? ?? false,
+      isDeviceCertificateValid: json['is_device_certificate_valid'] as bool? ?? false,
       fusionMonorepoBranch: json['fusion_monorepo_branch'] as String? ?? '',
-      fusionMonorepoCommitHash:
-          json['fusion_monorepo_commit_hash'] as String? ?? '',
+      fusionMonorepoCommitHash: json['fusion_monorepo_commit_hash'] as String? ?? '',
       jenkinsBuildNumber: json['jenkins_build_number'] as String? ?? '',
       preReleaseTag: json['pre_release_tag'] as String?,
     );
@@ -142,13 +137,10 @@ class FusionNetworkDevice {
       serialNumber: serialNumber ?? this.serialNumber,
       isPrimary: isPrimary ?? this.isPrimary,
       macAddress: macAddress ?? this.macAddress,
-      softwareUpdateVersion:
-          softwareUpdateVersion ?? this.softwareUpdateVersion,
-      isDeviceCertificateValid:
-          isDeviceCertificateValid ?? this.isDeviceCertificateValid,
+      softwareUpdateVersion: softwareUpdateVersion ?? this.softwareUpdateVersion,
+      isDeviceCertificateValid: isDeviceCertificateValid ?? this.isDeviceCertificateValid,
       fusionMonorepoBranch: fusionMonorepoBranch ?? this.fusionMonorepoBranch,
-      fusionMonorepoCommitHash:
-          fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
+      fusionMonorepoCommitHash: fusionMonorepoCommitHash ?? this.fusionMonorepoCommitHash,
       jenkinsBuildNumber: jenkinsBuildNumber ?? this.jenkinsBuildNumber,
       preReleaseTag: preReleaseTag ?? this.preReleaseTag,
     );
@@ -361,14 +353,10 @@ class DeviceUpdateProgressEvent extends Equatable {
   }
 
   factory DeviceUpdateProgressEvent.fromProtoValue(structpb.Value value) {
-    final structpb.Struct? payload = value.hasStructValue()
-        ? value.structValue
-        : null;
+    final structpb.Struct? payload = value.hasStructValue() ? value.structValue : null;
     final Map<String, structpb.Value> fields = payload?.fields ?? const {};
 
-    final String rawProgress =
-        _stringFromValue(fields['progress']) ??
-        _intFromValue(fields['progress']).toString();
+    final String rawProgress = _stringFromValue(fields['progress']) ?? _intFromValue(fields['progress']).toString();
     final int parsedProgress = int.tryParse(rawProgress) ?? 0;
 
     return DeviceUpdateProgressEvent(
@@ -398,8 +386,7 @@ class DeviceUpdateProgressEvent extends Equatable {
 
   bool get isCompleted => updateState.toUpperCase() == 'COMPLETED';
   bool get isSuccess => updateState.toUpperCase() == 'SUCCESS';
-  bool get isFailed =>
-      updateState.contains('FAIL') || updateState.contains('ERROR');
+  bool get isFailed => updateState.contains('FAIL') || updateState.contains('ERROR');
   double get stepProgress => progress.clamp(0, 100) / 100.0;
 
   @override
@@ -459,15 +446,13 @@ class FirmwareUpdateProgressEvent extends Equatable {
   bool get isUpdateProgress => type == 'update_progress';
 
   factory FirmwareUpdateProgressEvent.fromJson(Map<String, dynamic> json) {
-    final Map<String, DeviceUpdateProgressEvent> devicesBySerial =
-        <String, DeviceUpdateProgressEvent>{};
+    final Map<String, DeviceUpdateProgressEvent> devicesBySerial = <String, DeviceUpdateProgressEvent>{};
     final dynamic rawData = json['data'];
     if (rawData is Map<String, dynamic>) {
       for (final MapEntry<String, dynamic> entry in rawData.entries) {
         final dynamic value = entry.value;
         if (value is! Map<String, dynamic>) continue;
-        final DeviceUpdateProgressEvent parsed =
-            DeviceUpdateProgressEvent.fromJson(value);
+        final DeviceUpdateProgressEvent parsed = DeviceUpdateProgressEvent.fromJson(value);
         final String serial = parsed.serialNumber.trim();
         final String key = serial.isNotEmpty ? serial : entry.key;
         devicesBySerial[key] = parsed;
@@ -477,9 +462,7 @@ class FirmwareUpdateProgressEvent extends Equatable {
     return FirmwareUpdateProgressEvent(
       type: json['type']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
-      code: json['code'] is int
-          ? json['code'] as int
-          : int.tryParse(json['code']?.toString() ?? '') ?? 0,
+      code: json['code'] is int ? json['code'] as int : int.tryParse(json['code']?.toString() ?? '') ?? 0,
       message: json['message']?.toString() ?? '',
       timestamp: json['timestamp']?.toString() ?? '',
       devicesBySerial: devicesBySerial,
@@ -489,18 +472,15 @@ class FirmwareUpdateProgressEvent extends Equatable {
   factory FirmwareUpdateProgressEvent.fromWebSocketResponse(
     wsmodel.WebSocketResponse response,
   ) {
-    final Map<String, DeviceUpdateProgressEvent> devicesBySerial =
-        <String, DeviceUpdateProgressEvent>{};
+    final Map<String, DeviceUpdateProgressEvent> devicesBySerial = <String, DeviceUpdateProgressEvent>{};
 
     if (response.hasData() && response.data.hasStructValue()) {
-      final Map<String, structpb.Value> entries =
-          response.data.structValue.fields;
+      final Map<String, structpb.Value> entries = response.data.structValue.fields;
       for (final MapEntry<String, structpb.Value> entry in entries.entries) {
         if (!entry.value.hasStructValue()) {
           continue;
         }
-        final DeviceUpdateProgressEvent parsed =
-            DeviceUpdateProgressEvent.fromProtoValue(entry.value);
+        final DeviceUpdateProgressEvent parsed = DeviceUpdateProgressEvent.fromProtoValue(entry.value);
         final String serial = parsed.serialNumber.trim();
         final String key = serial.isNotEmpty ? serial : entry.key;
         devicesBySerial[key] = parsed;
@@ -512,9 +492,7 @@ class FirmwareUpdateProgressEvent extends Equatable {
       status: response.status,
       code: response.code,
       message: response.message,
-      timestamp: response.hasTimestamp()
-          ? response.timestamp.toDateTime().toUtc().toIso8601String()
-          : '',
+      timestamp: response.hasTimestamp() ? response.timestamp.toDateTime().toUtc().toIso8601String() : '',
       devicesBySerial: devicesBySerial,
     );
   }
