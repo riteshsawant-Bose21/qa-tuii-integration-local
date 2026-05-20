@@ -1,6 +1,7 @@
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/product_data/models/output_product.dart';
 
 class AddOutputDeviceRepository {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
@@ -35,7 +36,7 @@ class AddOutputDeviceRepository {
 
     _projectViewModel.addHardware(hardware: deviceToSave);
 
-    if (deviceToSave.connectionType == OutputDeviceConnectionType.aes67Stream && selectedStream != null) {
+    if (deviceToSave.connectionType == OutputConnectionType.aes67output && selectedStream != null) {
       final List<AssignedStreamChannel> channels = _buildChannelAssignments(
         stream: selectedStream,
         audioChannel: deviceToSave.audioChannel,

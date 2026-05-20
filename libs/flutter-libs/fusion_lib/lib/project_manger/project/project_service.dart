@@ -399,6 +399,7 @@ class ProjectService {
         if (c is FusionEndpoints) return c.toJson();
         if (c is HardwareRack) return c.toJson();
         if (c is NetworkSwitch) return c.toJson();
+        if (c is OutputDevice) return c.toJson();
         return (c as GenericHardwareComponent).toJson();
       }),
       "fusionDevices": fusionDevices.toJson((f) => f.toJson()),

@@ -52,6 +52,10 @@ class FusionDeviceDiscoveryService {
       isPrimary: device.isPrimary,
       macAddress: device.macAddress,
       softwareUpdateVersion: device.softwareUpdateVersion,
+      jenkinsBuildNumber: device.jenkinsBuildNumber,
+      preReleaseTag: device.preReleaseTag,
+      fusionMonorepoBranch: device.fusionMonorepoBranch,
+      fusionMonorepoCommitHash: device.fusionMonorepoCommitHash,
       isDeviceCertificateValid: device.isDeviceCertificateValid,
     );
   }
