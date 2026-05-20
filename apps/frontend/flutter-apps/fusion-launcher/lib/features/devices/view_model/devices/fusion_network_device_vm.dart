@@ -54,7 +54,12 @@ class FusionNetworkDeviceViewModel extends Cubit<FusionNetworkDeviceViewModelSta
     }
   }
 
-  Future<bool> updateDeviceDetails({required String currentDeviceId, required String newDeviceId, required String name, required String location,}) async {
+  Future<bool> updateDeviceDetails({
+    required String currentDeviceId,
+    required String newDeviceId,
+    required String name,
+    required String location,
+  }) async {
     final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? "";
     final ResponseCallback<bool> response = await fusionDeviceService.updateDeviceDetails(
       currentDeviceId: currentDeviceId,

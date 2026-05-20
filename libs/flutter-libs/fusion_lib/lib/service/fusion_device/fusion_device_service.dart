@@ -301,8 +301,6 @@ class FusionDeviceService {
     }
   }
 
-
-
   Future<ResponseCallback<String>> getCsrCertificate({
     required String vip,
     required String deviceId,

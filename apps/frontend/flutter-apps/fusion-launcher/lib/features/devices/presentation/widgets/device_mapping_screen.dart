@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
@@ -20,10 +19,9 @@ class DeviceMappingScreen extends StatelessWidget {
     return BlocProvider<FusionNetworkDeviceViewModel>(
       create: (BuildContext context) {
         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-        final FusionNetworkDeviceViewModel viewModel =
-            FusionNetworkDeviceViewModel(
-              serviceLocator<FusionDeviceDiscoveryService>(),
-            );
+        final FusionNetworkDeviceViewModel viewModel = FusionNetworkDeviceViewModel(
+          serviceLocator<FusionDeviceService>(),
+        );
         if (vip != null) {
           viewModel.getFusionNetworkDevice(vip: vip);
         }
@@ -40,15 +38,13 @@ class DeviceMappingScreenView extends StatefulWidget {
   });
 
   @override
-  State<DeviceMappingScreenView> createState() =>
-      _DeviceMappingScreenViewState();
+  State<DeviceMappingScreenView> createState() => _DeviceMappingScreenViewState();
 }
 
 class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   String? _draggedHardwareId;
   List<FusionNetworkDevice> _networkDevices = <FusionNetworkDevice>[];
   List<FusionNetworkController> _networkControllers = <FusionNetworkController>[];
-
 
   List<HardwareComponent> get fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
@@ -60,12 +56,6 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   }
 
   FusionNetworkDeviceViewModel get _vm => context.read<FusionNetworkDeviceViewModel>();
-
-  Future<void> _handleAssignHardware(
-    HardwareComponent device,
-    FusionNetworkDevice? hardware,
-  ) async {
-    if (hardware != null && hardware.id == device.id) return;
 
   Future<void> _handleAssignHardware(HardwareComponent device, FusionNetworkDevice? hardware) async {
     try {
