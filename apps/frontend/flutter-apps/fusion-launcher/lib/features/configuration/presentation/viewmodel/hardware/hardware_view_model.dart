@@ -26,7 +26,7 @@ extension HardwareViewModel on ProjectViewModel {
     bool autoSave = true,
   }) {
     print(
-      "Updating hardware: ${hardware.id}, pos: ${hardware.pos}, location: ${hardware.locationEntity.listeningAreaId}",
+      "Updating hardware: ${hardware.id}, pos: ${hardware.pos}, location: ${hardware.locationEntity.listeningAreaId} with networHwId ${hardware is FusionController ? hardware.assignedNetworkDeviceId : " N/A"}",
     );
     try {
       if (autoSave) {

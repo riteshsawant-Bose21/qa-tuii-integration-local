@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../software_update/software_update_service.dart';
@@ -19,9 +18,7 @@ class FirmwareUpdatesTab extends StatefulWidget {
 }
 
 class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
-  final SoftwareUpdateCubit _cubit = SoftwareUpdateCubit(
-    networkClient: serviceLocator<FusionNetworkClient>(),
-  );
+  final SoftwareUpdateCubit _cubit = SoftwareUpdateCubit();
 
   final GlobalBlockerController _screenBlocker = GlobalBlockerController();
   bool _showedSuccessDialog = false;
@@ -147,7 +144,7 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
         final bool showUpToDateHero = _showUpToDateHero(state);
         final String description = state.releaseNotes?.trim() ?? 'No release notes provided for this update.';
 
-        final String inUseVersion = state.fusionNetworkDevices.firstWhereOrNull((FusionNetworkDevice element) => element.isPrimary)?.primaryDeviceVersion ?? '';
+        final String inUseVersion = state.fusionNetworkDevices.inUseVersion ?? 'Unknown';
         final String availableVersion = state.availableVersion?.trim() ?? '';
         final bool shouldShowAvailableVersion = state.updateAvailable && availableVersion.isNotEmpty;
         final String headlineVersion = shouldShowAvailableVersion ? (availableVersion.split("+").firstOrNull ?? '') : inUseVersion;
@@ -200,16 +197,8 @@ class _FusionSoftwareUpdate2State extends State<FirmwareUpdatesTab> {
   }
 
   bool _showProgressTable(UpdateState s) {
-    // During upload, keep device list hidden until file transfer is fully done.
-    if (s.phase == UpdatePhase.uploading) {
-      return s.uploadProgress >= 1.0;
-    }
-
-    return s.phase == UpdatePhase.installing ||
-        s.phase == UpdatePhase.rebooting ||
-        s.phase == UpdatePhase.completed ||
-        s.isWaitingForSocketResponse ||
-        s.deviceProgress.isNotEmpty;
+    // Only show device progress during install, reboot, or completed.
+    return s.phase == UpdatePhase.installing || s.phase == UpdatePhase.rebooting || s.phase == UpdatePhase.completed;
   }
 
   bool _showUpToDateHero(UpdateState state) {

@@ -2,11 +2,10 @@ part of 'add_output_device_vm.dart';
 
 class AddOutputDeviceVmState extends Equatable {
   final String? zoneId;
-
   final String? outputDeviceName;
-  final OutputDeviceType? outputType;
-  final AudioChannel? audioChannel;
-  final OutputDeviceConnectionType? connection;
+  final int? outputProductId;
+  final AudioChannel audioChannel;
+  final OutputConnectionType? connectionType;
   final Aes67Config? selectedStream;
 
   // For Mono: selectedMonoChannel;
@@ -19,9 +18,9 @@ class AddOutputDeviceVmState extends Equatable {
   const AddOutputDeviceVmState({
     this.zoneId,
     this.outputDeviceName,
-    this.outputType,
-    this.audioChannel,
-    this.connection,
+    this.outputProductId,
+    this.audioChannel = AudioChannel.mono,
+    this.connectionType,
     this.selectedStream,
     this.selectedMonoChannel = 1,
     this.selectedLeftChannel = 1,
@@ -34,9 +33,9 @@ class AddOutputDeviceVmState extends Equatable {
   List<Object?> get props => <Object?>[
     zoneId,
     outputDeviceName,
-    outputType,
+    outputProductId,
     audioChannel,
-    connection,
+    connectionType,
     selectedStream,
     selectedMonoChannel,
     selectedLeftChannel,
@@ -46,9 +45,9 @@ class AddOutputDeviceVmState extends Equatable {
   AddOutputDeviceVmState copyWith({
     ValueGetter<String?>? zoneId,
     ValueGetter<String?>? outputDeviceName,
-    ValueGetter<OutputDeviceType?>? outputType,
-    ValueGetter<AudioChannel?>? audioChannel,
-    ValueGetter<OutputDeviceConnectionType?>? connection,
+    ValueGetter<int?>? outputProductId,
+    ValueGetter<AudioChannel>? audioChannel,
+    ValueGetter<OutputConnectionType?>? connectionType,
     ValueGetter<Aes67Config?>? selectedStream,
     ValueGetter<int?>? selectedMonoChannel,
     ValueGetter<int?>? selectedLeftChannel,
@@ -57,9 +56,9 @@ class AddOutputDeviceVmState extends Equatable {
     return AddOutputDeviceVmState(
       zoneId: zoneId != null ? zoneId() : this.zoneId,
       outputDeviceName: outputDeviceName != null ? outputDeviceName() : this.outputDeviceName,
-      outputType: outputType != null ? outputType() : this.outputType,
+      outputProductId: outputProductId != null ? outputProductId() : this.outputProductId,
       audioChannel: audioChannel != null ? audioChannel() : this.audioChannel,
-      connection: connection != null ? connection() : this.connection,
+      connectionType: connectionType != null ? connectionType() : this.connectionType,
       selectedStream: selectedStream != null ? selectedStream() : this.selectedStream,
       selectedMonoChannel: selectedMonoChannel != null ? selectedMonoChannel() : this.selectedMonoChannel,
       selectedLeftChannel: selectedLeftChannel != null ? selectedLeftChannel() : this.selectedLeftChannel,
