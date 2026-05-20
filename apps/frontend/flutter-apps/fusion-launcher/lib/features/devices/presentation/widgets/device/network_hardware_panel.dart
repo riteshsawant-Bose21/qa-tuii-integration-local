@@ -10,12 +10,14 @@ import '../hardware_card.dart';
 
 class NetworkHardwarePanel extends StatelessWidget {
   final List<FusionNetworkDevice> networkDevices;
+  final List<FusionNetworkController> networkControllers;
   final Function(String) onDragStarted;
   final VoidCallback onDragEnded;
 
   const NetworkHardwarePanel({
     super.key,
     required this.networkDevices,
+    this.networkControllers = const <FusionNetworkController>[],
     required this.onDragStarted,
     required this.onDragEnded,
   });
@@ -154,7 +156,7 @@ class NetworkHardwarePanel extends StatelessWidget {
       );
     }
 
-    if (networkDevices.isEmpty) {
+    if (networkDevices.isEmpty && networkControllers.isEmpty) {
       return Center(
         child: Text(
           "No hardware devices found on the network.",
@@ -163,19 +165,123 @@ class NetworkHardwarePanel extends StatelessWidget {
       );
     }
 
+    final int totalCount = networkDevices.length + networkControllers.length;
+
     return ListView.builder(
-      itemCount: networkDevices.length,
+      itemCount: totalCount,
       itemBuilder: (BuildContext context, int index) {
-        final FusionNetworkDevice hw = networkDevices[index];
+        if (index < networkDevices.length) {
+          final FusionNetworkDevice hw = networkDevices[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: HardwareCard(
+              hardware: hw,
+              onDragStarted: () => onDragStarted(hw.id),
+              onDragEnd: onDragEnded,
+            ),
+          );
+        }
+
+        final FusionNetworkController c = networkControllers[index - networkDevices.length];
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: HardwareCard(
-            hardware: hw,
-            onDragStarted: () => onDragStarted(hw.id),
+          child: ControllerCard(
+            controller: c,
+            onDragStarted: () => onDragStarted(c.id),
             onDragEnd: onDragEnded,
           ),
         );
       },
+    );
+  }
+}
+
+/// Compact draggable card representing a [FusionNetworkController] in the right-hand
+/// "Hardware on the network" panel. Drag payload is the controller's id (String) so that
+/// table rows can resolve it from the controllers list.
+class ControllerCard extends StatelessWidget {
+  final FusionNetworkController controller;
+  final VoidCallback? onDragStarted;
+  final VoidCallback? onDragEnd;
+
+  const ControllerCard({
+    super.key,
+    required this.controller,
+    this.onDragStarted,
+    this.onDragEnd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Draggable<String>(
+      data: controller.id,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Opacity(
+          opacity: 0.8,
+          child: SizedBox(width: 280, child: _buildContent(context, isDragging: true)),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.3, child: _buildContent(context)),
+      onDragStarted: onDragStarted,
+      onDragEnd: (_) => onDragEnd?.call(),
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, {bool isDragging = false}) {
+    return Container(
+      width: isDragging ? 280 : null,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.colorScheme.strokeLight),
+      ),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final bool showText = constraints.maxWidth > 50 || isDragging;
+          return Row(
+            children: <Widget>[
+              if (showText)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Flexible(
+                        child: FusionAppText(
+                          text: controller.name,
+                          style: context.textTheme.bodyMedium,
+                          textOverflow: TextOverflow.ellipsis,
+                          maxLine: 1,
+                          softWrap: false,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: FusionAppText(
+                          text: "IP: ${controller.address}",
+                          style: context.textTheme.labelSmall?.copyWith(
+                            color: context.colorScheme.textSecondary,
+                          ),
+                          textOverflow: TextOverflow.ellipsis,
+                          maxLine: 1,
+                          softWrap: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (showText) const SizedBox(width: 8),
+              Icon(
+                Icons.settings_remote,
+                size: 20,
+                color: context.colorScheme.iconWhite,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -54,9 +54,7 @@ class FusionDeviceService {
         additionalPath: '$version/request-download-url',
         fromJson: (dynamic json) {
           if (json is! Map<String, dynamic>) {
-            throw Exception(
-              'Unexpected firmware bundle download response format.',
-            );
+            throw Exception('Unexpected firmware bundle download response format.');
           }
           return BundleDownloadUrlResult.fromJson(json);
         },
@@ -283,6 +281,24 @@ class FusionDeviceService {
       softwareUpdateVersion: device.softwareUpdateVersion,
       isDeviceCertificateValid: device.isDeviceCertificateValid,
     );
+  }
+
+  /// Fetch wall-controllers currently announced on the Fusion network via `/controllers`.
+  Future<ResponseCallback<List<FusionNetworkController>>> getAvailableControllersOnNetwork({required String ip}) async {
+    try {
+      final ResponseCallback<List<FusionNetworkController>> responseCallback = await networkClient.get(
+        api: FusionApiEndpoint.fusionControllers,
+        baseUrlToOverride: ip,
+        isSecure: false,
+        fromJson: (dynamic json) => List<FusionNetworkController>.from(
+          (json as List<dynamic>).map((dynamic e) => FusionNetworkController.fromJson(e as Map<String, dynamic>)),
+        ),
+      );
+
+      return responseCallback;
+    } catch (e) {
+      return ResponseCallback<List<FusionNetworkController>>.failure(e.toString());
+    }
   }
 
   Future<ResponseCallback<String>> getCsrCertificate({

@@ -1002,6 +1002,7 @@ enum FusionApiEndpoint {
   //fusion server setup apis
   fusionDeviceConfig('/device', FusionApiType.fusionServer),
   fusionDevice('/devices', FusionApiType.fusionServer),
+  fusionControllers('/controllers', FusionApiType.fusionServer),
   fusionSync('/device', FusionApiType.fusionServer),
   setVip('/devices/vip', FusionApiType.fusionServer),
   audioSettings('/settings/audio', FusionApiType.fusionServer),

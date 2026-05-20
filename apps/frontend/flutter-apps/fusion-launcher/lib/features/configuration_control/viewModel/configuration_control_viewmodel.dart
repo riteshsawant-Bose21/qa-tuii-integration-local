@@ -138,6 +138,8 @@ class ConfigurationControlViewmodel extends Cubit<ConfigurationControlState> {
     _loadData(preserveControllerId: keepId);
   }
 
+  FusionController? getSelectedController() => _loaded?.selectedController;
+
   // ─── Tab / search ──────────────────────────────────────────────────────────
 
   void changeTab(ConfigControlTab tab) {

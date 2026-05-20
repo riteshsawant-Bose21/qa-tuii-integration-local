@@ -9,8 +9,12 @@ final class FusionNetworkDeviceViewModelLoading extends FusionNetworkDeviceViewM
 
 final class FusionNetworkDeviceViewModelLoaded extends FusionNetworkDeviceViewModelState {
   final List<FusionNetworkDevice> devices;
+  final List<FusionNetworkController> controllers;
 
-  FusionNetworkDeviceViewModelLoaded({required this.devices});
+  FusionNetworkDeviceViewModelLoaded({
+    required this.devices,
+    this.controllers = const <FusionNetworkController>[],
+  });
 }
 
 final class FusionNetworkDeviceViewModelError extends FusionNetworkDeviceViewModelState {

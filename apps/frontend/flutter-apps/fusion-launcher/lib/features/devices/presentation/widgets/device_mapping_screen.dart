@@ -1,23 +1,17 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/devices/services/fusion_device_discovery_service.dart';
 import 'package:fusion_launcher/features/devices/view_model/devices/fusion_network_device_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:uuid/uuid.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import 'device/device_mapping_table.dart';
 import 'device/network_hardware_panel.dart';
 
 class DeviceMappingScreen extends StatelessWidget {
-  final List<HardwareComponent> devices;
-
   const DeviceMappingScreen({
     super.key,
-    required this.devices,
   });
 
   @override
@@ -25,102 +19,72 @@ class DeviceMappingScreen extends StatelessWidget {
     return BlocProvider<FusionNetworkDeviceViewModel>(
       create: (BuildContext context) {
         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-        final FusionNetworkDeviceViewModel viewModel =
-            FusionNetworkDeviceViewModel(
-              serviceLocator<FusionDeviceDiscoveryService>(),
-            );
+        final FusionNetworkDeviceViewModel viewModel = FusionNetworkDeviceViewModel(
+          serviceLocator<FusionDeviceService>(),
+        );
         if (vip != null) {
           viewModel.getFusionNetworkDevice(vip: vip);
         }
         return viewModel;
       },
-      child: DeviceMappingScreenView(devices: devices),
+      child: const DeviceMappingScreenView(),
     );
   }
 }
 
 class DeviceMappingScreenView extends StatefulWidget {
-  final List<HardwareComponent> devices;
-
   const DeviceMappingScreenView({
     super.key,
-    required this.devices,
   });
 
   @override
-  State<DeviceMappingScreenView> createState() =>
-      _DeviceMappingScreenViewState();
+  State<DeviceMappingScreenView> createState() => _DeviceMappingScreenViewState();
 }
 
 class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
   String? _draggedHardwareId;
   List<FusionNetworkDevice> _networkDevices = <FusionNetworkDevice>[];
+  List<FusionNetworkController> _networkControllers = <FusionNetworkController>[];
 
-  FusionNetworkDeviceViewModel get fusionNetworkDeviceViewModel =>
-      context.read<FusionNetworkDeviceViewModel>();
+  List<HardwareComponent> get fusionDevices {
+    // Combine DSPs, Amplifiers, and Controllers
+    final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
+    final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
+    final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
+  }
 
-  Future<void> _handleAssignHardware(
-    HardwareComponent device,
-    FusionNetworkDevice? hardware,
-  ) async {
-    if (hardware != null && hardware.id == device.id) return;
+  FusionNetworkDeviceViewModel get _vm => context.read<FusionNetworkDeviceViewModel>();
 
+  Future<void> _handleAssignHardware(HardwareComponent device, FusionNetworkDevice? hardware) async {
     try {
-      for (final FusionNetworkDevice hw in _networkDevices.where(
-        (FusionNetworkDevice h) => h.id == device.id,
-      )) {
-        final String newId = const Uuid().v4();
-        if (!mounted) return;
-        await fusionNetworkDeviceViewModel.updateDeviceDetails(
-          currentDeviceId: hw.id,
-          newDeviceId: newId,
-          name: "Fusion ${FusionUtils.shortStringUUID()}",
-          location: "",
-        );
-      }
-
-      if (hardware != null) {
-        final String equipmentLocation =
-            serviceLocator<ProjectViewModel>()
-                .getEquipLocationForHardware(hardwareId: device.id)
-                ?.name ??
-            "";
-
-        if (!mounted) return;
-        await fusionNetworkDeviceViewModel.updateDeviceDetails(
-          currentDeviceId: hardware.id,
-          newDeviceId: device.id,
-          name: "${device.name} ${Random().nextInt(100)}",
-          location: equipmentLocation,
-        );
-      }
-
-      final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
-      if (vip != null && mounted) {
-        fusionNetworkDeviceViewModel.getFusionNetworkDevice(vip: vip);
-      }
+      await _vm.assignHardwareToDevice(device: device, hardware: hardware);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assignment failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _handleAssignController(FusionController device, FusionNetworkController? controller) async {
+    try {
+      await _vm.assignControllerToDevice(device: device, controller: controller);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Controller assignment failed: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<
-      FusionNetworkDeviceViewModel,
-      FusionNetworkDeviceViewModelState
-    >(
-      listener: (
-        BuildContext context,
-        FusionNetworkDeviceViewModelState state,
-      ) {
+    return BlocListener<FusionNetworkDeviceViewModel, FusionNetworkDeviceViewModelState>(
+      listener: (BuildContext context, FusionNetworkDeviceViewModelState state) {
         if (state is FusionNetworkDeviceViewModelLoaded) {
           setState(() {
             _networkDevices = List<FusionNetworkDevice>.from(state.devices);
+            _networkControllers = List<FusionNetworkController>.from(state.controllers);
           });
         } else if (state is FusionNetworkDeviceViewModelError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -150,15 +114,14 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: DeviceMappingTable(
-                        devices: widget.devices,
+                        devices: fusionDevices,
                         networkDevices: _networkDevices,
+                        networkControllers: _networkControllers,
                         draggedHardwareId: _draggedHardwareId,
-                        onDragEnter:
-                            (String id) =>
-                                setState(() => _draggedHardwareId = id),
-                        onDragLeave:
-                            () => setState(() => _draggedHardwareId = null),
+                        onDragEnter: (String id) => setState(() => _draggedHardwareId = id),
+                        onDragLeave: () => setState(() => _draggedHardwareId = null),
                         onAssignHardware: _handleAssignHardware,
+                        onAssignController: _handleAssignController,
                       ),
                     ),
                   ),
@@ -175,11 +138,9 @@ class _DeviceMappingScreenViewState extends State<DeviceMappingScreenView> {
                     flex: 3,
                     child: NetworkHardwarePanel(
                       networkDevices: _networkDevices,
-                      onDragStarted:
-                          (String id) =>
-                              setState(() => _draggedHardwareId = id),
-                      onDragEnded:
-                          () => setState(() => _draggedHardwareId = null),
+                      networkControllers: _networkControllers,
+                      onDragStarted: (String id) => setState(() => _draggedHardwareId = id),
+                      onDragEnded: () => setState(() => _draggedHardwareId = null),
                     ),
                   ),
                 ],
