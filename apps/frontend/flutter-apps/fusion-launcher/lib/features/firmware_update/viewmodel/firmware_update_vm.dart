@@ -103,6 +103,8 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
     await checkNewFirmwareUpdates();
   }
 
+  String get inUseVersion => state.networkDevices.inUseVersion ?? '';
+
   Future<void> getFusionNetworkDevice() async {
     try {
       final ResponseCallback<List<FusionNetworkDevice>> response = await fusionDeviceDiscoveryService.getAvailableDevicesOnNetwork(
@@ -179,7 +181,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
       } else if (updateCheckResult.appUpdateRequired) {
         nextUiState = FirmwareUpdateUiState.appUpdateRequired;
         nextErrorText = 'Launcher update required (min ${updateCheckResult.minDesktopAppVersion ?? 'unknown'}).';
-      } else if (primaryFusionDeviceVersion == updateAvailableVersion) {
+      } else if (inUseVersion == updateAvailableVersion) {
         // Already on the latest version — no need to keep a downloaded bundle.
         if (hasValidDownloadedBundle) {
           await _deleteCachedBundleIfExists(downloadedBundlePath);
@@ -236,7 +238,7 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   Future<FirmwareUpdateCheckResult> checkForUpdates() async {
     final ResponseCallback<FirmwareUpdateCheckResult> response = await fusionDeviceService.checkForFirmwareUpdates(
-      currentFirmwareVersion: primaryFusionDeviceVersion,
+      currentFirmwareVersion: inUseVersion,
       currentDesktopAppVersion: (await PackageInfo.fromPlatform()).version,
       jenkinsBuildNumber: primaryFusionDevicejenkinsBuildNumber,
     );
@@ -635,12 +637,6 @@ class FirmwareUpdateViewModel extends Cubit<FirmwareUpdateViewModelState> {
 
   void toggleProgressExpanded() {
     _emitIfOpen(state.copyWith(isProgressExpanded: !state.isProgressExpanded));
-  }
-
-  String get primaryFusionDeviceVersion {
-    final List<FusionNetworkDevice> fustionNetworkDevices = state.networkDevices;
-    final FusionNetworkDevice? primaryDevice = fustionNetworkDevices.firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
-    return primaryDevice?.primaryDeviceVersion ?? '';
   }
 
   String get primaryFusionDevicejenkinsBuildNumber {

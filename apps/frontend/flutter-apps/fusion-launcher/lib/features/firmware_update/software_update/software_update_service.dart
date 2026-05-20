@@ -423,8 +423,8 @@ class UpdateState {
   }
 }
 
-extension on List<FusionNetworkDevice> {
-  String? get softwareUpdateCheckDeviceVersion {
+extension ListFusionNetworkDeviceExt on List<FusionNetworkDevice> {
+  String? get inUseVersion {
     final FusionNetworkDevice? primarydevice = firstWhereOrNull((FusionNetworkDevice? d) => d?.isPrimary == true);
     final String? primaryPreReleaseTag = primarydevice?.preReleaseTag;
     final String? primaryJenkinsBuildNumber = primarydevice?.jenkinsBuildNumber;
@@ -746,7 +746,7 @@ class SoftwareUpdateService {
     _emit(
       _state.copyWith(
         phase: UpdatePhase.rollingBack,
-        availableVersion: rollbackVersion,
+        availableVersion: "$rollbackVersion-dev.162+70d5904",
         downloadResult: null,
         downloadProgress: 0,
         uploadProgress: 0,
@@ -918,11 +918,11 @@ class SoftwareUpdateService {
         "EEE ${fusionNetworkDevices.map((FusionNetworkDevice d) => '${d.name}:${d.softwareUpdateVersion} - ${d.preReleaseTag ?? 'unknown'} - ${d.jenkinsBuildNumber ?? 'unknown'}').join(', ')}",
       );
 
-      dev.log("SWU : ${fusionNetworkDevices.softwareUpdateCheckDeviceVersion}");
+      dev.log("SWU : ${fusionNetworkDevices.inUseVersion}");
       response = await _networkClient.get<FirmwareUpdateCheckResult>(
         api: FusionApiEndpoint.firmwareUpdateCheck,
         urlParameters: <String, dynamic>{
-          'current_firmware_version': fusionNetworkDevices.softwareUpdateCheckDeviceVersion ?? '',
+          'current_firmware_version': fusionNetworkDevices.inUseVersion ?? '',
           'current_desktop_app_version': currentDesktopAppVersion,
         },
         fromJson: (dynamic json) {
@@ -1042,7 +1042,7 @@ class SoftwareUpdateService {
       UpdateError(
         code: UpdateErrorCode.versionMismatch,
         message:
-            'Device versions are mismatching. Primary device $primarySerial is on $primaryVersionText. All devices: ${allDevices.join(', ')}. Mismatched devices: ${mismatchedDevices.join(', ')}.',
+            'Device versions are mismatching.\n\nPrimary device $primarySerial is on $primaryVersionText.\nAll devices: ${allDevices.join(', ')}.\nMismatched devices: ${mismatchedDevices.join(', ')}.',
         isRetryable: false,
       ),
     );
