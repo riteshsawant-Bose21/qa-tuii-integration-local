@@ -38,15 +38,6 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
   DeviceMappingDialogTab _selectedTab = DeviceMappingDialogTab.mapping;
   int _updatesRefreshToken = 0;
 
-  List<HardwareComponent> get _fusionDevices {
-    // Combine DSPs, Amplifiers, and Controllers
-    final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
-    final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
-    final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
-  }
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -68,7 +59,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                 builder: (BuildContext context) {
                   switch (_selectedTab) {
                     case DeviceMappingDialogTab.mapping:
-                      return DeviceMappingScreen(devices: _fusionDevices);
+                      return const DeviceMappingScreen();
                     case DeviceMappingDialogTab.settings:
                       return const DeviceGlobalSettingsTab();
                     case DeviceMappingDialogTab.droConfig:

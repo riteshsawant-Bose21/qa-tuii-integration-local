@@ -19,6 +19,8 @@ class FusionController extends HardwareComponent {
   /// Schedule filter radio-button selection: 'none' | 'all' | 'selected'.
   final String scheduleDisplayMode;
 
+  final String? assignedNetworkDeviceId;
+
   FusionController({
     String? id,
     required super.name,
@@ -40,6 +42,7 @@ class FusionController extends HardwareComponent {
     ControllerDisplayConfig? displayConfig,
     bool showUpcoming = true,
     String scheduleDisplayMode = 'all',
+    this.assignedNetworkDeviceId,
   }) : sku = sku ?? name,
        displayConfig = displayConfig ?? const ControllerDisplayConfig(),
        showUpcoming = showUpcoming,
@@ -49,6 +52,31 @@ class FusionController extends HardwareComponent {
          locationEntity: locationEntity ?? LocationModel(),
          id: id ?? "CONTROLLER${FusionUtils.shortStringUUID()}",
        );
+
+  FusionController clearNetworkHardwareId() {
+    return FusionController(
+      id: id,
+      name: name,
+      pos: pos,
+      wiringPos: wiringPos,
+      zAxis: zAxis,
+      image: image,
+      locationEntity: locationEntity,
+      price: price,
+      hardwareName: hardwareName,
+      sku: sku,
+      lockListeningArea: lockListeningArea,
+      communicationPorts: communicationPorts,
+      inputPortsData: inputPortsData,
+      outputPortsData: outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition,
+      displayConfig: displayConfig,
+      showUpcoming: showUpcoming,
+      scheduleDisplayMode: scheduleDisplayMode,
+      assignedNetworkDeviceId: null,
+    );
+  }
 
   @override
   FusionController copyWith({
@@ -71,6 +99,7 @@ class FusionController extends HardwareComponent {
     ControllerDisplayConfig? displayConfig,
     bool? showUpcoming,
     String? scheduleDisplayMode,
+    String? assignedNetworkDeviceId,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -92,6 +121,7 @@ class FusionController extends HardwareComponent {
       displayConfig: displayConfig ?? this.displayConfig,
       showUpcoming: showUpcoming ?? this.showUpcoming,
       scheduleDisplayMode: scheduleDisplayMode ?? this.scheduleDisplayMode,
+      assignedNetworkDeviceId: assignedNetworkDeviceId ?? this.assignedNetworkDeviceId,
     );
   }
 
@@ -117,6 +147,7 @@ class FusionController extends HardwareComponent {
       'displayConfig': displayConfig.toJson(),
       'showUpcoming': showUpcoming,
       'scheduleDisplayMode': scheduleDisplayMode,
+      'assignedNetworkDeviceId': assignedNetworkDeviceId,
     };
   }
 
@@ -153,6 +184,7 @@ class FusionController extends HardwareComponent {
       displayConfig: displayConfig,
       showUpcoming: showUpcoming,
       scheduleDisplayMode: scheduleDisplayMode,
+      assignedNetworkDeviceId: json['assignedNetworkDeviceId'] as String?,
     );
   }
 }
