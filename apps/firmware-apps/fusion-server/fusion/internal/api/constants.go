@@ -45,7 +45,7 @@ const (
 
 const (
 	HTTPTimeout       = 5 * time.Second
-	HTTPUploadTimeout = 30 * time.Second
+	HTTPUploadTimeout = 60 * time.Second
 )
 
 const (

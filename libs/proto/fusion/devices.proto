@@ -20,6 +20,10 @@ message DeviceInfo {
   string jenkins_build_number = 13;
   string pre_release_tag = 14;
   int32 vrrp_priority = 15;
+  string lan1_mac_address = 16;
+  string lan2_mac_address = 17;
+  string wifi_mac_address = 18;
+  string bluetooth_mac_address = 19;
 }
 
 message DevicePatch {

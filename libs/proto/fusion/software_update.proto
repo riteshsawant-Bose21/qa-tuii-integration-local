@@ -43,4 +43,6 @@ message SwUpdateInfo {
   string previous_boot_partition = 9;
   string error = 10;
   string updated_at = 11;
+  string jenkins_build_number = 12;
+  string pre_release_tag = 13;
 }
