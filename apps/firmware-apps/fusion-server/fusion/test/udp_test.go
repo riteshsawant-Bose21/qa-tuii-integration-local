@@ -200,6 +200,60 @@ func TestFusionUDP_OversizedBroadcastRequiresConfigPull(t *testing.T) {
 	t.Fatalf("timed out waiting for config_pull_required broadcast")
 }
 
+func TestFusionUDP_OversizedGetResponseRequiresConfigPull(t *testing.T) {
+	if runtime.GOOS == "darwin" && shouldSkipMultipassOnDarwin() {
+		t.Skip("macOS and Multipass networking prevents VM to host UDP responses. Set FUSION_UDP_ADDR=127.0.0.1:7947 to run locally.")
+	}
+
+	serverAddr, err := net.ResolveUDPAddr("udp4", getFusionUDPAddr())
+	if err != nil {
+		t.Fatalf("resolve server: %v", err)
+	}
+	clientConn, err := net.ListenUDP("udp4", nil)
+	if err != nil {
+		t.Fatalf("listen udp: %v", err)
+	}
+	defer clientConn.Close()
+
+	patchKey := fmt.Sprintf("settings.udp_oversized_get.%d", time.Now().UnixNano())
+	oversizedValue := strings.Repeat("x", 70*1024)
+
+	httpBase := httpBaseForUDPAddr(getFusionUDPAddr())
+	patchConfigViaWebSocket(t, httpBase, map[string]any{patchKey: oversizedValue})
+	defer func() {
+		patchConfigViaWebSocket(t, httpBase, map[string]any{patchKey: nil})
+	}()
+
+	if err := sendUDPJSON(clientConn, serverAddr, map[string]any{"action": "get"}); err != nil {
+		t.Fatalf("send get request: %v", err)
+	}
+
+	buf := make([]byte, 65535)
+	_ = clientConn.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
+	n, _, err := clientConn.ReadFromUDP(buf)
+	if err != nil {
+		t.Fatalf("expected UDP get response for oversized state, got read error: %v", err)
+	}
+
+	msg, err := parseJSON(buf[:n])
+	if err != nil {
+		t.Fatalf("parse get response: %v", err)
+	}
+	op, _ := msg[api.FusionOperation].(string)
+	if op != string(api.NotifyOpConfigPullRequired) {
+		t.Fatalf("expected config_pull_required for oversized get response, got: %s", string(buf[:n]))
+	}
+	if _, ok := msg[api.FusionEpoch]; !ok {
+		t.Fatalf("config_pull_required missing epoch: %s", string(buf[:n]))
+	}
+	if _, ok := msg[api.FusionVersion]; !ok {
+		t.Fatalf("config_pull_required missing version: %s", string(buf[:n]))
+	}
+	if n > 2048 {
+		t.Fatalf("config_pull_required notification too large: %d bytes", n)
+	}
+}
+
 func TestFusionUDP_BroadcastAckStopsRetries(t *testing.T) {
 	if os.Getenv("FUSION_UDP_ACK_TEST") == "" {
 		t.Skip("Skipping UDP ack test; set FUSION_UDP_ACK_TEST=1 to enable")
