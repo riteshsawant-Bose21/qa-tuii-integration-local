@@ -4,8 +4,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/aes67/configation_aes67.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../viewModel/output_stream_viewmodel/output_stream_viewmodel.dart';

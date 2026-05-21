@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:fusion_lib/fusion_lib.dart';
+
+import 'dro_native_resolver_service.dart';
 
 class DroConfigService {
   final FusionNetworkClient _fusionNetworkClient;
@@ -10,18 +15,35 @@ class DroConfigService {
     required String droServerUrl,
   }) async {
     try {
-      final ResponseCallback<DroResponseData> response = await _fusionNetworkClient.post(
-        api: FusionApiEndpoint.process,
-        data: droInput.toJson(),
-        baseUrlToOverride: droServerUrl,
-        isSecure: false,
-        fromJson: (val) => DroResponseData.fromJson(val),
-      );
-      print("received the response ${response.message}");
-      if (response.success && response.data!.error == null) {
-        return ResponseCallback.success(response.data);
+      if (Platform.isWindows) {
+        final ResponseCallback<DroResponseData> response = await _fusionNetworkClient.post(
+          api: FusionApiEndpoint.process,
+          data: droInput.toJson(),
+          baseUrlToOverride: droServerUrl,
+          isSecure: false,
+          fromJson: (val) => DroResponseData.fromJson(val),
+        );
+
+        if (response.success && response.data?.error == null) {
+          return ResponseCallback.success(response.data);
+        } else {
+          return ResponseCallback.failure(response.data?.error ?? response.message, data: response.data);
+        }
+      }
+
+      final FusionDro dro = FusionDro();
+
+      final inputJson = jsonEncode(droInput.toJson());
+
+      final resultJson = dro.solve(inputJson);
+      final result = jsonDecode(resultJson);
+      FusionLogger.log(tag: LogTag.dro, message: "Response received from DRO ");
+      DroResponseData response = DroResponseData.fromJson(result);
+
+      if (response.statusCode == 200) {
+        return ResponseCallback.success(response);
       } else {
-        return ResponseCallback.failure(response.data!.error ?? response.message, data: response.data);
+        return ResponseCallback.failure(response.error ?? response.statusMessage ?? "Something went wrong", data: response);
       }
     } catch (ex) {
       return ResponseCallback.failure(ex.toString());

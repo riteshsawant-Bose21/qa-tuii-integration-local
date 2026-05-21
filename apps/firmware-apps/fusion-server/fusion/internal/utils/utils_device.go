@@ -79,7 +79,7 @@ func GetCommitHash() string {
 	return fw.BuildConfiguration.FusionMonorepoCommitHash
 }
 
-func GetJenkinsBuildNumber() string {
+func GetBuildNumber() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {
 		logging.GetLogger().Warn("%s not found.", api.SoftwareUpdateInfoPath)
@@ -93,7 +93,7 @@ func GetJenkinsBuildNumber() string {
 		return api.Unknown
 	}
 
-	return fw.BuildConfiguration.JenkinsBuildNumber
+	return fw.BuildConfiguration.BuildNumber
 }
 
 func GetPreReleaseTag() string {
@@ -131,6 +131,19 @@ func GetMacAddress() string {
 	}
 	return macAddr
 }
+
+func getMacByInterface(name string) string {
+	data, err := os.ReadFile("/sys/class/net/" + name + "/address")
+	if err != nil {
+		logging.GetLogger().Warn("Unable to read MAC for interface %s: %v", name, err)
+		return api.Unknown
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func GetLan1MacAddress() string { return getMacByInterface("lan1") }
+func GetLan2MacAddress() string { return getMacByInterface("lan2") }
+func GetWifiMacAddress() string { return getMacByInterface("mlan0") }
 
 func IsCertificateValid() bool {
 	certContent, err := os.ReadFile(fmt.Sprintf("%s%s", api.DefaultIdentityFilePath, api.DefaultCertFileName))

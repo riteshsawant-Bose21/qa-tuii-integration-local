@@ -2,23 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 class DeviceMappingTable extends StatefulWidget {
   final List<HardwareComponent> devices;
   final List<FusionNetworkDevice> networkDevices;
+  final List<FusionNetworkController> networkControllers;
   final String? draggedHardwareId;
   final Function(String) onDragEnter;
   final VoidCallback onDragLeave;
   final Function(HardwareComponent, FusionNetworkDevice?) onAssignHardware;
+  final Function(FusionController, FusionNetworkController?) onAssignController;
 
   const DeviceMappingTable({
     super.key,
     required this.devices,
     required this.networkDevices,
+    required this.networkControllers,
     required this.draggedHardwareId,
     required this.onDragEnter,
     required this.onDragLeave,
     required this.onAssignHardware,
+    required this.onAssignController,
   });
 
   @override
@@ -32,6 +37,16 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
         (FusionNetworkDevice hw) => hw.id == deviceId,
       );
     } catch (e) {
+      return null;
+    }
+  }
+
+  FusionNetworkController? _getAssignedController(FusionController device) {
+    final String? assignedId = device.assignedNetworkDeviceId;
+    if (assignedId == null) return null;
+    try {
+      return widget.networkControllers.firstWhere((FusionNetworkController c) => c.id == assignedId);
+    } catch (_) {
       return null;
     }
   }
@@ -63,10 +78,17 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
         FusionTableColumn(key: 'firmware', header: 'VER', flex: 2),
         FusionTableColumn(key: 'assignedTo', header: 'ASSIGNED TO', flex: 4),
       ],
-      rows: widget.devices.map((HardwareComponent device) => _buildDeviceRow(device)).toList(),
+      rows:
+          widget.devices.map((HardwareComponent device) {
+            if (device is FusionController) {
+              return _buildControllerRow(device);
+            }
+            return _buildDeviceRow(device);
+          }).toList(),
     );
   }
 
+  // ── Audio-device rows ─────────────────────────────────────────────────────
   FusionTableRow _buildDeviceRow(HardwareComponent device) {
     final FusionNetworkDevice? assignedHardware = _getAssignedHardware(device.id);
     final bool isAssigned = assignedHardware != null;
@@ -135,6 +157,78 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
         );
         if (hw != null && hw.modelName == device.hardwareName) {
           widget.onAssignHardware(device, hw);
+        }
+        widget.onDragLeave();
+      },
+      isDragTarget: widget.draggedHardwareId != null,
+    );
+  }
+
+  // ── FusionController rows ─────────────────────────────────────────────────
+  FusionTableRow _buildControllerRow(FusionController device) {
+    final FusionNetworkController? assigned = _getAssignedController(device);
+    final bool isAssigned = assigned != null;
+
+    final TextStyle cellStyle = TextStyle(
+      color: context.colorScheme.textPrimary,
+      fontSize: 13,
+      overflow: TextOverflow.ellipsis,
+    );
+    final TextStyle greenLinkStyle = const TextStyle(
+      color: Color(0xFF4CAF50),
+      fontSize: 13,
+      decoration: TextDecoration.underline,
+      decorationColor: Color(0xFF4CAF50),
+      overflow: TextOverflow.ellipsis,
+    );
+
+    final String locationName = _getDeviceLocation(device);
+
+    return FusionTableRow(
+      key: device.id,
+      cells: <String, FusionTableCell>{
+        'status': FusionTableCell(
+          value: isAssigned ? 1 : 0,
+          child: _buildStatusIndicator(isAssigned),
+        ),
+        'deviceName': FusionTableCell(
+          value: device.name,
+          child: Text(device.name, style: greenLinkStyle, maxLines: 1),
+        ),
+        'modelName': FusionTableCell(
+          value: device.hardwareName,
+          child: Text(device.hardwareName, style: cellStyle, maxLines: 1),
+        ),
+        'location': FusionTableCell(
+          value: locationName,
+          child: Text(locationName, style: cellStyle, maxLines: 1),
+        ),
+        'ipAddress': FusionTableCell(
+          value: isAssigned ? assigned.address : '--',
+          child: Text(isAssigned ? assigned.address : '--', style: cellStyle, maxLines: 1),
+        ),
+        'firmware': FusionTableCell(
+          value: isAssigned ? assigned.version : '--',
+          child: Text(isAssigned ? assigned.version : '--', style: cellStyle, maxLines: 1),
+        ),
+        'assignedTo': FusionTableCell(
+          value: isAssigned ? assigned.name : 'unassigned',
+          child: _buildControllerAssignmentDropdown(device, assigned),
+        ),
+      },
+      onWillAccept: (String hardwareId) {
+        // Drag payload uses the same id space; controller-cards drag the FusionNetworkController.id.
+        return widget.networkControllers.any((FusionNetworkController c) => c.id == hardwareId);
+      },
+      onDragEnter: (String id) => widget.onDragEnter(id),
+      onDragLeave: () => widget.onDragLeave(),
+      onDrop: (String hardwareId) {
+        final FusionNetworkController? c = widget.networkControllers.cast<FusionNetworkController?>().firstWhere(
+          (FusionNetworkController? h) => h?.id == hardwareId,
+          orElse: () => null,
+        );
+        if (c != null) {
+          widget.onAssignController(device, c);
         }
         widget.onDragLeave();
       },
@@ -235,6 +329,89 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
     );
   }
 
+  /// Dropdown for assigning a [FusionNetworkController] to a [FusionController].
+  Widget _buildControllerAssignmentDropdown(
+    FusionController device,
+    FusionNetworkController? assigned,
+  ) {
+    final bool isAssigned = assigned != null;
+    final String? dropdownValue = isAssigned ? assigned.id : null;
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: context.colorScheme.strokeLight),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: dropdownValue,
+          isExpanded: true,
+          icon: Icon(Icons.keyboard_arrow_down, size: 16, color: context.colorScheme.iconDefault),
+          dropdownColor: context.colorScheme.elevation2,
+          style: TextStyle(
+            color: isAssigned ? context.colorScheme.textPrimary : context.colorScheme.primaryColor,
+            fontSize: 13,
+            fontWeight: isAssigned ? FontWeight.w400 : FontWeight.w500,
+          ),
+          items: _getControllerDropdownItems(device, assigned),
+          selectedItemBuilder: (BuildContext context) {
+            return _getControllerDropdownItems(device, assigned).map<Widget>((DropdownMenuItem<String?> item) {
+              String text = '';
+              String address = '';
+              if (item.value == null) {
+                text = isAssigned ? "Unassign Hardware" : "Assign Hardware";
+              } else {
+                final FusionNetworkController? c = widget.networkControllers.cast<FusionNetworkController?>().firstWhere(
+                  (FusionNetworkController? h) => h?.id == item.value,
+                  orElse: () => null,
+                );
+                text = c?.name ?? "Unknown";
+                address = c?.address ?? '';
+              }
+
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: text,
+                      maxLine: 1,
+                      textOverflow: TextOverflow.ellipsis,
+                      style: context.textTheme.labelMedium,
+                    ),
+                    if (address.isNotEmpty)
+                      FusionAppText(
+                        text: address,
+                        maxLine: 1,
+                        textOverflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelSmall!.copyWith(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }).toList();
+          },
+          onChanged: (String? controllerId) {
+            if (controllerId == null) {
+              widget.onAssignController(device, null);
+            } else {
+              final FusionNetworkController c = widget.networkControllers.firstWhere((FusionNetworkController h) => h.id == controllerId);
+              widget.onAssignController(device, c);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   List<DropdownMenuItem<String?>> _getDropdownItems(HardwareComponent device, FusionNetworkDevice? currentAssigned) {
     final List<DropdownMenuItem<String?>> items = <DropdownMenuItem<String?>>[];
 
@@ -291,6 +468,96 @@ class _DeviceMappingTableState extends State<DeviceMappingTable> {
               ),
               FusionAppText(
                 text: hw.address,
+                maxLine: 1,
+                textOverflow: TextOverflow.ellipsis,
+                style: context.textTheme.labelSmall!.copyWith(
+                  fontStyle: FontStyle.italic,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (currentAssigned == null && addedIds.isEmpty) {
+      items[0] = DropdownMenuItem<String?>(
+        value: null,
+        enabled: false,
+        child: FusionAppText(
+          text: 'No Hardware Available',
+          style: TextStyle(color: context.colorScheme.textSecondary),
+          textOverflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  /// Builds dropdown items for the FusionController-assignment dropdown.
+  /// Filters out controllers already assigned to other [FusionController]s in the project.
+  List<DropdownMenuItem<String?>> _getControllerDropdownItems(FusionController device, FusionNetworkController? currentAssigned) {
+    final List<DropdownMenuItem<String?>> items = <DropdownMenuItem<String?>>[];
+
+    if (currentAssigned != null) {
+      items.add(
+        DropdownMenuItem<String?>(
+          value: null,
+          child: Text(
+            'Unassign Hardware',
+            style: TextStyle(color: context.colorScheme.errorText),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    } else {
+      items.add(
+        DropdownMenuItem<String?>(
+          value: null,
+          enabled: false,
+          child: FusionAppText(
+            text: 'Assign Hardware',
+            style: TextStyle(color: context.colorScheme.primaryColor),
+            textOverflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+
+    final Set<String> assignedToOthers =
+        widget.devices
+            .whereType<FusionController>()
+            .where((FusionController c) => c.id != device.id && c.assignedNetworkDeviceId != null)
+            .map((FusionController c) => c.assignedNetworkDeviceId!)
+            .toSet();
+
+    final Iterable<FusionNetworkController> available = widget.networkControllers.where((FusionNetworkController c) {
+      if (currentAssigned != null && c.id == currentAssigned.id) return true;
+      return !assignedToOthers.contains(c.id);
+    });
+
+    final Set<String> addedIds = <String>{};
+    for (final FusionNetworkController c in available) {
+      if (addedIds.contains(c.id)) continue;
+      addedIds.add(c.id);
+
+      items.add(
+        DropdownMenuItem<String?>(
+          value: c.id,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FusionAppText(
+                text: c.name,
+                maxLine: 1,
+                textOverflow: TextOverflow.ellipsis,
+                style: context.textTheme.labelMedium!,
+              ),
+              FusionAppText(
+                text: c.address,
                 maxLine: 1,
                 textOverflow: TextOverflow.ellipsis,
                 style: context.textTheme.labelSmall!.copyWith(

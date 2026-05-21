@@ -66,7 +66,7 @@ class DroResponseData {
 }
 
 class DroResultData {
-  final List<Map<String, dynamic>>? audio_streams;
+  final List<Map<String, dynamic>>? audioStreams;
   final List<Map<String, dynamic>>? deviceConnections;
   final List<Map<String, dynamic>>? devices;
   final String? imageInput;
@@ -76,7 +76,7 @@ class DroResultData {
   final int? totalCost;
 
   DroResultData({
-    this.audio_streams,
+    this.audioStreams,
     this.devices,
     this.deviceConnections,
     this.imageInput,
@@ -88,20 +88,20 @@ class DroResultData {
 
   factory DroResultData.fromJson(Map<String, dynamic> json) {
     return DroResultData(
-      audio_streams: (json['audio_streams'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
+      audioStreams: (json['audio_streams'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       devices: (json['devices'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
       deviceConnections: (json['device_connections'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
-      imageInput: json['image_input'] as String?,
-      imageOutput: json['image_output'] as String?,
+      // imageInput: json['image_input'] as String?,
+      // imageOutput: json['image_output'] as String?,
       ioPorts: (json['io_ports'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
-      latencies: (json['latencies'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
-      totalCost: json['total_cost'] as int?,
+      // latencies: (json['latencies'] as List<dynamic>?)?.map((dynamic e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList(),
+      totalCost: json['total_cost'] != null ? int.tryParse(json['total_cost'].toString()) : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'audio_streams': audio_streams,
+      'audio_streams': audioStreams,
       'devices': devices,
       'image_input': imageInput,
       'image_output': imageOutput,
@@ -113,7 +113,7 @@ class DroResultData {
 
   //copy with
   DroResultData copyWith({
-    List<Map<String, dynamic>>? audio_streams,
+    List<Map<String, dynamic>>? audioStreams,
     List<Map<String, dynamic>>? devices,
     List<Map<String, dynamic>>? deviceConnections,
     String? imageInput,
@@ -123,7 +123,7 @@ class DroResultData {
     int? totalCost,
   }) {
     return DroResultData(
-      audio_streams: audio_streams ?? this.audio_streams,
+      audioStreams: audioStreams ?? this.audioStreams,
       devices: devices ?? this.devices,
       deviceConnections: deviceConnections ?? this.deviceConnections,
       imageInput: imageInput ?? this.imageInput,

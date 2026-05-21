@@ -16,3 +16,4 @@ export 'dsp_product.dart';
 export 'accessory_product.dart';
 export 'io_endpoint_product.dart';
 export 'source_product.dart';
+export 'output_product.dart';
