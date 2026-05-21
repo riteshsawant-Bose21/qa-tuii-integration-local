@@ -101,14 +101,14 @@ class _AddOutputDeviceContent extends StatelessWidget {
                 final List<OutputProduct> outputProducts = context.watch<AddOutputDeviceViewModel>().outputProducts;
 
                 return FusionOutlinedDropdown<OutputProduct>(
-                  value: outputProducts.firstWhereOrNull((OutputProduct p) => p.id == state.outputProductId),
+                  value: outputProducts.firstWhereOrNull((OutputProduct p) => p.outputId == state.outputProductId),
                   label: 'Output Type',
                   items: outputProducts,
                   hint: 'Select Output Type',
                   itemLabelBuilder: (OutputProduct outputDevice) => outputDevice.name,
                   onChanged: (OutputProduct? v) {
                     if (v == null) return;
-                    context.read<AddOutputDeviceViewModel>().updateOutputProductId(v.id);
+                    context.read<AddOutputDeviceViewModel>().updateOutputProductId(v.outputId);
                   },
                 );
               },
@@ -169,7 +169,7 @@ class _AddOutputDeviceContent extends StatelessWidget {
           // Connection-specific sections
           BlocBuilder<AddOutputDeviceViewModel, AddOutputDeviceVmState>(
             builder: (BuildContext context, AddOutputDeviceVmState state) {
-              if (state.connectionType != OutputConnectionType.aes67output) return const SizedBox.shrink();
+              if (state.connectionType != OutputConnectionType.aes67Output) return const SizedBox.shrink();
 
               final AddOutputDeviceViewModel addOutputDeviceVm = context.read<AddOutputDeviceViewModel>();
 
