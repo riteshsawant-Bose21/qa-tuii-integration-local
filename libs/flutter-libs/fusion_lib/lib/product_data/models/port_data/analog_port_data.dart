@@ -1,23 +1,34 @@
 part of '../product_port_data.dart';
 
 class AnalogPortData {
-  final int? inputs;
-  final int? outputs;
+  final int? inputBalanced;
+  final int? inputUnbalanced;
+  final int? outputBalanced;
+  final int? outputUnbalanced;
+  int? get inputs => (inputBalanced ?? 0) + (inputUnbalanced ?? 0);
+  int? get outputs => (outputBalanced ?? 0) + (outputUnbalanced ?? 0);
   final AnalogPorts? ports;
   AnalogPortData({
-    this.inputs,
-    this.outputs,
+    this.inputBalanced,
+    this.inputUnbalanced,
+    this.outputBalanced,
+    this.outputUnbalanced,
+
     this.ports,
   });
 
   AnalogPortData copyWith({
-    int? inputs,
-    int? outputs,
+    int? inputBalanced,
+    int? inputUnbalanced,
+    int? outputBalanced,
+    int? outputUnbalanced,
     AnalogPorts? ports,
   }) {
     return AnalogPortData(
-      inputs: inputs ?? this.inputs,
-      outputs: outputs ?? this.outputs,
+      inputBalanced: inputBalanced ?? this.inputBalanced,
+      inputUnbalanced: inputUnbalanced ?? this.inputUnbalanced,
+      outputBalanced: outputBalanced ?? this.outputBalanced,
+      outputUnbalanced: outputUnbalanced ?? this.outputUnbalanced,
       ports: ports ?? this.ports,
     );
   }
@@ -27,14 +38,20 @@ class AnalogPortData {
       'inputs': inputs,
       'outputs': outputs,
       'ports': ports?.toMap(),
+      'input_balanced': inputBalanced,
+      'input_unbalanced': inputUnbalanced,
+      'output_balanced': outputBalanced,
+      'output_unbalanced': outputUnbalanced,
     };
   }
 
   factory AnalogPortData.fromMap(Map<String, dynamic> map) {
     return AnalogPortData(
-      inputs: DeserializationUtil.intDeserializer.deserialize(map['inputs']),
-      outputs: DeserializationUtil.intDeserializer.deserialize(map['outputs']),
       ports: DeserializationUtil.classDeserializer(AnalogPorts.fromMap).deserialize(map['ports']),
+      inputBalanced: DeserializationUtil.intDeserializer.deserialize(map['inputs_balanced']),
+      inputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['inputs_unbalanced']),
+      outputBalanced: DeserializationUtil.intDeserializer.deserialize(map['outputs_balanced']),
+      outputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['outputs_unbalanced']),
     );
   }
 
@@ -44,19 +61,31 @@ class AnalogPortData {
 
   @override
   String toString() {
-    return 'AnalogPortData(inputs: $inputs, outputs: $outputs, ports: $ports)';
+    return 'AnalogPortData(inputs: $inputs, outputs: $outputs, ports: $ports, inputBalanced: $inputBalanced, inputUnbalanced: $inputUnbalanced, outputBalanced: $outputBalanced, outputUnbalanced: $outputUnbalanced)';
   }
 
   @override
   bool operator ==(covariant AnalogPortData other) {
     if (identical(this, other)) return true;
 
-    return other.inputs == inputs && other.outputs == outputs && other.ports == ports;
+    return other.inputs == inputs &&
+        other.outputs == outputs &&
+        other.ports == ports &&
+        other.inputBalanced == inputBalanced &&
+        other.inputUnbalanced == inputUnbalanced &&
+        other.outputBalanced == outputBalanced &&
+        other.outputUnbalanced == outputUnbalanced;
   }
 
   @override
   int get hashCode {
-    return inputs.hashCode ^ outputs.hashCode ^ ports.hashCode;
+    return inputs.hashCode ^
+        outputs.hashCode ^
+        ports.hashCode ^
+        inputBalanced.hashCode ^
+        inputUnbalanced.hashCode ^
+        outputBalanced.hashCode ^
+        outputUnbalanced.hashCode;
   }
 }
 
@@ -76,8 +105,8 @@ class AnalogPorts {
     List<PortInfo>? analogOutputs,
   }) {
     return AnalogPorts(
-      rcaInput: rcaInputs ?? this.rcaInput,
-      analogInput: analogInputs ?? this.analogInput,
+      rcaInput: rcaInputs ?? rcaInput,
+      analogInput: analogInputs ?? analogInput,
       analogOutputs: analogOutputs ?? this.analogOutputs,
     );
   }

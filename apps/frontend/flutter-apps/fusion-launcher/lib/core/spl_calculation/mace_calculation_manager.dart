@@ -84,7 +84,6 @@ class SPLCalculationManager {
         poly3d.add(<double>[end.position.dx / 100, end.position.dy / 100, 100.0]);
         poly3d.add(<double>[start.position.dx / 100, start.position.dy / 100, 100.0]);
 
-        print(" Wall[$i] Points for ${wall.id}: $poly3d points");
         engine.addSurface(poly3d);
       }
       // ///

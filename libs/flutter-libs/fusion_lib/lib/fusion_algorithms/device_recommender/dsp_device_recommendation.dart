@@ -1,5 +1,3 @@
-import 'package:fusion_lib/product_data/data_sources/data_sources.dart';
-
 import '../../api_data/devices/device_catalog.dart';
 
 class RecommendedDeviceResult {
@@ -16,7 +14,6 @@ class RecommendedDeviceResult {
 class DspDeviceRecommendation {
   List<RecommendedDeviceResult> pickBasedOnPrice({
     required List<List<RecommendedDeviceResult>> combinations,
-
   }) {
     final combinationWithPrices = combinations.map((combination) {
       final price = _calculateCombinationPrice(combination);
@@ -80,20 +77,20 @@ class DspDeviceRecommendation {
     final fm8yCount = extraOutputsNeeded > 0 ? (extraOutputsNeeded + (_fm8yOutputPorts - _fm6OutputPorts) - 1) ~/ (_fm8yOutputPorts - _fm6OutputPorts) : 0;
     final fm6Count = totalFm - fm8yCount;
 
-    _addDevice(devices, _deviceFm6, fm6Count);
-    _addDevice(devices, _deviceFm8y, fm8yCount);
+    _addDevice(devices, deviceFm6, fm6Count);
+    _addDevice(devices, deviceFm8y, fm8yCount);
 
     // Allocate PowerPure amplifiers for loudspeaker outputs.
     // Prefer 8ch units to minimize device count; use 4ch for remainder.
     var remainingOutputs = analogOutputs;
     final pp8chCount = remainingOutputs ~/ _powerPure8chOutputPorts;
     remainingOutputs %= _powerPure8chOutputPorts;
-    _addDevice(devices, _device8chPowerPure, pp8chCount);
+    _addDevice(devices, device8chPowerPure, pp8chCount);
 
     if (remainingOutputs > _powerPure4chOutputPorts) {
-      _addDevice(devices, _device8chPowerPure, 1);
+      _addDevice(devices, device8chPowerPure, 1);
     } else if (remainingOutputs > 0) {
-      _addDevice(devices, _device4chPowerPure, 1);
+      _addDevice(devices, device4chPowerPure, 1);
     }
 
     return _toRecommendationList(devices);
@@ -137,9 +134,9 @@ class DspDeviceRecommendation {
     // At least 1 FM device is always required.
     final remainingInputs = analogInputs - psInputCapacity;
     final fmCount = remainingInputs > 0 ? (remainingInputs + _fm6InputPorts - 1) ~/ _fm6InputPorts : 1;
-    _addDevice(devices, _deviceFm6, fmCount);
-    _addDevice(devices, _device8chPowerSmart, ps8chCount);
-    _addDevice(devices, _device4chPowerSmart, ps4chCount);
+    _addDevice(devices, deviceFm6, fmCount);
+    _addDevice(devices, device8chPowerSmart, ps8chCount);
+    _addDevice(devices, device4chPowerSmart, ps4chCount);
 
     return _toRecommendationList(devices);
   }
@@ -168,17 +165,17 @@ class DspDeviceRecommendation {
 
   double _devicePriceByName(String deviceName) {
     switch (deviceName) {
-      case _device4chPowerSmart:
+      case device4chPowerSmart:
         return 1075; //viceCatalog.powerSmart4ch.price;
-      case _device8chPowerSmart:
+      case device8chPowerSmart:
         return 2000; //DeviceCatalog.powerSmart8ch.price;
-      case _deviceFm6:
+      case deviceFm6:
         return DeviceCatalog.fm6.price;
-      case _deviceFm8y:
+      case deviceFm8y:
         return DeviceCatalog.fm8y.price;
-      case _device4chPowerPure:
+      case device4chPowerPure:
         return 850.0; //DeviceCatalog.powerPureAmplifier.price;
-      case _device8chPowerPure:
+      case device8chPowerPure:
         // Catalog has 4ch PowerPure only; treat 8ch as two 4ch units.
         return 1550; //DeviceCatalog.powerPureAmplifier.price * 2;
       default:
@@ -186,12 +183,12 @@ class DspDeviceRecommendation {
     }
   }
 
-  static const String _deviceFm6 = 'FM6';
-  static const String _deviceFm8y = 'FM8Y';
-  static const String _device4chPowerPure = '4ch PowerPure';
-  static const String _device8chPowerPure = '8ch PowerPure';
-  static const String _device4chPowerSmart = '4ch PowerSmart';
-  static const String _device8chPowerSmart = '8ch PowerSmart';
+  static const String deviceFm6 = 'FM6';
+  static const String deviceFm8y = 'FM8Y';
+  static const String device4chPowerPure = '4ch PowerPure';
+  static const String device8chPowerPure = '8ch PowerPure';
+  static const String device4chPowerSmart = '4ch PowerSmart';
+  static const String device8chPowerSmart = '8ch PowerSmart';
 
   static const int _fm6InputPorts = 4;
   static const int _fm6OutputPorts = 4;
@@ -204,4 +201,15 @@ class DspDeviceRecommendation {
 
   static const int _powerPure4chOutputPorts = 4;
   static const int _powerPure8chOutputPorts = 8;
+
+  List<({String device, int input, int output})> get dsps => [
+    (device: deviceFm6, input: _fm6InputPorts, output: _fm6OutputPorts),
+    (device: deviceFm8y, input: _fm6InputPorts, output: _fm8yOutputPorts),
+  ];
+  List<({String device, int input, int output, String family})> get amps => [
+    (device: device4chPowerPure, input: _powerPure4chOutputPorts, output: _powerPure4chOutputPorts, family: 'PowerPure'),
+    (device: device8chPowerPure, input: _powerPure8chOutputPorts, output: _powerPure8chOutputPorts, family: 'PowerPure'),
+    (device: device4chPowerSmart, input: _powerSmart4chInputPorts, output: _powerSmart4chOutputPorts, family: 'PowerSmart'),
+    (device: device8chPowerSmart, input: _powerSmart8chInputPorts, output: _powerSmart8chOutputPorts, family: 'PowerSmart'),
+  ];
 }
