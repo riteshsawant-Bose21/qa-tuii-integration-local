@@ -98,6 +98,10 @@ class MessageSyncService {
         additionalPath: '$triggerId/trigger',
         baseUrlToOverride: vip,
         isSecure: false,
+        data: {
+          "zones": ["all"],
+          "priority": 100,
+        },
       );
 
       if (response.success) {

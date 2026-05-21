@@ -290,9 +290,13 @@ class FusionDeviceService {
         api: FusionApiEndpoint.fusionControllers,
         baseUrlToOverride: ip,
         isSecure: false,
-        fromJson: (dynamic json) => List<FusionNetworkController>.from(
-          (json as List<dynamic>).map((dynamic e) => FusionNetworkController.fromJson(e as Map<String, dynamic>)),
-        ),
+        fromJson: (dynamic json) {
+          final Map<String, dynamic> map = json as Map<String, dynamic>;
+          final List<dynamic> list = map['controllers'] as List<dynamic>;
+          return List<FusionNetworkController>.from(
+            list.map((dynamic e) => FusionNetworkController.fromJson(e as Map<String, dynamic>)),
+          );
+        },
       );
 
       return responseCallback;
