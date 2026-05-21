@@ -31,9 +31,17 @@ class SplPainter extends FusionBasePainter {
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
+    final SplRelativeData? relative = splPanelData.relative ? splState.relativeData : null;
+    final num? average = relative?.average;
+    final num? tolerantDeviation = splPanelData.relativeRange?.value;
     final _HeatmapSignature currentSig = _computeHeatmapSignature();
     _HeatmapCache.instance.checkWithSignature(currentSig);
-    _buildHeatmapPicture(canvas);
+    _buildHeatmapPicture(
+      canvas,
+      average: average,
+      tolerance: tolerantDeviation,
+      useRelativeColoring: splPanelData.relative,
+    );
   }
 
   Color _colorFromLegend(double v) {
@@ -55,9 +63,50 @@ class SplPainter extends FusionBasePainter {
     return Color.lerp(_legendColors[i0], _legendColors[i1], f)!;
   }
 
-  List<Color> _buildColorLut([int lutSize = 256]) {
+  List<Color> _buildColorLut({
+    int lutSize = 256,
+    num? average,
+    num? tolerance,
+    bool useRelativeColoring = false,
+  }) {
     final int safeSize = lutSize.clamp(2, 4096);
     final List<Color> lut = List<Color>.filled(safeSize, const Color(0x00000000), growable: false);
+
+    final bool canUseRelative = useRelativeColoring && average != null && tolerance != null && tolerance > 0;
+    if (canUseRelative) {
+      final double avg = average.toDouble();
+      final double tol = tolerance.toDouble();
+      final double lowerBand = avg - tol;
+      final double upperBand = avg + tol;
+
+      const Color lowColor = Color(0xFF0090D4);
+      const Color inRangeColor = Color(0xFF34FD5D);
+      const Color highColor = Color(0xFFEF7E03);
+
+      final double lowerSpan = (lowerBand - minSpl).abs();
+      final double upperSpan = (maxSpl - upperBand).abs();
+
+      for (int i = 0; i < safeSize; i++) {
+        final double t = i / (safeSize - 1);
+        final double value = minSpl + (t * (maxSpl - minSpl));
+
+        if (value < lowerBand && lowerSpan > 0) {
+          final double localT = ((value - minSpl) / lowerSpan).clamp(0.0, 1.0);
+          lut[i] = Color.lerp(lowColor, inRangeColor, localT)!;
+          continue;
+        }
+
+        if (value > upperBand && upperSpan > 0) {
+          final double localT = ((value - upperBand) / upperSpan).clamp(0.0, 1.0);
+          lut[i] = Color.lerp(inRangeColor, highColor, localT)!;
+          continue;
+        }
+
+        lut[i] = inRangeColor;
+      }
+
+      return lut;
+    }
 
     if (maxSpl <= minSpl) {
       final Color fallback = _legendColors.isEmpty ? const Color(0x00000000) : _legendColors.first;
@@ -104,12 +153,21 @@ class SplPainter extends FusionBasePainter {
     );
   }
 
-  void _buildHeatmapPicture(Canvas canvas) {
+  void _buildHeatmapPicture(
+    Canvas canvas, {
+    num? average,
+    num? tolerance,
+    bool useRelativeColoring = false,
+  }) {
     final int effectiveStride = isLiveSpl ? livePointStride.clamp(1, 1 << 20) : 1;
     final double cellPointSize = pointSize;
     final Path tmpPath = Path();
     final Paint drawImagePaint = Paint();
-    final List<Color> colorLut = _buildColorLut();
+    final List<Color> colorLut = _buildColorLut(
+      average: average,
+      tolerance: tolerance,
+      useRelativeColoring: useRelativeColoring,
+    );
     final int maxColorIdx = colorLut.length - 1;
     final double splRange = maxSpl - minSpl;
     final double invSplRange = splRange > 0 ? 1.0 / splRange : 0.0;

@@ -138,6 +138,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                           .toList() ??
                                       <String>[],
                               };
+                              final SplState splState = context.watch<SplViewModel>().state;
                               return FusionCanvas(
                                 selectedIds: selectedIds,
                                 tools: <FusionCanvasTool<FusionToolState>>[
@@ -172,16 +173,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                     color: Colors.grey.shade300,
                                   ),
                                   if (buildingPageViewModel.isSplMode) ...<FusionBasePainter>[
-                                    SplLoaderPainter(
-                                      animation: animationController,
-                                      listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
-                                    ),
+                                    if (splState is SplLoadingState)
+                                      SplLoaderPainter(
+                                        animation: animationController,
+                                        listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
+                                      ),
                                     SplPainter(
                                       listeningAreas: listeningAreaPainters,
                                       minSpl: projectViewModel.minSPL,
                                       maxSpl: projectViewModel.maxSPL,
                                       splPanelData: widget.splPanelData,
-                                      splState: context.watch<SplViewModel>().state,
+                                      splState: splState,
                                     ),
                                   ],
                                   FloorPlanPainter(

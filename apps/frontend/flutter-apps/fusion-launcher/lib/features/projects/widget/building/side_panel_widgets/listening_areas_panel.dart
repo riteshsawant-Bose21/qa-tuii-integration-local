@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/speaker_selection_popup/viewmodel/product_query_view_model.dart';
-import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -12,9 +11,9 @@ import '../../../viewmodel/building_page_state.dart';
 import '../../../viewmodel/building_page_viewmodel.dart';
 
 class ListeningAreasPanel extends StatefulWidget {
-  final FloorCanvasController floorCanvasController;
-
-  const ListeningAreasPanel({super.key, required this.floorCanvasController});
+  const ListeningAreasPanel({
+    super.key,
+  });
 
   @override
   ListeningAreasPanelState createState() => ListeningAreasPanelState();
@@ -108,132 +107,123 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
     final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
 
-
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_card_$index"),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           // Listening Area Header
-          ValueListenableBuilder<bool>(
-            valueListenable: widget.floorCanvasController.isDrawing,
-            builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                  child: GestureDetector(
-                    onTap: () {
-                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                      if (!area.isDrawn) {
-                        widget.floorCanvasController.setDraw(true);
-                      } else if (area.isDrawn && widget.floorCanvasController.isDrawing.value) {
-                        widget.floorCanvasController.setDraw(false);
-                      }
-                    },
-                    child: Row(
-                      children: <Widget>[
-                        // Expand/Collapse icon
-                        InkWell(
-                          onTap: () => _toggleListeningAreaExpansion(area.id),
-                          child: AnimatedRotation(
-                            duration: const Duration(milliseconds: 200),
-                            turns: isListeningAreaExpanded ? 0.5 : 0.25,
-                            child: SemanticHelper.toggle(
-                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
-                              value: isListeningAreaExpanded,
-                              child: const Icon(LucideIcons.chevronUp200, size: 12),
-                              // FusionIcon.svg(
-                              //   AssetSvg.expandUp,
-                              //   color: context.colorScheme.elevation5,
-                              // ),
-                            ),
-                          ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? context.colorScheme.GreenThemeDisabled : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: GestureDetector(
+                onTap: () {
+                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
+                },
+                child: Row(
+                  children: <Widget>[
+                    // Expand/Collapse icon
+                    InkWell(
+                      onTap: () => _toggleListeningAreaExpansion(area.id),
+                      child: AnimatedRotation(
+                        duration: const Duration(milliseconds: 200),
+                        turns: isListeningAreaExpanded ? 0.5 : 0.25,
+                        child: SemanticHelper.toggle(
+                          testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
+                          value: isListeningAreaExpanded,
+                          child: const Icon(LucideIcons.chevronUp200, size: 12),
+                          // FusionIcon.svg(
+                          //   AssetSvg.expandUp,
+                          //   color: context.colorScheme.elevation5,
+                          // ),
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          LucideIcons.maximize200,
-                          size: 16,
-                          color: context.colorScheme.iconDefault,
-                        ),
-                        const SizedBox(width: 4),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      LucideIcons.maximize200,
+                      size: 16,
+                      color: context.colorScheme.iconDefault,
+                    ),
+                    const SizedBox(width: 4),
 
-                        /// Listening area name display
-                        Expanded(
-                          child: Row(
-                            children: <Widget>[
-                              // FusionAppText(
-                              //   text: "$floorName /",
-                              //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              //     fontSize: 11,
-                              //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                              //     color: (!area.isDrawn) ? context.colorScheme.error : null,
-                              //   ),
-                              // ),
-                              Expanded(
-                                child: SemanticHelper.formControl(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
-                                  child: InkWell(
-                                    onTap: () {
-                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                                    },
-                                    child: TitleTextFieldSwitcher(
-                                      value: area.name,
-                                      hintText: "listening area name",
-                                      style: Theme.of(context).textTheme.l1Regular.copyWith(
-                                        color: (!area.isDrawn) ? context.colorScheme.error : null,
-                                      ),
-                                      save: (String value) {
-                                        if (value.trim().isNotEmpty) {
-                                          final ListeningArea updatedLA = area.copyWith(name: value.trim());
-                                          _projectViewModel.updateListeningArea(area: updatedLA);
-                                        }
-                                      },
-                                    ),
+                    /// Listening area name display
+                    Expanded(
+                      child: Row(
+                        children: <Widget>[
+                          // FusionAppText(
+                          //   text: "$floorName /",
+                          //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          //     fontSize: 11,
+                          //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                          //     color: (!area.isDrawn) ? context.colorScheme.error : null,
+                          //   ),
+                          // ),
+                          Expanded(
+                            child: SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
+                              child: InkWell(
+                                onTap: () {
+                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
+                                },
+                                child: TitleTextFieldSwitcher(
+                                  value: area.name,
+                                  hintText: "listening area name",
+                                  style: Theme.of(context).textTheme.l1Regular.copyWith(
+                                    color: (!area.isDrawn) ? context.colorScheme.error : null,
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        if (!area.isDrawn && context.read<ProjectViewModel>().currentFloor.floorPlan.imagePath.isNotEmpty) ...<Widget>[
-                          SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_draw_$index"),
-                            child: InkWell(
-                              onTap: () {
-                                context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: area.id));
-                              },
-                              child: Tooltip(
-                                message: 'Start drawing to place this listening area',
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-
-                                  child: Icon(
-                                    Icons.info_outline_rounded,
-                                    size: 12,
-                                    color: context.colorScheme.error,
-                                  ),
+                                  save: (String value) {
+                                    if (value.trim().isNotEmpty) {
+                                      final ListeningArea updatedLA = area.copyWith(name: value.trim());
+                                      _projectViewModel.updateListeningArea(area: updatedLA);
+                                    }
+                                  },
                                 ),
                               ),
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
+
+                    if (!area.isDrawn && context.read<ProjectViewModel>().currentFloor.floorPlan.imagePath.isNotEmpty) ...<Widget>[
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_draw_$index"),
+                        child: InkWell(
+                          onTap: () {
+                            context.read<BuildingPageViewModel>().setTool(DrawingListeningAreaState(listeningAreaId: area.id));
+                          },
+                          child: Tooltip(
+                            message: 'Start drawing to place this listening area',
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color:
+                                    (isSelected && context.read<BuildingPageViewModel>().state is DrawingListeningAreaState)
+                                        ? context.colorScheme.errorContainer
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                size: 12,
+                                color: context.colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
 
           // Expandable Speakers Section
@@ -391,7 +381,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           child: GestureDetector(
             onTap: () {
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(speaker.id);
-
             },
             // borderRadius: BorderRadius.circular(4),
             child: Container(

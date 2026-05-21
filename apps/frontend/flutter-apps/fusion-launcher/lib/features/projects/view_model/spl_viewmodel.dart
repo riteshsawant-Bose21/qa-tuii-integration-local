@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/spl_calculation/ffi_constants.dart';
@@ -13,7 +14,7 @@ import '../../../core/spl_calculation/mace_calculation_manager.dart';
 class SplViewModel extends Cubit<SplState> {
   SplViewModel()
     : super(
-        SplLoadingState(panelData: const SplPanelData(), listeningAreas: <ListeningArea>[]),
+        SplLoadingState(panelData: const SplPanelData(), listeningAreas: <ListeningArea>[], relativeData: null),
       ) {
     _initialize();
   }
@@ -23,7 +24,7 @@ class SplViewModel extends Cubit<SplState> {
   Future<void> _initialize() async {
     await IsolatedMaceCalculationManager.instance.start();
     final SplPanelData currentPanelData = splRangeController.getPanelData();
-    emit(SplLoadedState(panelData: currentPanelData, listeningAreas: state.listeningAreas));
+    emit(SplLoadedState(panelData: currentPanelData, listeningAreas: state.listeningAreas, relativeData: state.relativeData));
     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
     serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb, autoSave: false);
   }
@@ -115,7 +116,7 @@ class SplViewModel extends Cubit<SplState> {
         // print("Skipping area with zero size: ${area.id}, size: $size");
       }
     }
-
+    emit(SplLoadingState(listeningAreas: state.listeningAreas, panelData: state.panelData, relativeData: state.relativeData));
     await IsolatedMaceCalculationManager.instance.calculateSpl(
       speakers: speakers,
       surfaces: nonZeroAreas,
@@ -179,7 +180,7 @@ class SplViewModel extends Cubit<SplState> {
     final List<SPLCalculation> toApply = <SPLCalculation>[];
 
     final Iterable<SPLCalculation> currentCalcs = await IsolatedMaceCalculationManager.instance.currentCalculations();
-
+    print("Current Calculations length: ${currentCalcs.length}");
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
       final List<SPLCalculation> updated = await IsolatedMaceCalculationManager.instance.getSplAt(
@@ -195,12 +196,25 @@ class SplViewModel extends Cubit<SplState> {
       toApply.addAll(updated);
     }
 
+    print("Applying SPL data for ${toApply.length} calculations");
     for (final SPLCalculation calc in toApply) {
       final List<Offset> pts = calc.surface.getFieldPoints(
         state.panelData.getResolutionSpacing(),
       );
-      floorListeningAreas.firstWhere((ListeningArea area) => area.id == calc.surface.id).setSplData(pts, calc.spl);
+      // final List<double> relative = await IsolatedMaceCalculationManager.instance.getRelativeSpls(calc.spl);
+      // print("Old: ${calc.spl.first}.  New: ${relative.first}");
+      floorListeningAreas
+          .firstWhere((ListeningArea area) => area.id == calc.surface.id)
+          .setSplData(
+            pts,
+            calc.spl,
+          );
     }
+    final num average = await compute(
+      _calculateAverageSpl,
+      floorListeningAreas.map((ListeningArea e) => e.splData?.splValues ?? <double>[]).expand((List<double> e) => e).toList(),
+    );
+    print("average: $average");
     emit(state.copyWith(listeningAreas: floorListeningAreas));
   }
 
@@ -211,39 +225,54 @@ class SplViewModel extends Cubit<SplState> {
   }
 
   void startLoading() {
-    emit(LiveSplState(panelData: state.panelData, listeningAreas: state.listeningAreas));
+    emit(LiveSplState(panelData: state.panelData, listeningAreas: state.listeningAreas, relativeData: state.relativeData));
   }
 
   void stopLoading() {
-    emit(SplLoadedState(panelData: state.panelData, listeningAreas: state.listeningAreas));
+    emit(SplLoadedState(panelData: state.panelData, listeningAreas: state.listeningAreas, relativeData: state.relativeData));
   }
+}
+
+num _calculateAverageSpl(List<double> splValues) {
+  if (splValues.isEmpty) return 0;
+  final double sum = splValues.reduce((double a, double b) => a + b);
+  return sum / splValues.length;
 }
 
 abstract class SplState {
   final SplPanelData panelData;
   final List<ListeningArea> listeningAreas;
+  final SplRelativeData? relativeData;
 
-  SplState({required this.panelData, required this.listeningAreas});
+  SplState({required this.panelData, required this.listeningAreas, this.relativeData});
 
   SplState copyWith({
     SplPanelData? panelData,
     List<ListeningArea>? listeningAreas,
+    SplRelativeData? relativeData,
   }) {
     return SplLoadedState(
       panelData: panelData ?? this.panelData,
       listeningAreas: listeningAreas ?? this.listeningAreas,
+      relativeData: relativeData ?? this.relativeData,
     );
   }
 }
 
 class SplLoadingState extends SplState {
-  SplLoadingState({required super.panelData, required super.listeningAreas});
+  SplLoadingState({required super.panelData, required super.listeningAreas, required super.relativeData});
 }
 
 class SplLoadedState extends SplState {
-  SplLoadedState({required super.panelData, required super.listeningAreas});
+  SplLoadedState({required super.panelData, required super.listeningAreas, required super.relativeData});
 }
 
 class LiveSplState extends SplState {
-  LiveSplState({required super.panelData, required super.listeningAreas});
+  LiveSplState({required super.panelData, required super.listeningAreas, required super.relativeData});
+}
+
+class SplRelativeData {
+  final num average;
+
+  SplRelativeData({required this.average});
 }
