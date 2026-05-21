@@ -1,0 +1,361 @@
+name: Software Bundle Release
+
+# On-demand workflow — only runnable from develop or release/* branches.
+# Excluded (Yocto-managed): fusion-dsp, fusion-edge-gateway, fusion-server,
+#                           fusion-system-monitor, fusion-telemetry-core.
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g. 1.2.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Additional release notes (Markdown)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate: enforce that the workflow only runs from develop or release/* branches.
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate-branch:
+    name: Validate Branch
+    runs-on: ubuntu-agent
+    steps:
+      - name: Check branch restriction
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          if [[ "$BRANCH" != "devops/setup-bundle-release" && "$BRANCH" != "develop" && ! "$BRANCH" =~ ^release/ ]]; then
+            echo "::error::This workflow can only be triggered on 'develop' or 'release/*' branches. Current branch: $BRANCH"
+            exit 1
+          fi
+          echo "Branch '$BRANCH' is valid."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Flutter Launcher — macOS / iOS / Android
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-macos-ios-android-build:
+    name: Flutter macOS / iOS / Android
+    needs: validate-branch
+    runs-on: mac-agent-actions-runner
+    timeout-minutes: 30
+    outputs:
+      nexus_url_macos: ${{ steps.capture.outputs.macos_url }}
+      flutter_version: ${{ steps.capture.outputs.version }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-Android-iOS
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          notarize_apple_id: ${{ secrets.NOTARIZE_APPLE_ID }}
+          notarize_app_password: ${{ secrets.NOTARIZE_APP_PASSWORD }}
+
+      - name: Capture Nexus URLs
+        id: capture
+        shell: bash
+        run: |
+          RAW=$(grep '^version:' apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml \
+                | awk '{print $2}' | cut -d'+' -f1)
+          VERSION="${RAW}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
+          BRANCH="${GITHUB_REF_NAME}"
+          BASE="${{ secrets.NEXUS_BASE_URL }}/Fusion-Frontend/Continuous/${BRANCH}/${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "macos_url=${BASE}/flutter-macOS/Fusion-Launcher-${VERSION}.dmg" >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Flutter Launcher — Windows
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-windows-build:
+    name: Flutter Windows
+    needs: validate-branch
+    runs-on: windows-actions-build-agent
+    timeout-minutes: 30
+    outputs:
+      nexus_url_windows: ${{ steps.capture.outputs.windows_url }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-windows
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          cert_thumbprint: ${{ secrets.CERT_THUMBPRINT }}
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD_NEW }}
+
+      - name: Capture Nexus URL
+        id: capture
+        shell: powershell
+        run: |
+          $content = Get-Content apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml
+          $versionLine = $content | Where-Object { $_ -match '^version:' }
+          $raw = ($versionLine -replace '^version:\s*', '' -replace '\+.*$', '').Trim()
+          $version = "$raw-$env:GITHUB_RUN_NUMBER+$(git rev-parse --short=8 HEAD)"
+          $branch = $env:GITHUB_REF_NAME
+          $url = "${{ secrets.NEXUS_BASE_URL }}/Fusion-Frontend/Continuous/$branch/$version/flutter-windows/Fusion-Launcher-$version.exe"
+          "windows_url=$url" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Flutter Launcher — Web
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-web-build:
+    name: Flutter Web
+    needs: validate-branch
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+    outputs:
+      nexus_url_web: ${{ steps.capture.outputs.web_url }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: Build Apps
+        uses: ./.github/reusable-actions/build-flutter-web
+        with:
+          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+          AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_QA }}
+          AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA }}
+          AWS_REGION_DEV: ${{ vars.AWS_DEFAULT_REGION }}
+          AMPLIFY_APP_ID: ${{ secrets.AWS_AMPLIFY_APP_ID_QA }}
+
+      - name: Capture Nexus URL
+        id: capture
+        shell: bash
+        run: |
+          RAW=$(grep '^version:' apps/frontend/flutter-apps/fusion-launcher/pubspec.yaml \
+                | awk '{print $2}' | cut -d'+' -f1)
+          VERSION="${RAW}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
+          BRANCH="${GITHUB_REF_NAME}"
+          BASE="${{ secrets.NEXUS_BASE_URL }}/Fusion-Frontend/Continuous/${BRANCH}/${VERSION}"
+          echo "web_url=${BASE}/flutter-web/Fusion-Launcher-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Cloud Services Backend (Docker → ECR)
+  # ─────────────────────────────────────────────────────────────────────────────
+  cloud-backend-build:
+    name: Cloud Services Backend
+    needs: validate-branch
+    runs-on: ubuntu-agent
+    timeout-minutes: 30
+    outputs:
+      ecr_registry: ${{ steps.capture.outputs.registry }}
+      ecr_image_tag: ${{ steps.capture.outputs.image_tag }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Setup Monorepo Toolchain
+        uses: ./.github/reusable-actions/setup-toolchain
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.6
+          problem-matchers: true
+          working-directory: apps/cloud-backend/fusion-core
+
+      - name: Build & Deploy
+        uses: ./.github/reusable-actions/build-cloud-web-backend
+        with:
+          cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
+          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          DOCKER_REGISTRY_DEV: ${{ vars.DOCKER_REGISTRY_DEV }}
+          AWS_ECS_CLUSTER: ${{ vars.AWS_ECS_CLUSTER }}
+          AWS_ECS_SERVICE: ${{ vars.AWS_ECS_SERVICE }}
+          AWS_ECS_TASK_DEFINITION: ${{ vars.AWS_ECS_TASK_DEFINITION }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+
+      - name: Capture ECR info
+        id: capture
+        shell: bash
+        run: |
+          echo "image_tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "registry=${{ vars.DOCKER_REGISTRY_DEV }}"  >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Assemble manifest, release notes and GitHub Release
+  # ─────────────────────────────────────────────────────────────────────────────
+  create-release-bundle:
+    name: Create Release Manifest & Notes
+    needs:
+      - flutter-macos-ios-android-build
+      - flutter-windows-build
+      - flutter-web-build
+      - cloud-backend-build
+    if: >-
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-agent
+    timeout-minutes: 15
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4
+
+      - name: Generate manifest and release notes
+        shell: bash
+        env:
+          RELEASE_VERSION:   ${{ inputs.release_version }}
+          BRANCH:            ${{ github.ref_name }}
+          COMMIT:            ${{ github.sha }}
+          FLUTTER_VERSION:   ${{ needs.flutter-macos-ios-android-build.outputs.flutter_version }}
+          MACOS_URL:         ${{ needs.flutter-macos-ios-android-build.outputs.nexus_url_macos }}
+          WINDOWS_URL:       ${{ needs.flutter-windows-build.outputs.nexus_url_windows }}
+          WEB_URL:           ${{ needs.flutter-web-build.outputs.nexus_url_web }}
+          ECR_REGISTRY:      ${{ needs.cloud-backend-build.outputs.ecr_registry }}
+          ECR_TAG:           ${{ needs.cloud-backend-build.outputs.ecr_image_tag }}
+          EXTRA_NOTES:       ${{ inputs.release_notes }}
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          SHORT_COMMIT="${COMMIT:0:8}"
+
+          # ── release-manifest.yaml ────────────────────────────────────────────
+          cat > release-manifest.yaml <<MANIFEST
+          release:
+            version: "${RELEASE_VERSION}"
+            branch: "${BRANCH}"
+            commit: "${COMMIT}"
+            buildDate: "${BUILD_DATE}"
+            runNumber: "${{ github.run_number }}"
+
+          components:
+            fusionLauncher:
+              version: "${FLUTTER_VERSION}"
+              artifacts:
+                macOS:   "${MACOS_URL}"
+                windows: "${WINDOWS_URL}"
+                web:     "${WEB_URL}"
+
+            cloudServicesBackend:
+              imageTag: "${ECR_TAG}"
+              images:
+                fusionApi:   "${ECR_REGISTRY}/fusion-api-image:${ECR_TAG}"
+                authService: "${ECR_REGISTRY}/auth-image:${ECR_TAG}"
+                productSync: "${ECR_REGISTRY}/product-sync-image:${ECR_TAG}"
+
+          yoctoManaged:
+            note: >
+              The following components are managed by the Yocto build system
+              and are not included in this bundle.
+            components:
+              - fusion-dsp
+              - fusion-edge-gateway
+              - fusion-server
+              - fusion-system-monitor
+              - fusion-telemetry-core
+          MANIFEST
+
+          # ── release-notes.md ─────────────────────────────────────────────────
+          cat > release-notes.md <<NOTES
+          # Fusion Software Bundle — v${RELEASE_VERSION}
+
+          | | |
+          |---|---|
+          | **Branch** | \`${BRANCH}\` |
+          | **Commit** | \`${SHORT_COMMIT}\` |
+          | **Build date** | ${BUILD_DATE} |
+          | **Run** | #${{ github.run_number }} |
+
+          ---
+
+          ## Fusion Launcher (v${FLUTTER_VERSION})
+
+          | Platform | Artifact |
+          |----------|----------|
+          | macOS    | [Fusion-Launcher-${FLUTTER_VERSION}.dmg](${MACOS_URL}) |
+          | Windows  | [Fusion-Launcher-${FLUTTER_VERSION}.exe](${WINDOWS_URL}) |
+          | Web      | [Fusion-Launcher-${FLUTTER_VERSION}.zip](${WEB_URL}) |
+
+          ## Cloud Services Backend (tag: \`${ECR_TAG}\`)
+
+          | Image | ECR URI |
+          |-------|---------|
+          | Fusion API   | \`${ECR_REGISTRY}/fusion-api-image:${ECR_TAG}\` |
+          | Auth Service | \`${ECR_REGISTRY}/auth-image:${ECR_TAG}\` |
+          | Product Sync | \`${ECR_REGISTRY}/product-sync-image:${ECR_TAG}\` |
+
+          ---
+
+          ## Yocto-Managed Components _(not included in this bundle)_
+
+          The following components are built and packaged separately by the Yocto
+          build system:
+
+          - \`fusion-dsp\`
+          - \`fusion-edge-gateway\`
+          - \`fusion-server\`
+          - \`fusion-system-monitor\`
+          - \`fusion-telemetry-core\`
+
+          ---
+
+          ## Additional Notes
+
+          ${EXTRA_NOTES:-_No additional notes provided._}
+          NOTES
+
+          echo "Generated release-manifest.yaml and release-notes.md"
+
+      - name: Upload manifest & notes to Nexus
+        shell: bash
+        env:
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NEXUS_BASE_URL: ${{ secrets.NEXUS_BASE_URL }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          VER="${{ inputs.release_version }}"
+          BASE="${NEXUS_BASE_URL}/Fusion-Releases/${BRANCH}/${VER}"
+
+          curl -k --ssl-no-revoke -f \
+            -u "github-actions-uploader:${NEXUS_PASSWORD}" \
+            -T release-manifest.yaml \
+            "${BASE}/release-manifest.yaml"
+
+          curl -k --ssl-no-revoke -f \
+            -u "github-actions-uploader:${NEXUS_PASSWORD}" \
+            -T release-notes.md \
+            "${BASE}/release-notes.md"
+
+          echo "Release artifacts uploaded:"
+          echo "  Manifest : ${BASE}/release-manifest.yaml"
+          echo "  Notes    : ${BASE}/release-notes.md"
+
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     tag_name: v${{ inputs.release_version }}
+      #     name: "Fusion Software Bundle v${{ inputs.release_version }}"
+      #     body_path: release-notes.md
+      #     draft: false
+      #     prerelease: ${{ github.ref_name == 'develop' }}
+      #     files: |
+      #       release-manifest.yaml
+      #       release-notes.md
