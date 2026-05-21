@@ -264,7 +264,7 @@ class GpioPage extends StatelessWidget {
                                             },
                                           ),
                                         ),
-                                        GpioDirection.output => SemanticHelper.button(
+                                        GpioDirection.output => SemanticHelper.dropdown(
                                           testId: SemanticHelper.createTestId(SemanticTypes.button, "gpo_output_action_dropdown_$index"),
                                           child: FusionDropdown<GpoAction>(
                                             value: gpio.gpoAction,
