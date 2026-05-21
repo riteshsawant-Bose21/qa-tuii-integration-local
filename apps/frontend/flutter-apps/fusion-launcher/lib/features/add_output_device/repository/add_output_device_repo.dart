@@ -36,7 +36,7 @@ class AddOutputDeviceRepository {
 
     _projectViewModel.addHardware(hardware: deviceToSave);
 
-    if (deviceToSave.connectionType == OutputConnectionType.aes67output && selectedStream != null) {
+    if (deviceToSave.connectionType == OutputConnectionType.aes67Output && selectedStream != null) {
       final List<AssignedStreamChannel> channels = _buildChannelAssignments(
         stream: selectedStream,
         audioChannel: deviceToSave.audioChannel,
