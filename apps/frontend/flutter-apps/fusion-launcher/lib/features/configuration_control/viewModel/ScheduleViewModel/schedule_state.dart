@@ -42,7 +42,7 @@ class ScheduleLoaded extends ScheduleState {
   /// All schedules loaded from the project.
   final List<ScheduleConfig> allSchedules;
 
-  /// Whether "Show upcoming items" is checked.
+  /// Whether "Show upcoming items" is checked (initially true).
   final bool showUpcoming;
 
   /// Active filter mode in the Schedule tab.
@@ -56,7 +56,7 @@ class ScheduleLoaded extends ScheduleState {
 
   const ScheduleLoaded({
     required this.allSchedules,
-    this.showUpcoming = false,
+    this.showUpcoming = true,
     this.filterMode = ScheduleFilterMode.all,
     this.selectedScheduleIds = const <String>{},
     this.controllerId,

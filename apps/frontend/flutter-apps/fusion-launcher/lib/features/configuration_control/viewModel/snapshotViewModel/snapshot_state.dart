@@ -67,6 +67,9 @@ class SnapshotLoaded extends SnapshotState {
   /// Currently selected snapshot page in PAGES panel.
   final String? selectedSnapshotPageId;
 
+  /// Ordered list of page entries (scene sets + snapshot pages) in insertion order.
+  final List<ControllerPageModel> orderedPageEntries;
+
   /// The controller ID this state belongs to.
   final String? controllerId;
 
@@ -81,6 +84,7 @@ class SnapshotLoaded extends SnapshotState {
     this.activeSnapshotId,
     this.snapshotPages = const <SnapshotPageModel>[],
     this.selectedSnapshotPageId,
+    this.orderedPageEntries = const <ControllerPageModel>[],
     this.controllerId,
   });
 
@@ -104,6 +108,7 @@ class SnapshotLoaded extends SnapshotState {
     Object? activeSnapshotId = _sentinel,
     List<SnapshotPageModel>? snapshotPages,
     Object? selectedSnapshotPageId = _sentinel,
+    List<ControllerPageModel>? orderedPageEntries,
     Object? controllerId = _sentinel,
   }) {
     return SnapshotLoaded(
@@ -117,6 +122,7 @@ class SnapshotLoaded extends SnapshotState {
       activeSnapshotId: identical(activeSnapshotId, _sentinel) ? this.activeSnapshotId : activeSnapshotId as String?,
       snapshotPages: snapshotPages ?? this.snapshotPages,
       selectedSnapshotPageId: identical(selectedSnapshotPageId, _sentinel) ? this.selectedSnapshotPageId : selectedSnapshotPageId as String?,
+      orderedPageEntries: orderedPageEntries ?? this.orderedPageEntries,
       controllerId: identical(controllerId, _sentinel) ? this.controllerId : controllerId as String?,
     );
   }
@@ -133,6 +139,7 @@ class SnapshotLoaded extends SnapshotState {
     activeSnapshotId,
     snapshotPages,
     selectedSnapshotPageId,
+    orderedPageEntries,
     controllerId,
   ];
 }

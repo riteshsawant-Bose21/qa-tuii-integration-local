@@ -31,9 +31,12 @@ class USBPortData {
   }
 
   factory USBPortData.fromMap(Map<String, dynamic> map) {
+    final channels = DeserializationUtil.intDeserializer.deserialize(map['channels']);
+    final ioPorts = DeserializationUtil.intDeserializer.deserialize(map['io_ports']);
+
     return USBPortData(
-      ioPorts: DeserializationUtil.intDeserializer.deserialize(map['io_ports']),
-      channels: DeserializationUtil.intDeserializer.deserialize(map['channels']),
+      ioPorts: ioPorts ?? DeserializationUtil.intDeserializer.deserialize(map['inputs']) ?? DeserializationUtil.intDeserializer.deserialize(map['outputs']),
+      channels: channels ?? DeserializationUtil.intDeserializer.deserialize(map['number_of_channels_per_port']),
       ports: PortInfo.fromList(map['ports']),
     );
   }

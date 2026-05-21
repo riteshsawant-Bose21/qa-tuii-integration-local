@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
@@ -180,9 +181,21 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                   ),
                                   save: (String value) {
                                     if (value.isNotEmpty) {
+                                      final bool isDuplicate = Helper.isNameExists<SceneSetModel>(
+                                        items: _configSceneSetsViewmodel.state.sceneSets,
+                                        newName: value,
+                                        getName: (SceneSetModel s) => s.name,
+                                        excludeId: widget.sceneSetData.id,
+                                        getId: (SceneSetModel s) => s.id,
+                                      );
+                                      if (isDuplicate) {
+                                        FusionToast.error(context, message: "Scene set name already exists");
+                                        return false;
+                                      }
                                       final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
                                       _configSceneSetsViewmodel.updateSceneSet(newScenesSet);
                                     }
+                                    return true;
                                   },
                                 ),
                               ),
@@ -318,8 +331,20 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                       draggingSnapshotId: widget.draggingSnapshotId,
                                       isInControlMode: serviceLocator<ProjectViewModel>().isInControlMode,
                                       onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                                        final bool isDuplicate = Helper.isNameExists<SnapshotsModel>(
+                                          items: widget.snapShotList,
+                                          newName: value,
+                                          getName: (SnapshotsModel s) => s.name,
+                                          excludeId: newSnapshot.id,
+                                          getId: (SnapshotsModel s) => s.id,
+                                        );
+                                        if (isDuplicate) {
+                                          FusionToast.error(context, message: "Snapshot name already exists");
+                                          return false;
+                                        }
                                         _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
                                         _configSceneSetsViewmodel.syncWithProjectViewModel();
+                                        return true;
                                       },
                                       onSnapshotRecall: (String sceneId) async {
                                         final String? vip = serviceLocator<ProjectViewModel>().virtualIP;

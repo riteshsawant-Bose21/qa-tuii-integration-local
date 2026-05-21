@@ -81,6 +81,7 @@ runs:
         }
         $global:LASTEXITCODE = 0
         flutter pub get --suppress-analytics *> $null
+        powershell -NoProfile -ExecutionPolicy Bypass -File .\tool\generate_protos.ps1
         moon run flutter-apps:win-automation-build
 
         if ($LASTEXITCODE -ne 0) {

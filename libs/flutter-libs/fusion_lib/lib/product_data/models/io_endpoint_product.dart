@@ -10,7 +10,9 @@ class IoEndpointProduct {
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
+  final String? dataSheetLink;
   final ProductPortData? numberOfInputsAndOutputs;
+  @Deprecated('Not available in the latest io_endpoint response for Fusion records; kept for backward compatibility.')
   final bool network;
   final bool isFusionCompatible;
 
@@ -19,6 +21,7 @@ class IoEndpointProduct {
     required this.assets,
     required this.modelName,
     required this.modelFamily,
+    this.dataSheetLink,
     this.numberOfInputsAndOutputs,
     this.network = false,
     this.isFusionCompatible = false,
@@ -33,6 +36,7 @@ class IoEndpointProduct {
       assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'io_endpoint'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
+      dataSheetLink: specs['data_sheet_link'] as String?,
       numberOfInputsAndOutputs: ioPortsJson is Map<String, dynamic> ? ProductPortData.fromMap(ioPortsJson) : null,
       network: specs['network'] as bool? ?? false,
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
@@ -45,6 +49,7 @@ class IoEndpointProduct {
     'model_name': modelName,
     'model_family': modelFamily,
     'specifications': {
+      if (dataSheetLink != null) 'data_sheet_link': dataSheetLink,
       if (numberOfInputsAndOutputs != null) 'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toMap(),
       'network': network,
     },

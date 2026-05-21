@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/helper.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/viewModel/source_sets_viewmodel/config_source_sets_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -178,5 +179,24 @@ class ConfigSourceSetsViewmodel extends Cubit<ConfigSourceSetsState> {
   void unlinkSourceSet({required String sourceSetId}) {
     _projectViewModel.unlinkSourceSet(sourceSetId: sourceSetId);
     syncWithProjectViewModel();
+  }
+
+  /// Check if a source set name already exists
+  bool isSourceSetNameExists({required String name, String? excludeId}) {
+    return Helper.isNameExists<SourceSet>(
+      items: _projectViewModel.sourceSets,
+      newName: name,
+      getName: (SourceSet sourceSet) => sourceSet.name,
+      excludeId: excludeId,
+      getId: (SourceSet sourceSet) => sourceSet.id,
+    );
+  }
+
+  /// Generate a unique default name for a new source set
+  String generateUniqueSourceSetName({String baseName = 'Untitled Source Set'}) {
+    return Helper.generateUniqueName(
+      baseName: baseName,
+      existingNames: _projectViewModel.sourceSets.map((SourceSet s) => s.name).toSet(),
+    );
   }
 }

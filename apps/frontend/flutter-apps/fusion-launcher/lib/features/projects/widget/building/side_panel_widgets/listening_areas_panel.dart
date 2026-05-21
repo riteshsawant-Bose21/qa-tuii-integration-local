@@ -152,44 +152,45 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     ),
                     const SizedBox(width: 4),
 
-                    /// Listening area name display
-                    Expanded(
-                      child: Row(
-                        children: <Widget>[
-                          // FusionAppText(
-                          //   text: "$floorName /",
-                          //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          //     fontSize: 11,
-                          //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                          //     color: (!area.isDrawn) ? context.colorScheme.error : null,
-                          //   ),
-                          // ),
-                          Expanded(
-                            child: SemanticHelper.formControl(
-                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
-                              child: InkWell(
-                                onTap: () {
-                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                                },
-                                child: TitleTextFieldSwitcher(
-                                  value: area.name,
-                                  hintText: "listening area name",
-                                  style: Theme.of(context).textTheme.l1Regular.copyWith(
-                                    color: (!area.isDrawn) ? context.colorScheme.error : null,
+                        /// Listening area name display
+                        Expanded(
+                          child: Row(
+                            children: <Widget>[
+                              // FusionAppText(
+                              //   text: "$floorName /",
+                              //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              //     fontSize: 11,
+                              //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                              //     color: (!area.isDrawn) ? context.colorScheme.error : null,
+                              //   ),
+                              // ),
+                              Expanded(
+                                child: SemanticHelper.formControl(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
+                                  child: InkWell(
+                                    onTap: () {
+                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
+                                    },
+                                    child: TitleTextFieldSwitcher(
+                                      value: area.name,
+                                      hintText: "listening area name",
+                                      style: Theme.of(context).textTheme.l1Regular.copyWith(
+                                        color: (!area.isDrawn) ? context.colorScheme.error : null,
+                                      ),
+                                      save: (String value) {
+                                        if (value.trim().isNotEmpty) {
+                                          final ListeningArea updatedLA = area.copyWith(name: value.trim());
+                                          _projectViewModel.updateListeningArea(area: updatedLA);
+                                        }
+                                        return true;
+                                      },
+                                    ),
                                   ),
-                                  save: (String value) {
-                                    if (value.trim().isNotEmpty) {
-                                      final ListeningArea updatedLA = area.copyWith(name: value.trim());
-                                      _projectViewModel.updateListeningArea(area: updatedLA);
-                                    }
-                                  },
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
 
                     if (!area.isDrawn && context.read<ProjectViewModel>().currentFloor.floorPlan.imagePath.isNotEmpty) ...<Widget>[
                       SemanticHelper.button(
@@ -388,7 +389,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               child: Row(
                 children: <Widget>[
                   FusionImageAuto(
-                    path: serviceLocator<ProductQueryViewModel>().getProductImage(speaker.productId),
+                    path: serviceLocator<ProductQueryViewModel>().getSpeakerImage(speaker.productId),
                     width: 14,
                     height: 14,
                   ),
@@ -418,6 +419,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                           final HardwareComponent updated = speaker.copyWith(name: value);
                           _projectViewModel.updateHardware(hardware: updated);
                         }
+                        return true;
                       },
                     ),
                   ),

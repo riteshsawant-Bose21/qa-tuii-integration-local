@@ -16,13 +16,10 @@ class PagesPanel extends StatelessWidget {
       builder: (BuildContext context, SnapshotState state) {
         if (state is! SnapshotLoaded) return const SizedBox.shrink();
 
-        // Checked scene sets (only these appear as scene-set rows)
-        final List<SceneSetModel> selectedSets = state.sceneSets.where((SceneSetModel s) => state.selectedSceneSetIds.contains(s.id)).toList();
+        // Ordered page entries — preserves insertion order
+        final List<ControllerPageModel> orderedEntries = state.orderedPageEntries;
 
-        // User-created snapshot pages — always shown in PAGES
-        final List<SnapshotPageModel> snapshotPages = state.snapshotPages;
-
-        final bool nothingToShow = selectedSets.isEmpty && snapshotPages.isEmpty;
+        final bool nothingToShow = orderedEntries.isEmpty;
 
         return Container(
           decoration: BoxDecoration(
@@ -45,30 +42,41 @@ class PagesPanel extends StatelessWidget {
                             ),
                           ),
                         )
-                        : ListView(
+                        : ReorderableListView.builder(
                           padding: const EdgeInsets.symmetric(vertical: 6),
-                          children: <Widget>[
-                            // ── Checked scene-set rows ───────────────────────────
-                            ...selectedSets.map((SceneSetModel s) {
-                              // Scene-set row is active only when NO snapshot page is selected
-                              final bool isActive = s.id == state.selectedSceneSetId && state.selectedSnapshotPageId == null;
+                          buildDefaultDragHandles: false,
+                          onReorder: (int oldIndex, int newIndex) {
+                            context.read<SnapshotViewModel>().reorderPages(oldIndex, newIndex);
+                          },
+                          proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                            return Material(
+                              color: Colors.transparent,
+                              child: child,
+                            );
+                          },
+                          itemCount: orderedEntries.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final ControllerPageModel entry = orderedEntries[index];
+                            if (entry.type == ControllerPageType.sceneSet) {
+                              final bool isActive = entry.id == state.selectedSceneSetId && state.selectedSnapshotPageId == null;
                               return _PageRow(
-                                label: s.name,
+                                key: ValueKey<String>(entry.id),
+                                index: index,
+                                label: entry.name,
                                 isActive: isActive,
-                                onTap: () => context.read<SnapshotViewModel>().selectSceneSet(s.id),
+                                onTap: () => context.read<SnapshotViewModel>().selectSceneSet(entry.id),
                               );
-                            }),
-
-                            // ── User-created snapshot pages ──────────────────────
-                            ...snapshotPages.map((SnapshotPageModel page) {
-                              final bool isActive = state.selectedSnapshotPageId == page.id;
+                            } else {
+                              final bool isActive = state.selectedSnapshotPageId == entry.id;
                               return _PageRow(
-                                label: page.name,
+                                key: ValueKey<String>(entry.id),
+                                index: index,
+                                label: entry.name,
                                 isActive: isActive,
-                                onTap: () => context.read<SnapshotViewModel>().selectSnapshotPage(page.id),
+                                onTap: () => context.read<SnapshotViewModel>().selectSnapshotPage(entry.id),
                               );
-                            }),
-                          ],
+                            }
+                          },
                         ),
               ),
             ],
@@ -88,11 +96,14 @@ class _PageRow extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final int index;
 
   const _PageRow({
+    super.key,
     required this.label,
     required this.isActive,
     required this.onTap,
+    required this.index,
   });
 
   @override
@@ -112,11 +123,14 @@ class _PageRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            FusionIcon.svg(
-              semanticId: 'snapshot_and_scenes_page_row_icon',
-              "assets/svg/Four_Dots.svg",
-              size: 11,
-              color: context.colorScheme.iconWhite,
+            ReorderableDragStartListener(
+              index: index,
+              child: FusionIcon.svg(
+                semanticId: 'snapshot_and_scenes_page_row_icon',
+                "assets/svg/Four_Dots.svg",
+                size: 11,
+                color: isActive ? context.colorScheme.iconWhite : context.colorScheme.iconDefault,
+              ),
             ),
             const SizedBox(width: 6),
             Expanded(

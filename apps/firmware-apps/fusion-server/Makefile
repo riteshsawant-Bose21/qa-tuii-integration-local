@@ -33,7 +33,8 @@ PROTO_FILES=\
 	$(PROTO_FUSION_DIR)/vip.proto \
 	$(PROTO_FUSION_DIR)/health.proto \
 	$(PROTO_FUSION_DIR)/udp.proto \
-	$(PROTO_FUSION_DIR)/version.proto
+	$(PROTO_FUSION_DIR)/version.proto \
+	$(PROTO_FUSION_DIR)/telemetry.proto
 
 # Versioning
 VERSION ?= 1.0.0-proto.2
@@ -115,6 +116,7 @@ proto-clean:
 	rm -f $(PROTO_GO_OUT)/fusion/health.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/udp.pb.go
 	rm -f $(PROTO_GO_OUT)/fusion/version.pb.go
+	rm -f $(PROTO_GO_OUT)/fusion/telemetry.pb.go
 
 # Cross compilation
 build-linux-amd64: proto

@@ -1,5 +1,6 @@
 // mdns_service.dart
 import 'dart:async';
+import 'dart:io' show InternetAddress, InternetAddressType, NetworkInterface, Platform, RawDatagramSocket;
 import 'package:multicast_dns/multicast_dns.dart';
 
 import '../../fusion_lib.dart';
@@ -12,6 +13,7 @@ class MdnsService {
 
   MDnsClient? _client;
   bool _running = false;
+  Completer<void>? _teardownCompleter;
 
   MdnsService({
     required this.serviceType,
@@ -21,20 +23,62 @@ class MdnsService {
   Stream<MdnsDevice> startDiscovery({
     Duration timeout = const Duration(seconds: 3),
   }) async* {
-    if (_running) return;
-    _running = true;
+    // If a previous scan is still tearing down (singleton scenario — e.g. the
+    // dialog was closed and reopened quickly), wait for its `finally` block to
+    // run before we touch `_client` / `_running` again. Without this guard the
+    // old generator would null out the new client and the new scan would
+    // silently produce zero devices.
+    if (_running) {
+      // Ask the previous run to stop, then await its teardown.
+      final Completer<void>? pending = _teardownCompleter;
+      final MDnsClient? prevClient = _client;
+      _client = null;
+      try {
+        prevClient?.stop();
+      } catch (_) {}
+      if (pending != null && !pending.isCompleted) {
+        await pending.future;
+      }
+    }
 
-    final client = MDnsClient();
+    _running = true;
+    final Completer<void> teardown = Completer<void>();
+    _teardownCompleter = teardown;
+
+    final client = MDnsClient(
+      rawDatagramSocketFactory:
+          (
+            dynamic host,
+            int port, {
+            bool reuseAddress = true,
+            bool reusePort = true,
+            int ttl = 1,
+          }) {
+            // Windows does not support SO_REUSEPORT; force it off there.
+            return RawDatagramSocket.bind(
+              host,
+              port,
+              reuseAddress: reuseAddress,
+              reusePort: Platform.isWindows ? false : reusePort,
+              ttl: ttl,
+            );
+          },
+    );
     _client = client;
 
     final seen = <String, MdnsDevice>{};
 
     try {
-      await client.start();
+      await client.start(
+        listenAddress: InternetAddress.anyIPv4,
+        interfacesFactory: _interfacesFactory,
+      );
 
       final ptrQuery = ResourceRecordQuery.serverPointer(serviceType);
 
       await for (final PtrResourceRecord ptr in client.lookup<PtrResourceRecord>(ptrQuery)) {
+        // Bail out if we were stopped externally or superseded by a new scan.
+        if (!identical(_client, client)) break;
         final instanceName = ptr.domainName;
 
         print("instance name is $instanceName");
@@ -113,16 +157,32 @@ class MdnsService {
         }
       }
     } finally {
-      client.stop();
-      _client = null;
+      try {
+        client.stop();
+      } catch (_) {}
+      // Only clear shared state if we still own it (i.e. we weren't
+      // superseded by a newer startDiscovery() call).
+      if (identical(_client, client)) {
+        _client = null;
+      }
       _running = false;
+      if (identical(_teardownCompleter, teardown)) {
+        _teardownCompleter = null;
+      }
+      if (!teardown.isCompleted) teardown.complete();
     }
   }
 
   void stopDiscovery() {
-    _client?.stop();
+    final MDnsClient? client = _client;
     _client = null;
-    _running = false;
+    try {
+      client?.stop();
+    } catch (_) {}
+    // Do NOT touch `_running` here — let the async generator's `finally` flip
+    // it once teardown is complete. This prevents a brand-new startDiscovery()
+    // call from racing past the `_running` guard while the previous run is
+    // still unwinding.
   }
 
   Map<String, String> _parseTxt(String raw) {
@@ -144,5 +204,36 @@ class MdnsService {
     }
 
     return result;
+  }
+
+  /// Returns network interfaces suitable for IPv4 multicast.
+  ///
+  /// On Windows, [NetworkInterface.list] returns many virtual adapters
+  /// (Hyper-V, WSL, VPN, Loopback Pseudo-Interface, vEthernet, Bluetooth PAN,
+  /// etc.) that don't support `IP_ADD_MEMBERSHIP`; trying to `joinMulticast`
+  /// on them throws `WSAENOPROTOOPT (errno 10042)` and aborts the whole
+  /// `MDnsClient.start()`. We filter those out here.
+  static Future<Iterable<NetworkInterface>> _interfacesFactory(
+    InternetAddressType type,
+  ) async {
+    final interfaces = await NetworkInterface.list(
+      includeLoopback: false,
+      includeLinkLocal: false,
+      type: type,
+    );
+
+    if (!Platform.isWindows) return interfaces;
+
+    final blocked = RegExp(
+      r'(vethernet|hyper-?v|vmware|virtualbox|vbox|wsl|loopback|bluetooth|tap|tunnel|isatap|teredo|wan miniport)',
+      caseSensitive: false,
+    );
+
+    return interfaces.where((i) {
+      if (blocked.hasMatch(i.name)) return false;
+      return i.addresses.any(
+        (a) => a.type == InternetAddressType.IPv4 && !a.isLinkLocal,
+      );
+    });
   }
 }

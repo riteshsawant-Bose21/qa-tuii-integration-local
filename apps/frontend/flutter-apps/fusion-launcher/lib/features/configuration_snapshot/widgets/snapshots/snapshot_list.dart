@@ -35,7 +35,7 @@ class SnapshotList extends StatelessWidget {
   final String? draggingSnapshotId;
   final bool isInControlMode;
   final Future<void> Function(String sceneId)? onSnapshotRecall;
-  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
+  final bool Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
     super.key,
@@ -172,9 +172,10 @@ class SnapshotList extends StatelessWidget {
               onRenameSave: (String value, SnapshotsModel newSnapshot) {
                 if (value.isNotEmpty) {
                   if (onRenameSave != null) {
-                    onRenameSave!.call(value, newSnapshot);
+                    return onRenameSave!.call(value, newSnapshot);
                   }
                 }
+                return false;
               },
               onDelete: () {
                 onDelete(snapShotData.id);

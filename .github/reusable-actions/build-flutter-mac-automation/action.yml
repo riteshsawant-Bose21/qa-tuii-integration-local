@@ -48,6 +48,8 @@ runs:
       run: |
         flutter clean
         flutter pub get
+        chmod +x tool/generate_protos.sh
+        ./tool/generate_protos.sh
         rm -rf windows/flutter/ephemeral
         rm -rf build/
         cp /Users/devops/Documents/flutter-env/.env ./.env

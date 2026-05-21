@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -244,6 +245,9 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                       initialValue: duration,
                       // enabled: isEnabled,
                       keyboardType: TextInputType.number,
+                      inputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
                       decoration: InputDecoration(
                         hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
                         counterText: '',

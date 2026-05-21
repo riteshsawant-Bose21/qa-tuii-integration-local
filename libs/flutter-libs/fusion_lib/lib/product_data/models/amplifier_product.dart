@@ -62,13 +62,16 @@ class AmplifierProduct {
   final String modelName;
   final String modelFamily;
   final dynamic certifications;
+  @Deprecated('No longer present in the new amplifier response.')
   final dynamic colors;
   final dynamic currentDraw;
+  final String? dataSheetLink;
   final dynamic dimensions;
   final dynamic firmware;
   final dynamic frontPanelImage;
   final dynamic netWeight;
   final ProductPortData? numberOfInputsAndOutputs;
+  @Deprecated('No longer present in the new amplifier response.')
   final int? numberOfLoudspeakerOutputs;
   final Map<String, dynamic>? powerOutput;
   final dynamic productCodes;
@@ -86,6 +89,7 @@ class AmplifierProduct {
     this.certifications,
     this.colors,
     this.currentDraw,
+    this.dataSheetLink,
     this.dimensions,
     this.firmware,
     this.frontPanelImage,
@@ -114,6 +118,7 @@ class AmplifierProduct {
       certifications: specs['certifications'],
       colors: specs['colors'],
       currentDraw: specs['current_draw'],
+      dataSheetLink: specs['data_sheet_link'] as String?,
       dimensions: specs['dimensions'],
       firmware: specs['firmware'],
       frontPanelImage: specs['front_panel_image'],
@@ -139,6 +144,7 @@ class AmplifierProduct {
       if (certifications != null) 'certifications': certifications,
       if (colors != null) 'colors': colors,
       if (currentDraw != null) 'current_draw': currentDraw,
+      if (dataSheetLink != null) 'data_sheet_link': dataSheetLink,
       if (dimensions != null) 'dimensions': dimensions,
       if (firmware != null) 'firmware': firmware,
       if (frontPanelImage != null) 'front_panel_image': frontPanelImage,

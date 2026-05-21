@@ -6,7 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"fusion/internal/api"
+	model "fusion/internal/gen/proto/fusion"
 	"io"
 	"net/http"
 	"net/url"
@@ -61,7 +61,7 @@ func TestVIPMasterPriorityDemotesCurrentPrimary(t *testing.T) {
 	if err := setMasterPriority(ctx, fc.Env.BaseURL(), primary.Id, false); err != nil {
 		t.Fatalf("set master priority low failed: %v", err)
 	}
-	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceRuntimeInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []model.DeviceInfo) bool {
 		if len(ds) != len(devices) {
 			return false
 		}
@@ -159,7 +159,7 @@ func TestVIPMasterPrioritySinglePreferredNodeBecomesPrimary(t *testing.T) {
 		}
 	}()
 
-	settled, err := waitForDevices(ctx, fc.Env, func(ds []api.DeviceRuntimeInfo) bool {
+	settled, err := waitForDevices(ctx, fc.Env, func(ds []model.DeviceInfo) bool {
 		if len(ds) != len(baseline) {
 			return false
 		}
@@ -334,8 +334,8 @@ func doPostNoBody(ctx context.Context, endpoint string) (int, string, error) {
 	return resp.StatusCode, string(body), nil
 }
 
-func waitForDevices(ctx context.Context, env Env, predicate func([]api.DeviceRuntimeInfo) bool) ([]api.DeviceRuntimeInfo, error) {
-	var latest []api.DeviceRuntimeInfo
+func waitForDevices(ctx context.Context, env Env, predicate func([]model.DeviceInfo) bool) ([]model.DeviceInfo, error) {
+	var latest []model.DeviceInfo
 	err := PollUntil(ctx, 2*time.Second, func() (bool, error) {
 		ds, err := GetDevicesNodePreferred(ctx, env)
 		if err != nil {
@@ -350,9 +350,9 @@ func waitForDevices(ctx context.Context, env Env, predicate func([]api.DeviceRun
 	return latest, nil
 }
 
-func findPrimary(ds []api.DeviceRuntimeInfo) (api.DeviceRuntimeInfo, error) {
+func findPrimary(ds []model.DeviceInfo) (model.DeviceInfo, error) {
 	count := 0
-	var primary api.DeviceRuntimeInfo
+	var primary model.DeviceInfo
 	for _, d := range ds {
 		if d.IsPrimary {
 			count++
@@ -360,35 +360,35 @@ func findPrimary(ds []api.DeviceRuntimeInfo) (api.DeviceRuntimeInfo, error) {
 		}
 	}
 	if count != 1 {
-		return api.DeviceRuntimeInfo{}, fmt.Errorf("expected exactly one primary, got %d", count)
+		return model.DeviceInfo{}, fmt.Errorf("expected exactly one primary, got %d", count)
 	}
 	return primary, nil
 }
 
-func findDeviceByID(ds []api.DeviceRuntimeInfo, id string) (api.DeviceRuntimeInfo, bool) {
+func findDeviceByID(ds []model.DeviceInfo, id string) (model.DeviceInfo, bool) {
 	for _, d := range ds {
 		if d.Id == id {
 			return d, true
 		}
 	}
-	return api.DeviceRuntimeInfo{}, false
+	return model.DeviceInfo{}, false
 }
 
-func pickNonPrimaryTarget(ds []api.DeviceRuntimeInfo) (api.DeviceRuntimeInfo, error) {
-	candidates := make([]api.DeviceRuntimeInfo, 0, len(ds))
+func pickNonPrimaryTarget(ds []model.DeviceInfo) (model.DeviceInfo, error) {
+	candidates := make([]model.DeviceInfo, 0, len(ds))
 	for _, d := range ds {
 		if !d.IsPrimary {
 			candidates = append(candidates, d)
 		}
 	}
 	if len(candidates) == 0 {
-		return api.DeviceRuntimeInfo{}, fmt.Errorf("no non-primary device available")
+		return model.DeviceInfo{}, fmt.Errorf("no non-primary device available")
 	}
 	sort.Slice(candidates, func(i, j int) bool { return candidates[i].Id < candidates[j].Id })
 	return candidates[0], nil
 }
 
-func sortedDeviceIDs(ds []api.DeviceRuntimeInfo) []string {
+func sortedDeviceIDs(ds []model.DeviceInfo) []string {
 	ids := make([]string, 0, len(ds))
 	for _, d := range ds {
 		ids = append(ids, d.Id)

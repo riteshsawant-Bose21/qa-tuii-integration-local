@@ -68,8 +68,9 @@ class SearchBarSources extends StatelessWidget {
                           size: 16,
                         ),
                         onChanged: (String value) {
-                          if (value.isEmpty) {
+                          if (value.isEmpty || value.startsWith(' ')) {
                             onClearSearch?.call();
+                            return;
                           }
                           onSearchChanged?.call(value);
                         },

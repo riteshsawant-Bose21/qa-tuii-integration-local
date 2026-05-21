@@ -17,7 +17,7 @@ class SnapshotItemCard extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDuplicate;
   final Future<void> Function()? onSnapshotRecall;
-  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
+  final bool Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
   final int index;
 
   const SnapshotItemCard({
@@ -146,12 +146,11 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                     hintText: "Enter snapshot name",
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
                     save: (String value) {
-                      if (value.isNotEmpty) {
-                        if (widget.onRenameSave != null) {
-                          final SnapshotsModel newSnapshot = widget.snapShotData.copyWith(name: value);
-                          widget.onRenameSave!.call(value, newSnapshot);
-                        }
+                      if (value.isNotEmpty && widget.onRenameSave != null) {
+                        final SnapshotsModel newSnapshot = widget.snapShotData.copyWith(name: value);
+                        return widget.onRenameSave!.call(value, newSnapshot);
                       }
+                      return false;
                     },
                   ),
                 ),
