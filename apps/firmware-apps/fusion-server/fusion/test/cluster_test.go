@@ -138,8 +138,12 @@ func TestGetDevicesInfo(t *testing.T) {
 		assert.NotEmpty(t, device.GetSoftwareUpdateVersion(), "software_update_version should be populated")
 		assert.NotEmpty(t, device.GetFusionMonorepoBranch(), "fusion_monorepo_branch should be populated")
 		assert.NotEmpty(t, device.GetFusionMonorepoCommitHash(), "fusion_monorepo_commit_hash should be populated")
-		assert.NotEmpty(t, device.GetJenkinsBuildNumber(), "jenkins_build_number should be populated")
+		assert.NotEmpty(t, device.GetBuildNumber(), "build_number should be populated")
 		assert.Greater(t, device.GetVrrpPriority(), int32(0), "vrrp_priority should be a positive value")
+		assert.NotEmpty(t, device.GetLan1MacAddress(), "lan1_mac_address should be populated")
+		assert.NotEmpty(t, device.GetLan2MacAddress(), "lan2_mac_address should be populated")
+		assert.NotEmpty(t, device.GetWifiMacAddress(), "wifi_mac_address should be populated")
+		assert.NotEmpty(t, device.GetBluetoothMacAddress(), "bluetooth_mac_address should be populated")
 	}
 }
 

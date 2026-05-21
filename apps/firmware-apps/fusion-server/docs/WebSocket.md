@@ -242,7 +242,9 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
           "boot_partition": "B",
           "previous_boot_partition": "A",
           "error": "",
-          "updated_at": "2026-04-06T10:15:22Z"
+          "updated_at": "2026-04-06T10:15:22Z",
+          "build_number": "1042",
+          "pre_release_tag": "dev"
         },
         {
           "serial_number": "SN987654321",
@@ -255,7 +257,9 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
           "boot_partition": "B",
           "previous_boot_partition": "A",
           "error": "",
-          "updated_at": "2026-04-06T10:15:30Z"
+          "updated_at": "2026-04-06T10:15:30Z",
+          "build_number": "1042",
+          "pre_release_tag": "dev"
         }
       ],
       "timestamp": "2026-04-06T10:16:00Z"
@@ -277,6 +281,8 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
     | `previous_boot_partition` | string | Previously active boot partition |
     | `error` | string | Error message from last swupdate run, empty if none |
     | `updated_at` | string | RFC3339 timestamp of the last update |
+    | `build_number` | string | CI build number that produced this firmware, empty if not set |
+    | `pre_release_tag` | string | Pre-release tag (e.g. `dev`), empty for production builds |
 
 11. **`list_sw_update_files`** - List OTA bundles from **all cluster nodes** (concatenated across nodes; may contain duplicates if the same filename is present on multiple nodes)
     ```json

@@ -391,6 +391,76 @@ function regex_for_test_file() {
     printf '^(%s)$' "$tests"
 }
 
+function list_test_names_for_glob() {
+    local glob="$1"
+    rg -o --no-filename '^func (Test[^(: ]+)' $glob -r '$1' 2>/dev/null | sort -u
+}
+
+function list_test_names_for_type() {
+    local label="$1"
+
+    case "$label" in
+        all)
+            {
+                list_test_names_for_glob "./*_test.go"
+                list_test_names_for_glob "./tasks/*_test.go"
+                list_test_names_for_glob "./persistence/*_test.go"
+            } | sort -u
+            ;;
+        logger)
+            {
+                list_test_names_for_glob "./logger_test.go"
+                (cd ../../../fusion-services-core/logging && list_test_names_for_glob "./*_test.go")
+            } | sort -u
+            ;;
+        tasks)
+            {
+                list_test_names_for_glob "./tasks_test.go"
+                list_test_names_for_glob "./tasks/*_test.go"
+            } | sort -u
+            ;;
+        persistence)
+            list_test_names_for_glob "./persistence/*_test.go"
+            ;;
+        integration)
+            list_test_names_for_glob "./integration/*_test.go"
+            ;;
+        udp-chaos)
+            list_test_names_for_glob "./udp_chaos_test.go"
+            ;;
+        essential)
+            local essential_type
+            while IFS= read -r essential_type; do
+                list_test_names_for_type "$essential_type"
+            done < <(essential_test_types)
+            ;;
+        *)
+            local file
+            file=$(test_file_for_type "$label")
+            if [[ -n "$file" ]]; then
+                list_test_names_for_glob "./$file"
+            fi
+            ;;
+    esac
+}
+
+function ensure_test_name_matches() {
+    local label="$1"
+    if [[ -z "$test_name" ]]; then
+        return 0
+    fi
+
+    local matches
+    matches=$(list_test_names_for_type "$label" | grep -E "$test_name" || true)
+    if [[ -n "$matches" ]]; then
+        return 0
+    fi
+
+    echo "No tests matched --test-name '$test_name' for test type '$label'" >&2
+    echo "Use --list or --list-all to inspect available test names." >&2
+    return 1
+}
+
 # Helper to run fusion/test in package mode so shared TestMain/helpers are available.
 function filter_go_test_output() {
     awk '
@@ -533,6 +603,8 @@ function print_summary() {
 function run_named_test_type() {
     local label="$1"
     local status=0
+
+    ensure_test_name_matches "$label" || return 1
 
     case "$label" in
         "all")

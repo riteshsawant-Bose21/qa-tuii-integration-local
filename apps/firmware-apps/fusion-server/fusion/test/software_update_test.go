@@ -829,7 +829,9 @@ func TestSwUpdateInfoViaWebSocket(t *testing.T) {
 		_ = info.GetStatus()
 		_ = info.GetBootPartition()
 		_ = info.GetUpdatedAt()
-		t.Logf("node[%d]: serial=%q status=%q bundle=%q", i, info.GetSerialNumber(), info.GetStatus(), info.GetCurrentBundleVersion())
+		_ = info.GetBuildNumber()
+		_ = info.GetPreReleaseTag()
+		t.Logf("node[%d]: serial=%q status=%q bundle=%q build_number=%q pre_release_tag=%q", i, info.GetSerialNumber(), info.GetStatus(), info.GetCurrentBundleVersion(), info.GetBuildNumber(), info.GetPreReleaseTag())
 	}
 }
 
