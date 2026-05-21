@@ -225,18 +225,23 @@ class GpioPage extends StatelessWidget {
                                                 return SemanticHelper.radio(
                                                   testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_${direction.name.toLowerCase()}_$index"),
                                                   value: direction == gpio.direction,
-                                                  child: Row(
-                                                    children: <Widget>[
-                                                      Radio<GpioDirection>(
-                                                        value: direction,
-                                                        activeColor: context.colorScheme.iconDefault,
-                                                      ),
-                                                      FusionAppText(
-                                                        text: direction.name.toUpperCase(),
-                                                        semanticId: 'gpio_direction_text',
-                                                        style: context.textTheme.bodySmall!,
-                                                      ),
-                                                    ],
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(direction: direction));
+                                                    },
+                                                    child: Row(
+                                                      children: <Widget>[
+                                                        Radio<GpioDirection>(
+                                                          value: direction,
+                                                          activeColor: context.colorScheme.iconDefault,
+                                                        ),
+                                                        FusionAppText(
+                                                          text: direction.name.toUpperCase(),
+                                                          semanticId: 'gpio_direction_text',
+                                                          style: context.textTheme.bodySmall!,
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 );
                                               }),
@@ -247,7 +252,7 @@ class GpioPage extends StatelessWidget {
 
                                       /// Action Dropdown
                                       switch (gpio.direction) {
-                                        GpioDirection.input => SemanticHelper.button(
+                                        GpioDirection.input => SemanticHelper.dropdown(
                                           testId: SemanticHelper.createTestId(SemanticTypes.button, "gpi_input_action_dropdown_$index"),
                                           child: FusionDropdown<GpiAction>(
                                             value: gpio.gpiAction,
