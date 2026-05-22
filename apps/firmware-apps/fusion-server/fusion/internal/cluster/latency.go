@@ -19,6 +19,7 @@ import (
 	"slices"
 
 	"github.com/go-ping/ping"
+	"github.com/hashicorp/memberlist"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -418,17 +419,13 @@ func (c *Cluster) fetchAllLatencyStatus() []NodeLatencyStatus {
 func (c *Cluster) getNodeAdminAddresses() []string {
 	var addrs []string
 	for _, member := range c.memberlist.Members() {
+		if member.State != memberlist.StateAlive {
+			logging.GetLogger().Debug("Skipping non-alive member %s (%s) for admin fanout", member.Name, member.Addr.String())
+			continue
+		}
+
 		host := member.Addr.String()
 		addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
-
-		//used in post anf get generic from admin. should we filter only alive members here or try all members?
-
-		// if member.State == memberlist.StateAlive {
-		// host := member.Addr.String()
-		// addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
-		// } else {
-		// 	logging.GetLogger().Debug("Skipping non-alive member %s (%s)", member.Name, member.Addr.String())
-		// }
 	}
 	return addrs
 }

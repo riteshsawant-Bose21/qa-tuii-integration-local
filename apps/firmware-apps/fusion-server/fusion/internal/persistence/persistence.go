@@ -22,6 +22,7 @@ import (
 
 	"github.com/gibson042/canonicaljson-go"
 	json "github.com/goccy/go-json"
+	"google.golang.org/protobuf/proto"
 
 	"go.etcd.io/bbolt"
 )
@@ -700,8 +701,11 @@ func (p *Persistence) saveMetadataWithNotify(meta *model.DatabaseMetadata, notif
 		notifier := p.metadataNotifier
 		p.notifierMu.RUnlock()
 		if notifier != nil {
-			metaCopy := *meta
-			go notifier(&metaCopy)
+			metaCopy, ok := proto.Clone(meta).(*model.DatabaseMetadata)
+			if !ok {
+				return fmt.Errorf("failed to clone database metadata before notify")
+			}
+			go notifier(metaCopy)
 		}
 	}
 
@@ -878,7 +882,7 @@ func normalizeBucketValueForHash(bucketName, key string, value []byte) ([]byte, 
 		}
 		metadata.Hash = ""
 		metadata.Version = nil
-		normalized, err := canonicaljson.Marshal(metadata)
+		normalized, err := canonicaljson.Marshal(&metadata)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal normalized metadata for hashing: %w", err)
 		}

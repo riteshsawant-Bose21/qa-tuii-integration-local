@@ -57,7 +57,7 @@ func CheckClusterHealth(ctx context.Context, env Env, expectedSize int) error {
 		}
 		primaries := 0
 		for _, d := range devices {
-			if d.IsPrimary {
+			if d != nil && d.IsPrimary {
 				primaries++
 			}
 		}
@@ -118,7 +118,7 @@ func nodeBaseURLs(ctx context.Context, env Env) []string {
 	return urls
 }
 
-func GetDevicesNodePreferred(ctx context.Context, env Env) ([]model.DeviceInfo, error) {
+func GetDevicesNodePreferred(ctx context.Context, env Env) ([]*model.DeviceInfo, error) {
 	var firstErr error
 	for _, baseURL := range nodeBaseURLs(ctx, env) {
 		ds, err := GetDevices(ctx, baseURL)
@@ -179,10 +179,10 @@ func checkClusterStatus(ctx context.Context, baseURL string) error {
 	return nil
 }
 
-func hasSinglePrimary(ds []model.DeviceInfo) bool {
+func hasSinglePrimary(ds []*model.DeviceInfo) bool {
 	count := 0
 	for _, d := range ds {
-		if d.IsPrimary {
+		if d != nil && d.IsPrimary {
 			count++
 		}
 	}
@@ -201,7 +201,7 @@ func combineErrors(errs []error) error {
 }
 
 // GetDevices fetches devices from the VIP.
-func GetDevices(ctx context.Context, baseURL string) ([]model.DeviceInfo, error) {
+func GetDevices(ctx context.Context, baseURL string) ([]*model.DeviceInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/devices", nil)
 	if err != nil {
 		return nil, err
@@ -227,14 +227,14 @@ func GetDevices(ctx context.Context, baseURL string) ([]model.DeviceInfo, error)
 	return ds, nil
 }
 
-func decodeDevicesResponse(body []byte) ([]model.DeviceInfo, error) {
-	var devices []model.DeviceInfo
+func decodeDevicesResponse(body []byte) ([]*model.DeviceInfo, error) {
+	var devices []*model.DeviceInfo
 	if err := json.Unmarshal(body, &devices); err == nil {
 		return devices, nil
 	}
 
 	var wrapped struct {
-		Devices []model.DeviceInfo `json:"devices"`
+		Devices []*model.DeviceInfo `json:"devices"`
 	}
 	if err := json.Unmarshal(body, &wrapped); err == nil && wrapped.Devices != nil {
 		return wrapped.Devices, nil
@@ -243,7 +243,7 @@ func decodeDevicesResponse(body []byte) ([]model.DeviceInfo, error) {
 	var single model.DeviceInfo
 	if err := json.Unmarshal(body, &single); err == nil {
 		if single.Address != "" || single.Id != "" || single.Name != "" {
-			return []model.DeviceInfo{single}, nil
+			return []*model.DeviceInfo{&single}, nil
 		}
 	}
 
@@ -312,6 +312,9 @@ func checkPerNodeClusterAgreement(ctx context.Context, env Env, expectedSize int
 		primaryAddr := ""
 		addrs := make([]string, 0, len(devices))
 		for _, d := range devices {
+			if d == nil {
+				continue
+			}
 			addrs = append(addrs, d.Address)
 			if d.IsPrimary {
 				primaryCount++

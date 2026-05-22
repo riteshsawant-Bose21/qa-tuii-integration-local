@@ -58,10 +58,20 @@ const (
 const (
 	MaxSoftwareUpdateUploadBytes = 300 << 20 // 300 MB
 	MinFreeSpaceBuffer           = 100 << 20 // 100 MB minimum free space buffer
-	ModelUnknown                 = "Unknown"
 	Protocol                     = "http://"
 	SoftwareUpdateOTAPath        = "/mnt/ota"
 	Unknown                      = "Unknown"
+)
+
+const (
+	ModelC1EVK      = "c1-evk"
+	ModelPowerSmart = "powersmart"
+	ModelFM6        = "fm6"
+	ModelFM8Y       = "fm8y"
+	ModelXLRPal     = "xlr-pal"
+	ModelBluePal    = "blue-pal"
+	ModelSOM        = "som"
+	ModelUnknown    = "Unknown"
 )
 
 const (
