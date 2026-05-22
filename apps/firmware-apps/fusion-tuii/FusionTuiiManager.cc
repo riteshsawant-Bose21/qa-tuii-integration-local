@@ -29,6 +29,8 @@
 #include "FusionTuiiBridge.h"
 #include "SerialManager.h"
 #include "TuiiConfigModels.h"
+#include "LocalConfig.h"
+
 #include <observer/observer.h>
 
 static bool g_bSuccess = false;
@@ -191,6 +193,7 @@ void QueueAudioSettingsForProtocol(const Json::Value &newSettings);
 void HandleSerialProtocolMessage(const char *buf, std::size_t len);
 bool WaitForReadyAck();
 ZoneEndWaitResult WaitForZoneEndResult();
+bool SetInitialBrightness();
 bool PerformInitializationCycle(Json::Value &deviceSnapshot,
                                 std::vector<TuiiZoneConfig> &zoneSnapshot);
 bool ApplyQueuedAudioCommands();
@@ -494,6 +497,29 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
 
     const Json::Value &payload = msg["payload"];
 
+    FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
+    if (!bridge.isInitialized())
+    {
+        spdlog::warn("[Protocol] {} bridge not initialized", action);
+        SendNackWithRetry(action, -1);
+        return;
+    }
+
+    if (action == "setBrightness")
+    {
+        if (!payload.isMember("value") || !payload["value"].isInt())
+        {
+            spdlog::warn("[Protocol] setBrightness missing int payload.value");
+            return;
+        }
+
+        const int brightness = payload["value"].asInt();
+        auto localConfig = LocalConfig::getInstance();
+        localConfig->setBrightness(brightness);
+
+        return;
+    }
+
     if (!payload.isMember("zone") || !payload["zone"].isInt())
     {
         spdlog::warn("[Protocol] {} missing integer payload.zone", action);
@@ -501,14 +527,6 @@ void HandleClientSetCommand(const std::string &action, const Json::Value &msg)
         return;
     }
     const int zoneIndex = payload["zone"].asInt();
-
-    FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
-    if (!bridge.isInitialized())
-    {
-        spdlog::warn("[Protocol] {} bridge not initialized", action);
-        SendNackWithRetry(action, zoneIndex);
-        return;
-    }
 
     // Take a snapshot from the central store in the bridge
     std::map<std::string, int> trackerSnapshot = bridge.getObjectTrackerSnapshot();
@@ -628,7 +646,7 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
     const std::string action = msg["action"].asString();
 
     // Route inbound set* commands from TUII Client to Fusion
-    if (action == "setGain" || action == "setMute" || action == "setSource")
+    if (action == "setGain" || action == "setMute" || action == "setSource" || action == "setBrightness")
     {
         HandleClientSetCommand(action, msg);
         return;
@@ -786,6 +804,26 @@ ZoneEndWaitResult WaitForZoneEndResult()
     } while (!signaled);
 
     return g_zoneEndWaitResult;
+}
+
+bool SetInitialBrightness()
+{
+    Json::Value packet(Json::objectValue);
+    packet["action"] = "setBrightness";
+
+    Json::Value payload(Json::objectValue);
+    auto brightness = LocalConfig::getInstance()->getBrightness();
+    payload["value"] = brightness;
+    packet["payload"] = payload;
+
+    if (!SendJsonPacket(packet))
+    {
+        spdlog::warn("[Protocol] Failed to send initial brightness '{}'", brightness);
+        return false;
+    }
+    spdlog::info("[Protocol] Sent intial brightness packet '{}'", brightness);
+
+    return true;
 }
 
 bool PerformInitializationCycle(Json::Value &deviceSnapshot,
@@ -1167,6 +1205,11 @@ void ProtocolWorkerLoop()
                 continue;
             }
             g_readyAckReceived = false;  // Reset readyAck flag.
+
+            if (!SetInitialBrightness())
+            {
+                continue;
+            }
 
             if (!PerformInitializationCycle(deviceSnapshot, zoneSnapshot))
             {
