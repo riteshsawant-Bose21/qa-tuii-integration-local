@@ -806,6 +806,11 @@
                     "default_value": 5,
                     "minimum_value": 1,
                     "maximum_value": 32
+                },
+                {
+                    "name": "realtime",
+                    "value_type": "boolean",
+                    "default_value": true
                 }
             ],
             "terminals": [
