@@ -32,7 +32,8 @@
                     "property_settings": [
                         { "name": "channels", "value": 1 },
                         { "name": "frame_size", "value": 512 },
-                        { "name": "sample_rate", "value": 48000 }
+                        { "name": "sample_rate", "value": 48000 },
+                        { "name": "realtime", "value": false }
                     ]
                 },
                 {

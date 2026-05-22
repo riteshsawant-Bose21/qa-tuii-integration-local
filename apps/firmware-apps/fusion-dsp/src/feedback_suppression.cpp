@@ -244,7 +244,17 @@ FeedbackSuppression::FeedbackSuppression(const bosepro::BlockConfiguration &conf
     filter_manager = std::unique_ptr<FilterManager>(new FilterManager(num_filters, 
         number_recent_filters_not_to_be_recycled, 0.0f, channels, get_sample_rate()));
 
-    analysis_task.set_priority(8);
+    bool realtime = true;
+    get_property("realtime", realtime);
+
+    if (realtime)
+    {
+        analysis_task.set_priority(8);
+    }
+    else
+    {
+        analysis_task.set_non_realtime(true);
+    }
 }
 
 
