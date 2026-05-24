@@ -981,17 +981,21 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 			continue
 		}
 
-		var metadata model.DatabaseMetadata
+		var metadata *model.DatabaseMetadata
 		var envelope model.DatabaseMetadataResponse
 		if err := protojson.Unmarshal(body, &envelope); err == nil && envelope.Metadata != nil {
-			metadata = *envelope.Metadata
-		} else if err := protojson.Unmarshal(body, &metadata); err != nil || (metadata.Version == nil && metadata.ActiveSnapshot == "" && metadata.Hash == "" && !metadata.Valid) {
-			if err != nil {
-				logger.Warn("Failed to decode metadata from %s: %v. Raw JSON: %s", member.Name, err, string(body))
-			} else {
-				logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
+			metadata = envelope.Metadata
+		} else {
+			var flat model.DatabaseMetadata
+			if err := protojson.Unmarshal(body, &flat); err != nil || (flat.Version == nil && flat.ActiveSnapshot == "" && flat.Hash == "" && !flat.Valid) {
+				if err != nil {
+					logger.Warn("Failed to decode metadata from %s: %v. Raw JSON: %s", member.Name, err, string(body))
+				} else {
+					logger.Warn("Failed to decode metadata envelope from %s. Raw JSON: %s", member.Name, string(body))
+				}
+				continue
 			}
-			continue
+			metadata = &flat
 		}
 		if metadata.Version == nil {
 			metadata.Version = &model.VersionInfo{NodeId: member.Name}
@@ -1080,6 +1084,12 @@ func (sm *StateManager) validateData() bool {
 }
 
 func memberMetadataLess(a, b api.MemberMetadata) bool {
+	if a.Metadata == nil {
+		return b.Metadata != nil
+	}
+	if b.Metadata == nil {
+		return false
+	}
 	if apiVersionFromProto(a.Metadata.Version).Less(apiVersionFromProto(b.Metadata.Version)) {
 		return true
 	}
@@ -1097,7 +1107,7 @@ func (sm *StateManager) syncData(memberMetadata []api.MemberMetadata, currentHas
 	success := true
 
 	for _, ms := range memberMetadata {
-		if ms.Metadata.Hash != currentHash {
+		if ms.Metadata != nil && ms.Metadata.Hash != currentHash {
 			importURL := utils.BuildInternalURL(ms.Member.Addr.String(), api.AdminPort, routes.DataEndpoint)
 			if !sm.importData(importURL, data) {
 				success = false
@@ -1140,8 +1150,14 @@ func (sm *StateManager) getFullStateUnsafe() map[string]any {
 // hashIsConsistent checks if hash is consistent across all members
 func hashIsConsistent(metadata []api.MemberMetadata) bool {
 	if len(metadata) > 0 {
+		if metadata[0].Metadata == nil {
+			return false
+		}
 		firstHash := metadata[0].Metadata.Hash
 		for _, ms := range metadata[1:] {
+			if ms.Metadata == nil {
+				return false
+			}
 			if ms.Metadata.Hash != firstHash {
 				return false
 			}

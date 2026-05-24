@@ -9,5 +9,5 @@ import (
 // MemberMetadata associates a member to its database metadata.
 type MemberMetadata struct {
 	Member   *memberlist.Node
-	Metadata model.DatabaseMetadata
+	Metadata *model.DatabaseMetadata
 }

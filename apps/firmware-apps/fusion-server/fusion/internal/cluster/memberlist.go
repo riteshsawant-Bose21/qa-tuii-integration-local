@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +21,11 @@ import (
 
 	"github.com/hashicorp/memberlist"
 )
+
+const firstNodeWhileVIPExistsLog = "[MEMBERLIST] No remote join seeds resolved while a VIP was already known; treating node as first member"
+const zeroSeedsJoinLog = "[MEMBERLIST] No remote join seeds resolved"
+const retryingZeroSeedsJoinLog = "[MEMBERLIST] No remote join seeds resolved during startup; retrying join"
+const standaloneBootstrapAssumedLog = "[MEMBERLIST] Join retry stopping after startup grace; allowing standalone bootstrap"
 
 const (
 	gossipInterval      = 20 * time.Millisecond
@@ -39,6 +45,7 @@ const (
 	vipMembersInitialBackoff = 1 * time.Second
 	vipMembersMaxBackoff     = 30 * time.Second
 	vipMembersMaxDuration    = 5 * time.Minute
+	bootstrapJoinGrace       = 15 * time.Second
 )
 
 func (c *Cluster) LocalNode() *hashicorpMemberlist.Node {
@@ -106,8 +113,37 @@ func (c *Cluster) JoinMemberlist() error {
 	logger.Debug("[GOSSIP] seeds=%v self=%s:%d", joinAddrs, c.appConfig.BindAddr, c.appConfig.BindPort)
 
 	if len(joinAddrs) == 0 {
-		// This is the first node in the cluster
-		logger.Debug("[MEMBERLIST] First member of cluster: %s", c.appConfig.BindAddr)
+		currentVIP := c.getCurrentVIP()
+		localMembers := c.memberlist.Members()
+		logger.Warn("%s vip=%q self=%s:%d local_members=%s",
+			zeroSeedsJoinLog,
+			currentVIP,
+			c.appConfig.BindAddr,
+			c.appConfig.BindPort,
+			formatMemberlistMembers(localMembers),
+		)
+		if c.shouldRetryZeroSeedJoin(currentVIP, localMembers) {
+			logger.Warn("%s vip=%q local_vip_holder=%t self=%s:%d",
+				retryingZeroSeedsJoinLog,
+				currentVIP,
+				c.isLocalVIPHolder(),
+				c.appConfig.BindAddr,
+				c.appConfig.BindPort,
+			)
+			c.ensureJoinRetryLoop()
+			return fmt.Errorf("join unresolved: zero remote seeds for %s while cluster state is not a confirmed bootstrap", c.appConfig.BindAddr)
+		}
+
+		if currentVIP != "" {
+			logger.Warn("%s vip=%s self=%s:%d local_members=%s",
+				firstNodeWhileVIPExistsLog,
+				currentVIP,
+				c.appConfig.BindAddr,
+				c.appConfig.BindPort,
+				formatMemberlistMembers(localMembers),
+			)
+		}
+		logger.Warn("[MEMBERLIST] First member of cluster: %s", c.appConfig.BindAddr)
 		return nil
 	}
 
@@ -137,6 +173,93 @@ func (c *Cluster) JoinMemberlist() error {
 	}
 
 	return fmt.Errorf("failed to join cluster after %d attempts: %w", retryTimes, lastErr)
+}
+
+func (c *Cluster) shouldRetryZeroSeedJoin(currentVIP string, localMembers []*memberlist.Node) bool {
+	if len(localMembers) > 1 {
+		return false
+	}
+	if currentVIP != "" {
+		return true
+	}
+	if c.isLocalVIPHolder() {
+		return true
+	}
+	return time.Since(c.createdAt) < bootstrapJoinGrace
+}
+
+func (c *Cluster) isLocalVIPHolder() bool {
+	if c.vipMonitor == nil {
+		return false
+	}
+	return c.vipMonitor.IsLocalVIPHolder()
+}
+
+func (c *Cluster) ensureJoinRetryLoop() {
+	c.joinRetryMu.Lock()
+	if c.joinRetryActive {
+		c.joinRetryMu.Unlock()
+		return
+	}
+	c.joinRetryActive = true
+	c.joinRetryMu.Unlock()
+
+	go c.retryJoinUntilSuccessOrTimeout()
+}
+
+func (c *Cluster) retryJoinUntilSuccessOrTimeout() {
+	logger := logging.GetLogger()
+	deadline := time.Now().Add(vipMembersMaxDuration)
+
+	defer func() {
+		c.joinRetryMu.Lock()
+		c.joinRetryActive = false
+		c.joinRetryMu.Unlock()
+	}()
+
+	for time.Now().Before(deadline) {
+		if len(c.memberlist.Members()) > 1 {
+			logger.Info("[MEMBERLIST] Join retry loop stopping: local memberlist already has %d members", len(c.memberlist.Members()))
+			return
+		}
+
+		joinAddrs, err := c.getJoinAddresses(c.appConfig.BindAddr)
+		if err != nil {
+			logger.Warn("[MEMBERLIST] Join retry: failed to resolve join addresses: %v", err)
+			time.Sleep(retryInterval)
+			continue
+		}
+
+		if len(joinAddrs) == 0 {
+			currentVIP := c.getCurrentVIP()
+			localMembers := c.memberlist.Members()
+			if !c.shouldRetryZeroSeedJoin(currentVIP, localMembers) {
+				logger.Warn("%s vip=%q self=%s elapsed=%v local_members=%s",
+					standaloneBootstrapAssumedLog,
+					currentVIP,
+					c.appConfig.BindAddr,
+					time.Since(c.createdAt).Round(time.Second),
+					formatMemberlistMembers(localMembers),
+				)
+				return
+			}
+
+			logger.Warn("[MEMBERLIST] Join retry: still no remote seeds for %s", c.appConfig.BindAddr)
+			time.Sleep(retryInterval)
+			continue
+		}
+
+		if _, err := c.memberlist.Join(joinAddrs); err != nil {
+			logger.Warn("[MEMBERLIST] Join retry with seeds=%v failed: %v", joinAddrs, err)
+			time.Sleep(retryInterval)
+			continue
+		}
+
+		logger.Info("[MEMBERLIST] Join retry succeeded with seeds=%v", joinAddrs)
+		return
+	}
+
+	logger.Error("[MEMBERLIST] Join retry loop timed out after %v for %s", vipMembersMaxDuration, c.appConfig.BindAddr)
 }
 
 // IsMember returns true if the address is a member of the memberlist
@@ -267,5 +390,35 @@ func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 		}
 	}
 
+	if len(filteredAddrs) == 0 && c.getCurrentVIP() != "" {
+		logging.GetLogger().Warn("[MEMBERLIST] getJoinAddresses filtered all VIP-derived seeds as self vip=%s self=%s live_addrs=%v",
+			c.getCurrentVIP(),
+			bindAddr,
+			joinAddrs,
+		)
+	}
+
 	return filteredAddrs, nil
+}
+
+func formatMemberlistMembers(members []*memberlist.Node) string {
+	if len(members) == 0 {
+		return "[]"
+	}
+
+	formatted := make([]string, 0, len(members))
+	for _, member := range members {
+		if member == nil {
+			formatted = append(formatted, "<nil>")
+			continue
+		}
+		formatted = append(formatted, fmt.Sprintf("%s(%s:%d,%s)",
+			member.Name,
+			member.Addr.String(),
+			member.Port,
+			GetStateString(member.State),
+		))
+	}
+
+	return fmt.Sprintf("[%s]", strings.Join(formatted, ", "))
 }

@@ -15,8 +15,8 @@ type ClusterInterface interface {
 	PostGenericToAdmin(endpoint string, localFn func() error) error
 	FetchGenericWithTargetDevice(deviceID string, endpointTemplate string, localFn func() ([]byte, error), remoteFn func(url string) ([]byte, error)) ([]byte, error)
 	DoGenericToTargetDevice(deviceID, endpointTemplate string, payload []byte, localFn func(payload []byte) error, remoteFn func(payload []byte, url string) error) error
-	GetAllDevicesInfo() []model.DeviceInfo
-	GetDeviceInfoLocal() model.DeviceInfo
+	GetAllDevicesInfo() []DeviceRecord
+	GetDeviceInfoLocal() *model.DeviceInfo
 	GetAllSwUpdateInfo() []*model.SwUpdateInfo
 	GetAllSoftwareUpdateList() []*model.SoftwareUpdateBundle
 

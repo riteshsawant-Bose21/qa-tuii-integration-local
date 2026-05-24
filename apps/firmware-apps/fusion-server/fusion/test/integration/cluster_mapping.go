@@ -23,7 +23,7 @@ type FusionCluster struct {
 type FusionNode struct {
 	MultipassName string
 	MultipassIPs  []string
-	Device        model.DeviceInfo
+	Device        *model.DeviceInfo
 }
 
 // NewTestCluster builds, resets, restarts and validates a cluster for tests.
@@ -189,6 +189,9 @@ func buildNodeMappings(ctx context.Context, env Env) ([]FusionNode, error) {
 
 	var mappings []FusionNode
 	for _, d := range devices {
+		if d == nil {
+			continue
+		}
 		instName := ipToInstance[d.Address]
 
 		mappings = append(mappings, FusionNode{
@@ -243,13 +246,14 @@ func (fc FusionCluster) Primary() (FusionNode, error) {
 	}
 
 	var primary *model.DeviceInfo
-	for i := range devices {
-		if devices[i].IsPrimary {
-			if primary != nil {
-				return FusionNode{}, fmt.Errorf("expected exactly one primary, found multiple")
-			}
-			primary = &devices[i]
+	for _, device := range devices {
+		if device == nil || !device.IsPrimary {
+			continue
 		}
+		if primary != nil {
+			return FusionNode{}, fmt.Errorf("expected exactly one primary, found multiple")
+		}
+		primary = device
 	}
 	if primary == nil {
 		return FusionNode{}, fmt.Errorf("expected exactly one primary, found none")

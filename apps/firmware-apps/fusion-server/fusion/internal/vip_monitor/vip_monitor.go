@@ -32,6 +32,8 @@ const (
 	reloadPhaseTimeout = 45 * time.Second
 	reloadPollInterval = 1 * time.Second
 	serverPrefix       = "fusion"
+	startupGuardPoll   = 1 * time.Second
+	startupGuardGrace  = 20 * time.Second
 )
 
 type masterPriorityMode string
@@ -251,6 +253,10 @@ type VIPMonitor struct {
 
 	selfHealMu     sync.Mutex
 	selfHealActive bool // true while a self-heal goroutine is in-flight
+
+	startupGuardMu       sync.Mutex
+	startupGuardActive   bool
+	startupGuardPriority int
 }
 
 // NewVIPMonitor creates a new VIP monitor instance
@@ -277,6 +283,132 @@ func parseMasterPriorityMode(modeValue string) (int, error) {
 	}
 
 	return priority, nil
+}
+
+func (m *VIPMonitor) followerOnlyModelName() string {
+	modelName := utils.GetModelName()
+	if utils.IsFollowerOnlyModel(modelName) {
+		return modelName
+	}
+	return ""
+}
+
+func (m *VIPMonitor) enforceFollowerOnlyPriority() {
+	modelName := m.followerOnlyModelName()
+	if modelName == "" {
+		return
+	}
+
+	currentPriority, err := m.GetKeepalivedPriority()
+	if err != nil {
+		logging.GetLogger().Warn("Follower-only model %s: unable to read keepalived priority: %v", modelName, err)
+		return
+	}
+
+	if currentPriority <= api.VIPvrrpLowPriority {
+		return
+	}
+
+	logging.GetLogger().Warn("Follower-only model %s detected with VRRP priority %d; forcing %d (%s)",
+		modelName, currentPriority, api.VIPvrrpLowPriority, api.VIPLowPriority)
+	if err := m.setMasterPriority(api.VIPvrrpLowPriority, api.VIPLowPriority); err != nil {
+		logging.GetLogger().Error("Follower-only model %s: failed to force low VRRP priority: %v", modelName, err)
+	}
+}
+
+func (m *VIPMonitor) startStartupConvergenceGuard() {
+	if m.isLocal || m.followerOnlyModelName() != "" {
+		return
+	}
+
+	currentPriority, err := m.GetKeepalivedPriority()
+	if err != nil {
+		logging.GetLogger().Warn("Startup convergence guard: unable to read keepalived priority: %v", err)
+		return
+	}
+	if currentPriority <= api.VIPvrrpLowPriority {
+		return
+	}
+
+	m.startupGuardMu.Lock()
+	if m.startupGuardActive {
+		m.startupGuardMu.Unlock()
+		return
+	}
+	m.startupGuardActive = true
+	m.startupGuardPriority = currentPriority
+	m.startupGuardMu.Unlock()
+
+	logging.GetLogger().Warn("Startup convergence guard: temporarily lowering VRRP priority from %d to %d until memberlist converges or %v elapses",
+		currentPriority, api.VIPvrrpLowPriority, startupGuardGrace)
+	if err := m.setMasterPriority(api.VIPvrrpLowPriority, api.VIPLowPriority); err != nil {
+		logging.GetLogger().Error("Startup convergence guard: failed to lower VRRP priority: %v", err)
+		m.finishStartupGuard(false)
+		return
+	}
+
+	go m.waitAndRestoreStartupPriority()
+}
+
+func (m *VIPMonitor) waitAndRestoreStartupPriority() {
+	ticker := time.NewTicker(startupGuardPoll)
+	defer ticker.Stop()
+	deadline := time.Now().Add(startupGuardGrace)
+
+	for {
+		if m.hasConvergedMemberlist() || time.Now().After(deadline) {
+			break
+		}
+
+		select {
+		case <-m.stopCh:
+			m.finishStartupGuard(false)
+			return
+		case <-ticker.C:
+		}
+	}
+
+	if err := m.restoreStartupPriority(); err != nil {
+		logging.GetLogger().Error("Startup convergence guard: failed to restore VRRP priority: %v", err)
+		m.finishStartupGuard(false)
+		return
+	}
+	m.finishStartupGuard(true)
+}
+
+func (m *VIPMonitor) hasConvergedMemberlist() bool {
+	aliveCount := 0
+	for _, member := range m.clusterInterface.MemberListMembers() {
+		if member != nil && member.State == hashicorpMemberlist.StateAlive {
+			aliveCount++
+		}
+	}
+	return aliveCount > 1
+}
+
+func (m *VIPMonitor) restoreStartupPriority() error {
+	m.startupGuardMu.Lock()
+	priority := m.startupGuardPriority
+	active := m.startupGuardActive
+	m.startupGuardMu.Unlock()
+
+	if !active || priority <= api.VIPvrrpLowPriority {
+		return nil
+	}
+
+	logging.GetLogger().Warn("Startup convergence guard: restoring VRRP priority to %d", priority)
+	return m.setMasterPriority(priority, api.VIPDefaultPriority)
+}
+
+func (m *VIPMonitor) finishStartupGuard(restored bool) {
+	m.startupGuardMu.Lock()
+	m.startupGuardActive = false
+	m.startupGuardPriority = 0
+	m.startupGuardMu.Unlock()
+
+	if restored {
+		logging.GetLogger().Info("Startup convergence guard: finished")
+	}
 }
 
 func (m *VIPMonitor) setMasterPriority(priority int, modeValue string) error {
@@ -361,6 +493,8 @@ func (m *VIPMonitor) Start() error {
 	// NOTE: In a case where the VIP is not set, the VRRP listener will still
 	// be started but the vip_watcher will only start when the vip is set
 	if !m.isLocal {
+		m.enforceFollowerOnlyPriority()
+		m.startStartupConvergenceGuard()
 		m.stopWg.Add(1)
 		go m.startVRRPListener()
 	}
@@ -1809,7 +1943,11 @@ func (m *VIPMonitor) HandleSetMasterPriorityLocal(w http.ResponseWriter, r *http
 		return
 	}
 
-	localID := m.clusterInterface.GetDeviceInfoLocal().Id
+	localInfo := m.clusterInterface.GetDeviceInfoLocal()
+	localID := ""
+	if localInfo != nil {
+		localID = localInfo.Id
+	}
 	if localID == "" || localID != deviceID {
 		http.Error(w, fmt.Sprintf("device %s not found on this node", deviceID), http.StatusNotFound)
 		return
@@ -1818,6 +1956,11 @@ func (m *VIPMonitor) HandleSetMasterPriorityLocal(w http.ResponseWriter, r *http
 	modeValue, err := utils.ExtractValue(r, "mode")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if modelName := m.followerOnlyModelName(); modelName != "" && modeValue != api.VIPLowPriority {
+		http.Error(w, fmt.Sprintf("model %s is follower-only and only supports %s priority", modelName, api.VIPLowPriority), http.StatusConflict)
 		return
 	}
 
@@ -1851,6 +1994,11 @@ func (m *VIPMonitor) HandleSetMasterPriority(w http.ResponseWriter, r *http.Requ
 	modeValue, err := utils.ExtractValue(r, "mode")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if modelName := m.followerOnlyModelName(); modelName != "" && modeValue != api.VIPLowPriority {
+		http.Error(w, fmt.Sprintf("model %s is follower-only and only supports %s priority", modelName, api.VIPLowPriority), http.StatusConflict)
 		return
 	}
 

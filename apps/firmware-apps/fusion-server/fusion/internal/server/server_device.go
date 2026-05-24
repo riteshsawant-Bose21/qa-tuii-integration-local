@@ -311,8 +311,8 @@ func (s *FusionServer) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 	response := &model.DeviceListResponse{
 		Devices: make([]*model.DeviceInfo, 0, len(info)),
 	}
-	for i := range info {
-		response.Devices = append(response.Devices, &info[i])
+	for _, deviceInfo := range info {
+		response.Devices = append(response.Devices, deviceInfo.ToProto())
 	}
 
 	if err := writeProtoJSON(w, response); err != nil {
@@ -327,7 +327,7 @@ func (s *FusionServer) GetDeviceInfoLocal(w http.ResponseWriter, r *http.Request
 
 	info := s.handler.HandleGetDeviceInfo()
 
-	if err := writeProtoJSON(w, &info); err != nil {
+	if err := writeProtoJSON(w, info); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding device info: %v", err), http.StatusInternalServerError)
 	}
 }
