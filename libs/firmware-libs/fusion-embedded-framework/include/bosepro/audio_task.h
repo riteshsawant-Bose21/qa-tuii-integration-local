@@ -53,6 +53,17 @@ public:
     void set_priority(int priority);
 
 
+    /// Enable non-realtime mode.  In this mode, tick() will block and wait
+    /// for the subtask to finish processing rather than dropping frames when
+    /// the subtask runs behind.  Use this for file-based (non-realtime) testing.
+    ///
+    /// @param  enabled  True to enable non-realtime (blocking) mode.
+    void set_non_realtime(bool enabled)
+    {
+        non_realtime = enabled;
+    }
+
+
     /// Increment the task tick count, indicating one frame at the base frame
     /// rate has passed.  This will wake the task according to its period.
     inline void tick()
@@ -62,8 +73,20 @@ public:
 
         if (ticks >= 2 * period)
         {
-            SPDLOG_WARN("Audio SubTask {} is running behind: {}, {}", task_id, ticks, period);
-            ticks = 1;
+            if (non_realtime)
+            {
+                // In non-realtime mode, block until the subtask finishes its
+                // current run instead of dropping the frame.
+                while (subtask_busy)
+                {
+                    pthread_cond_wait(&done_cond, &ticks_mutex);
+                }
+            }
+            else
+            {
+                SPDLOG_WARN("Audio SubTask {} is running behind: {}, {}", task_id, ticks, period);
+                ticks = 1;
+            }
         }
 
         if (ticks >= period)
@@ -88,12 +111,15 @@ private:
     pthread_t thread;
     pthread_mutex_t ticks_mutex;
     pthread_cond_t ticks_cond;
+    pthread_cond_t done_cond;
     void (*run_function)(void *);
     void *obj;
     int_fast32_t sample_rate;
     int_fast32_t frame_size;
     int_fast32_t period;
     int_fast32_t ticks;
+    bool non_realtime = false;
+    bool subtask_busy = false;
     Profile profile;
 };
 

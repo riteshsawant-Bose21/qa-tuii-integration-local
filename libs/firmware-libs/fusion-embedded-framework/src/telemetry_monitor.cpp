@@ -302,6 +302,15 @@ void TelemetryMonitor::unregister_block(const std::string &block_name)
 
 bool TelemetryMonitor::has_telemetry(const std::string &qualified_name)
 {
+    if (telemetry_alias_map.count(qualified_name) != 0)
+    {
+        const std::string &aliased_name = telemetry_alias_map[qualified_name];
+        if (meters.count(aliased_name) != 0 || events.count(aliased_name) != 0)
+        {
+            return true;
+        }
+    }
+
     if (meters.count(qualified_name) == 0)
     {
         if (events.count(qualified_name) == 0)
@@ -316,6 +325,15 @@ bool TelemetryMonitor::has_telemetry(const std::string &qualified_name)
 
 bool TelemetryMonitor::has_meter(const std::string &qualified_name)
 {
+    if (telemetry_alias_map.count(qualified_name) != 0)
+    {
+        const std::string &aliased_name = telemetry_alias_map[qualified_name];
+        if (meters.count(aliased_name) != 0)
+        {
+            return true;
+        }
+    }
+
     if (meters.count(qualified_name) == 0)
     {
         return false;
@@ -338,6 +356,19 @@ bool TelemetryMonitor::has_event(const std::string &qualified_name)
 
 Telemetry &TelemetryMonitor::get_telemetry(const std::string &qualified_name)
 {
+    if (telemetry_alias_map.count(qualified_name) != 0)
+    {
+        const std::string &aliased_name = telemetry_alias_map[qualified_name];
+        if (meters.count(aliased_name) != 0)
+        {
+            return *meters[aliased_name];
+        }
+        if (events.count(aliased_name) != 0)
+        {
+            return *events[aliased_name];
+        }
+    }
+
     if (meters.count(qualified_name) == 0)
     {
         if (events.count(qualified_name) == 0)
@@ -353,6 +384,15 @@ Telemetry &TelemetryMonitor::get_telemetry(const std::string &qualified_name)
 
 Telemetry &TelemetryMonitor::get_meter(const std::string &qualified_name)
 {
+    if (telemetry_alias_map.count(qualified_name) != 0)
+    {
+        const std::string &aliased_name = telemetry_alias_map[qualified_name];
+        if (meters.count(aliased_name) != 0)
+        {
+            return *meters[aliased_name];
+        }
+    }
+
     if (meters.count(qualified_name) == 0)
     {
         SPDLOG_CRITICAL("Unknown meter '{}'", qualified_name);
