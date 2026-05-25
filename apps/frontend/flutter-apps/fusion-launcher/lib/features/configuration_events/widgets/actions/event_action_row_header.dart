@@ -116,19 +116,24 @@ class EventActionRowHeader extends StatelessWidget {
                       bottom: 20,
                       right: responsivePadding,
                     ),
-                    child: CupertinoSlidingSegmentedControl<bool>(
-                      children: sliderChildren,
-                      groupValue: groupValue,
-                      onValueChanged: (bool? value) {
-                        if (value == null) return;
-                        final EventStates newSelected = value ? left : right;
-                        // Route through ConfigEventsViewmodel so the events state
-                        // always emits a fresh object → EventActionRowData rebuilds.
-                        configEventsViewmodel.updateEventSelectedState(
-                          eventId: selectedEventId,
-                          selectedState: newSelected,
-                        );
-                      },
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, 'event_state_selector'),
+                      label: 'Event state selector',
+                      value: groupValue ? left.name : right.name,
+                      child: CupertinoSlidingSegmentedControl<bool>(
+                        children: sliderChildren,
+                        groupValue: groupValue,
+                        onValueChanged: (bool? value) {
+                          if (value == null) return;
+                          final EventStates newSelected = value ? left : right;
+                          // Route through ConfigEventsViewmodel so the events state
+                          // always emits a fresh object → EventActionRowData rebuilds.
+                          configEventsViewmodel.updateEventSelectedState(
+                            eventId: selectedEventId,
+                            selectedState: newSelected,
+                          );
+                        },
+                      ),
                     ),
                   );
                 },
