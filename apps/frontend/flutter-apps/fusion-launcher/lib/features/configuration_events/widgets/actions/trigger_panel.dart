@@ -183,22 +183,25 @@ class TriggerPanel extends StatelessWidget {
                               ),
                             ),
                           )
-                          : ReorderableListView.builder(
-                            buildDefaultDragHandles: false,
-                            physics: const ClampingScrollPhysics(),
-                            itemCount: eventActionsList.length,
-                            onReorder: (int oldIndex, int newIndex) {
-                              actionsCubit.reorderActions(oldIndex, newIndex);
-                            },
-                            itemBuilder: (BuildContext context, int index) {
-                              final SceneActionModel action = eventActionsList[index];
-                              return EventActionRowData(
-                                key: ValueKey<String>(action.id),
-                                action: action,
-                                eventId: selectedEventId,
-                                index: index,
-                              );
-                            },
+                          : SemanticHelper.container(
+                            testId: SemanticHelper.createTestId(SemanticTypes.container, 'action_list_data_panel'),
+                            child: ReorderableListView.builder(
+                              buildDefaultDragHandles: false,
+                              physics: const ClampingScrollPhysics(),
+                              itemCount: eventActionsList.length,
+                              onReorder: (int oldIndex, int newIndex) {
+                                actionsCubit.reorderActions(oldIndex, newIndex);
+                              },
+                              itemBuilder: (BuildContext context, int index) {
+                                final SceneActionModel action = eventActionsList[index];
+                                return EventActionRowData(
+                                  key: ValueKey<String>(action.id),
+                                  action: action,
+                                  eventId: selectedEventId,
+                                  index: index,
+                                );
+                              },
+                            ),
                           ),
                 ),
               ],
