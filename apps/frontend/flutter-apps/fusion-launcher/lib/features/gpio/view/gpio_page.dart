@@ -211,6 +211,7 @@ class GpioPage extends StatelessWidget {
                                       ),
                                       SemanticHelper.radioGroup(
                                         testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_direction_radiogroup_$index"),
+                                        value: gpio.direction.name,
                                         child: RadioGroup<GpioDirection>(
                                           groupValue: gpio.direction,
                                           onChanged: (GpioDirection? value) {

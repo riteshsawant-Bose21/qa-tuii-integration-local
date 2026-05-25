@@ -79,8 +79,8 @@ class _EventActionRowContent extends StatelessWidget {
     final List<SceneParam> paramList = _getParamList(cubit);
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
 
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.eventactionrowdata}$index"),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.eventactionrowdata}_$index"),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(

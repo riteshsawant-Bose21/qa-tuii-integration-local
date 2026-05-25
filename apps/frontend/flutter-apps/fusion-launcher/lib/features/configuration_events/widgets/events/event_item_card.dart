@@ -48,8 +48,8 @@ class _EventItemCardState extends State<EventItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_item_card_${widget.index}"),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "event_item_card_${widget.index}"),
       child: GestureDetector(
         onTap: widget.onTap,
         child: MouseRegion(
@@ -83,7 +83,7 @@ class _EventItemCardState extends State<EventItemCard> {
                   child: Opacity(
                     opacity: 0.4,
                     child: FusionIcon.icon(
-                      semanticId: "${FusionTestKeys.instance.events_itm_card_drag_icon}_${widget.index}",
+                      semanticId: FusionTestKeys.instance.events_itm_card_drag_icon,
                       Icons.drag_indicator,
                       size: 16,
                       color: context.colorScheme.textPlaceholder,
@@ -121,7 +121,7 @@ class _EventItemCardState extends State<EventItemCard> {
                                     )
                                     : FusionImageAuto(
                                       path: Assets.playIcon,
-                                      semanticId: "${FusionTestKeys.instance.events_itm_card_play_icon}_${widget.index}",
+                                      semanticId: FusionTestKeys.instance.events_itm_card_play_icon,
                                       width: 24,
                                       height: 24,
                                       color: widget.isInControlMode ? context.colorScheme.iconWhite : context.colorScheme.iconWhite.withAlpha(80),
@@ -159,6 +159,7 @@ class _EventItemCardState extends State<EventItemCard> {
                     child: Opacity(
                       opacity: widget.isInControlMode ? 1.0 : 0.4,
                       child: FusionSwitch(
+                        semanticId: "event_enable_disable",
                         height: 22,
                         width: 36,
                         value: widget.eventData.isEnabled,
@@ -181,6 +182,7 @@ class _EventItemCardState extends State<EventItemCard> {
                         context: context,
                         builder:
                             (_) => FusionDialog(
+                              semanticId: FusionTestKeys.instance.eventsdeletedialog,
                               title: 'Delete Event?',
                               description: "This will remove '${widget.eventData.name}' from the Event list.",
                               primaryButtonLabel: 'Delete',
@@ -199,7 +201,7 @@ class _EventItemCardState extends State<EventItemCard> {
                     },
                     child: FusionImageAuto(
                       path: Assets.deleteIcon,
-                      semanticId: "${FusionTestKeys.instance.deletevent}_${widget.index}",
+                      semanticId: FusionTestKeys.instance.deletevent,
                       width: 17,
                       height: 17,
                       color: context.colorScheme.iconWhite,
