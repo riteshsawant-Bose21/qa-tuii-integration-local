@@ -1,5 +1,4 @@
 import 'package:fusion_lib/models/fusion_models.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../fusion_utils/fusion_utilities.dart';
 
@@ -7,22 +6,26 @@ class FloorModel {
   final String id;
   final String name;
   FloorPlanModel floorPlan;
+  final bool? skipFloorPlan;
 
   FloorModel({
     String? id,
     required this.name,
     required this.floorPlan,
+    this.skipFloorPlan,
   }) : id = id ?? "FLOOR${FusionUtils.shortStringUUID()}";
 
   FloorModel copyWith({
     String? id,
     String? name,
     FloorPlanModel? floorPlan,
+    bool? skipFloorPlan,
   }) {
     return FloorModel(
       id: id ?? this.id,
       name: name ?? this.name,
       floorPlan: floorPlan ?? this.floorPlan,
+      skipFloorPlan: skipFloorPlan ?? this.skipFloorPlan,
     );
   }
 
@@ -30,6 +33,7 @@ class FloorModel {
     'id': id,
     'name': name,
     'floorPlan': floorPlan.toJson(),
+    'skipFloorPlan': skipFloorPlan,
   };
 
   factory FloorModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +44,7 @@ class FloorModel {
       id: json['id'] as String?,
       name: json['name'] as String,
       floorPlan: fp,
+      skipFloorPlan: json['skipFloorPlan'] as bool?,
     );
   }
 }

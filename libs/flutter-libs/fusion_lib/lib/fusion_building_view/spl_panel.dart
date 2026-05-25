@@ -821,6 +821,7 @@ class SplPanelData {
   final SplBandwidth bandwidth;
   final SplResolution resolution;
   final SplRelativeRange? relativeRange;
+  final bool autoCalculate;
 
   final bool splAutoScale;
   final bool splInvertColor;
@@ -839,6 +840,7 @@ class SplPanelData {
     this.splUpperDb = 63,
     this.splLowerDb = 36,
     this.relative = false,
+    this.autoCalculate = true,
   });
 
   SplPanelData copyWith({
@@ -852,6 +854,8 @@ class SplPanelData {
     double? splUpperDb,
     double? splLowerDb,
     bool? relativeDb,
+    bool? autoCalculate,
+
   }) {
     return SplPanelData(
       weighting: weighting ?? this.weighting,
@@ -864,6 +868,7 @@ class SplPanelData {
       splUpperDb: splUpperDb ?? this.splUpperDb,
       splLowerDb: splLowerDb ?? this.splLowerDb,
       relative: relativeDb ?? relative,
+      autoCalculate: autoCalculate ?? this.autoCalculate,
     );
   }
 
