@@ -154,7 +154,7 @@ class _SourceMatrixControlsPanelState extends State<SourceMatrixControlsPanel> {
                                     ),
                                     FusionNeumorphicButton(
                                       semanticId: 'mute_unmute',
-                                      selected: matrixSetting.isSelected,
+                                      selected: !matrixSetting.inputMute,
                                       onTap: () {
                                         _matrixMixerViewModel.updateInputMute(
                                           function: widget.zoneFunctions,

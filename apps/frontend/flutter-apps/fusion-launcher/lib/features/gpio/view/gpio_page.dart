@@ -212,6 +212,7 @@ class GpioPage extends StatelessWidget {
                                       ),
                                       SemanticHelper.radioGroup(
                                         testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_direction_radiogroup_$index"),
+                                        value: gpio.direction.name,
                                         child: RadioGroup<GpioDirection>(
                                           groupValue: gpio.direction,
                                           onChanged: (GpioDirection? value) {
@@ -225,18 +226,23 @@ class GpioPage extends StatelessWidget {
                                                 return SemanticHelper.radio(
                                                   testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_${direction.name.toLowerCase()}_$index"),
                                                   value: direction == gpio.direction,
-                                                  child: Row(
-                                                    children: <Widget>[
-                                                      Radio<GpioDirection>(
-                                                        value: direction,
-                                                        activeColor: context.colorScheme.iconDefault,
-                                                      ),
-                                                      FusionAppText(
-                                                        text: direction.name.toUpperCase(),
-                                                        semanticId: 'gpio_direction_text',
-                                                        style: context.textTheme.bodySmall!,
-                                                      ),
-                                                    ],
+                                                  child: GestureDetector(
+                                                    onTap: () {
+                                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(direction: direction));
+                                                    },
+                                                    child: Row(
+                                                      children: <Widget>[
+                                                        Radio<GpioDirection>(
+                                                          value: direction,
+                                                          activeColor: context.colorScheme.iconDefault,
+                                                        ),
+                                                        FusionAppText(
+                                                          text: direction.name.toUpperCase(),
+                                                          semanticId: 'gpio_direction_text',
+                                                          style: context.textTheme.bodySmall!,
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 );
                                               }),

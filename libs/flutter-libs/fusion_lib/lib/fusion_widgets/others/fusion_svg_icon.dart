@@ -132,11 +132,17 @@ class FusionIcon extends StatelessWidget {
     }
     // Material Icon
     else if (icon != null) {
-      iconWidget = Icon(
-        icon,
-        size: size,
-        color: color,
-        semanticLabel: semanticsLabel,
+      iconWidget = SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          semanticsLabel,
+        ),
+        child: Icon(
+          icon,
+          size: size,
+          color: color,
+          semanticLabel: semanticsLabel,
+        ),
       );
     }
     // Fallback

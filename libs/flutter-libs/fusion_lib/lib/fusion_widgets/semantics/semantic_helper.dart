@@ -126,11 +126,13 @@ class SemanticHelper {
     required String testId,
     required Widget child,
     String? label,
+    String? value,
   }) {
     return Semantics(
       container: true,
       identifier: testId,
       label: label,
+      value: value,
       child: child,
     );
   }
