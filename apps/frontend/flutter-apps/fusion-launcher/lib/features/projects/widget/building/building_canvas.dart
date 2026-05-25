@@ -26,6 +26,7 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
 import '../../../fusion_canvas/state/fusion_tool_state.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
+import '../../../fusion_canvas/view/painters/elements/derived/floor_text_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_painter/floor_plan_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
@@ -131,12 +132,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                 if (buildingPageViewModel.state.selectedListeningAreaId != null) buildingPageViewModel.state.selectedListeningAreaId!,
                                 if (buildingPageViewModel.state.selectedSpeakerId != null) buildingPageViewModel.state.selectedSpeakerId!,
                                 if (buildingPageViewModel.state.selectedWallId != null) buildingPageViewModel.state.selectedWallId!,
+                                if (buildingPageViewModel.state.selectedTextId != null) buildingPageViewModel.state.selectedTextId!,
                                 if (buildingPageViewModel.state.selectedCircuitId != null) //buildingPageViewModel.state.selectedCircuitId!,
                                   ...serviceLocator<ProjectViewModel>()
-                                          .getHardwareForCircuit(circuitId: buildingPageViewModel.state.selectedCircuitId!)
-                                          .map((HardwareComponent e) => e.id)
-                                          .toList() ??
-                                      <String>[],
+                                      .getHardwareForCircuit(circuitId: buildingPageViewModel.state.selectedCircuitId!)
+                                      .map((HardwareComponent e) => e.id),
                               };
                               final SplState splState = context.watch<SplViewModel>().state;
                               return FusionCanvas(
@@ -195,6 +195,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
 
                                   ...listeningAreaPainters,
                                   for (final Wall wall in serviceLocator<ProjectViewModel>().getWallsForFloor(floorId: floor.id)) WallPainter(wall: wall),
+                                  // for (final FloorText floorText in serviceLocator<ProjectViewModel>().getTextsForFloor(floorId: floor.id))
+                                  //   FloorTextPainter(floorText: floorText),
                                   for (final HardwareComponent hw in hardwareInFloorWithPosition)
                                     if (hw is Speaker)
                                       HardwareComponentPainter(hardware: hw, canMove: isAcousticsMode)
@@ -210,8 +212,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                       context.read<BuildingPageViewModel>().selectHardware(value.hardware);
                                     } else if (value is WallPainter) {
                                       context.read<BuildingPageViewModel>().selectWall(value.wall.id);
+                                    } else if (value is FloorTextPainter) {
+                                      context.read<BuildingPageViewModel>().selectText(value.floorText.id);
                                     } else if (value == null) {
                                       projectViewModel.deselectAll();
+                                      context.read<BuildingPageViewModel>().clearCanvasEntitySelection();
                                     }
                                   },
                                   onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
@@ -255,6 +260,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                         ),
                                       );
                                       calculateSpl(context);
+                                    } else if (painter is FloorTextPainter) {
+                                      serviceLocator<ProjectViewModel>().updateText(
+                                        floorText: painter.floorText.copyWith(
+                                          position: painter.floorText.position.copyWith(position: painter.floorText.position.position + offset),
+                                        ),
+                                      );
                                     }
                                   },
                                   onDeleteLayer: (FusionBasePainter painter) {
@@ -264,6 +275,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                       serviceLocator<ProjectViewModel>().removeHardware(hardwareId: painter.hardware.id);
                                     } else if (painter is WallPainter) {
                                       serviceLocator<ProjectViewModel>().removeWall(wallId: painter.wall.id);
+                                    } else if (painter is FloorTextPainter) {
+                                      serviceLocator<ProjectViewModel>().removeText(textId: painter.floorText.id);
                                     }
                                     calculateSpl(context);
                                   },
@@ -335,6 +348,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                   inputEvents: FusionCanvasInputEvents(
                                     onMouseUp: (FusionCanvasInputTapUpState event) {
                                       final BuildingPageViewModel buildingPageViewModel = context.read<BuildingPageViewModel>();
+                                      if (buildingPageViewModel.state.toolState is DrawingTextState && event.gestureOrigin == FusionGestureOrigin.click) {
+                                        final int textCount = serviceLocator<ProjectViewModel>().getTextsForFloor(floorId: floor.id).length;
+                                        serviceLocator<ProjectViewModel>().addText(
+                                          floorText: FloorText(
+                                            text: 'Text ${textCount + 1}',
+                                            position: FusionCanvasPoint(position: event.tapPosition),
+                                          ),
+                                          floorId: floor.id,
+                                        );
+                                        return true;
+                                      }
                                       if (!buildingPageViewModel.canPlaceSpeakerOnMouseUp(event)) {
                                         return false;
                                       }
@@ -394,8 +418,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                       if (value.last == value.first) {
                                         value.removeLast();
                                       }
-                                      final BuildingPageToolState state = context.read<BuildingPageViewModel>().state.toolState;
-
                                       final String? listeningAreaId = null;
                                       // state
                                       //     .listeningAreaId; // if we are already in drawing mode, we should update the existing listening area instead of creating a new one

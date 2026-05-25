@@ -58,6 +58,22 @@ class BuildingPageState {
     return null;
   }
 
+  String? get selectedTextId {
+    if (toolState case TextSelectToolState(:final String? selectedTextId)) {
+      return selectedTextId;
+    }
+    if (toolState case SelectToolState(:final String? selectedTextId)) {
+      return selectedTextId;
+    }
+    if (toolState case SplSelectToolState(:final String? selectedTextId)) {
+      return selectedTextId;
+    }
+    if (toolState case SystemSelectToolState(:final String? selectedTextId)) {
+      return selectedTextId;
+    }
+    return null;
+  }
+
   String? get selectedCircuitId {
     if (toolState case SelectToolState(:final String? selectedCircuitId)) {
       return selectedCircuitId;
@@ -80,12 +96,15 @@ class BuildingPageState {
     bool clearSelectedSpeakerId = false,
     bool clearSelectedWallId = false,
     String? selectedWallId,
+    bool clearSelectedTextId = false,
+    String? selectedTextId,
     bool clearSelectedCircuitId = false,
     String? selectedCircuitId,
   }) {
     final String? nextListeningAreaId = clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId;
     final String? nextSpeakerId = clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId;
     final String? nextWallId = clearSelectedWallId ? null : selectedWallId ?? this.selectedWallId;
+    final String? nextTextId = clearSelectedTextId ? null : selectedTextId ?? this.selectedTextId;
     final String? nextCircuitId = clearSelectedCircuitId ? null : selectedCircuitId ?? this.selectedCircuitId;
 
     final BuildingPageToolState nextToolState = _copyToolStateWithSelection(
@@ -96,6 +115,8 @@ class BuildingPageState {
       clearSelectedSpeakerId: clearSelectedSpeakerId,
       selectedWallId: nextWallId,
       clearSelectedWallId: clearSelectedWallId,
+      selectedTextId: nextTextId,
+      clearSelectedTextId: clearSelectedTextId,
       selectedCircuitId: nextCircuitId,
       clearSelectedCircuitId: clearSelectedCircuitId,
     );
@@ -111,10 +132,12 @@ class BuildingPageState {
     required String? selectedListeningAreaId,
     required String? selectedSpeakerId,
     required String? selectedWallId,
+    required String? selectedTextId,
     required String? selectedCircuitId,
     required bool clearSelectedListeningAreaId,
     required bool clearSelectedSpeakerId,
     required bool clearSelectedWallId,
+    required bool clearSelectedTextId,
     required bool clearSelectedCircuitId,
   }) {
     if (value case final SelectToolState tool) {
@@ -124,6 +147,8 @@ class BuildingPageState {
         selectedCircuitId: selectedCircuitId,
         clearSelectedListeningAreaId: clearSelectedListeningAreaId,
         clearSelectedSpeakerId: clearSelectedSpeakerId,
+        selectedTextId: selectedTextId,
+        clearSelectedTextId: clearSelectedTextId,
         clearSelectedWallId: clearSelectedWallId,
         clearSelectedCircuitId: clearSelectedCircuitId,
       );
@@ -144,14 +169,24 @@ class BuildingPageState {
     }
     if (value case final SplSelectToolState tool) {
       return tool.copyWith(
+        selectedTextId: selectedTextId,
         selectedCircuitId: selectedCircuitId,
+        clearSelectedTextId: clearSelectedTextId,
         clearSelectedCircuitId: clearSelectedCircuitId,
       );
     }
     if (value case final SystemSelectToolState tool) {
       return tool.copyWith(
+        selectedTextId: selectedTextId,
         selectedCircuitId: selectedCircuitId,
+        clearSelectedTextId: clearSelectedTextId,
         clearSelectedCircuitId: clearSelectedCircuitId,
+      );
+    }
+    if (value case final TextSelectToolState tool) {
+      return tool.copyWith(
+        selectedTextId: selectedTextId,
+        clearSelectedTextId: clearSelectedTextId,
       );
     }
     return value;
@@ -166,11 +201,12 @@ class BuildingPageState {
         other.selectedListeningAreaId == selectedListeningAreaId &&
         other.selectedSpeakerId == selectedSpeakerId &&
         other.selectedWallId == selectedWallId &&
+        other.selectedTextId == selectedTextId &&
         other.selectedCircuitId == selectedCircuitId;
   }
 
   @override
-  int get hashCode => Object.hash(toolbarMode, toolState, selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedCircuitId);
+  int get hashCode => Object.hash(toolbarMode, toolState, selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedTextId, selectedCircuitId);
 
   static BuildingPageState defaultAcousticsState() {
     return BuildingPageState(
@@ -201,24 +237,28 @@ class SplSelectToolState extends SplToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
   final String? selectedWallId;
+  final String? selectedTextId;
   final String? selectedCircuitId;
 
-  SplSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedCircuitId});
+  SplSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedTextId, this.selectedCircuitId});
 
   SplSelectToolState copyWith({
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
     String? selectedWallId,
+    String? selectedTextId,
     String? selectedCircuitId,
     bool clearSelectedListeningAreaId = false,
     bool clearSelectedSpeakerId = false,
     bool clearSelectedWallId = false,
+    bool clearSelectedTextId = false,
     bool clearSelectedCircuitId = false,
   }) {
     return SplSelectToolState(
       selectedListeningAreaId: clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId,
       selectedSpeakerId: clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId,
       selectedWallId: clearSelectedWallId ? null : selectedWallId ?? this.selectedWallId,
+      selectedTextId: clearSelectedTextId ? null : selectedTextId ?? this.selectedTextId,
       selectedCircuitId: clearSelectedCircuitId ? null : selectedCircuitId ?? this.selectedCircuitId,
     );
   }
@@ -230,11 +270,12 @@ class SplSelectToolState extends SplToolState {
         other.selectedListeningAreaId == selectedListeningAreaId &&
         other.selectedSpeakerId == selectedSpeakerId &&
         other.selectedWallId == selectedWallId &&
+        other.selectedTextId == selectedTextId &&
         other.selectedCircuitId == selectedCircuitId;
   }
 
   @override
-  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedCircuitId);
+  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedTextId, selectedCircuitId);
 }
 
 abstract class ListeningAreaToolState extends BuildingPageToolState {}
@@ -275,24 +316,28 @@ class SelectToolState extends ListeningAreaToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
   final String? selectedWallId;
+  final String? selectedTextId;
   final String? selectedCircuitId;
 
-  SelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedCircuitId});
+  SelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedTextId, this.selectedCircuitId});
 
   SelectToolState copyWith({
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
     String? selectedWallId,
+    String? selectedTextId,
     String? selectedCircuitId,
     bool clearSelectedListeningAreaId = false,
     bool clearSelectedSpeakerId = false,
     bool clearSelectedWallId = false,
+    bool clearSelectedTextId = false,
     bool clearSelectedCircuitId = false,
   }) {
     return SelectToolState(
       selectedListeningAreaId: clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId,
       selectedSpeakerId: clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId,
       selectedWallId: clearSelectedWallId ? null : selectedWallId ?? this.selectedWallId,
+      selectedTextId: clearSelectedTextId ? null : selectedTextId ?? this.selectedTextId,
       selectedCircuitId: clearSelectedCircuitId ? null : selectedCircuitId ?? this.selectedCircuitId,
     );
   }
@@ -304,11 +349,12 @@ class SelectToolState extends ListeningAreaToolState {
         other.selectedListeningAreaId == selectedListeningAreaId &&
         other.selectedSpeakerId == selectedSpeakerId &&
         other.selectedWallId == selectedWallId &&
+        other.selectedTextId == selectedTextId &&
         other.selectedCircuitId == selectedCircuitId;
   }
 
   @override
-  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedCircuitId);
+  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedTextId, selectedCircuitId);
 }
 
 class SpeakerPlacementState extends ListeningAreaToolState {
@@ -340,6 +386,43 @@ class SpeakerPlacementState extends ListeningAreaToolState {
 }
 
 abstract class WallToolState extends BuildingPageToolState {}
+
+abstract class TextToolState extends BuildingPageToolState {}
+
+class DrawingTextState extends TextToolState {
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+    return other is DrawingTextState;
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+class TextSelectToolState extends TextToolState {
+  final String? selectedTextId;
+
+  TextSelectToolState({this.selectedTextId});
+
+  TextSelectToolState copyWith({
+    String? selectedTextId,
+    bool clearSelectedTextId = false,
+  }) {
+    return TextSelectToolState(
+      selectedTextId: clearSelectedTextId ? null : selectedTextId ?? this.selectedTextId,
+    );
+  }
+
+  @override
+  bool operator ==(covariant BuildingPageToolState other) {
+    if (identical(this, other)) return true;
+    return other is TextSelectToolState && other.selectedTextId == selectedTextId;
+  }
+
+  @override
+  int get hashCode => selectedTextId.hashCode;
+}
 
 class DrawingWallState extends WallToolState {
   final String? wallId;
@@ -385,24 +468,28 @@ class SystemSelectToolState extends SystemToolState {
   final String? selectedListeningAreaId;
   final String? selectedSpeakerId;
   final String? selectedWallId;
+  final String? selectedTextId;
   final String? selectedCircuitId;
 
-  SystemSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedCircuitId});
+  SystemSelectToolState({this.selectedListeningAreaId, this.selectedSpeakerId, this.selectedWallId, this.selectedTextId, this.selectedCircuitId});
 
   SystemSelectToolState copyWith({
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
     String? selectedWallId,
+    String? selectedTextId,
     String? selectedCircuitId,
     bool clearSelectedListeningAreaId = false,
     bool clearSelectedSpeakerId = false,
     bool clearSelectedWallId = false,
+    bool clearSelectedTextId = false,
     bool clearSelectedCircuitId = false,
   }) {
     return SystemSelectToolState(
       selectedListeningAreaId: clearSelectedListeningAreaId ? null : selectedListeningAreaId ?? this.selectedListeningAreaId,
       selectedSpeakerId: clearSelectedSpeakerId ? null : selectedSpeakerId ?? this.selectedSpeakerId,
       selectedWallId: clearSelectedWallId ? null : selectedWallId ?? this.selectedWallId,
+      selectedTextId: clearSelectedTextId ? null : selectedTextId ?? this.selectedTextId,
       selectedCircuitId: clearSelectedCircuitId ? null : selectedCircuitId ?? this.selectedCircuitId,
     );
   }
@@ -414,9 +501,10 @@ class SystemSelectToolState extends SystemToolState {
         other.selectedListeningAreaId == selectedListeningAreaId &&
         other.selectedSpeakerId == selectedSpeakerId &&
         other.selectedWallId == selectedWallId &&
+        other.selectedTextId == selectedTextId &&
         other.selectedCircuitId == selectedCircuitId;
   }
 
   @override
-  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedCircuitId);
+  int get hashCode => Object.hash(selectedListeningAreaId, selectedSpeakerId, selectedWallId, selectedTextId, selectedCircuitId);
 }
