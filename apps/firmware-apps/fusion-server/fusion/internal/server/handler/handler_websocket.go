@@ -285,16 +285,20 @@ func (h *Handler) handleUnsubscribeMeterData(request *model.WebSocketRequest, co
 	return createSuccessResponse(&request.Id, api.WSMsgTypeUnsubscribeMeterData, api.WSCodeOK, "Unsubscribed from meter data", nil), nil
 }
 
-func (h *Handler) getDevicesList() ([]model.DeviceInfo, error) {
+func (h *Handler) getDevicesList() ([]*model.DeviceInfo, error) {
 	devicesInfo := h.clusterTransport.GetAllDevicesInfo()
-	return devicesInfo, nil
+	devices := make([]*model.DeviceInfo, 0, len(devicesInfo))
+	for _, deviceInfo := range devicesInfo {
+		devices = append(devices, deviceInfo.ToProto())
+	}
+	return devices, nil
 }
 
 func (h *Handler) getDeviceByID(deviceID string) (*model.DeviceInfo, error) {
 	allDevices := h.clusterTransport.GetAllDevicesInfo()
-	for i := range allDevices {
-		if allDevices[i].Id == deviceID {
-			return &allDevices[i], nil
+	for _, deviceInfo := range allDevices {
+		if deviceInfo.Id == deviceID {
+			return deviceInfo.ToProto(), nil
 		}
 	}
 	return nil, fmt.Errorf("device not found")

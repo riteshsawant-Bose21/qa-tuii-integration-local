@@ -303,7 +303,7 @@ function test_file_for_type() {
         version)                echo "version_test.go" ;;
         vip-api)                echo "vip_endpoints_test.go" ;;
         vip-bootstrap)          echo "bootstrap_vip_test.go" ;;
-        vip-convergence)        echo "setup_vip_test.go" ;;
+        vip-convergence)        echo "setup_vip_test.go, vip_before_memberlist_test.go" ;;
         websocket)              echo "websocket_test.go" ;;
         integration)            echo "integration tests" ;;
         all)    
@@ -658,7 +658,7 @@ function run_named_test_type() {
 
         vip-api)      print_group_header "vip-api"; run_package_tests "$(regex_for_test_file ./vip_endpoints_test.go)" || status=$? ;;
         vip-bootstrap)   print_group_header "vip-bootstrap"; run_package_tests "$(regex_for_test_file ./bootstrap_vip_test.go)" || status=$? ;;
-        vip-convergence) print_group_header "vip-convergence"; run_package_tests "$(regex_for_test_file ./setup_vip_test.go)" || status=$? ;;
+        vip-convergence) print_group_header "vip-convergence"; run_package_tests "$(regex_for_test_file ./setup_vip_test.go)|$(regex_for_test_file ./vip_before_memberlist_test.go)" || status=$? ;;
         udp-chaos)
             print_group_header "udp-chaos"
             export FUSION_UDP_CHAOS_TEST=1

@@ -28,6 +28,17 @@ func GetModelName() string {
 	return name
 }
 
+// IsFollowerOnlyModel returns true for endpoint-style hardware that should not
+// compete to become the VRRP master in mixed-device deployments.
+func IsFollowerOnlyModel(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case api.ModelBluePal, api.ModelXLRPal:
+		return true
+	default:
+		return false
+	}
+}
+
 func GetSoftwareUpdateVersion() string {
 	data, err := os.ReadFile(api.SoftwareUpdateInfoPath)
 	if err != nil {

@@ -100,6 +100,13 @@ AudioSubtask::AudioSubtask(void (*run_function)(void *), void *obj,
         SPDLOG_CRITICAL("pthread_cond_init() failed: {}", strerror(err));
     }
 
+    err = pthread_cond_init(&done_cond, NULL);
+
+    if (err != 0)
+    {
+        SPDLOG_CRITICAL("pthread_cond_init() (done_cond) failed: {}", strerror(err));
+    }
+
     err = pthread_create(&thread, NULL, run, this);
 
     if (err != 0)
@@ -175,10 +182,22 @@ void *AudioSubtask::run(void *p_task)
             pthread_cond_wait(&task->ticks_cond, &task->ticks_mutex);
         }
         task->ticks -= task->period;
+        bool non_realtime = task->non_realtime;
+        if (non_realtime)
+        {
+            task->subtask_busy = true;
+        }
         pthread_mutex_unlock(&task->ticks_mutex);
         task->profile.start();
         task->run_function(task->obj);
         task->profile.finish();
+        if (non_realtime)
+        {
+            pthread_mutex_lock(&task->ticks_mutex);
+            task->subtask_busy = false;
+            pthread_cond_signal(&task->done_cond);
+            pthread_mutex_unlock(&task->ticks_mutex);
+        }
     }
 }
 
