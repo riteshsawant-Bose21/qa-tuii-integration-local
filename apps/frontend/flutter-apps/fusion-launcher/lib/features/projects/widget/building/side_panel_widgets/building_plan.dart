@@ -289,6 +289,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       : () {
                                         setState(() => selectedIndex = index);
                                         viewModel.setCurrentFloorIndex(index);
+                                        context.read<BuildingPageViewModel>().cancelState();
                                       },
                               borderRadius: BorderRadius.circular(
                                 FusionSizes.borderRadius8,

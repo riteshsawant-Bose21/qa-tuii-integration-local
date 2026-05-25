@@ -28,6 +28,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/spl_loader_painter
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/wall_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/fusion_dotted_bg_painter.dart';
+import '../../../fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import '../../../fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../../../fusion_canvas/viewmodel/tools/fusion_canvas_tool.dart';
 import '../../presentation/project_work_area.dart';
@@ -58,6 +59,7 @@ class BuildingCanvas extends StatefulWidget {
 class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProviderStateMixin {
   late final AnimationController animationController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
   // bool showLiveSpl = false;
+  FusionCanvasPainter? painter;
   @override
   void dispose() {
     animationController.dispose();
@@ -136,32 +138,38 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                               final SplState splState = context.watch<SplViewModel>().state;
                               return FusionCanvas(
                                 selectedIds: selectedIds,
-                                tools: <FusionCanvasTool<FusionToolState>>[
-                                  FusionCanvasTool.measureTool,
-                                  FusionCanvasTool.penTool,
-                                  FusionCanvasTool.rectangleTool,
-                                  FusionCanvasTool.customDragTool(
-                                    transformSelectedLayerIds: (String layerId) {
-                                      return buildingPageViewModel.transformLayerIdForSelection(
-                                        layerId: layerId,
-                                        hardwareInFloorWithPosition: hardwareInFloorWithPosition,
-                                      );
-                                    },
-                                  ),
-                                  FusionCanvasTool.customSingleSelectionTool(
-                                    SelectionToolParams(
-                                      enableSelect: true,
-                                      enableMultiSelect: false,
-                                      enableMarqueeSelection: false,
-                                      transformSelectedLayerIds: (String layerId) {
-                                        return buildingPageViewModel.transformLayerIdForSelection(
-                                          layerId: layerId,
-                                          hardwareInFloorWithPosition: hardwareInFloorWithPosition,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
+                                onCanvasPainterReady: (FusionCanvasPainter value) {
+                                  painter = value;
+                                },
+                                tools:
+                                    isFloorPlanPending
+                                        ? <FusionCanvasTool<FusionToolState>>[]
+                                        : <FusionCanvasTool<FusionToolState>>[
+                                          FusionCanvasTool.measureTool,
+                                          FusionCanvasTool.penTool,
+                                          FusionCanvasTool.rectangleTool,
+                                          FusionCanvasTool.customDragTool(
+                                            transformSelectedLayerIds: (String layerId) {
+                                              return buildingPageViewModel.transformLayerIdForSelection(
+                                                layerId: layerId,
+                                                hardwareInFloorWithPosition: hardwareInFloorWithPosition,
+                                              );
+                                            },
+                                          ),
+                                          FusionCanvasTool.customSingleSelectionTool(
+                                            SelectionToolParams(
+                                              enableSelect: true,
+                                              enableMultiSelect: false,
+                                              enableMarqueeSelection: false,
+                                              transformSelectedLayerIds: (String layerId) {
+                                                return buildingPageViewModel.transformLayerIdForSelection(
+                                                  layerId: layerId,
+                                                  hardwareInFloorWithPosition: hardwareInFloorWithPosition,
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
                                 selectionToolParam: const SelectionToolPainterParam(drawOverallBounding: false),
                                 elements: <FusionBasePainter>[
                                   FusionDottedBgPainter(
@@ -184,7 +192,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> with SingleTickerProvid
                                   FloorPlanPainter(
                                     image: floor.floorPlan.imagePath,
                                     position: floor.floorPlan.position,
-                                    size: floor.floorPlan.size,
+                                    size: floor.skipFloorPlan == true ? const Size(5000, 5000) : floor.floorPlan.size,
                                     showSpl: true,
                                   ),
 
