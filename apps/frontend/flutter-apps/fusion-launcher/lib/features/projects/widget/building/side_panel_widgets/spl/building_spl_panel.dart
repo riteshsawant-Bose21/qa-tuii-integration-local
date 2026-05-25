@@ -168,7 +168,15 @@ class SplSettingPanel extends StatelessWidget {
         final SplPanelData panelData = state.panelData;
         return Column(
           spacing: 12,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            FusionAppText(
+              text: "MAPPING",
+              style: context.textTheme.l1Medium.copyWith(
+                color: context.colorScheme.textBody,
+              ),
+            ),
+            const Divider(),
             FusionOutlinedDropdown<SplResolution>(
               label: "Resolution",
               hint: "Select Resolution",

@@ -221,7 +221,9 @@ class _DockItemPanel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
                         title,
-                        style: context.textTheme.l1Regular,
+                        style: context.textTheme.l1Regular.copyWith(
+                          color: context.colorScheme.textBody,
+                        ),
                       ),
                     ),
                   ),
