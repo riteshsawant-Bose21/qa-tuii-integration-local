@@ -116,6 +116,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     final String? nextListeningAreaId = _projectViewModel.currentSelectedListeningAreaId;
     final String? nextSpeakerId = _projectViewModel.currentSelectedHardwareId;
     final String? nextCircuitId = _projectViewModel.currentSelectedCircuitId;
+    final String? nextTextId = state.selectedTextId;
 
     final bool listeningAreaChanged = state.selectedListeningAreaId != nextListeningAreaId;
     final bool speakerChanged = state.selectedSpeakerId != nextSpeakerId;
@@ -132,6 +133,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       state.toolState,
       selectedListeningAreaId: nextListeningAreaId,
       selectedSpeakerId: nextSpeakerId,
+      selectedTextId: nextTextId,
       selectedCircuitId: nextCircuitId,
     );
     // : state.toolState;
@@ -142,6 +144,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       selectedSpeakerId: nextSpeakerId,
       clearSelectedListeningAreaId: listeningAreaChanged && nextListeningAreaId == null,
       clearSelectedSpeakerId: speakerChanged && nextSpeakerId == null,
+      selectedTextId: nextTextId,
       clearSelectedCircuitId: circuitChanged && nextCircuitId == null,
       selectedCircuitId: nextCircuitId,
     );
@@ -154,12 +157,14 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     BuildingPageToolState mode, {
     String? selectedListeningAreaId,
     String? selectedSpeakerId,
+    String? selectedTextId,
     String? selectedCircuitId,
   }) {
     if (mode is SplToolState) {
       return SplSelectToolState(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedTextId: selectedTextId,
         selectedCircuitId: selectedCircuitId,
       );
     }
@@ -167,6 +172,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
       return SystemSelectToolState(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedTextId: selectedTextId,
         selectedCircuitId: selectedCircuitId,
       );
     }
@@ -175,6 +181,7 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
     return SelectToolState(
       selectedListeningAreaId: selectedListeningAreaId,
       selectedSpeakerId: selectedSpeakerId,
+      selectedTextId: selectedTextId,
       selectedCircuitId: selectedCircuitId,
     );
     // }
@@ -184,15 +191,18 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
   BuildingPageToolState _toolStateWithProjectSelection(BuildingPageToolState toolState) {
     final String? selectedListeningAreaId = _projectViewModel.currentSelectedListeningAreaId;
     final String? selectedSpeakerId = _projectViewModel.currentSelectedHardwareId;
+    final String? selectedTextId = state.selectedTextId;
     final String? selectedCircuitId = _projectViewModel.currentSelectedCircuitId;
 
     if (toolState case final SelectToolState value) {
       return value.copyWith(
         selectedListeningAreaId: selectedListeningAreaId,
         selectedSpeakerId: selectedSpeakerId,
+        selectedTextId: selectedTextId,
         selectedCircuitId: selectedCircuitId,
         clearSelectedListeningAreaId: selectedListeningAreaId == null,
         clearSelectedSpeakerId: selectedSpeakerId == null,
+        clearSelectedTextId: selectedTextId == null,
         clearSelectedCircuitId: selectedCircuitId == null,
       );
     }
@@ -234,6 +244,31 @@ class BuildingPageViewModel extends Cubit<BuildingPageState> {
 
   void selectWall(String id) {
     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+    emit(
+      state.copyWith(
+        selectedWallId: id,
+        clearSelectedTextId: true,
+      ),
+    );
+  }
+
+  void selectText(String id) {
+    serviceLocator<ProjectViewModel>().deselectAll();
+    emit(
+      state.copyWith(
+        selectedTextId: id,
+        clearSelectedWallId: true,
+      ),
+    );
+  }
+
+  void clearCanvasEntitySelection() {
+    emit(
+      state.copyWith(
+        clearSelectedWallId: true,
+        clearSelectedTextId: true,
+      ),
+    );
   }
 
   void selectListingArea(String id) {

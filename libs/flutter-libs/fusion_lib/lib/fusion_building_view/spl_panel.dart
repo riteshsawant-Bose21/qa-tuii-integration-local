@@ -10,7 +10,7 @@ import 'spl_range_controller.dart';
 /// Weighting options for SPL measurements
 enum SplWeighting {
   aWeighted('A-Weighted'),
-  zWeighted('Z-Weighted'),
+  zWeighted('Z-Weighted (Flat)'),
   cWeighted('C-Weighted');
 
   const SplWeighting(this.displayName);
@@ -69,9 +69,7 @@ enum SplFrequency {
   /// Get frequency value as integer Hz (round if decimal)
   int get frequencyValue {
     if (displayName.contains('kHz')) {
-      final numericPart = displayName
-          .replaceAll(' kHz', '')
-          .replaceAll(' ', '');
+      final numericPart = displayName.replaceAll(' kHz', '').replaceAll(' ', '');
       return (double.parse(numericPart) * 1000).round();
     } else if (displayName.contains('Hz')) {
       final numericPart = displayName.replaceAll(' Hz', '').replaceAll(' ', '');
@@ -99,6 +97,26 @@ enum SplBandwidth {
   }
 }
 
+enum SplMapping {
+  relative('Relative'),
+  absolute('Absolute');
+
+  const SplMapping(this.displayName);
+  final String displayName;
+}
+
+enum SplRelativeRange {
+  avg1("Avg ±1dB", 1),
+  avg2("Avg ±2dB", 2),
+  avg3("Avg ±3dB", 3),
+  avg6("Avg ±6dB", 6),
+  avg9("Avg ±9dB", 9);
+
+  const SplRelativeRange(this.displayName, this.value);
+  final String displayName;
+  final num value;
+}
+
 /// Mapping resolution options for SPL measurements
 enum SplResolution {
   low('Low'),
@@ -119,17 +137,13 @@ enum SplResolution {
 /// Extension methods to get lists of display names for dropdowns
 /// Note: This extension is now deprecated since we use enums directly
 extension SplEnumExtensions on Object {
-  static List<String> get weightingOptions =>
-      SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
+  static List<String> get weightingOptions => SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
 
-  static List<String> get frequencyOptions =>
-      SplFrequency.values.map((SplFrequency e) => e.displayName).toList();
+  static List<String> get frequencyOptions => SplFrequency.values.map((SplFrequency e) => e.displayName).toList();
 
-  static List<String> get bandwidthOptions =>
-      SplBandwidth.values.map((SplBandwidth e) => e.displayName).toList();
+  static List<String> get bandwidthOptions => SplBandwidth.values.map((SplBandwidth e) => e.displayName).toList();
 
-  static List<String> get resolutionOptions =>
-      SplResolution.values.map((SplResolution e) => e.displayName).toList();
+  static List<String> get resolutionOptions => SplResolution.values.map((SplResolution e) => e.displayName).toList();
 }
 
 /// Panel widget for configuring SPL mapping attributes
@@ -170,9 +184,7 @@ class _SplPanelState extends State<SplPanel> {
     FilteringTextInputFormatter.allow(RegExp(r'[-]?\d*\.?\d*')),
   ];
 
-  bool get _needsFrequency =>
-      _bandwidth == SplBandwidth.oneThirdOctave ||
-      _bandwidth == SplBandwidth.oneOctave;
+  bool get _needsFrequency => _bandwidth == SplBandwidth.oneThirdOctave || _bandwidth == SplBandwidth.oneOctave;
 
   /// Allowed ISO centers by bandwidth
   List<SplFrequency> _allowedFrequenciesFor(SplBandwidth bw) {
@@ -536,25 +548,19 @@ class _SplPanelState extends State<SplPanel> {
                                   _bandwidth,
                                 ).contains(_frequency)
                                 ? _frequency
-                                : (_allowedFrequenciesFor(_bandwidth).isNotEmpty
-                                      ? _allowedFrequenciesFor(_bandwidth).first
-                                      : null),
+                                : (_allowedFrequenciesFor(_bandwidth).isNotEmpty ? _allowedFrequenciesFor(_bandwidth).first : null),
                             items: _allowedFrequenciesFor(_bandwidth)
                                 .map(
-                                  (SplFrequency e) =>
-                                      DropdownMenuItem<SplFrequency>(
-                                        value: e,
-                                        child: FusionAppText(
-                                          text: e.displayName,
-                                          style: context.textTheme.bodyMedium!
-                                              .copyWith(
-                                                fontSize: 12,
-                                                color: context
-                                                    .colorScheme
-                                                    .textPrimary,
-                                              ),
-                                        ),
+                                  (SplFrequency e) => DropdownMenuItem<SplFrequency>(
+                                    value: e,
+                                    child: FusionAppText(
+                                      text: e.displayName,
+                                      style: context.textTheme.bodyMedium!.copyWith(
+                                        fontSize: 12,
+                                        color: context.colorScheme.textPrimary,
                                       ),
+                                    ),
+                                  ),
                                 )
                                 .toList(),
                             onChanged: (SplFrequency? v) {
@@ -814,6 +820,8 @@ class SplPanelData {
   final SplFrequency frequency;
   final SplBandwidth bandwidth;
   final SplResolution resolution;
+  final SplRelativeRange? relativeRange;
+  final bool autoCalculate;
 
   final bool splAutoScale;
   final bool splInvertColor;
@@ -826,11 +834,13 @@ class SplPanelData {
     this.frequency = SplFrequency.hz2000,
     this.bandwidth = SplBandwidth.allBands,
     this.resolution = SplResolution.medium,
+    this.relativeRange,
     this.splAutoScale = false,
     this.splInvertColor = false,
     this.splUpperDb = 63,
     this.splLowerDb = 36,
     this.relative = false,
+    this.autoCalculate = true,
   });
 
   SplPanelData copyWith({
@@ -838,22 +848,27 @@ class SplPanelData {
     SplFrequency? frequency,
     SplBandwidth? bandwidth,
     SplResolution? resolution,
+    SplRelativeRange? relativeRange,
     bool? splAutoScale,
     bool? splInvertColor,
     double? splUpperDb,
     double? splLowerDb,
     bool? relativeDb,
+    bool? autoCalculate,
+
   }) {
     return SplPanelData(
       weighting: weighting ?? this.weighting,
       frequency: frequency ?? this.frequency,
       bandwidth: bandwidth ?? this.bandwidth,
       resolution: resolution ?? this.resolution,
+      relativeRange: relativeRange ?? this.relativeRange,
       splAutoScale: splAutoScale ?? this.splAutoScale,
       splInvertColor: splInvertColor ?? this.splInvertColor,
       splUpperDb: splUpperDb ?? this.splUpperDb,
       splLowerDb: splLowerDb ?? this.splLowerDb,
       relative: relativeDb ?? relative,
+      autoCalculate: autoCalculate ?? this.autoCalculate,
     );
   }
 

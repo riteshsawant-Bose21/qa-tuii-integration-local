@@ -268,7 +268,7 @@ class PEQController {
       valueHandler.updateValue(field: 'frequency', dimension: bandIndex, value: 1000);
       valueHandler.updateValue(field: 'gain', dimension: bandIndex, value: 0.0);
       valueHandler.updateValue(field: 'q', dimension: bandIndex, value: isInBW ? qToBw(1.0) : 1.0);
-      valueHandler.updateValue(field: 'band_enable', dimension: bandIndex, value: false);
+      valueHandler.updateValue(field: 'band_enable', dimension: bandIndex, value: true);
     }
   }
 

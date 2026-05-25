@@ -337,7 +337,7 @@ func (p *Persistence) DeleteScene(sceneID string) error {
 				set.CurrentSceneId = ""
 			}
 
-			updated, err := json.Marshal(set)
+			updated, err := json.Marshal(&set)
 			if err != nil {
 				return fmt.Errorf("failed to marshal updated scene set '%s': %w", set.GetSetId(), err)
 			}
@@ -403,7 +403,7 @@ func (p *Persistence) SetCurrentScene(setID, sceneID string) error {
 
 		set.CurrentSceneId = sceneID
 
-		updated, err := json.Marshal(set)
+		updated, err := json.Marshal(&set)
 		if err != nil {
 			return fmt.Errorf("failed to marshal scene set '%s': %w", setID, err)
 		}

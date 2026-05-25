@@ -75,8 +75,7 @@ class PossibleConnection {
 
       PossibleConnection(fromPortType: PortType.gpioInput, toPortType: PortType.gpioOutput, connectionType: ConnectionType.gpio),
 
-      PossibleConnection(fromPortType: PortType.aes67Input, toPortType: PortType.aes67Output, connectionType: ConnectionType.aes67),
-
+      // PossibleConnection(fromPortType: PortType.aes67Input, toPortType: PortType.aes67Output, connectionType: ConnectionType.aes67),
       PossibleConnection(fromPortType: PortType.speakerInput, toPortType: PortType.amplifierOutput, connectionType: ConnectionType.speaker),
 
       PossibleConnection(fromPortType: PortType.networkSwitchOut, toPortType: PortType.networkSwitchIn, connectionType: ConnectionType.ethernet),

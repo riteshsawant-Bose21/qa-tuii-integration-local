@@ -9,6 +9,7 @@ export 'fusion_auth/refresh_token_response_dto.dart';
 export 'fusion_auth/registration_response_dto.dart';
 export 'fusion_auth/user_dto.dart';
 export 'fusion_auth/user_model.dart';
+export 'fusion_device/fusion_network_controller.dart';
 export 'fusion_device/fusion_network_device.dart';
 export 'mdns/mdns_device.dart';
 export 'product_query/product_query_model.dart';
@@ -26,6 +27,7 @@ export 'project_entities/controller_page_model.dart';
 export 'project_entities/equip_location.dart';
 export 'project_entities/floor_model.dart';
 export 'project_entities/floor_plan_model.dart';
+export 'project_entities/floor_text_model.dart';
 export 'project_entities/fusion_dsp.dart';
 export 'project_entities/generic_hardware_component_model.dart';
 export 'project_entities/hardware_component_model.dart';
@@ -59,21 +61,3 @@ export 'project_entities/zone_functions.dart';
 export 'project_entities/zone_model.dart';
 export 'response_callback.dart';
 export 'timezones/time_zone.dart';
-export 'project_entities/message_player_model.dart';
-
-export 'mdns/mdns_device.dart';
-
-export 'project_entities/controller_page_model.dart';
-
-export 'controller_config/controller_config.dart';
-
-export 'dro/dro_input_model.dart';
-
-export 'fusion_device/fusion_network_device.dart';
-export 'fusion_device/fusion_network_controller.dart';
-
-export 'dro/dro_response.dart';
-
-export 'project_entities/snapshot_api/snapshots_request.dart';
-export 'project_entities/sncene_set/scene_set_request.dart';
-export 'project_entities/task_dto/create_schedule_task_dto.dart';

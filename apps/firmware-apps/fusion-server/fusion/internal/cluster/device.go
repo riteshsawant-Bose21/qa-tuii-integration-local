@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	model "fusion/internal/gen/proto/fusion"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
@@ -15,11 +16,11 @@ import (
 	json "github.com/goccy/go-json"
 )
 
-func (c *Cluster) GetAllDevicesInfo() []model.DeviceInfo {
+func (c *Cluster) GetAllDevicesInfo() []transport.DeviceRecord {
 	return c.fetchAllDeviceInfos()
 }
 
-func (c *Cluster) GetDeviceInfoLocal() model.DeviceInfo {
+func (c *Cluster) GetDeviceInfoLocal() *model.DeviceInfo {
 	return c.getDeviceInfoLocal()
 }
 
@@ -33,7 +34,7 @@ func (c *Cluster) UpdateDeviceInfo(device_id string, patch *model.DevicePatch) e
 	if c.hostIsLocal(localInfo.Address) {
 		return c.UpdateDeviceInfoLocal(patch)
 	}
-	return c.updateRemoteDevice(device_id, localInfo, patch)
+	return c.updateRemoteDevice(localInfo, patch)
 
 }
 
@@ -50,15 +51,15 @@ func (c *Cluster) UpdateDeviceInfoLocal(patch *model.DevicePatch) error {
 		return fmt.Errorf("Failed to set device info: %v", err)
 	}
 	info := c.getDeviceInfoLocal()
-	c.broadcastDeviceUpdate(&info)
+	c.broadcastDeviceUpdate(info)
 	return nil
 }
 
 // findAndValidateDevice finds the device and validates the patch
-func (c *Cluster) findAndValidateDevice(device_id string, patch *model.DevicePatch) (*model.DeviceInfo, error) {
+func (c *Cluster) findAndValidateDevice(device_id string, patch *model.DevicePatch) (*transport.DeviceRecord, error) {
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var localInfo *model.DeviceInfo
+	var localInfo *transport.DeviceRecord
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == device_id {
 			localInfo = &deviceInfos[i]
@@ -70,28 +71,34 @@ func (c *Cluster) findAndValidateDevice(device_id string, patch *model.DevicePat
 		return nil, fmt.Errorf("Device %s not found", device_id)
 	}
 
-	if err := validateNoDuplication(deviceInfos, *patch, localInfo.Id); err != nil {
+	if err := validateNoDuplication(deviceInfos, patch, localInfo.Id); err != nil {
 		return nil, err
 	}
 
 	return localInfo, nil
 }
 
-func (c *Cluster) fetchAllDeviceInfos() []model.DeviceInfo {
-	return fetchFromAdmin(
+func (c *Cluster) fetchAllDeviceInfos() []transport.DeviceRecord {
+	protoInfos := fetchFromAdmin(
 		c,
 		c.getDeviceInfoLocal,
 		routes.DeviceEndpoint,
 	)
+
+	records := make([]transport.DeviceRecord, 0, len(protoInfos))
+	for _, info := range protoInfos {
+		records = append(records, transport.NewDeviceRecordFromProto(info))
+	}
+	return records
 }
 
-func (c *Cluster) getDeviceInfoLocal() model.DeviceInfo {
+func (c *Cluster) getDeviceInfoLocal() *model.DeviceInfo {
 
 	savedInfo, err := c.delegate.persistence.GetStoredDeviceInfo()
 	if err != nil {
 		//This doesnt return error as this fuction is called from fetchGenericFromAdmin which cant return partial errors
 		logging.GetLogger().Error("Failed to get local device info: %v", err)
-		return model.DeviceInfo{}
+		return &model.DeviceInfo{}
 	}
 
 	id := ""
@@ -107,7 +114,7 @@ func (c *Cluster) getDeviceInfoLocal() model.DeviceInfo {
 		location = *savedInfo.Location
 	}
 
-	deviceInfo := model.DeviceInfo{
+	deviceInfo := &model.DeviceInfo{
 		Address:                  c.appConfig.BindAddr,
 		Id:                       id,
 		Location:                 location,
@@ -133,7 +140,7 @@ func (c *Cluster) getDeviceInfoLocal() model.DeviceInfo {
 }
 
 // updateRemoteDevice updates a device that is hosted on a remote node
-func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *model.DeviceInfo, patch *model.DevicePatch) error {
+func (c *Cluster) updateRemoteDevice(localInfo *transport.DeviceRecord, patch *model.DevicePatch) error {
 	jsonBody, err := json.Marshal(patch)
 	if err != nil {
 		return fmt.Errorf("Failed to encode patch: %v", err)
@@ -201,10 +208,14 @@ func (c *Cluster) applyPatch(patch *model.DevicePatch, storedInfo *model.DeviceP
 // validateNoDuplication returns an error if any of the non‐nil fields in patch
 // would collide with another DeviceInfo other than the one with ID == currentID.
 func validateNoDuplication(
-	allInfos []model.DeviceInfo,
-	patch model.DevicePatch,
+	allInfos []transport.DeviceRecord,
+	patch *model.DevicePatch,
 	currentID string,
 ) error {
+	if patch == nil {
+		return nil
+	}
+
 	for _, info := range allInfos {
 		// Skip the device we are updating
 		if info.Id == currentID {

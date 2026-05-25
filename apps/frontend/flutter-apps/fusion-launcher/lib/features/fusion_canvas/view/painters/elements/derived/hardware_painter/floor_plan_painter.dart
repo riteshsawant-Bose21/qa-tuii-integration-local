@@ -24,7 +24,7 @@ class FloorPlanPainter extends FusionImagePainter {
             ..blendMode = BlendMode.dstIn;
     }
 
-    drawImage(canvas: canvas, imagePath: image, rect: dst, painter: painter, paint: floorPlanPaint);
+    if (image.isNotEmpty) drawImage(canvas: canvas, imagePath: image, rect: dst, painter: painter, paint: floorPlanPaint);
 
     canvas.restore();
   }

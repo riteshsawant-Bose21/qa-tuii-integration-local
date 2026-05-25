@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
-	model "fusion/internal/gen/proto/fusion"
+	"fusion/internal/cluster/transport"
 	"io"
 	"os/exec"
 
@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	hashicorpMemberlist "github.com/hashicorp/memberlist"
@@ -71,6 +72,9 @@ type Cluster struct {
 	vipMonitor       VIPMonitorInterface
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
+	joinRetryMu      sync.Mutex
+	joinRetryActive  bool
+	createdAt        time.Time
 }
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *hashicorpMemberlist.Memberlist) *Cluster {
@@ -82,6 +86,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		memberlist:       memberlist,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		createdAt:        time.Now(),
 	}
 
 	logger := logging.GetLogger()
@@ -460,7 +465,7 @@ func (c *Cluster) FetchGenericWithTargetDevice(
 
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *model.DeviceInfo
+	var targetDevice *transport.DeviceRecord
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]
@@ -491,7 +496,7 @@ func (c *Cluster) DoGenericToTargetDevice(
 ) error {
 	deviceInfos := c.GetAllDevicesInfo()
 
-	var targetDevice *model.DeviceInfo
+	var targetDevice *transport.DeviceRecord
 	for i := range deviceInfos {
 		if deviceInfos[i].Id == deviceID {
 			targetDevice = &deviceInfos[i]

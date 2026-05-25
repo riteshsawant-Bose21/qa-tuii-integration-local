@@ -13,6 +13,7 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	model "fusion/internal/gen/proto/fusion"
 
 	json "github.com/goccy/go-json"
@@ -56,9 +57,9 @@ func (s *stubClusterTransport) DoGenericToTargetDevice(deviceID, endpointTemplat
 	return nil
 }
 
-func (s *stubClusterTransport) GetAllDevicesInfo() []model.DeviceInfo { return nil }
+func (s *stubClusterTransport) GetAllDevicesInfo() []transport.DeviceRecord { return nil }
 
-func (s *stubClusterTransport) GetDeviceInfoLocal() model.DeviceInfo { return model.DeviceInfo{} }
+func (s *stubClusterTransport) GetDeviceInfoLocal() *model.DeviceInfo { return &model.DeviceInfo{} }
 
 func (s *stubClusterTransport) UpdateDeviceInfo(deviceID string, patch *model.DevicePatch) error {
 	return nil

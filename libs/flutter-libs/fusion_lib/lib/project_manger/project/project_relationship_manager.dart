@@ -4,6 +4,7 @@
 enum RelationshipType {
   floorAreas,
   floorWalls,
+  floorTexts,
   zoneAreas,
   zoneSourceSet,
   zoneSources,

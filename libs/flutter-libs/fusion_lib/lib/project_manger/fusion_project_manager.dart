@@ -1,7 +1,7 @@
 //Cloud
 // AES67
-export 'aes67/aes67_manager.dart';
 //aes67
+export 'aes67/aes67_manager.dart';
 export 'aes67/aes67_manager.dart';
 export 'aes67/aes67_service.dart';
 export 'circuit/circuit_manager.dart';
@@ -65,6 +65,9 @@ export 'source_set/source_set_manager.dart';
 export 'source_set/source_set_service.dart';
 export 'sub_zone/sub_zone_manager.dart';
 export 'sub_zone/sub_zone_service.dart';
+//Text
+export 'text/text_manager.dart';
+export 'text/text_service.dart';
 export 'undo_redo/undo_redo_manager.dart';
 //Undo Redo
 export 'undo_redo/undo_redo_service.dart';

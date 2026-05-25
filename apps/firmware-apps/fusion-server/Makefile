@@ -4,11 +4,13 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOMOD=$(GOCMD) mod
 BINARY_NAME=fusion-server
+CLUSTER_WATCH_BINARY=cluster_watch
 MAIN_PATH=fusion/cmd/fusion
 BUILD_DIR=build
 BUILD_FLAGS=-tags netgo,osusergo
 RELEASE_FLAGS=-trimpath
 DEBUG_FLAGS=-gcflags "all=-N -l"
+TOOLS_GOCACHE=/private/tmp/fusion-server-go-cache
 PROTOC ?= protoc
 PROTO_SRC_DIR=../../../libs/proto
 PROTO_GO_OUT=fusion/internal/gen/proto
@@ -56,6 +58,10 @@ build: proto
 	mkdir -p $(BUILD_DIR)
 	cd fusion && CGO_ENABLED=0 GOOS=linux $(GOBUILD) $(BUILD_FLAGS) $(LDFLAGS) -o ../$(BUILD_DIR)/$(BINARY_NAME) -v ./cmd/fusion
 	cd $(BUILD_DIR) && ln -sf $(BINARY_NAME) fusion-server
+
+cluster-watch:
+	mkdir -p $(BUILD_DIR)
+	env GOWORK=off GOCACHE=$(TOOLS_GOCACHE) $(GOBUILD) -o $(BUILD_DIR)/$(CLUSTER_WATCH_BINARY) ./tools/cluster_watch
 
 debug: proto
 	mkdir -p $(BUILD_DIR)
@@ -174,6 +180,7 @@ help:
 	@echo " build - Build for current platform"
 	@echo " debug - Build an unoptimized Linux binary with debug symbols"
 	@echo " release - Build an optimized Linux binary with reduced binary size"
+	@echo " cluster-watch - Build the standalone cluster disruption watcher"
 	@echo " clean - Clean build files"
 	@echo " run - Build and run locally"
 	@echo " deps - Download dependencies"
@@ -192,4 +199,4 @@ help:
 	@echo " release-linux-arm64 - Build optimized release binary for Linux ARM64"
 	@echo " build-all - Build for all platforms"
 
-.PHONY: all build debug release clean run deps tidy proto proto-tools proto-clean fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
+.PHONY: all build cluster-watch debug release clean run deps tidy proto proto-tools proto-clean fmt vet lint build-linux-amd64 build-linux-arm32 build-linux-arm64 build-darwin-arm64 release-linux-amd64 release-linux-arm32 release-linux-arm64 build-all help
