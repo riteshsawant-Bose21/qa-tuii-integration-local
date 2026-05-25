@@ -81,8 +81,8 @@ class FusionAppButton extends StatefulWidget {
   final FusionAppButtonStyle style;
   final bool enabled;
 
-  final double width;
-  final double height;
+  final double? width;
+  final double? height;
 
   final bool showPrefixIcon;
   final IconData? prefixIcon;
@@ -176,14 +176,12 @@ class _FusionAppButtonState extends State<FusionAppButton> {
 
   double? _width() {
     if (widget.style == FusionAppButtonStyle.link) return null;
-    if (widget.child != null) return 40;
     if (widget.style == FusionAppButtonStyle.tertiary) return null;
     return widget.width;
   }
 
-  double _height() {
+  double? _height() {
     if (widget.style == FusionAppButtonStyle.link || widget.style == FusionAppButtonStyle.tertiary) return 24;
-    if (widget.child != null) return 40;
     return widget.height;
   }
 

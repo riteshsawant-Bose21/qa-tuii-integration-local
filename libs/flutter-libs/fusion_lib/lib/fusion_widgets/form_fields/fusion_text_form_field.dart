@@ -51,6 +51,8 @@ class FusionTextFormField extends StatefulWidget {
   /// Whether the field is active (affects styling).
   final bool isActive;
 
+  final bool isDense;
+
   /// Whether to show error styling.
   final bool hasError;
 
@@ -86,6 +88,10 @@ class FusionTextFormField extends StatefulWidget {
 
   /// Submit callback.
   final ValueChanged<String>? onSubmitted;
+
+  ///
+  final VoidCallback? onTapOutside;
+
   final List<TextInputFormatter>? inputFormatters;
 
   final Widget? prefixIcon;
@@ -105,6 +111,7 @@ class FusionTextFormField extends StatefulWidget {
     this.readOnly = false,
     this.isActive = true,
     this.hasError = false,
+    this.isDense = false,
     this.maxLines = 1,
     this.maxLength = 60,
     this.keyboardType = TextInputType.text,
@@ -116,6 +123,7 @@ class FusionTextFormField extends StatefulWidget {
     this.validator,
     this.onChanged,
     this.onSubmitted,
+    this.onTapOutside,
     this.inputFormatters,
     this.prefixIcon,
     this.suffixIcon,
@@ -147,8 +155,7 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
                 widget.title,
                 style: Theme.of(context).textTheme.labelMedium,
               ),
-              if (widget.isRequired)
-                Text(' *', style: TextStyle(color: Colors.red.shade600)),
+              if (widget.isRequired) Text(' *', style: TextStyle(color: Colors.red.shade600)),
             ],
           ),
         if (widget.title.isNotEmpty) const SizedBox(height: 8),
@@ -171,7 +178,7 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
               prefixText: widget.prefixText,
               prefixStyle: widget.prefixTextStyle,
               prefixIcon: widget.prefixIcon,
-
+              isDense: widget.isDense,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               counter: SizedBox(),
@@ -181,9 +188,7 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
                   (widget.isPassword
                       ? IconButton(
                           icon: Icon(
-                            _obscureText
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                            _obscureText ? Icons.visibility_off : Icons.visibility,
                             size: 18,
                             color: Colors.grey.shade600,
                           ),
@@ -198,6 +203,9 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
             validator: widget.validator,
             onChanged: widget.onChanged,
             onFieldSubmitted: widget.onSubmitted,
+            onTapOutside: (_) {
+              widget.onTapOutside?.call();
+            },
           ),
         ),
       ],

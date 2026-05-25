@@ -54,6 +54,12 @@ class AcousticToolBar extends StatelessWidget {
               ),
         ),
         // _ToolBarIcon(
+        //   icon: "line.png",
+        //   label: "Text",
+        //   isSelected: toolState is TextToolState,
+        //   onTap: () => context.read<BuildingPageViewModel>().setTool(DrawingTextState()),
+        // ),
+        // _ToolBarIcon(
         //   icon: "pointer.png",
         //   label: "Select",
         //   isSelected: toolState is SelectToolState,
