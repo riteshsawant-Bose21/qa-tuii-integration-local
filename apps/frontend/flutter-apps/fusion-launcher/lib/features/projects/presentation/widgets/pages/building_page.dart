@@ -242,6 +242,7 @@ class _RightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      shrinkWrap: true,
       children: <Widget>[
         const _DockItemPanel(
           title: "COST CALCULATOR",
