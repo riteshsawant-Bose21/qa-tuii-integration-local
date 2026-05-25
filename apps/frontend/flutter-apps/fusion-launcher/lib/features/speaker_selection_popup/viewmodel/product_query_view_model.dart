@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/product_data/models/output_product.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 import 'package:mutex/mutex.dart';
@@ -226,7 +225,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 }
 
 class ProductPriceModel extends Equatable {
-  final String variant;
+  final String? variant;
   final String currency;
   final double price;
 
@@ -234,7 +233,7 @@ class ProductPriceModel extends Equatable {
 
   factory ProductPriceModel.fromJson(Map<String, dynamic> json) {
     return ProductPriceModel(
-      variant: json['variant'] as String,
+      variant: DeserializationUtil.stringDeserializer.deserialize(json['variant']),
       currency: json['currency'] as String,
       price: (json['price'] as num).toDouble(),
     );

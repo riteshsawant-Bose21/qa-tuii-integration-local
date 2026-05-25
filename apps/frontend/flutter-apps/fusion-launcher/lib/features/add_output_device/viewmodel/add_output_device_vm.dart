@@ -21,12 +21,12 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
   List<OutputProduct> get outputProducts => serviceLocator<ProductQueryViewModel>().outputs;
 
   void updateOutputProductId(int? productId) {
-    final OutputProduct? selectedProduct = outputProducts.firstWhereOrNull((OutputProduct p) => p.id == productId);
+    final OutputProduct? selectedProduct = outputProducts.firstWhereOrNull((OutputProduct p) => p.outputId == productId);
     emit(state.copyWith(outputProductId: () => productId, connectionType: () => selectedProduct?.primaryConnection));
   }
 
   List<OutputConnectionType> get supportedConnectionTypes {
-    return outputProducts.firstWhereOrNull((OutputProduct p) => p.id == state.outputProductId)?.supportedConnections ?? <OutputConnectionType>[];
+    return outputProducts.firstWhereOrNull((OutputProduct p) => p.outputId == state.outputProductId)?.supportedConnections ?? <OutputConnectionType>[];
   }
 
   void updateOutputDeviceName(String name) => emit(state.copyWith(outputDeviceName: () => name));
@@ -43,7 +43,7 @@ class AddOutputDeviceViewModel extends Cubit<AddOutputDeviceVmState> {
     final bool hasName = vmState.outputDeviceName != null && vmState.outputDeviceName!.isNotEmpty;
     canProceed = vmState.zoneId != null && hasName && vmState.outputProductId != null && vmState.connectionType != null;
 
-    final bool isAes67 = vmState.connectionType == OutputConnectionType.aes67output;
+    final bool isAes67 = vmState.connectionType == OutputConnectionType.aes67Output;
     if (isAes67) {
       if (vmState.audioChannel == AudioChannel.mono) {
         canProceed = canProceed && vmState.selectedMonoChannel != null && vmState.selectedStream != null;

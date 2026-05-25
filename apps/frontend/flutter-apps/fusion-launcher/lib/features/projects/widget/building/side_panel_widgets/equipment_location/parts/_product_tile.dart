@@ -5,11 +5,13 @@ class _ProductTile extends StatelessWidget {
     required this.index,
     required this.product,
     required this.addProduct,
+    this.suggestedQuantity,
   });
 
   final int index;
   final EQLProduct product;
   final VoidCallback addProduct;
+  final int? suggestedQuantity;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +85,23 @@ class _ProductTile extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (suggestedQuantity != null) ...<Widget>[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: FusionAppText(
+                                text: 'x$suggestedQuantity',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.colorScheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(width: 4),
                           // info
                           FusionArrowPopup(

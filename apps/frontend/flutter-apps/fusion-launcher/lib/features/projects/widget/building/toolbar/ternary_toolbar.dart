@@ -1,7 +1,7 @@
 part of 'canvas_toolbar.dart';
 
 class _TernaryToolbar extends StatelessWidget {
-  const _TernaryToolbar({super.key});
+  const _TernaryToolbar();
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +49,24 @@ class _TernaryToolbar extends StatelessWidget {
             isSelected: currentMode is WallSelectToolState,
             onTap: () {
               context.read<BuildingPageViewModel>().setTool(WallSelectToolState());
+            },
+          ),
+        ],
+        TextToolState() => <Widget>[
+          _ToolBarIcon(
+            icon: "line.png",
+            label: "Draw",
+            isSelected: currentMode is DrawingTextState,
+            onTap: () {
+              context.read<BuildingPageViewModel>().setTool(DrawingTextState());
+            },
+          ),
+          _ToolBarIcon(
+            icon: "pointer.png",
+            label: "Select",
+            isSelected: currentMode is TextSelectToolState,
+            onTap: () {
+              context.read<BuildingPageViewModel>().setTool(TextSelectToolState());
             },
           ),
         ],

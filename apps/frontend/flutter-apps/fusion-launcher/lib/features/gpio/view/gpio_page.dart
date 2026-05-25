@@ -6,7 +6,6 @@ import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gpio/gpio_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../core/widgets/configuration_widgets/action_drop_down.dart';
 import '../../../core/widgets/fusion_app_table.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/gpio_state.dart';
@@ -226,7 +225,7 @@ class GpioPage extends StatelessWidget {
                                                 return SemanticHelper.radio(
                                                   testId: SemanticHelper.createTestId(SemanticTypes.radio, "gpio_${direction.name.toLowerCase()}_$index"),
                                                   value: direction == gpio.direction,
-                                                  child: GestureDetector(
+                                                  child: InkWell(
                                                     onTap: () {
                                                       context.read<GpioViewmodel>().updateGpio(gpio.copyWith(direction: direction));
                                                     },
@@ -252,32 +251,37 @@ class GpioPage extends StatelessWidget {
                                       ),
 
                                       /// Action Dropdown
-                                      switch (gpio.direction) {
-                                        GpioDirection.input => SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpi_input_action_dropdown_$index"),
-                                          child: FusionDropdown<GpiAction>(
+                                      SemanticHelper.dropdown(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_action_dropdown_$index"),
+                                        child: switch (gpio.direction) {
+                                          GpioDirection.input => _Dropdown<GpiAction>(
+                                            semanticId: "gpio_action_dropdown_item_$index",
                                             value: gpio.gpiAction,
-                                            display: (GpiAction action) => action.displayName,
+                                            // selectedIndex: gpio.gpiAction != null ? GpiAction.values.indexOf(gpio.gpiAction!) : null,
+
+                                            // display: (GpiAction action) => action.displayName,
+                                            display: (GpiAction item) => item.displayName,
                                             hint: "Select Action",
                                             items: GpiAction.values,
-                                            onChanged: (GpiAction? action) {
-                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpiAction: action));
+                                            onChanged: (GpiAction? value) {
+                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpiAction: value));
                                             },
                                           ),
-                                        ),
-                                        GpioDirection.output => SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpo_output_action_dropdown_$index"),
-                                          child: FusionDropdown<GpoAction>(
+                                          GpioDirection.output => _Dropdown<GpoAction>(
+                                            semanticId: "gpio_action_dropdown_item_$index",
                                             value: gpio.gpoAction,
-                                            display: (GpoAction action) => action.displayName,
+                                            // selectedIndex: gpio.gpoAction != null ? GpoAction.values.indexOf(gpio.gpoAction!) : null,
+
+                                            // display: (GpoAction action) => action.displayName,
+                                            display: (GpoAction item) => item.displayName,
                                             hint: "Select Action",
                                             items: GpoAction.values,
-                                            onChanged: (GpoAction? action) {
-                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpoAction: action));
+                                            onChanged: (GpoAction? value) {
+                                              context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpoAction: value));
                                             },
                                           ),
-                                        ),
-                                      },
+                                        },
+                                      ),
                                       if ((gpio.direction == GpioDirection.output && gpio.gpoAction == GpoAction.openCollector) ||
                                           (gpio.direction == GpioDirection.input && gpio.gpiAction == GpiAction.voltageTrigger))
                                         SemanticHelper.toggle(
@@ -424,6 +428,60 @@ class GpioPage extends StatelessWidget {
               },
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Dropdown<T> extends StatelessWidget {
+  const _Dropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.hint,
+    required this.display,
+    required this.onChanged,
+    required this.semanticId,
+  });
+  final T? value;
+  final List<T> items;
+  final String hint;
+  final String Function(T) display;
+  final ValueChanged<T?>? onChanged;
+  final String semanticId;
+  @override
+  Widget build(BuildContext context) {
+    return FusionDropDown<T>(
+      // value: gpio.gpoAction,
+      selectedIndex: value != null ? items.indexOf(value as T) : null,
+
+      // display: (GpoAction action) => action.displayName,
+      itemBuilder: (BuildContext context, T item, bool isSelected) {
+        return FusionAppText(
+          text: display(item),
+          semanticId: '${semanticId}_${item.toString().toLowerCase()}',
+          style: context.textTheme.bodySmall!,
+        );
+      },
+      // hint: "Select Action",
+      items: items,
+      onSelected: (int selectedIndex) {
+        onChanged?.call(items[selectedIndex]);
+      },
+      trigger: FusionFlatContainer(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        margin: const EdgeInsets.all(0),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: value != null ? display(value as T) : hint,
+                style: context.textTheme.l1Medium,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down_rounded),
+          ],
         ),
       ),
     );

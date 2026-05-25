@@ -5,7 +5,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/message_player_config/view/message_player_config_dialog.dart';
-import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -34,11 +33,8 @@ List<ListeningArea> getCompletelyUnassignedListeningAreas() {
 }
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
-  final FloorCanvasController floorCanvasController;
-
   const ZoneAndListeningAreaPanel({
     super.key,
-    required this.floorCanvasController,
   });
 
   @override

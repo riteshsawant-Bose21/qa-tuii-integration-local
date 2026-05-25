@@ -41,6 +41,7 @@ class ProjectService {
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
   final WallRepository walls;
+  final TextRepository texts;
   final ZoneRepository zones;
   final SourceSetRepository sourceSets;
   final HardwareRepository hardware;
@@ -113,6 +114,7 @@ class ProjectService {
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     WallRepository? walls,
+    TextRepository? texts,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -140,6 +142,7 @@ class ProjectService {
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        walls = walls ?? WallRepository(),
+       texts = texts ?? TextRepository(),
        zones = zones ?? ZoneRepository(),
        subZones = subZones ?? SubZoneRepository(),
        sourceSets = sourceSets ?? SourceSetRepository(),
@@ -195,6 +198,7 @@ class ProjectService {
       floors: floors,
       listeningAreas: listeningAreas,
       walls: walls,
+      texts: texts,
       zones: zones,
       subZones: subZones,
       sourceSets: sourceSets,
@@ -261,6 +265,7 @@ class ProjectService {
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     WallRepository? walls,
+    TextRepository? texts,
     ZoneRepository? zones,
     SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
@@ -316,6 +321,7 @@ class ProjectService {
       floors: floors ?? this.floors,
       listeningAreas: listeningAreas ?? this.listeningAreas,
       walls: walls ?? this.walls,
+      texts: texts ?? this.texts,
       zones: zones ?? this.zones,
       subZones: subZones ?? this.subZones,
       sourceSets: sourceSets ?? this.sourceSets,
@@ -387,6 +393,7 @@ class ProjectService {
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
       "walls": walls.toJson((w) => w.toJson()),
+      "texts": texts.toJson((t) => t.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
       "subZones": subZones.toJson((sz) => sz.toJson()),
       "sourceSet": sourceSets.toJson((m) => m.toJson()),
@@ -462,6 +469,7 @@ class ProjectService {
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
     service.listeningAreas.fromJsonList(json["listeningAreas"], (m) => ListeningArea.fromJson(m), "id");
     service.walls.fromJsonList(json["walls"], (m) => Wall.fromJson(m), "id");
+    service.texts.fromJsonList(json["texts"], (m) => FloorText.fromJson(m), "id");
     service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
     service.subZones.fromJsonList(json["subZones"], (m) => SubZone.fromJson(m), "id");
     service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");
