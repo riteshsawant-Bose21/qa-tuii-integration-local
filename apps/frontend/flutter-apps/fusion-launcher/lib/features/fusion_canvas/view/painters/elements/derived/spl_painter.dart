@@ -28,14 +28,16 @@ class SplPainter extends FusionBasePainter {
   }) : _legendColors = splPanelData.splInvertColor ? List<Color>.of(SPLCalculationData.legendColors.reversed) : SPLCalculationData.legendColors;
 
   bool get isLiveSpl => splState is LiveSplState;
-
+  bool get isDebug => false;
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     final SplRelativeData? relative = splPanelData.relative ? splState.relativeData : null;
+    // print("Relative SPL data: ${splState.relativeData}");
     final num? average = relative?.average;
     final num? tolerantDeviation = splPanelData.relativeRange?.value;
     final _HeatmapSignature currentSig = _computeHeatmapSignature();
     _HeatmapCache.instance.checkWithSignature(currentSig);
+
     _buildHeatmapPicture(
       canvas,
       average: average,
@@ -159,6 +161,9 @@ class SplPainter extends FusionBasePainter {
     num? tolerance,
     bool useRelativeColoring = false,
   }) {
+    print(
+      "Painting SPL average: ${average?.toStringAsFixed(2)}, tolerance: ${tolerance?.toStringAsFixed(2)}",
+    );
     final int effectiveStride = isLiveSpl ? livePointStride.clamp(1, 1 << 20) : 1;
     final double cellPointSize = pointSize;
     final Path tmpPath = Path();
@@ -219,7 +224,8 @@ class SplPainter extends FusionBasePainter {
         areaCanvas.clipPath(tmpPath);
 
         final Paint pointPaint = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-
+        final num? upperBound = average != null && tolerance != null ? average + tolerance : null;
+        final num? lowerBound = average != null && tolerance != null ? average - tolerance : null;
         for (int i = 0; i < sortedIndices.length; i++) {
           final int idx = sortedIndices[i];
           if (idx < 0 || idx >= count) {
@@ -228,8 +234,41 @@ class SplPainter extends FusionBasePainter {
 
           final double normalized = invSplRange > 0 ? (values[idx] - minSpl) * invSplRange : 0.0;
           final int lutIndex = (normalized * maxColorIdx).round().clamp(0, maxColorIdx);
-          pointPaint.color = colorLut[lutIndex];
+          const Color lowColor = Color(0xFF0090D4);
+          const Color inRangeColor = Color(0xFF34FD5D);
+          const Color highColor = Color(0xFFEF7E03);
+          final double value = values[idx];
+          pointPaint.color = (upperBound != null && lowerBound != null
+                  ? (value < upperBound && value > lowerBound ? inRangeColor : (value <= lowerBound ? lowColor : highColor))
+                  : colorLut[lutIndex])
+              .withValues(alpha: isDebug ? 0.05 : 1.0);
           areaCanvas.drawRect(Rect.fromCenter(center: points[idx], width: cellPointSize, height: cellPointSize), pointPaint);
+          if (isDebug) {
+            final ParagraphBuilder pb =
+                ParagraphBuilder(
+                    ParagraphStyle(
+                      fontSize: (cellPointSize * 0.25).clamp(8.0, 14.0),
+                      maxLines: 1,
+                    ),
+                  )
+                  ..pushStyle(
+                    TextStyle(color: const Color(0xFF111111), fontSize: 10),
+                  )
+                  ..addText(((values[idx] - (average ?? 0))).toStringAsFixed(0)); // -
+
+            final Paragraph paragraph =
+                pb.build()..layout(
+                  ParagraphConstraints(width: (cellPointSize * 3).clamp(24.0, 96.0)),
+                );
+
+            areaCanvas.drawParagraph(
+              paragraph,
+              Offset(
+                points[idx].dx - (paragraph.maxIntrinsicWidth / 2),
+                points[idx].dy - (paragraph.height / 2),
+              ),
+            );
+          }
         }
 
         areaCanvas.restore();

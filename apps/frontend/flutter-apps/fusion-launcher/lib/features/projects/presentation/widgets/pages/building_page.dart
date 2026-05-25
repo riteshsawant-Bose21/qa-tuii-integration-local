@@ -42,7 +42,7 @@ class BuildingPage extends StatelessWidget {
                 return BuildingCanvas(
                   splRangeController: viewModel.splRangeController,
                   onSplStateChanged: (bool value) {},
-                  onCalculateSpl: () => viewModel.calculateSPL(),
+                  onCalculateSpl: () => viewModel.autoCalculateSpl(),
                   splPanelData: state.panelData,
                   rightPanel: Builder(
                     builder: (BuildContext context) {

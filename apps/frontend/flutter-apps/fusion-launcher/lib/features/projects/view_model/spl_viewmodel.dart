@@ -73,6 +73,12 @@ class SplViewModel extends Cubit<SplState> {
     return true;
   }
 
+  Future<void> autoCalculateSpl() async {
+    if (state.panelData.autoCalculate) {
+      return calculateSPL();
+    }
+  }
+
   Future<void> calculateSPL() async {
     // print(
     //   "Calculating SPL with panel data: ${state.panelData}, current listening areas: ${state.listeningAreas.length}",
@@ -215,7 +221,7 @@ class SplViewModel extends Cubit<SplState> {
       floorListeningAreas.map((ListeningArea e) => e.splData?.splValues ?? <double>[]).expand((List<double> e) => e).toList(),
     );
     print("average: $average");
-    emit(state.copyWith(listeningAreas: floorListeningAreas));
+    emit(state.copyWith(listeningAreas: floorListeningAreas, relativeData: SplRelativeData(average: average)));
   }
 
   @override

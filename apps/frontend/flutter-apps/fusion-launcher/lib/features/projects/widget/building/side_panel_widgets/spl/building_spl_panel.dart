@@ -61,8 +61,43 @@ class BuildingSplPanel extends StatelessWidget {
                 ],
               ),
             ),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
 
-            // const Divider(),
+              child: Column(
+                spacing: 12,
+                children: <Widget>[
+                  Row(
+                    spacing: 8,
+                    children: <Widget>[
+                      FusionCheckbox(
+                        semanticId: "autocalculate_checkbox",
+                        value: panelData.autoCalculate,
+                        onChanged: () {
+                          context.read<SplViewModel>().updatePanelData(panelData.copyWith(autoCalculate: !panelData.autoCalculate));
+                        },
+                      ),
+                      FusionAppText(
+                        semanticId: "autocalculate_label",
+                        text: "Auto-Calculate",
+                        style: context.textTheme.l1Regular,
+                      ),
+                    ],
+                  ),
+
+                  FusionAppButton(
+                    enabled: !panelData.autoCalculate,
+                    semanticId: "recalculate_spl",
+                    text: "Recalculate",
+                    onPressed: () {
+                      context.read<SplViewModel>().calculateSPL();
+                    },
+                    style: FusionAppButtonStyle.primary,
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       },
