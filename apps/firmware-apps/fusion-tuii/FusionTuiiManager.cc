@@ -33,6 +33,15 @@
 
 #include <observer/observer.h>
 
+
+#include <future>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/write.hpp>
+
+#ifndef ENABLE_QA_PROXY
+#define ENABLE_QA_PROXY 1
+#endif
+
 static bool g_bSuccess = false;
 static std::unique_ptr<UDPValueMonitor> g_udpObserver;
 
@@ -135,6 +144,25 @@ bool InitializeFusionTUIIBridge(const std::string &serverIP,
                                 const std::map<std::string, int> &objectTracker,
                                 const std::vector<TuiiZoneConfig> &zoneConfigs,
                                 const Json::Value &deviceConfig);
+#if ENABLE_QA_PROXY
+enum class QaTxPriority
+{
+    UiHigh,
+    QaLow
+};
+
+struct QaTxCommand
+{
+    std::string serialized;
+    QaTxPriority priority = QaTxPriority::UiHigh;
+    bool holdUntilRuntime = false;
+    std::shared_ptr<std::promise<bool>> completion;
+};
+#endif
+
+
+
+
 void HandleTUIIConfigurationUpdate(const Json::Value &newConfig);
 void HandleTUIIDeviceConfigurationUpdate(const Json::Value &newConfig);
 void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings);
@@ -149,6 +177,50 @@ bool ValidateDeviceConfig(const Json::Value &device, Json::Value &deviceConfigOu
 bool IsValidMacAddress(const std::string &macAddress);
 bool IsValidIPv4Address(const std::string &ipAddress);
 bool SendJsonPacket(const Json::Value &packet);
+
+#if ENABLE_QA_PROXY
+// ========================= QA_PROXY_BEGIN =========================
+// Isolated QA integration layer.
+
+std::mutex              g_qaTxMutex;
+std::condition_variable g_qaTxCv;
+std::thread             g_qaTxThread;
+bool                    g_qaTxRunning = false;
+bool                    g_qaTxStop = false;
+std::deque<QaTxCommand> g_qaUiQueue;
+std::deque<QaTxCommand> g_qaLowQueue;
+
+std::thread             g_qaTcpThread;
+bool                    g_qaTcpRunning = false;
+bool                    g_qaTcpStop = false;
+constexpr uint16_t      QA_PROXY_TCP_PORT = 9000;
+
+using QaSocketPtr = std::shared_ptr<boost::asio::ip::tcp::socket>;
+std::mutex g_qaPendingMutex;
+std::map<std::string, QaSocketPtr> g_qaPendingById;
+
+bool SerializeJsonCompact(const Json::Value &msg, std::string &out);
+bool SerializeJsonForUart(const Json::Value &msg, std::string &out);
+bool SendSerializedToSerial(const std::string &serialized);
+bool EnqueueQaTx(const Json::Value &packet, QaTxPriority priority, bool holdUntilRuntime, bool waitForCompletion);
+bool SendJsonPacketSync(const Json::Value &packet);
+bool SendJsonPacketAsyncQa(const Json::Value &packet);
+
+void QaArbitratorLoop();
+void StartQaArbitrator();
+void StopQaArbitrator();
+
+void QaTcpListenerLoop();
+void StartQaTcpListener();
+void StopQaTcpListener();
+void HandleQaClient(const QaSocketPtr &socket);
+
+bool QaWriteJsonLine(const QaSocketPtr &socket, const Json::Value &msg);
+void QaDropPendingForSocket(const QaSocketPtr &socket);
+void QaRouteResponseToClient(const Json::Value &msg);
+
+// ========================== QA_PROXY_END ==========================
+#endif
 
 namespace {
 constexpr int PROTOCOL_ACK_TIMEOUT_MS      = 1000;
@@ -331,6 +403,10 @@ int main(int argc, const char *argv[])
             spdlog::error("Serial device initialization failed for {}", serialDevice);
             // Non-fatal: protocol worker will retry every second.
         }
+#if ENABLE_QA_PROXY
+    StartQaArbitrator();
+    StartQaTcpListener();
+#endif
 
         StartProtocolWorker();
         if (deviceConfig.isObject() && !deviceConfig.empty())
@@ -359,8 +435,187 @@ int main(int argc, const char *argv[])
 void ShutdownSerial()
 {
     StopProtocolWorker();
+#if ENABLE_QA_PROXY
+    StopQaTcpListener();
+    StopQaArbitrator();
+#endif
     SerialManager::getInstance().shutdown();
 }
+
+#if ENABLE_QA_PROXY
+bool QaWriteJsonLine(const QaSocketPtr &socket, const Json::Value &msg)
+{
+    if (!socket) return false;
+    std::string s;
+    if (!SerializeJsonCompact(msg, s)) return false;
+    s.push_back('\n');
+    boost::system::error_code ec;
+    boost::asio::write(*socket, boost::asio::buffer(s), ec);
+    return !ec;
+}
+
+void QaDropPendingForSocket(const QaSocketPtr &socket)
+{
+    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+    for (auto it = g_qaPendingById.begin(); it != g_qaPendingById.end(); )
+    {
+        if (it->second == socket) it = g_qaPendingById.erase(it);
+        else ++it;
+    }
+}
+
+void QaRouteResponseToClient(const Json::Value &msg)
+{
+    if (!msg.isMember("id") || !msg["id"].isString()) return;
+    const std::string id = msg["id"].asString();
+
+    QaSocketPtr sock;
+    {
+        std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+        auto it = g_qaPendingById.find(id);
+        if (it == g_qaPendingById.end()) return;
+        sock = it->second;
+        g_qaPendingById.erase(it);
+    }
+
+    QaWriteJsonLine(sock, msg);
+}
+
+void HandleQaClient(const QaSocketPtr &socket)
+{
+    if (!socket) return;
+
+    boost::system::error_code ec;
+    socket->non_blocking(true, ec);
+    if (ec) return;
+
+    std::string pending;
+    char buf[1024];
+
+    while (true)
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+            if (g_qaTcpStop) break;
+        }
+
+        std::size_t n = socket->read_some(boost::asio::buffer(buf, sizeof(buf)), ec);
+        if (ec == boost::asio::error::would_block || ec == boost::asio::error::try_again)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            continue;
+        }
+        if (ec) break;
+
+        pending.append(buf, n);
+
+        while (true)
+        {
+            const std::size_t pos = pending.find('\n');
+            if (pos == std::string::npos) break;
+
+            std::string line = pending.substr(0, pos);
+            pending.erase(0, pos + 1);
+
+            while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
+            if (line.empty()) continue;
+
+            Json::Value req;
+            Json::CharReaderBuilder rb;
+            std::string errs;
+            std::unique_ptr<Json::CharReader> reader(rb.newCharReader());
+            if (!reader->parse(line.data(), line.data() + line.size(), &req, &errs)) continue;
+            if (!req.isObject() || !req.isMember("action") || !req["action"].isString()) continue;
+            if (req["action"].asString() != "qa_invoke") continue;
+            if (!req.isMember("id") || !req["id"].isString()) continue;
+
+            const std::string id = req["id"].asString();
+            {
+                std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+                g_qaPendingById[id] = socket;
+            }
+
+            if (!SendJsonPacketAsyncQa(req))
+            {
+                {
+                    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+                    g_qaPendingById.erase(id);
+                }
+            }
+        }
+    }
+
+    QaDropPendingForSocket(socket);
+    socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    socket->close(ec);
+}
+
+void QaTcpListenerLoop()
+{
+    using boost::asio::ip::tcp;
+
+    boost::asio::io_context io;
+    tcp::acceptor acceptor(io);
+    boost::system::error_code ec;
+    tcp::endpoint ep(tcp::v4(), QA_PROXY_TCP_PORT);
+
+    acceptor.open(ep.protocol(), ec);
+    if (ec) return;
+    acceptor.set_option(tcp::acceptor::reuse_address(true), ec);
+    acceptor.bind(ep, ec);
+    if (ec) return;
+    acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+    if (ec) return;
+    acceptor.non_blocking(true, ec);
+
+    while (true)
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+            if (g_qaTcpStop) break;
+        }
+
+        QaSocketPtr socket = std::make_shared<tcp::socket>(io);
+        acceptor.accept(*socket, ec);
+
+        if (ec == boost::asio::error::would_block || ec == boost::asio::error::try_again)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
+        if (ec)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        HandleQaClient(socket);
+    }
+}
+
+void StartQaTcpListener()
+{
+    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+    if (g_qaTcpRunning) return;
+    g_qaTcpStop = false;
+    g_qaTcpRunning = true;
+    g_qaTcpThread = std::thread(QaTcpListenerLoop);
+}
+
+void StopQaTcpListener()
+{
+    {
+        std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+        if (!g_qaTcpRunning) return;
+        g_qaTcpStop = true;
+    }
+    if (g_qaTcpThread.joinable()) g_qaTcpThread.join();
+    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+    g_qaTcpRunning = false;
+}
+#endif
+
+
 
 bool InitializeFusionTUIIBridge(const std::string &serverIP,
                                 unsigned int serverPort,
@@ -437,6 +692,100 @@ bool InitializeFusionTUIIBridge(const std::string &serverIP,
     }
 }
 
+#if ENABLE_QA_PROXY
+bool SerializeJsonCompact(const Json::Value &msg, std::string &out)
+{
+    Json::StreamWriterBuilder swb;
+    swb["indentation"] = "";
+    out = Json::writeString(swb, msg);
+    if (out.empty())
+    {
+        spdlog::error("[QA_PROXY] JSON serialize failed");
+        return false;
+    }
+    return true;
+}
+
+bool SerializeJsonForUart(const Json::Value &msg, std::string &out)
+{
+    if (!SerializeJsonCompact(msg, out))
+    {
+        return false;
+    }
+    if (out.size() > 255)
+    {
+        spdlog::error("[QA_PROXY] UART payload too large ({} > 255)", out.size());
+        return false;
+    }
+    return true;
+}
+
+bool SendSerializedToSerial(const std::string &serialized)
+{
+    SerialManager &serial = SerialManager::getInstance();
+    if (!serial.isInitialized())
+    {
+        spdlog::warn("[QA_PROXY] Serial not initialized");
+        return false;
+    }
+    return serial.send(serialized.c_str(), serialized.size());
+}
+
+bool EnqueueQaTx(const Json::Value &packet, QaTxPriority priority, bool holdUntilRuntime, bool waitForCompletion)
+{
+    std::string serialized;
+    if (!SerializeJsonForUart(packet, serialized))
+    {
+        return false;
+    }
+
+    QaTxCommand cmd;
+    cmd.serialized = std::move(serialized);
+    cmd.priority = priority;
+    cmd.holdUntilRuntime = holdUntilRuntime;
+
+    std::future<bool> f;
+    if (waitForCompletion)
+    {
+        cmd.completion = std::make_shared<std::promise<bool>>();
+        f = cmd.completion->get_future();
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(g_qaTxMutex);
+        if (priority == QaTxPriority::UiHigh)
+        {
+            g_qaUiQueue.push_back(std::move(cmd));
+        }
+        else
+        {
+            g_qaLowQueue.push_back(std::move(cmd));
+        }
+    }
+    g_qaTxCv.notify_all();
+
+    if (waitForCompletion)
+    {
+        return f.get();
+    }
+    return true;
+}
+
+bool SendJsonPacketSync(const Json::Value &packet)
+{
+    return EnqueueQaTx(packet, QaTxPriority::UiHigh, false, true);
+}
+
+bool SendJsonPacketAsyncQa(const Json::Value &packet)
+{
+    return EnqueueQaTx(packet, QaTxPriority::QaLow, true, false);
+}
+
+bool SendJsonPacket(const Json::Value &packet)
+{
+    return SendJsonPacketSync(packet);
+}
+#else
 bool SendJsonPacket(const Json::Value &packet)
 {
     Json::StreamWriterBuilder swb;
@@ -458,6 +807,89 @@ bool SendJsonPacket(const Json::Value &packet)
     SerialManager &serial = SerialManager::getInstance();
     return serial.send(serialized.c_str(), serialized.size());
 }
+#endif
+
+#if ENABLE_QA_PROXY
+void QaArbitratorLoop()
+{
+    spdlog::info("[QA_PROXY] Arbitrator started");
+
+    while (true)
+    {
+        QaTxCommand cmd;
+        bool hasCmd = false;
+
+        {
+            std::unique_lock<std::mutex> lock(g_qaTxMutex);
+            g_qaTxCv.wait_for(lock, std::chrono::milliseconds(50), []() {
+                return g_qaTxStop || !g_qaUiQueue.empty() || !g_qaLowQueue.empty();
+            });
+
+            if (g_qaTxStop)
+            {
+                break;
+            }
+
+            if (!g_qaUiQueue.empty())
+            {
+                cmd = std::move(g_qaUiQueue.front());
+                g_qaUiQueue.pop_front();
+                hasCmd = true;
+            }
+            else if (!g_qaLowQueue.empty())
+            {
+                bool runtimeReady = false;
+                {
+                    std::lock_guard<std::mutex> pLock(g_protocolMutex);
+                    runtimeReady = g_initialSyncDone;
+                }
+
+                if (runtimeReady)
+                {
+                    cmd = std::move(g_qaLowQueue.front());
+                    g_qaLowQueue.pop_front();
+                    hasCmd = true;
+                }
+            }
+        }
+
+        if (!hasCmd)
+        {
+            continue;
+        }
+
+        const bool ok = SendSerializedToSerial(cmd.serialized);
+        if (cmd.completion)
+        {
+            cmd.completion->set_value(ok);
+        }
+    }
+
+    spdlog::info("[QA_PROXY] Arbitrator stopped");
+}
+
+void StartQaArbitrator()
+{
+    std::lock_guard<std::mutex> lock(g_qaTxMutex);
+    if (g_qaTxRunning) return;
+    g_qaTxStop = false;
+    g_qaTxRunning = true;
+    g_qaTxThread = std::thread(QaArbitratorLoop);
+}
+
+void StopQaArbitrator()
+{
+    {
+        std::lock_guard<std::mutex> lock(g_qaTxMutex);
+        if (!g_qaTxRunning) return;
+        g_qaTxStop = true;
+    }
+    g_qaTxCv.notify_all();
+    if (g_qaTxThread.joinable()) g_qaTxThread.join();
+    std::lock_guard<std::mutex> lock(g_qaTxMutex);
+    g_qaTxRunning = false;
+}
+#endif
 
 namespace {
 
@@ -651,6 +1083,14 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
         HandleClientSetCommand(action, msg);
         return;
     }
+
+#if ENABLE_QA_PROXY
+    if (action == "qa_response")
+    {
+        QaRouteResponseToClient(msg);
+        return;
+    }
+#endif
 
     bool sendUnknownNack = false;
     {
@@ -1186,12 +1626,20 @@ void ProtocolWorkerLoop()
             FusionTUIIBridge &bridge = FusionTUIIBridge::getInstance();
             std::vector<TuiiZoneConfig> zoneSnapshot = bridge.getZoneConfigsSnapshot();
 
-            Json::Value readyPacket(Json::objectValue);
-            readyPacket["action"] = "ready";
+           
             {
                 std::lock_guard<std::mutex> lock(g_protocolMutex);
+                g_initialSyncDone = false;
                 g_readyAckReceived = false;
             }
+#if ENABLE_QA_PROXY
+            g_qaTxCv.notify_all();
+#endif
+              
+            Json::Value readyPacket(Json::objectValue);
+            readyPacket["action"] = "ready"; 
+
+            
             if (!SendJsonPacket(readyPacket))
             {
                 spdlog::warn("[Protocol] Failed to send ready; retrying in {} ms", SERIAL_RETRY_INTERVAL_MS);
@@ -1219,7 +1667,12 @@ void ProtocolWorkerLoop()
             {
                 std::lock_guard<std::mutex> lock(g_protocolMutex);
                 g_initialSyncDone = true;
+                g_readyAckReceived = false;
             }
+
+#if ENABLE_QA_PROXY
+            g_qaTxCv.notify_all();
+#endif
 
             while (true)
             {
