@@ -570,37 +570,53 @@ void HandleQaClient(const QaSocketPtr &socket)
             std::unique_ptr<Json::CharReader> reader(rb.newCharReader());
             if (!reader->parse(line.data(), line.data() + line.size(), &req, &errs)) continue;
             if (!req.isObject() || !req.isMember("action") || !req["action"].isString()) continue;
-            if (req["action"].asString() != "qa_invoke") continue;
-            if (!req.isMember("id") || !req["id"].isString()) continue;
 
-            const std::string id = req["id"].asString();
-            {
-              std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+const std::string actionIn = req["action"].asString();
 
-              // If same id somehow repeats, remove old queue entry first.
-              g_qaPendingOrder.erase(
-              std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
-              g_qaPendingOrder.end());
+Json::Value toSerial(Json::objectValue);
 
-              g_qaPendingById[id] = socket;
-              g_qaPendingOrder.push_back(id);
-            }
-
-            Json::Value toSerial = req;
-
-if (req.isMember("api") && req["api"].isString() &&
-    req["api"].asString() == "setBrightness" &&
-    req.isMember("params") && req["params"].isObject())
+if (actionIn == "qa_invoke")
 {
-    toSerial = Json::Value(Json::objectValue);
-    toSerial["action"] = "setBrightness";
+    if (!req.isMember("api") || !req["api"].isString()) continue;
 
-    Json::Value payload(Json::objectValue);
-    if (req["params"].isMember("value"))
+    toSerial["action"] = req["api"].asString();
+
+    if (req.isMember("params") && req["params"].isObject())
     {
-        payload["value"] = req["params"]["value"];
+        toSerial["payload"] = req["params"];
     }
-    toSerial["payload"] = payload;
+    else
+    {
+        toSerial["payload"] = Json::Value(Json::objectValue);
+    }
+}
+else
+{
+    // Raw passthrough mode: python sends direct serial-style JSON.
+    toSerial = req;
+}
+
+if (!toSerial.isObject() || !toSerial.isMember("action") || !toSerial["action"].isString()) continue;
+
+std::string id;
+if (req.isMember("id") && req["id"].isString() && !req["id"].asString().empty())
+{
+    id = req["id"].asString();
+}
+else
+{
+    id = "qa-auto-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+}
+
+{
+    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+
+    g_qaPendingOrder.erase(
+        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+        g_qaPendingOrder.end());
+
+    g_qaPendingById[id] = socket;
+    g_qaPendingOrder.push_back(id);
 }
 
 if (!SendJsonPacketAsyncQa(toSerial))
@@ -1144,24 +1160,21 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
     }
 
     const std::string action = msg["action"].asString();
+    #if ENABLE_QA_PROXY
+// Mirror serial response to pending QA TCP request as well.
+QaRouteResponseToClient(msg);
+#endif
+    
 
     // Route inbound set* commands from TUII Client to Fusion
     if (action == "setGain" || action == "setMute" || action == "setSource" || action == "setBrightness")
     {
-    #if ENABLE_QA_PROXY
-        QaRouteResponseToClient(msg);
-    #endif
+    
         HandleClientSetCommand(action, msg);
         return;
     }
 
-#if ENABLE_QA_PROXY
-    if (action == "qa_response")
-    {
-        QaRouteResponseToClient(msg);
-        return;
-    }
-#endif
+
 
     bool sendUnknownNack = false;
     {
