@@ -198,6 +198,7 @@ constexpr uint16_t      QA_PROXY_TCP_PORT = 9000;
 using QaSocketPtr = std::shared_ptr<boost::asio::ip::tcp::socket>;
 std::mutex g_qaPendingMutex;
 std::map<std::string, QaSocketPtr> g_qaPendingById;
+std::deque<std::string> g_qaPendingOrder;
 
 bool SerializeJsonCompact(const Json::Value &msg, std::string &out);
 bool SerializeJsonForUart(const Json::Value &msg, std::string &out);
@@ -457,29 +458,72 @@ bool QaWriteJsonLine(const QaSocketPtr &socket, const Json::Value &msg)
 void QaDropPendingForSocket(const QaSocketPtr &socket)
 {
     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+
     for (auto it = g_qaPendingById.begin(); it != g_qaPendingById.end(); )
     {
-        if (it->second == socket) it = g_qaPendingById.erase(it);
-        else ++it;
+        if (it->second == socket)
+        {
+            const std::string id = it->first;
+            it = g_qaPendingById.erase(it);
+
+            g_qaPendingOrder.erase(
+                std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+                g_qaPendingOrder.end());
+        }
+        else
+        {
+            ++it;
+        }
     }
 }
 
 void QaRouteResponseToClient(const Json::Value &msg)
 {
-    if (!msg.isMember("id") || !msg["id"].isString()) return;
-    const std::string id = msg["id"].asString();
-
     QaSocketPtr sock;
+
     {
         std::lock_guard<std::mutex> lock(g_qaPendingMutex);
-        auto it = g_qaPendingById.find(id);
-        if (it == g_qaPendingById.end()) return;
-        sock = it->second;
-        g_qaPendingById.erase(it);
+
+        // Preferred path: explicit id correlation.
+        if (msg.isMember("id") && msg["id"].isString())
+        {
+            const std::string id = msg["id"].asString();
+            auto it = g_qaPendingById.find(id);
+            if (it == g_qaPendingById.end()) return;
+
+            sock = it->second;
+            g_qaPendingById.erase(it);
+
+            g_qaPendingOrder.erase(
+                std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+                g_qaPendingOrder.end());
+        }
+        else
+        {
+            // Fallback path: no id from STM32, use oldest pending request.
+            while (!g_qaPendingOrder.empty())
+            {
+                const std::string oldestId = g_qaPendingOrder.front();
+                g_qaPendingOrder.pop_front();
+
+                auto it = g_qaPendingById.find(oldestId);
+                if (it == g_qaPendingById.end())
+                {
+                    continue; // stale queue entry
+                }
+
+                sock = it->second;
+                g_qaPendingById.erase(it);
+                break;
+            }
+
+            if (!sock) return;
+        }
     }
 
     QaWriteJsonLine(sock, msg);
 }
+
 
 void HandleQaClient(const QaSocketPtr &socket)
 {
@@ -531,8 +575,15 @@ void HandleQaClient(const QaSocketPtr &socket)
 
             const std::string id = req["id"].asString();
             {
-                std::lock_guard<std::mutex> lock(g_qaPendingMutex);
-                g_qaPendingById[id] = socket;
+              std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+
+              // If same id somehow repeats, remove old queue entry first.
+              g_qaPendingOrder.erase(
+              std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+              g_qaPendingOrder.end());
+
+              g_qaPendingById[id] = socket;
+              g_qaPendingOrder.push_back(id);
             }
 
             if (!SendJsonPacketAsyncQa(req))
@@ -540,6 +591,9 @@ void HandleQaClient(const QaSocketPtr &socket)
                 {
                     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
                     g_qaPendingById.erase(id);
+                    g_qaPendingOrder.erase(
+                        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+                        g_qaPendingOrder.end());
                 }
             }
         }
@@ -1080,6 +1134,9 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
     // Route inbound set* commands from TUII Client to Fusion
     if (action == "setGain" || action == "setMute" || action == "setSource" || action == "setBrightness")
     {
+    #if ENABLE_QA_PROXY
+        QaRouteResponseToClient(msg);
+    #endif
         HandleClientSetCommand(action, msg);
         return;
     }
