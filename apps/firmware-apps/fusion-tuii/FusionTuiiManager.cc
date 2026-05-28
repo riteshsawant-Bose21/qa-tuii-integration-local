@@ -586,16 +586,31 @@ void HandleQaClient(const QaSocketPtr &socket)
               g_qaPendingOrder.push_back(id);
             }
 
-            if (!SendJsonPacketAsyncQa(req))
-            {
-                {
-                    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
-                    g_qaPendingById.erase(id);
-                    g_qaPendingOrder.erase(
-                        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
-                        g_qaPendingOrder.end());
-                }
-            }
+            Json::Value toSerial = req;
+
+if (req.isMember("api") && req["api"].isString() &&
+    req["api"].asString() == "setBrightness" &&
+    req.isMember("params") && req["params"].isObject())
+{
+    toSerial = Json::Value(Json::objectValue);
+    toSerial["action"] = "setBrightness";
+
+    Json::Value payload(Json::objectValue);
+    if (req["params"].isMember("value"))
+    {
+        payload["value"] = req["params"]["value"];
+    }
+    toSerial["payload"] = payload;
+}
+
+if (!SendJsonPacketAsyncQa(toSerial))
+{
+    std::lock_guard<std::mutex> lock(g_qaPendingMutex);
+    g_qaPendingById.erase(id);
+    g_qaPendingOrder.erase(
+        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+        g_qaPendingOrder.end());
+}
         }
     }
 
