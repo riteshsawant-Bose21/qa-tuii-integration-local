@@ -847,8 +847,7 @@ bool SendJsonPacketSync(const Json::Value &packet)
 
 bool SendJsonPacketAsyncQa(const Json::Value &packet)
 {
-    return EnqueueQaTx(packet, QaTxPriority::QaLow, true, false);
-}
+    return EnqueueQaTx(packet, QaTxPriority::UiHigh, false, false);}
 
 bool SendJsonPacket(const Json::Value &packet)
 {
