@@ -2175,3 +2175,4 @@ void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings)
 
     spdlog::info("Audio settings update processing completed");
 }
+//end of code
