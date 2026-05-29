@@ -598,6 +598,13 @@ else
 
 if (!toSerial.isObject() || !toSerial.isMember("action") || !toSerial["action"].isString()) continue;
 
+spdlog::info(
+    "[QA_GATE_B_TX_PREP] toSerial_action={} has_payload={}",
+    toSerial["action"].asString(),
+    toSerial.isMember("payload")
+);
+
+
 std::string id;
 if (req.isMember("id") && req["id"].isString() && !req["id"].asString().empty())
 {
@@ -607,6 +614,13 @@ else
 {
     id = "qa-auto-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 }
+
+spdlog::info(
+    "[QA_GATE_B_RX] actionIn={} has_id={} id={}",
+    actionIn,
+    (req.isMember("id") && req["id"].isString()),
+    id
+);
 
 {
     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
@@ -619,7 +633,10 @@ else
     g_qaPendingOrder.push_back(id);
 }
 
-if (!SendJsonPacketAsyncQa(toSerial))
+const bool qaSendOk = SendJsonPacketAsyncQa(toSerial);
+spdlog::info("[QA_GATE_B_TX_ENQUEUE] ok={}", qaSendOk);
+
+if (!qaSendOk)
 {
     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
     g_qaPendingById.erase(id);
