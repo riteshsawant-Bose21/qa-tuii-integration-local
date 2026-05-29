@@ -2173,6 +2173,6 @@ void HandleTUIIAudioSettingsUpdate(const Json::Value &newSettings)
 
     QueueAudioSettingsForProtocol(newSettings);
 
-    spdlog::info("Audio settings update processing completed");
+    spdlog::info("Audio settings update processing completed successfully");
 }
 //end of code
