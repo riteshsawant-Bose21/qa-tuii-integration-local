@@ -200,6 +200,20 @@ std::mutex g_qaPendingMutex;
 std::map<std::string, QaSocketPtr> g_qaPendingById;
 std::deque<std::string> g_qaPendingOrder;
 
+struct QaFrameAssembly
+{
+    std::string screen;
+    int width = 0;
+    int height = 0;
+    std::string format;
+    int rawBytes = -1;
+    std::map<int, std::string> chunks;
+    int maxSeq = -1;
+};
+
+std::mutex g_qaFrameMutex;
+std::map<std::string, QaFrameAssembly> g_qaFrames;
+
 bool SerializeJsonCompact(const Json::Value &msg, std::string &out);
 bool SerializeJsonForUart(const Json::Value &msg, std::string &out);
 bool SendSerializedToSerial(const std::string &serialized);
@@ -218,8 +232,8 @@ void HandleQaClient(const QaSocketPtr &socket);
 
 bool QaWriteJsonLine(const QaSocketPtr &socket, const Json::Value &msg);
 void QaDropPendingForSocket(const QaSocketPtr &socket);
-void QaRouteResponseToClient(const Json::Value &msg);
-
+bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping = true);
+bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &action);
 // ========================== QA_PROXY_END ==========================
 #endif
 
@@ -477,7 +491,7 @@ void QaDropPendingForSocket(const QaSocketPtr &socket)
     }
 }
 
-void QaRouteResponseToClient(const Json::Value &msg)
+bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping)
 {
     QaSocketPtr sock;
 
@@ -489,14 +503,17 @@ void QaRouteResponseToClient(const Json::Value &msg)
         {
             const std::string id = msg["id"].asString();
             auto it = g_qaPendingById.find(id);
-            if (it == g_qaPendingById.end()) return;
+            if (it == g_qaPendingById.end()) return false;
 
             sock = it->second;
-            g_qaPendingById.erase(it);
 
-            g_qaPendingOrder.erase(
-                std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
-                g_qaPendingOrder.end());
+            if (consumeMapping)
+            {
+                g_qaPendingById.erase(it);
+                g_qaPendingOrder.erase(
+                    std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+                    g_qaPendingOrder.end());
+            }
         }
         else
         {
@@ -517,11 +534,153 @@ void QaRouteResponseToClient(const Json::Value &msg)
                 break;
             }
 
-            if (!sock) return;
+            if (!sock) return false;
         }
     }
 
-    QaWriteJsonLine(sock, msg);
+    return QaWriteJsonLine(sock, msg);
+}
+
+static bool QaIsFrameAction(const std::string &action)
+{
+    return action == "frameStart" || action == "frameChunk" || action == "frameEnd";
+}
+
+bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &action)
+{
+    if (!QaIsFrameAction(action))
+    {
+        return false; // not handled here
+    }
+
+    if (!msg.isMember("id") || !msg["id"].isString() || msg["id"].asString().empty())
+    {
+        spdlog::warn("[QA_FRAME] {} missing string id", action);
+        return true; // handled (drop invalid frame message)
+    }
+
+    const std::string id = msg["id"].asString();
+
+    if (action == "frameStart")
+    {
+        QaFrameAssembly frame;
+        if (msg.isMember("screen") && msg["screen"].isString()) frame.screen = msg["screen"].asString();
+        if (msg.isMember("width") && msg["width"].isInt()) frame.width = msg["width"].asInt();
+        if (msg.isMember("height") && msg["height"].isInt()) frame.height = msg["height"].asInt();
+        if (msg.isMember("format") && msg["format"].isString()) frame.format = msg["format"].asString();
+        if (msg.isMember("raw_bytes") && msg["raw_bytes"].isInt()) frame.rawBytes = msg["raw_bytes"].asInt();
+
+        {
+            std::lock_guard<std::mutex> lock(g_qaFrameMutex);
+            g_qaFrames[id] = std::move(frame);
+        }
+
+        spdlog::info("[QA_FRAME] frameStart accepted id={}", id);
+        return true;
+    }
+
+    if (action == "frameChunk")
+    {
+        if (!msg.isMember("seq") || !msg["seq"].isInt() ||
+            !msg.isMember("data") || !msg["data"].isString())
+        {
+            spdlog::warn("[QA_FRAME] frameChunk invalid payload for id={}", id);
+            return true;
+        }
+
+        const int seq = msg["seq"].asInt();
+        if (seq < 0)
+        {
+            spdlog::warn("[QA_FRAME] frameChunk negative seq id={} seq={}", id, seq);
+            return true;
+        }
+
+        const std::string chunk = msg["data"].asString();
+
+        {
+            std::lock_guard<std::mutex> lock(g_qaFrameMutex);
+            auto it = g_qaFrames.find(id);
+            if (it == g_qaFrames.end())
+            {
+                // Tolerate missing start by creating an empty frame context.
+                it = g_qaFrames.emplace(id, QaFrameAssembly{}).first;
+            }
+
+            it->second.chunks[seq] = chunk;
+            if (seq > it->second.maxSeq) it->second.maxSeq = seq;
+        }
+
+        return true;
+    }
+
+    // action == "frameEnd"
+    QaFrameAssembly frame;
+    {
+        std::lock_guard<std::mutex> lock(g_qaFrameMutex);
+        auto it = g_qaFrames.find(id);
+        if (it == g_qaFrames.end())
+        {
+            Json::Value err(Json::objectValue);
+            err["action"] = "frameError";
+            err["id"] = id;
+            err["reason"] = "missing_frame_start";
+            QaRouteResponseToClient(err, true);
+            return true;
+        }
+
+        frame = std::move(it->second);
+        g_qaFrames.erase(it);
+    }
+
+    if (frame.maxSeq < 0)
+    {
+        Json::Value err(Json::objectValue);
+        err["action"] = "frameError";
+        err["id"] = id;
+        err["reason"] = "no_chunks";
+        QaRouteResponseToClient(err, true);
+        return true;
+    }
+
+    std::string merged;
+    for (int i = 0; i <= frame.maxSeq; ++i)
+    {
+        auto it = frame.chunks.find(i);
+        if (it == frame.chunks.end())
+        {
+            Json::Value err(Json::objectValue);
+            err["action"] = "frameError";
+            err["id"] = id;
+            err["reason"] = "missing_chunk";
+            err["missing_seq"] = i;
+            QaRouteResponseToClient(err, true);
+            return true;
+        }
+        merged += it->second;
+    }
+
+    Json::Value out(Json::objectValue);
+    out["action"] = "frameComplete";
+    out["id"] = id;
+    if (!frame.screen.empty()) out["screen"] = frame.screen;
+    if (frame.width > 0) out["width"] = frame.width;
+    if (frame.height > 0) out["height"] = frame.height;
+    if (!frame.format.empty()) out["format"] = frame.format;
+    if (frame.rawBytes >= 0) out["raw_bytes"] = frame.rawBytes;
+    out["chunk_count"] = frame.maxSeq + 1;
+    out["data"] = merged;
+
+    const bool routed = QaRouteResponseToClient(out, true);
+    if (!routed)
+    {
+        spdlog::warn("[QA_FRAME] frameComplete not routed id={}", id);
+    }
+    else
+    {
+        spdlog::info("[QA_FRAME] frameComplete routed id={} chunks={}", id, frame.maxSeq + 1);
+    }
+
+    return true;
 }
 
 
@@ -1177,9 +1336,15 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
     }
 
     const std::string action = msg["action"].asString();
-    #if ENABLE_QA_PROXY
-// Mirror serial response to pending QA TCP request as well.
-QaRouteResponseToClient(msg);
+#if ENABLE_QA_PROXY
+// Frame stream is handled specially: buffer + reassemble + single final TCP response.
+if (QaHandleFrameSerialMessage(msg, action))
+{
+    return;
+}
+
+// Mirror regular serial response to pending QA TCP request.
+QaRouteResponseToClient(msg, true);
 #endif
     
 
