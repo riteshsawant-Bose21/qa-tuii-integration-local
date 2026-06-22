@@ -37,6 +37,7 @@
 #include <future>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
+#include <set>
 
 #ifndef ENABLE_QA_PROXY
 #define ENABLE_QA_PROXY 1
@@ -195,10 +196,47 @@ bool                    g_qaTcpRunning = false;
 bool                    g_qaTcpStop = false;
 constexpr uint16_t      QA_PROXY_TCP_PORT = 9000;
 
+static bool QaApiUsesStream(const std::string &api);
+static std::string QaEnsureTxIdForOutbound(const Json::Value &request, Json::Value &toSerial, const std::string &fallbackId);
+static bool QaExtractCorrelationKey(const Json::Value &msg, std::string &keyOut);
+static Json::Value QaBuildStreamError(const std::string &txId,
+                                      const std::string &api,
+                                      const std::string &code,
+                                      const std::string &message);
+static bool QaValidateStreamPayload(const Json::Value &msg,
+                                    std::string &txId,
+                                    std::string &api,
+                                    std::string &phase);
+static void QaSweepExpiredStreamSessions();
+bool QaHandleStreamSerialMessage(const Json::Value &msg, const std::string &action);
+
 using QaSocketPtr = std::shared_ptr<boost::asio::ip::tcp::socket>;
 std::mutex g_qaPendingMutex;
 std::map<std::string, QaSocketPtr> g_qaPendingById;
 std::deque<std::string> g_qaPendingOrder;
+
+struct QaStreamSession
+{
+    std::string txId;
+    std::string api;
+    int expectedCount = -1;
+    std::set<int> seenSeq;
+    std::chrono::steady_clock::time_point createdAt;
+    std::chrono::steady_clock::time_point lastSeen;
+};
+
+std::mutex g_qaStreamMutex;
+std::map<std::string, QaStreamSession> g_qaStreamSessions;
+
+// Start with safe defaults; tune later from field data.
+constexpr std::size_t QA_STREAM_MAX_SESSIONS = 32;
+constexpr std::size_t QA_STREAM_MAX_ITEMS_PER_SESSION = 200000;
+constexpr int QA_STREAM_TIMEOUT_MS = 10000;
+
+// APIs that use chunked qaStream begin/item/end.
+const std::set<std::string> g_qaStreamApis = {
+    "getUIState"
+};
 
 struct QaFrameAssembly
 {
@@ -491,6 +529,119 @@ void QaDropPendingForSocket(const QaSocketPtr &socket)
     }
 }
 
+static bool QaApiUsesStream(const std::string &api)
+{
+    return g_qaStreamApis.find(api) != g_qaStreamApis.end();
+}
+
+static std::string QaEnsureTxIdForOutbound(const Json::Value &request, Json::Value &toSerial, const std::string &fallbackId)
+{
+    if (!toSerial.isObject())
+    {
+        return "";
+    }
+
+    const std::string api = (toSerial.isMember("action") && toSerial["action"].isString())
+                                ? toSerial["action"].asString()
+                                : "";
+
+    if (!QaApiUsesStream(api))
+    {
+        // Non-stream API: leave payload untouched.
+        return "";
+    }
+
+    if (!toSerial.isMember("payload") || !toSerial["payload"].isObject())
+    {
+        toSerial["payload"] = Json::Value(Json::objectValue);
+    }
+
+    Json::Value &payload = toSerial["payload"];
+
+    if (payload.isMember("txId") && payload["txId"].isString() && !payload["txId"].asString().empty())
+    {
+        return payload["txId"].asString();
+    }
+
+    // Backward compatibility: host may still send id only.
+    if (request.isMember("id") && request["id"].isString() && !request["id"].asString().empty())
+    {
+        payload["txId"] = request["id"].asString();
+        return request["id"].asString();
+    }
+
+    payload["txId"] = fallbackId;
+    return fallbackId;
+}
+
+static bool QaExtractCorrelationKey(const Json::Value &msg, std::string &keyOut)
+{
+    // Prefer payload.txId for stream traffic.
+    if (msg.isMember("payload") && msg["payload"].isObject())
+    {
+        const Json::Value &payload = msg["payload"];
+        if (payload.isMember("txId") && payload["txId"].isString() && !payload["txId"].asString().empty())
+        {
+            keyOut = payload["txId"].asString();
+            return true;
+        }
+    }
+
+    // Legacy fallback.
+    if (msg.isMember("id") && msg["id"].isString() && !msg["id"].asString().empty())
+    {
+        keyOut = msg["id"].asString();
+        return true;
+    }
+
+    return false;
+}
+
+static Json::Value QaBuildStreamError(const std::string &txId,
+                                      const std::string &api,
+                                      const std::string &code,
+                                      const std::string &message)
+{
+    Json::Value err(Json::objectValue);
+    err["action"] = "qaStreamError";
+    err["payload"]["txId"] = txId;
+    if (!api.empty()) err["payload"]["api"] = api;
+    err["payload"]["code"] = code;
+    err["payload"]["message"] = message;
+    return err;
+}
+
+static bool QaValidateStreamPayload(const Json::Value &msg,
+                                    std::string &txId,
+                                    std::string &api,
+                                    std::string &phase)
+{
+    if (!msg.isMember("payload") || !msg["payload"].isObject())
+    {
+        return false;
+    }
+
+    const Json::Value &p = msg["payload"];
+
+    if (!p.isMember("txId") || !p["txId"].isString() || p["txId"].asString().empty())
+    {
+        return false;
+    }
+    if (!p.isMember("api") || !p["api"].isString() || p["api"].asString().empty())
+    {
+        return false;
+    }
+    if (!p.isMember("phase") || !p["phase"].isString() || p["phase"].asString().empty())
+    {
+        return false;
+    }
+
+    txId = p["txId"].asString();
+    api = p["api"].asString();
+    phase = p["phase"].asString();
+    return true;
+}
+
 bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping)
 {
     QaSocketPtr sock;
@@ -498,11 +649,10 @@ bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping)
     {
         std::lock_guard<std::mutex> lock(g_qaPendingMutex);
 
-        // Preferred path: explicit id correlation.
-        if (msg.isMember("id") && msg["id"].isString())
+        std::string key;
+        if (QaExtractCorrelationKey(msg, key))
         {
-            const std::string id = msg["id"].asString();
-            auto it = g_qaPendingById.find(id);
+            auto it = g_qaPendingById.find(key);
             if (it == g_qaPendingById.end()) return false;
 
             sock = it->second;
@@ -511,31 +661,15 @@ bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping)
             {
                 g_qaPendingById.erase(it);
                 g_qaPendingOrder.erase(
-                    std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+                    std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), key),
                     g_qaPendingOrder.end());
             }
         }
         else
-        {
-            // Fallback path: no id from STM32, use oldest pending request.
-            while (!g_qaPendingOrder.empty())
-            {
-                const std::string oldestId = g_qaPendingOrder.front();
-                g_qaPendingOrder.pop_front();
-
-                auto it = g_qaPendingById.find(oldestId);
-                if (it == g_qaPendingById.end())
-                {
-                    continue; // stale queue entry
-                }
-
-                sock = it->second;
-                g_qaPendingById.erase(it);
-                break;
-            }
-
-            if (!sock) return false;
-        }
+{
+    // Strict isolation: if no txId/id, do not guess a target request.
+    return false;
+}
     }
 
     return QaWriteJsonLine(sock, msg);
@@ -670,19 +804,237 @@ bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &actio
     out["chunk_count"] = frame.maxSeq + 1;
     out["data"] = merged;
 
-    const bool routed = QaRouteResponseToClient(out, true);
-    if (!routed)
+    const bool routed = QaRouteResponseToClient(msg, true);
+if (!routed)
+{
+    spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
+}
+}
+
+bool QaHandleStreamSerialMessage(const Json::Value &msg, const std::string &action)
+{
+    if (action != "qaStream")
     {
-        spdlog::warn("[QA_FRAME] frameComplete not routed id={}", id);
-    }
-    else
-    {
-        spdlog::info("[QA_FRAME] frameComplete routed id={} chunks={}", id, frame.maxSeq + 1);
+        return false;
     }
 
+    std::string txId;
+    std::string api;
+    std::string phase;
+    if (!QaValidateStreamPayload(msg, txId, api, phase))
+    {
+        Json::Value err = QaBuildStreamError("", "", "invalid_payload", "qaStream missing txId/api/phase");
+        QaRouteResponseToClient(err, true);
+        return true;
+    }
+
+    const Json::Value &p = msg["payload"];
+    const auto now = std::chrono::steady_clock::now();
+
+    if (phase == "begin")
+    {
+        if (!p.isMember("count") || !p["count"].isInt())
+        {
+            QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_begin", "count missing"), true);
+            return true;
+        }
+
+        const int count = p["count"].asInt();
+        if (count < 0 || static_cast<std::size_t>(count) > QA_STREAM_MAX_ITEMS_PER_SESSION)
+        {
+            QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_begin", "count out of bounds"), true);
+            return true;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(g_qaStreamMutex);
+            if (g_qaStreamSessions.size() >= QA_STREAM_MAX_SESSIONS && g_qaStreamSessions.find(txId) == g_qaStreamSessions.end())
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "too_many_sessions", "stream session limit reached"), true);
+                return true;
+            }
+
+            QaStreamSession s;
+            s.txId = txId;
+            s.api = api;
+            s.expectedCount = count;
+            s.createdAt = now;
+            s.lastSeen = now;
+            g_qaStreamSessions[txId] = std::move(s);
+        }
+
+        // Pass through, keep mapping alive.
+        QaRouteResponseToClient(msg, false);
+        return true;
+    }
+
+    if (phase == "item")
+    {
+        if (!p.isMember("seq") || !p["seq"].isInt())
+        {
+            QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_item", "seq missing"), true);
+            return true;
+        }
+        if (!p.isMember("part"))
+        {
+            QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_item", "part missing"), true);
+            return true;
+        }
+
+        const int seq = p["seq"].asInt();
+        if (seq < 0)
+        {
+            QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_item", "seq negative"), true);
+            return true;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(g_qaStreamMutex);
+            auto it = g_qaStreamSessions.find(txId);
+            if (it == g_qaStreamSessions.end())
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "unknown_tx", "item before begin"), true);
+                return true;
+            }
+
+            QaStreamSession &s = it->second;
+            if (s.api != api)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "api_mismatch", "api differs from begin"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+
+            if (s.expectedCount >= 0 && seq >= s.expectedCount)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "seq_out_of_range", "seq exceeds expected count"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+
+            s.seenSeq.insert(seq);
+            s.lastSeen = now;
+
+            if (s.seenSeq.size() > QA_STREAM_MAX_ITEMS_PER_SESSION)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "too_many_items", "session item limit reached"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+        }
+
+        // Pass through, keep mapping alive.
+        QaRouteResponseToClient(msg, false);
+        return true;
+    }
+
+    if (phase == "end")
+    {
+        int expected = -1;
+        {
+            std::lock_guard<std::mutex> lock(g_qaStreamMutex);
+            auto it = g_qaStreamSessions.find(txId);
+            if (it == g_qaStreamSessions.end())
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "unknown_tx", "end without begin"), true);
+                return true;
+            }
+
+            QaStreamSession &s = it->second;
+            if (s.api != api)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "api_mismatch", "api differs from begin"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+
+            expected = s.expectedCount;
+            if (p.isMember("count") && p["count"].isInt() && p["count"].asInt() != expected)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "count_mismatch", "end count differs from begin count"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+
+            if (static_cast<int>(s.seenSeq.size()) != expected)
+            {
+                QaRouteResponseToClient(QaBuildStreamError(txId, api, "count_mismatch", "received item count mismatch"), true);
+                g_qaStreamSessions.erase(it);
+                return true;
+            }
+
+            for (int i = 0; i < expected; ++i)
+            {
+                if (s.seenSeq.find(i) == s.seenSeq.end())
+                {
+                    QaRouteResponseToClient(QaBuildStreamError(txId, api, "missing_seq", "missing one or more sequence indices"), true);
+                    g_qaStreamSessions.erase(it);
+                    return true;
+                }
+            }
+
+            g_qaStreamSessions.erase(it);
+        }
+
+        // Terminal success, consume mapping now.
+        QaRouteResponseToClient(msg, true);
+        return true;
+    }
+
+    if (phase == "abort")
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_qaStreamMutex);
+            g_qaStreamSessions.erase(txId);
+        }
+
+        // Terminal abort, consume mapping now.
+        QaRouteResponseToClient(msg, true);
+        return true;
+    }
+
+    QaRouteResponseToClient(QaBuildStreamError(txId, api, "invalid_phase", "phase must be begin/item/end/abort"), true);
     return true;
 }
 
+static void QaSweepExpiredStreamSessions()
+{
+    std::vector<std::pair<std::string, std::string>> expired; // txId, api
+    const auto now = std::chrono::steady_clock::now();
+
+    {
+        std::lock_guard<std::mutex> lock(g_qaStreamMutex);
+
+        for (auto it = g_qaStreamSessions.begin(); it != g_qaStreamSessions.end(); )
+        {
+            const auto ageMs =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second.lastSeen).count();
+
+            if (ageMs > QA_STREAM_TIMEOUT_MS)
+            {
+                expired.emplace_back(it->second.txId, it->second.api);
+                it = g_qaStreamSessions.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    // Route errors outside the session lock.
+    for (const auto &e : expired)
+    {
+        Json::Value err = QaBuildStreamError(
+            e.first,   // txId
+            e.second,  // api
+            "timeout",
+            "stream timed out waiting for next chunk");
+
+        // timeout is terminal for that txId
+        QaRouteResponseToClient(err, true);
+    }
+}
 
 void HandleQaClient(const QaSocketPtr &socket)
 {
@@ -774,37 +1126,46 @@ else
     id = "qa-auto-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 }
 
+// Ensure txId for stream APIs only.
+const std::string txId = QaEnsureTxIdForOutbound(req, toSerial, id);
+
+// Routing key:
+// - stream API: route by txId
+// - non-stream API: route by id
+const std::string routeKey = txId.empty() ? id : txId;
+
 spdlog::info(
-    "[QA_GATE_B_RX] actionIn={} has_id={} id={}",
+    "[QA_GATE_B_RX] actionIn={} id={} txId={} routeKey={}",
     actionIn,
-    (req.isMember("id") && req["id"].isString()),
-    id
+    id,
+    txId,
+    routeKey
 );
 
 {
     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
 
     g_qaPendingOrder.erase(
-        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), routeKey),
         g_qaPendingOrder.end());
 
-    g_qaPendingById[id] = socket;
-    g_qaPendingOrder.push_back(id);
+    g_qaPendingById[routeKey] = socket;
+    g_qaPendingOrder.push_back(routeKey);
 }
 
 const bool qaSendOk = SendJsonPacketAsyncQa(toSerial);
-spdlog::info("[QA_GATE_B_TX_ENQUEUE] ok={}", qaSendOk);
+spdlog::info("[QA_GATE_B_TX_ENQUEUE] ok={} routeKey={}", qaSendOk, routeKey);
 
 if (!qaSendOk)
 {
     std::lock_guard<std::mutex> lock(g_qaPendingMutex);
-    g_qaPendingById.erase(id);
+    g_qaPendingById.erase(routeKey);
     g_qaPendingOrder.erase(
-        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), id),
+        std::remove(g_qaPendingOrder.begin(), g_qaPendingOrder.end(), routeKey),
         g_qaPendingOrder.end());
 }
-        }
-    }
+        } // end inner line-processing while
+    }     // end socket read while
 
     QaDropPendingForSocket(socket);
     socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -1075,9 +1436,11 @@ void QaArbitratorLoop()
     spdlog::info("[QA_PROXY] Arbitrator started");
 
     while (true)
-    {
-        QaTxCommand cmd;
-        bool hasCmd = false;
+{
+    QaSweepExpiredStreamSessions();
+
+    QaTxCommand cmd;
+    bool hasCmd = false;
 
         {
             std::unique_lock<std::mutex> lock(g_qaTxMutex);
@@ -1337,14 +1700,25 @@ void HandleSerialProtocolMessage(const char *buf, std::size_t len)
 
     const std::string action = msg["action"].asString();
 #if ENABLE_QA_PROXY
-// Frame stream is handled specially: buffer + reassemble + single final TCP response.
+// First: generic chunked stream handling for heavy APIs.
+if (QaHandleStreamSerialMessage(msg, action))
+{
+    return;
+}
+
+// Second: existing frame path (kept for compatibility).
 if (QaHandleFrameSerialMessage(msg, action))
 {
     return;
 }
 
-// Mirror regular serial response to pending QA TCP request.
-QaRouteResponseToClient(msg, true);
+// Third: normal one-shot response routing.
+const bool routed = QaRouteResponseToClient(msg, true);
+if (!routed)
+{
+    spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
+}
+
 #endif
     
 
