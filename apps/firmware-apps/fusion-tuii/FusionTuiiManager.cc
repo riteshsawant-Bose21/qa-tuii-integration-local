@@ -235,7 +235,8 @@ constexpr int QA_STREAM_TIMEOUT_MS = 10000;
 
 // APIs that use chunked qaStream begin/item/end.
 const std::set<std::string> g_qaStreamApis = {
-    "getUIState"
+    "getUIState",
+    "getUiState"
 };
 
 struct QaFrameAssembly
@@ -686,7 +687,7 @@ bool QaRouteResponseToClient(const Json::Value &msg, bool consumeMapping)
 
 static bool QaIsFrameAction(const std::string &action)
 {
-    return action == "frameStart" || action == "frameChunk" || action == "frameEnd";
+    return action == "frameStart" || action == "frameChunk" || action == "frameEnd" || action == "frameDone";
 }
 
 bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &action)
@@ -756,7 +757,7 @@ bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &actio
         return true;
     }
 
-    // action == "frameEnd"
+    // action == "frameEnd" or "frameDone"
     QaFrameAssembly frame;
     {
         std::lock_guard<std::mutex> lock(g_qaFrameMutex);
