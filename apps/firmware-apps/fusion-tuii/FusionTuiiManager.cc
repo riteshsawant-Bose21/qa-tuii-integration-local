@@ -1731,10 +1731,12 @@ if (QaHandleFrameSerialMessage(msg, action))
 }
 
 const bool routed = QaRouteResponseToClient(msg, true);
-if (!routed)
+if (routed)
 {
-    spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
+    return; // Stop here: QA response already forwarded to host.
 }
+
+spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
 #endif
     
 
