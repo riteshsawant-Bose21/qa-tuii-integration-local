@@ -588,10 +588,19 @@ static bool QaExtractCorrelationKey(const Json::Value &msg, std::string &keyOut)
     }
 
     // Legacy fallback.
-    if (msg.isMember("id") && msg["id"].isString() && !msg["id"].asString().empty())
+    if (msg.isMember("id"))
     {
-        keyOut = msg["id"].asString();
-        return true;
+        if (msg["id"].isString() && !msg["id"].asString().empty())
+        {
+            keyOut = msg["id"].asString();
+            return true;
+        }
+
+        if (msg["id"].isInt() || msg["id"].isUInt() || msg["id"].isInt64() || msg["id"].isUInt64())
+        {
+            keyOut = msg["id"].asString();
+            return true;
+        }
     }
 
     return false;
@@ -804,11 +813,13 @@ bool QaHandleFrameSerialMessage(const Json::Value &msg, const std::string &actio
     out["chunk_count"] = frame.maxSeq + 1;
     out["data"] = merged;
 
-    const bool routed = QaRouteResponseToClient(msg, true);
+const bool routed = QaRouteResponseToClient(out, true);
 if (!routed)
 {
-    spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
+    spdlog::debug("[QA_PROXY] Unrouted frameComplete id={}", id);
 }
+return true;
+
 }
 
 bool QaHandleStreamSerialMessage(const Json::Value &msg, const std::string &action)
@@ -1124,6 +1135,12 @@ if (req.isMember("id") && req["id"].isString() && !req["id"].asString().empty())
 else
 {
     id = "qa-auto-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+}
+
+// Ensure non-stream responses can correlate back to this pending socket.
+if (!toSerial.isMember("id") || !toSerial["id"].isString() || toSerial["id"].asString().empty())
+{
+    toSerial["id"] = id;
 }
 
 // Ensure txId for stream APIs only.
@@ -1712,13 +1729,11 @@ if (QaHandleFrameSerialMessage(msg, action))
     return;
 }
 
-// Third: normal one-shot response routing.
 const bool routed = QaRouteResponseToClient(msg, true);
 if (!routed)
 {
     spdlog::debug("[QA_PROXY] Unrouted serial response action={}", action);
 }
-
 #endif
     
 
